@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PMG Workshop | บริหารงานซ่อม</title>
+<script>var _cl=document.createElement('script');_cl.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js';document.head.appendChild(_cl);</script>
+<style>
+:root{--bg:#f0f4f8;--card:#fff;--accent:#2563eb;--accent2:#7c3aed;--green:#059669;--red:#dc2626;--orange:#ea580c;--yellow:#d97706;--purple:#7c3aed;--pink:#db2777;--text:#1e293b;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.header{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:12px 16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(37,99,235,.25)}
+.header h1{font-size:18px;color:#fff;display:flex;align-items:center;gap:6px}
+.header .ver{font-size:11px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.15);padding:1px 6px;border-radius:4px}
+.tabs{display:flex;gap:4px;margin-top:8px;overflow-x:auto;padding-bottom:4px}
+.tab-btn{background:rgba(255,255,255,.15);color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;transition:.2s}
+.tab-btn:hover{background:rgba(255,255,255,.3)}
+.tab-btn.active{background:#fff;color:#1e3a5f;font-weight:600}
+.filters{background:#fff;border-bottom:1px solid var(--border);padding:8px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:56px;z-index:90;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.filter-group{display:flex;gap:2px;align-items:center}
+.filter-group label{font-size:11px;color:var(--text3);margin-right:4px}
+.fbtn{padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:12px;cursor:pointer;transition:.2s;color:var(--text2)}
+.fbtn.active{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+.fbtn:hover:not(.active){background:#e8f0fe}
+.date-inputs{display:flex;gap:4px;align-items:center}
+.date-inputs input{padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;width:120px}
+.period-info{font-size:12px;color:var(--text3);font-style:italic;margin-left:8px}
+.content{padding:12px 16px 40px}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--card);border-radius:var(--radius);padding:14px;text-align:center;box-shadow:var(--shadow);border:1px solid var(--border)}
+.card .label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.card .value{font-size:26px;font-weight:700;margin-top:4px}
+.card .sub{font-size:11px;color:var(--text3);margin-top:2px}
+.card.green .value{color:var(--green)}
+.card.red .value{color:var(--red)}
+.card.orange .value{color:var(--orange)}
+.card.blue .value{color:var(--accent)}
+.card.purple .value{color:var(--purple)}
+.card.pink .value{color:var(--pink)}
+.card.yellow .value{color:var(--yellow)}
+.section{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.section h3{font-size:15px;font-weight:600;margin-bottom:10px;color:var(--accent);display:flex;align-items:center;gap:6px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f8fafc;padding:8px 6px;text-align:left;font-weight:600;color:var(--text2);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0}
+td{padding:6px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:hover{background:#f8fafc}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge.green{background:#d1fae5;color:var(--green)}
+.badge.red{background:#fee2e2;color:var(--red)}
+.badge.orange{background:#ffedd5;color:var(--orange)}
+.badge.blue{background:#dbeafe;color:var(--accent)}
+.badge.purple{background:#ede9fe;color:var(--purple)}
+.badge.gray{background:#f1f5f9;color:#64748b}
+.badge.pink{background:#fce7f3;color:var(--pink)}
+.badge.yellow{background:#fef3c7;color:var(--yellow)}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:12px}
+.kpi-card{background:var(--card);border-radius:8px;padding:10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid var(--border)}
+.kpi-card .kpi-label{font-size:10px;color:var(--text3)}
+.kpi-card .kpi-val{font-size:20px;font-weight:700}
+.kpi-card .kpi-sub{font-size:10px;color:var(--text3)}
+.sp-bar{display:flex;gap:1px;margin-top:2px}
+.sp-bar .sp{flex:1;min-width:8px;text-align:center;font-size:8px;padding:2px 0;border-radius:2px;color:#fff;line-height:1.1}
+.sp.done{background:var(--green)}
+.sp.current{background:var(--accent);animation:pulse 1.5s infinite}
+.sp.pending{background:#e2e8f0;color:#94a3b8}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.donut-wrap{max-width:260px;margin:0 auto}
+.chart-box{position:relative;max-width:100%}
+.chart-box canvas{width:100%!important;max-height:280px}
+.loading{text-align:center;padding:40px;color:var(--text3)}
+.loading:after{content:'';display:inline-block;width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-left:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.stn-table td:nth-child(n+3){font-size:11px}
+@media(max-width:600px){.cards{grid-template-columns:repeat(2,1fr)}.kpi-grid{grid-template-columns:repeat(2,1fr)}.tab-btn{font-size:11px;padding:5px 8px}}
+.search-box{display:flex;align-items:center;gap:4px;margin-left:auto}
+.search-box input{padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:160px;transition:border-color .2s}
+.search-box input:focus{outline:none;border-color:var(--accent2)}
+.src-link{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--accent);background:#eef2ff;padding:2px 6px;border-radius:4px;text-decoration:none;border:1px solid #c7d2fe;margin-left:4px;white-space:nowrap}
+.src-link:hover{background:#dbeafe;border-color:var(--accent)}
+.search-box .search-icon{font-size:16px;color:var(--text3)}
+.search-count{font-size:11px;color:var(--text3);margin-left:4px;white-space:nowrap}
+/* ═══ Action Modal ═══ */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.modal-box{background:#fff;border-radius:12px;padding:20px;width:90%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:85vh;overflow-y:auto}
+.modal-box h3{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.modal-box label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin:8px 0 4px}
+.modal-box input,.modal-box select,.modal-box textarea{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box}
+.modal-box input:focus,.modal-box select:focus,.modal-box textarea:focus{outline:none;border-color:var(--accent2)}
+.modal-box textarea{resize:vertical;min-height:60px}
+.modal-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.modal-actions button{padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.modal-actions .btn-save{background:var(--accent2);color:#fff}
+.modal-actions .btn-save:hover{background:#6d28d9}
+.modal-actions .btn-save:disabled{background:#c4b5fd;cursor:not-allowed}
+.modal-actions .btn-cancel{background:#f1f5f9;color:var(--text2);border:1px solid var(--border)}
+.modal-actions .btn-cancel:hover{background:#e2e8f0}
+.modal-status{margin-top:8px;font-size:12px;padding:6px 10px;border-radius:4px;display:none}
+.modal-status.success{display:block;background:#d1fae5;color:var(--green)}
+.modal-status.error{display:block;background:#fee2e2;color:var(--red)}
+.act-btn{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;background:#fff;transition:.2s;color:var(--text2);margin-right:2px}
+.act-btn:hover{background:#e8f0fe;border-color:var(--accent)}
+.act-btn.reschedule{color:#92400e;border-color:#fbbf24;background:#fffbeb}
+.act-btn.reschedule:hover{background:#fef3c7}
+.act-btn.delivery{color:#059669;border-color:#6ee7b7;background:#ecfdf5}
+.act-btn.delivery:hover{background:#d1fae5}
+.act-btn.move{color:#2563eb;border-color:#93c5fd;background:#eff6ff}
+.act-btn.move:hover{background:#dbeafe}
+</style>
+</head>
+<body>
+<span style="position:fixed;top:8px;right:16px;background:#dc2626;color:white;font-size:.65rem;padding:3px 8px;border-radius:10px;font-weight:700;letter-spacing:.5px;z-index:9999;box-shadow:0 2px 8px rgba(220,38,38,.3)">🔒 PDPA ข้อมูลลับ</span>
+<div class="header">
+<h1>🚗 PMG Workshop Dashboard<span class="ver">v3.65</span></h1>
+<div class="tabs">
+<button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">📊 สรุปภาพรวม</button>
+<button class="tab-btn" data-tab="status" onclick="switchTab('status')">🚗 สถานะงานซ่อม</button>
+<button class="tab-btn" data-tab="check" onclick="switchTab('check')">✅ ตรวจ FinalCheck</button>
+<button class="tab-btn" data-tab="station" onclick="switchTab('station')">📈 สถานีซ่อม KPI</button>
+<button class="tab-btn" data-tab="movement" onclick="switchTab('movement')">🔀 Movement</button>
+<button class="tab-btn" data-tab="workflow" onclick="switchTab('workflow')">🔄 เคลื่อนไหว</button>
+<button class="tab-btn" data-tab="summary" onclick="switchTab('summary')">📋 สรุปสั้น</button>
+<button class="tab-btn" data-tab="pmwi" onclick="switchTab('pmwi')" style="background:rgba(129,140,248,.2);color:#a5b4fc;border-color:rgba(129,140,248,.4)">📘 PM/WI</button>
+<button class="tab-btn" data-tab="stdtime" onclick="switchTab('stdtime')" style="background:rgba(34,197,94,.15);color:#4ade80;border-color:rgba(34,197,94,.4)">⏱️ Std Time</button>
+</div>
+</div>
+<div class="filters">
+<div class="filter-group">
+<label>ช่วง:</label>
+<button class="fbtn" data-period="daily" onclick="setPeriod('daily')">วันนี้</button>
+<button class="fbtn" data-period="monthly" onclick="setPeriod('monthly')">เดือนนี้</button>
+<button class="fbtn active" data-period="yearly" onclick="setPeriod('yearly')">ปีนี้</button>
+</div>
+<div class="filter-group">
+<label>สาขา:</label>
+<button class="fbtn active" data-branch="all" onclick="setBranch('all')">ทั้งหมด</button>
+<button class="fbtn" data-branch="cnb" onclick="setBranch('cnb')">มหาราช</button>
+<button class="fbtn" data-branch="csk" onclick="setBranch('csk')">ซีเอสเค</button>
+</div>
+<div class="date-inputs">
+<input type="date" id="dateFrom" placeholder="จากวันที่" onchange="applyDateRange()">
+<input type="date" id="dateTo" placeholder="ถึงวันที่" onchange="applyDateRange()">
+</div>
+<span class="period-info" id="periodInfo"></span>
+</div>
+<div class="content">
+<div id="tab-overview" class="tab-panel active"><div class="loading">กำลังโหลดข้อมูล</div></div>
+<div id="tab-status" class="tab-panel"><div class="loading">กำลังโหลดข้อมูล</div></div>
+<div id="tab-check" class="tab-panel"><div class="loading">กำลังโหลดข้อมูล</div></div>
+<div id="tab-station" class="tab-panel"><div class="loading">กำลังโหลดข้อมูล</div></div>
+<div id="tab-movement" class="tab-panel"><div class="loading">กำลังโหลดข้อมูล</div></div>
+<div id="tab-workflow" class="tab-panel"><div class="loading">กำลังโหลดข้อมูล</div></div>
+<div id="tab-summary" class="tab-panel"><div class="loading">กำลังโหลดข้อมูล</div></div>
+<div id="tab-pmwi" class="tab-panel"><div class="loading">กำลังโหลดข้อมูล PM/WI</div></div>
+<div id="tab-stdtime" class="tab-panel"><div class="loading">กำลังโหลดข้อมูล Standard Time</div></div>
+</div>
+<div id="modal-overlay" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal-box" id="modal-box"></div>
+</div>
+<script>
+var currentTab = 'overview';
+var currentPeriod = 'yearly';
+var currentBranch = 'all';
+var dataCache = {};
+var charts = {};
+var searchQuery = '';
+var tabDataCache = {};
+var STATIONS = {knock:'เคาะ',patch:'โป๊ว',squirt:'พ่น',assemble:'ประกอบ',polish:'ขัดสี',wash:'ล้าง',supQC:'SUP QC',deliver:'ส่งมอบ'};
+var STN_ORDER = ['knock','patch','squirt','assemble','polish','wash','supQC','deliver'];
+var BRANCH = {cnb:'มหาราช (CNB)',csk:'ซีเอสเค (CSK)'};
+
+function switchTab(t){
+  currentTab = t;
+  searchQuery = '';
+  var searchEl = document.getElementById('globalSearch');
+  if(searchEl) searchEl.value = '';
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tab===t)});
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.toggle('active',p.id==='tab-'+t)});
+  loadTab(t);
+}
+function setPeriod(p){
+  currentPeriod = p;
+  document.querySelectorAll('[data-period]').forEach(function(b){b.classList.toggle('active',b.dataset.period===p)});
+  // Clear custom date inputs when switching to a preset period
+  document.getElementById('dateFrom').value = '';
+  document.getElementById('dateTo').value = '';
+  updatePeriodInfo();
+  loadTab(currentTab);
+}
+function setBranch(b){
+  currentBranch = b;
+  document.querySelectorAll('[data-branch]').forEach(function(btn){btn.classList.toggle('active',btn.dataset.branch===b)});
+  loadTab(currentTab);
+}
+function applyDateRange(){
+  // Update period info to show the custom date range
+  var df = document.getElementById('dateFrom').value;
+  var dt = document.getElementById('dateTo').value;
+  var el = document.getElementById('periodInfo');
+  if(df || dt) {
+    el.textContent = '(ช่วงวัน: ' + (df||'...') + ' ถึง ' + (dt||'...') + ')';
+  }
+  loadTab(currentTab);
+}
+function updatePeriodInfo(){
+  var el = document.getElementById('periodInfo');
+  if(currentPeriod==='daily'){var d=new Date();el.textContent='(วันนี้: '+fmtDate(d)+')'}
+  else if(currentPeriod==='monthly'){var d=new Date();el.textContent='(เดือนนี้: '+d.getFullYear()+'-'+pad2(d.getMonth()+1)+')'}
+  else{el.textContent='(ทั้งปี)'}
+}
+function fmtDate(d){if(!d)return'';if(typeof d==='string')return d.substring(0,10);return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())}
+function pad2(n){return n<10?'0'+n:''+n}
+function pct(n,total){if(!total)return'0%';return(n/total*100).toFixed(1)+'%'}
+function numFmt(n){if(n==null)return'-';return Number(n).toLocaleString('th-TH')}
+
+var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
+function loadTab(tab){
+  var el = document.getElementById('tab-'+tab);
+  // PM/WI tab is static HTML, no API call needed
+  if(tab==='pmwi'){
+    el.innerHTML = '<iframe src="'+SCRIPT_URL+'?pmwi=1" style="width:100%;height:calc(100vh - 120px);border:none;background:var(--bg)" sandbox="allow-scripts allow-same-origin"></iframe>';
+    return;
+  }
+  // Standard Time tab is also static HTML in iframe
+  if(tab==='stdtime'){
+    el.innerHTML = '<iframe src="'+SCRIPT_URL+'?stdtime=1" style="width:100%;height:calc(100vh - 120px);border:none;background:var(--bg)" sandbox="allow-scripts allow-same-origin"></iframe>';
+    return;
+  }
+  el.innerHTML = '<div class="loading">กำลังโหลดข้อมูล</div>';
+  var dateFrom = document.getElementById('dateFrom').value || null;
+  var dateTo = document.getElementById('dateTo').value || null;
+  var branch = currentBranch==='all' ? null : currentBranch;
+  // Use fetch to API endpoint (bypasses Caja sandbox issues with google.script.run)
+  var params = '?api=1&tab='+encodeURIComponent(tab)+'&period='+encodeURIComponent(currentPeriod)+'&_t='+Date.now();
+  if(branch) params += '&branch='+encodeURIComponent(branch);
+  if(dateFrom) params += '&dateFrom='+encodeURIComponent(dateFrom);
+  if(dateTo) params += '&dateTo='+encodeURIComponent(dateTo);
+  fetch(SCRIPT_URL+params, {redirect:'follow', cache:'no-store'})
+    .then(function(r){return r.text()})
+    .then(function(t){try{return JSON.parse(t)}catch(e){throw new Error('Invalid JSON')}})
+    .then(function(d){tabDataCache[tab]=d;renderTab(tab,d)})
+    .catch(function(e){el.innerHTML='<div class="section"><p style="color:var(--red)">&#10060; Error: '+e.message+'</p></div>'});
+}
+
+function renderTab(tab,d){
+  var el=document.getElementById('tab-'+tab);
+  // Destroy old charts
+  if(charts[tab]){Object.values(charts[tab]).forEach(function(c){if(c&&c.destroy)c.destroy()});charts[tab]={}}
+  if(tab==='overview')renderOverview(el,d);
+  else if(tab==='status')renderStatus(el,d);
+  else if(tab==='check')renderCheck(el,d);
+  else if(tab==='station')renderStation(el,d);
+  else if(tab==='movement')renderMovement(el,d);
+  else if(tab==='workflow')renderWorkflow(el,d);
+  else if(tab==='summary')renderSummary(el,d);
+}
+
+/* ═══ Overview ═══ */
+function renderOverview(el,d){
+  var s=d.summary||{};
+  var vs=s.vehicleStatus||{};
+  var dv=s.delivery||{};
+  var cnb=vs.cnb||{}, csk=vs.csk||{};
+  var totalIn=(cnb.total||0)+(csk.total||0);
+  var totalDelivered=(cnb.delivered||0)+(csk.delivered||0);
+  var h=srcLinksHtml(d,['main']);
+
+  // Period-based check data
+  var ck=s.yearly||{};
+  if(currentPeriod==='daily')ck=s.daily||{};
+  if(currentPeriod==='monthly')ck=s.monthly||{};
+  var ckTotal=(ck.pass||0)+(ck.fail||0);
+
+  h+='<div class="cards">';
+  h+=kcard('รถในโรงซ่อม',totalIn,'blue');
+  h+=kcard('ส่งมอบ PMG แล้ว',totalDelivered,'green');
+  h+=kcard('ตรวจผ่าน',ck.pass||0,'green');
+  h+=kcard('ตรวจไม่ผ่าน',ck.fail||0,'red');
+  h+=kcard('อัตราผ่าน',ckTotal>0?pct(ck.pass,ckTotal):'0%','blue');
+  h+=kcard('มหาราช (CNB)',cnb.total||0,'purple');
+  h+=kcard('ซีเอสเค (CSK)',csk.total||0,'pink');
+  h+='</div>';
+
+  // Vehicle status chart
+  var statLabels=['เคาะ','โป๊ว','พ่น','ประกอบ','ขัดสี','ล้าง','SUP QC','รอส่งมอบ'];
+  var statColors=['#dc2626','#ea580c','#d97706','#059669','#2563eb','#7c3aed','#db2777','#6366f1'];
+  var cnbStat=[cnb.knocker||0,cnb.filler||0,cnb.spray||0,cnb.assemble||0,cnb.polish||0,cnb.wash||0,cnb.supQC||0,cnb.waitDelivery||0];
+  var cskStat=[csk.knocker||0,csk.filler||0,csk.spray||0,csk.assemble||0,csk.polish||0,csk.wash||0,csk.supQC||0,csk.waitDelivery||0];
+  var totalStat=cnbStat.map(function(v,i){return v+cskStat[i]});
+
+  h+='<div class="section"><h3>🚗 สถานะรถในโรงซ่อม</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  h+='<div><b style="color:var(--accent)">มหาราช: '+(cnb.total||0)+' คัน</b><div style="font-size:12px;color:var(--text2);margin-top:4px">';
+  statLabels.forEach(function(l,i){if(cnbStat[i]>0)h+=l+': <b>'+cnbStat[i]+'</b> '});
+  h+='</div></div>';
+  h+='<div><b style="color:var(--purple)">ซีเอสเค: '+(csk.total||0)+' คัน</b><div style="font-size:12px;color:var(--text2);margin-top:4px">';
+  statLabels.forEach(function(l,i){if(cskStat[i]>0)h+=l+': <b>'+cskStat[i]+'</b> '});
+  h+='</div></div></div></div>';
+
+  // Delivery
+  h+='<div class="section"><h3>🚚 ส่งมอบ PMG</h3><div class="cards">';
+  h+=kcard('ตรงเวลา SUP1',dv.onTimeSUP1||0,'green');
+  h+=kcard('เกินกำหนด SUP1',dv.overdueSUP1||0,'red');
+  h+=kcard('ตรงเวลา SUP2',dv.onTimeSUP2||0,'green');
+  h+=kcard('เกินกำหนด SUP2',dv.overdueSUP2||0,'red');
+  h+='</div></div>';
+
+  // Donut chart
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  h+='<div class="section"><h3>🍩 สถานะรถ</h3><div class="donut-wrap"><canvas id="ov-status"></canvas></div></div>';
+  // Check donut
+  h+='<div class="section"><h3>✅ FinalCheck</h3><div class="donut-wrap"><canvas id="ov-check"></canvas></div></div>';
+  h+='</div>';
+
+  // Cause breakdown
+  var causes=ck.causes||{};
+  if(causes.assembly||causes.paint){
+    h+='<div class="section"><h3>⚠️ สาเหตุไม่ผ่าน</h3><div class="kpi-grid">';
+    var items=[
+      {name:'งานสี',key:'paint',icon:'🎨',color:'var(--blue)'},
+      {name:'อื่นๆ',key:'other',icon:'❓',color:'var(--orange)'},
+      {name:'ขัดสี',key:'polish',icon:'✨',color:'var(--purple)'},
+      {name:'สะอาด',key:'cleaning',icon:'🧹',color:'var(--green)'},
+      {name:'ประกอบ',key:'assembly',icon:'🔩',color:'var(--red)'},
+      {name:'ตัวถัง',key:'body',icon:'🚗',color:'var(--yellow)'}
+    ];
+    items.forEach(function(it){
+      var c=causes[it.key];
+      var cnt=c?(typeof c==='object'?c.count||0:c):0;
+      h+='<div class="kpi-card"><div class="kpi-label">'+it.icon+' '+it.name+'</div><div class="kpi-val" style="color:'+it.color+'">'+cnt+'</div></div>';
+    });
+    h+='</div></div>';
+  }
+
+  el.innerHTML=h;
+  updatePeriodInfo();
+
+  // Render charts
+  var ctx1=document.getElementById('ov-status');
+  if(ctx1){
+    charts.overview={};
+    charts.overview.status=new Chart(ctx1.getContext('2d'),{
+      type:'doughnut',data:{labels:statLabels,datasets:[{data:totalStat,backgroundColor:statColors,borderWidth:0,hoverOffset:8}]},
+      options:{responsive:true,cutout:'55%',plugins:{legend:{position:'bottom',labels:{font:{size:10}}},tooltip:{callbacks:{label:function(c){return c.label+': '+c.raw+' คัน'}}}}}
+    });
+  }
+  var ctx2=document.getElementById('ov-check');
+  if(ctx2 && ckTotal>0){
+    charts.overview.check=new Chart(ctx2.getContext('2d'),{
+      type:'doughnut',data:{labels:['ผ่าน','ไม่ผ่าน'],datasets:[{data:[ck.pass||0,ck.fail||0],backgroundColor:['#059669','#dc2626'],borderWidth:0}]},
+      options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}}
+    });
+  }
+}
+
+/* ═══ Status Tab ═══ */
+function renderStatus(el,d){
+  var s=d.summary||{};
+  var vehicles=d.vehicles||[];
+  var pi=d.periodInfo||{};
+  var total=s.total||vehicles.length;
+  var h=srcLinksHtml(d,['main']);
+  var periodText='';
+  if(currentPeriod==='daily')periodText='(วันนี้: '+(pi.dateFrom||'')+')';
+  else if(currentPeriod==='monthly')periodText='('+(pi.dateFrom||'')+' ถึง '+(pi.dateTo||'')+')';
+  else periodText='(ทั้งปี — รถทุกคันในโรงซ่อม)';
+
+  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">'+periodText+'</div>';
+  h+='<div class="cards">';
+  h+=kcard('รวมรถในโรงซ่อม',total,'blue');
+  h+=kcard('ส่งมอบ PMG แล้ว',s.delivered||0,'green');
+  h+=kcard('เคาะ',s.knocker||0,'red');
+  h+=kcard('โป๊ว',s.filler||0,'orange');
+  h+=kcard('พ่น',s.spray||0,'yellow');
+  h+=kcard('ประกอบ',s.assemble||0,'green');
+  h+=kcard('ขัดสี',s.polish||0,'blue');
+  h+=kcard('ล้าง',s.wash||0,'purple');
+  h+=kcard('SUP QC',s.supQC||0,'pink');
+  h+=kcard('รอส่งมอบ',s.waitDelivery||0,'blue');
+  h+='</div>';
+
+  // Progress bars
+  var stages=[
+    {name:'เคาะ',count:s.knocker||0,color:'#dc2626'},
+    {name:'โป๊ว',count:s.filler||0,color:'#ea580c'},
+    {name:'พ่น',count:s.spray||0,color:'#d97706'},
+    {name:'ประกอบ',count:s.assemble||0,color:'#059669'},
+    {name:'ขัดสี',count:s.polish||0,color:'#2563eb'},
+    {name:'ล้าง',count:s.wash||0,color:'#7c3aed'},
+    {name:'SUP QC',count:s.supQC||0,color:'#db2777'},
+    {name:'รอส่งมอบ',count:s.waitDelivery||0,color:'#6366f1'},
+    {name:'ส่งมอบแล้ว',count:s.delivered||0,color:'#059669'}
+  ];
+  h+='<div class="section"><h3>📊 สัดส่วนสถานะ</h3>';
+  stages.forEach(function(st){
+    var pct=total?(st.count/total*100):0;
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+    h+='<div style="width:70px;font-size:12px;font-weight:600">'+st.name+'</div>';
+    h+='<div style="flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div style="width:'+Math.max(pct,2)+'%;height:100%;background:'+st.color+';border-radius:4px"></div></div>';
+    h+='<div style="width:50px;font-size:12px;text-align:right">'+st.count+' คัน</div></div>';
+  });
+  h+='</div>';
+
+  // Link to Station KPI for full vehicle details
+  h+='<div class="section" style="background:linear-gradient(135deg,#eff6ff,#f0f0ff);border:1px dashed #93c5fd;border-radius:10px;padding:16px 20px;text-align:center">';
+  h+='<div style="font-size:14px;color:var(--accent);font-weight:600;margin-bottom:6px">📋 รายการรถทั้งหมด อยู่ที่แท็บ "สถานีซ่อม KPI"</div>';
+  h+='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">ข้อมูลรถละเอียด (สถานีที่ผ่าน, Cycle Time, วันส่งมอบ, เลื่อนนัด) รวมจาก B2 ทั้ง CNB+CSK — แหล่งข้อมูลหลักเดียว</div>';
+  h+='<button onclick="switchTab(\'station\')" style="background:var(--accent);color:#fff;border:none;padding:8px 24px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,.3)">🔗 ไปยังแท็บ สถานีซ่อม KPI</button>';
+  h+='</div>';
+  el.innerHTML=h;
+}
+
+/* ═══ Check Tab ═══ */
+function renderCheck(el,d){
+  // Determine which check data to show based on current period
+  var periodLabel=currentPeriod==='daily'?'วันนี้':currentPeriod==='monthly'?'เดือนนี้':'ปีนี้';
+  var pi=d.periodInfo||{};
+  var ck=d.yearlyCheck||{};
+  if(currentPeriod==='daily')ck=d.dailyCheck||{};
+  if(currentPeriod==='monthly')ck=d.monthlyCheck||{};
+  // If custom date range was used and checkData was computed, prefer it
+  if(d.checkData && currentPeriod!=='yearly'){
+    ck=d.checkData;
+    periodLabel=(pi.dateFrom||'')+' ถึง '+(pi.dateTo||'');
+  }
+  if(ck.computedFromRaw){
+    periodLabel=(ck.dateFrom||pi.dateFrom||'')+' ถึง '+(ck.dateTo||pi.dateTo||'');
+    if(currentPeriod==='daily') periodLabel='วันนี้ ('+periodLabel+')';
+    if(currentPeriod==='monthly') periodLabel='เดือนนี้ ('+periodLabel+')';
+  }
+  var vs=d.vehicleStatus||{};
+  var cnb=vs.cnb||{}, csk=vs.csk||{};
+  var total=(ck.pass||0)+(ck.fail||0);
+
+  var h=srcLinksHtml(d,['main']);
+  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">'+periodLabel+(ck.computedFromRaw?' (คำนวณจากข้อมูลดิบ)':'')+'</div>';
+  h+='<div class="cards">';
+  h+=kcard('รถตรวจทั้งหมด ('+periodLabel+')',total,'blue');
+  h+=kcard('ผ่าน',ck.pass||0,'green');
+  h+=kcard('ไม่ผ่าน',ck.fail||0,'red');
+  h+=kcard('อัตราผ่าน',total>0?pct(ck.pass,total):'0%','green');
+  h+='</div>';
+
+  // Cause breakdown
+  var causes=ck.causes||{};
+  h+='<div class="section"><h3>⚠️ สาเหตุไม่ผ่าน FinalCheck</h3><div class="kpi-grid">';
+  var causeItems=[
+    {name:'งานสี',key:'paint',icon:'🎨',color:'var(--accent)'},
+    {name:'อื่นๆ',key:'other',icon:'❓',color:'var(--orange)'},
+    {name:'ขัดสี',key:'polish',icon:'✨',color:'var(--purple)'},
+    {name:'ความสะอาด',key:'cleaning',icon:'🧹',color:'var(--green)'},
+    {name:'ประกอบ',key:'assembly',icon:'🔩',color:'var(--red)'},
+    {name:'ตัวถัง',key:'body',icon:'🚗',color:'var(--yellow)'}
+  ];
+  causeItems.forEach(function(it){
+    var c=causes[it.key];
+    var cnt=c?(typeof c==='object'?c.count||0:c):0;
+    var pctVal=c?(typeof c==='object'?c.pct||0:c):0;
+    h+='<div class="kpi-card"><div class="kpi-label">'+it.icon+' '+it.name+'</div><div class="kpi-val" style="color:'+it.color+'">'+cnt+'</div><div class="kpi-sub">'+(typeof c==='object'&&c.pct?(c.pct*100).toFixed(1)+'%':'')+'</div></div>';
+  });
+  h+='</div></div>';
+
+  // Donut chart
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  h+='<div class="section"><h3>🍩 ผล FinalCheck</h3><div class="donut-wrap"><canvas id="ck-donut"></canvas></div></div>';
+  // Branch status
+  h+='<div class="section"><h3>🚗 รถในโรงซ่อม (แยกสาขา)</h3>';
+  h+='<div style="margin-bottom:8px"><b style="color:var(--accent)">มหาราช: '+(cnb.total||0)+' คัน</b><div style="font-size:12px;color:var(--text2)">';
+  ['เคาะ','โป๊ว','พ่น','ประกอบ','ขัดสี','ล้าง'].forEach(function(n,i){
+    var vals=[cnb.knocker,cnb.filler,cnb.spray,cnb.assemble,cnb.polish,cnb.wash];
+    if(vals[i])h+=n+': <b>'+vals[i]+'</b> ';
+  });
+  h+='</div></div>';
+  h+='<div><b style="color:var(--purple)">ซีเอสเค: '+(csk.total||0)+' คัน</b><div style="font-size:12px;color:var(--text2)">';
+  ['เคาะ','โป๊ว','พ่น','ประกอบ','ขัดสี','ล้าง'].forEach(function(n,i){
+    var vals=[csk.knocker,csk.filler,csk.spray,csk.assemble,csk.polish,csk.wash];
+    if(vals[i])h+=n+': <b>'+vals[i]+'</b> ';
+  });
+  h+='</div></div></div></div>';
+
+  el.innerHTML=h;
+
+  // Render check donut
+  var ctx=document.getElementById('ck-donut');
+  if(ctx && total>0){
+    charts.check={};
+    charts.check.donut=new Chart(ctx.getContext('2d'),{
+      type:'doughnut',data:{labels:['ผ่าน','ไม่ผ่าน'],datasets:[{data:[ck.pass||0,ck.fail||0],backgroundColor:['#059669','#dc2626'],borderWidth:0}]},
+      options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}
+    });
+  }
+}
+
+/* ═══ Station KPI Tab ═══ */
+function renderStation(el,d){
+  var cnbV=d.cnb?d.cnb.vehicles||[]:[];
+  var cskV=d.csk?d.csk.vehicles||[]:[];
+  var cnbS=d.cnb?d.cnb.stationStats||[]:[];
+  var cskS=d.csk?d.csk.stationStats||[]:[];
+  var allV=cnbV.concat(cskV);
+  if(currentBranch==='cnb')allV=cnbV;
+  if(currentBranch==='csk')allV=cskV;
+  var cnbTotal=cnbV.length, cskTotal=cskV.length, allTotal=allV.length;
+  var h=srcLinksHtml(d,['cnb','csk']);
+
+  h+='<div class="cards">';
+  h+=kcard('รวมรถทั้งหมด',allTotal,'blue');
+  h+=kcard('มหาราช (CNB)',cnbTotal,'purple');
+  h+=kcard('ซีเอสเค (CSK)',cskTotal,'pink');
+  h+='</div>';
+
+  // Merge station stats
+  var merged={};
+  STN_ORDER.forEach(function(k){merged[k]={cnb:{avgWork:0,avgWait:0,maxWork:0,count:0,dataPoints:0},csk:{avgWork:0,avgWait:0,maxWork:0,count:0,dataPoints:0}}});
+  cnbS.forEach(function(st){if(merged[st.station])merged[st.station].cnb={avgWork:st.avgWorkDays,avgWait:st.avgWaitDays,maxWork:st.maxWorkDays,count:st.vehiclesProcessed,dataPoints:st.totalDataPoints}});
+  cskS.forEach(function(st){if(merged[st.station])merged[st.station].csk={avgWork:st.avgWorkDays,avgWait:st.avgWaitDays,maxWork:st.maxWorkDays,count:st.vehiclesProcessed,dataPoints:st.totalDataPoints}});
+
+  // Station KPI cards
+  h+='<div class="kpi-grid">';
+  STN_ORDER.forEach(function(k){
+    var m=merged[k];
+    var avgAll=0,n=0;
+    if(m.cnb.dataPoints>0){avgAll+=m.cnb.avgWork;n++}
+    if(m.csk.dataPoints>0){avgAll+=m.csk.avgWork;n++}
+    if(n>0)avgAll=avgAll/n;
+    h+='<div class="kpi-card"><div class="kpi-label">'+STATIONS[k]+'</div><div class="kpi-val" style="color:var(--accent);font-size:18px">'+avgAll.toFixed(1)+'</div><div class="kpi-sub">วันเฉลี่ย</div></div>';
+  });
+  h+='</div>';
+
+  // Bar chart: CNB vs CSK
+  h+='<div class="section"><h3>📊 เปรียบเทียบ Cycle Time ตามสถานี (วันเฉลี่ย)</h3><div class="chart-box"><canvas id="st-bar"></canvas></div></div>';
+
+  // Station details table
+  h+='<div class="section"><h3>📋 รายละเอียด Cycle Time ตามสถานี</h3><div class="table-wrap"><table class="stn-table"><thead><tr><th>สถานี</th><th>CNB รถ(ที่ผ่าน)</th><th>CNB เฉลี่ย(วัน)</th><th>CNB รอเฉลี่ย(วัน)</th><th>CSK รถ(ที่ผ่าน)</th><th>CSK เฉลี่ย(วัน)</th><th>CSK รอเฉลี่ย(วัน)</th></tr></thead><tbody>';
+  STN_ORDER.forEach(function(k){
+    var m=merged[k];
+    h+='<tr><td><b>'+STATIONS[k]+'</b></td>';
+    h+='<td>'+(m.cnb.count||'-')+'</td><td>'+(m.cnb.dataPoints>0?m.cnb.avgWork:'-')+'</td><td>'+(m.cnb.dataPoints>0?m.cnb.avgWait:'-')+'</td>';
+    h+='<td>'+(m.csk.count||'-')+'</td><td>'+(m.csk.dataPoints>0?m.csk.avgWork:'-')+'</td><td>'+(m.csk.dataPoints>0?m.csk.avgWait:'-')+'</td></tr>';
+  });
+  h+='</tbody></table></div></div>';
+
+  // Vehicle table with station progress + search
+  var filteredAllV = searchQuery ? allV.filter(function(v){return matchVehicle(v,searchQuery)}) : allV;
+  var stSearchCountText = searchQuery ? filteredAllV.length+'/'+allV.length : '';
+  h+='<div class="section"><h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">🚗 รายการรถทั้งหมด ('+allV.length+' คัน)'+searchBoxHtml('ค้นหา ทะเบียน, ยี่ห้อ, รุ่น, SA, ประกัน...')+'</h3><div class="table-wrap"><table><thead><tr><th>ทะเบียน</th><th>สาขา</th><th>สถานะ</th><th>ยี่ห้อ</th><th>รุ่น</th><th>ประกัน</th><th>SA</th><th>ศูนย์</th><th>กำลังดำเนินการ</th><th>วันเข้า</th><th>วันส่งมอบ</th><th>นัดหมายใหม่</th><th>เลื่อนนัด</th><th>รวม(วัน)</th><th>จัดการ</th></tr></thead><tbody>';
+  var stRowIndex=0;
+  filteredAllV.forEach(function(v){
+    var bc=statusBadge(v.status);
+    var brName=v.branch?BRANCH[v.branch]||v.branch:'-';
+    var br=v.brand||'-', md=v.model||'-', ins=v.insurer||'-';
+    var stationHtml='';
+    if(v.stations){
+      stationHtml='<div class="sp-bar">';
+      ['knock','patch','squirt','assemble','polish'].forEach(function(sk){
+        var st=v.stations[sk];
+        if(!st)st={};
+        if(st.endDate)stationHtml+='<div class="sp done">'+STATIONS[sk].substring(0,2)+'</div>';
+        else if(st.startDate)stationHtml+='<div class="sp current">'+STATIONS[sk].substring(0,2)+'</div>';
+        else stationHtml+='<div class="sp pending"></div>';
+      });
+      // wash, supQC, deliver just show end date
+      ['wash','supQC','deliver'].forEach(function(sk){
+        var st=v.stations[sk];
+        if(!st)st={};
+        if(st.endDate)stationHtml+='<div class="sp done">'+STATIONS[sk].substring(0,2)+'</div>';
+        else stationHtml+='<div class="sp pending"></div>';
+      });
+      stationHtml+='</div>';
+    }
+    // Delivery date from stations.deliver.endDate
+    var deliveryDate='-';
+    if(v.stations && v.stations.deliver && v.stations.deliver.endDate) deliveryDate=v.stations.deliver.endDate;
+
+    // Reschedule badge (clickable)
+    var rsCount=v.rescheduleCount||0;
+    var rsId='rs_stn_'+(stRowIndex++);
+    var rsLabel='';
+    var rsDetailRow='';
+    if(rsCount>0){
+      rsLabel='<span style="background:#fbbf24;color:#78350f;padding:2px 5px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer" onclick="document.getElementById(\''+rsId+'\').style.display=document.getElementById(\''+rsId+'\').style.display===\'none\'?\'table-row\':\'none\'">🔄'+rsCount+' ▾</span>';
+      var rsDetails='<div style="padding:4px 8px">';
+      (v.reschedules||[]).forEach(function(r,i){
+        rsDetails+='<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed #fbbf2444">';
+        rsDetails+='<span style="background:#fbbf24;color:#78350f;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600">ครั้งที่ '+(i+1)+'</span>';
+        rsDetails+='<span style="font-size:12px;font-weight:600">📅 '+(r.date||'ยังไม่กำหนด')+'</span>';
+        if(r.reason) rsDetails+='<span style="font-size:11px;color:#78350f">สาเหตุ: '+r.reason+'</span>';
+        rsDetails+='</div>';
+      });
+      rsDetails+='</div>';
+      rsDetailRow='<tr id="'+rsId+'" style="display:none;background:#fffbeb;border-left:3px solid #fbbf24"><td colspan="14" style="padding:0">'+rsDetails+'</td></tr>';
+    } else {
+      rsLabel='<span style="color:var(--text3);font-size:10px">-</span>';
+    }
+
+    h+='<tr>';
+    h+='<td><b>'+(v.plate||'-')+'</b></td>';
+    h+='<td style="font-size:11px">'+brName+'</td>';
+    h+='<td><span class="badge '+bc+'">'+(v.status||'-')+'</span></td>';
+    h+='<td>'+br+'</td><td>'+md+'</td><td style="font-size:11px">'+ins+'</td>';
+    h+='<td>'+(v.sa||'-')+'</td>';
+    h+='<td style="font-size:11px">'+(v.saCenter||'-')+'</td>';
+    h+='<td>'+stationHtml+'</td>';
+    h+='<td style="font-size:11px">'+(v.repairDate||'-')+'</td>';
+    h+='<td style="font-size:11px">'+deliveryDate+'</td>';
+    // Latest reschedule date = นัดหมายส่งมอบใหม่
+    var newDeliveryDate='-';
+    if(v.reschedules && v.reschedules.length>0){
+      var lastRs=v.reschedules[v.reschedules.length-1];
+      if(lastRs.date) newDeliveryDate=lastRs.date;
+    }
+    h+='<td style="font-size:11px">'+(rsCount>0?'<span style="color:#92400e;font-weight:600">'+newDeliveryDate+'</span>':'-')+'</td>';
+    h+='<td style="text-align:center">'+rsLabel+'</td>';
+    h+='<td><b>'+(v.totalDays!=null?v.totalDays:'-')+'</b></td>';
+    h+='<td style="font-size:10px;white-space:nowrap">'+actionButtonsHtml(v.plate,v.branch||v.sup,v.status||'',v.rescheduleCount||0)+'</td>';
+    h+='</tr>';
+    if(rsDetailRow) h+=rsDetailRow;
+  });
+  h+='</tbody></table></div>'+(stSearchCountText?'<div style="margin-top:4px;font-size:11px;color:var(--text3)">แสดง '+stSearchCountText+' คัน</div>':'')+'</div>';
+
+  el.innerHTML=h;
+
+  // Render bar chart
+  var barCtx=document.getElementById('st-bar');
+  if(barCtx){
+    charts.station={};
+    var labels=STN_ORDER.map(function(k){return STATIONS[k]});
+    var cnbData=STN_ORDER.map(function(k){var m=merged[k];return m.cnb.dataPoints>0?+m.cnb.avgWork.toFixed(2):0});
+    var cskData=STN_ORDER.map(function(k){var m=merged[k];return m.csk.dataPoints>0?+m.csk.avgWork.toFixed(2):0});
+    charts.station.bar=new Chart(barCtx.getContext('2d'),{
+      type:'bar',data:{labels:labels,datasets:[
+        {label:'มหาราช (CNB)',data:cnbData,backgroundColor:'rgba(37,99,235,.7)',borderRadius:4},
+        {label:'ซีเอสเค (CSK)',data:cskData,backgroundColor:'rgba(124,58,237,.7)',borderRadius:4}
+      ]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{font:{size:11}}}},scales:{y:{beginAtZero:true,title:{display:true,text:'วันเฉลี่ย'}},x:{ticks:{font:{size:10}}}}}
+    });
+  }
+}
+
+/* ═══ Movement Tab — v5: สรุปงานเสร็จรายวัน แยกตามสถานี + คลิกดูรายละเอียด ═══ */
+function renderMovement(el,d){
+  var dailyData=d.dailyData||[];
+  var stationTotals=d.stationTotals||{};
+  var stationKeys=d.stationKeys||['knock','patch','squirt','assemble','polish','wash','deliver'];
+  var stationNames=d.stationNames||{knock:'เคาะ',patch:'โป๊ว',squirt:'พ่น',assemble:'ประกอบ',polish:'ขัดสี',wash:'ล้าง',deliver:'ส่งมอบ'};
+  var totalDays=d.totalDays||0;
+  var showBranch=currentBranch;
+
+  // ── Show active date range ──
+  var dateFrom=document.getElementById('dateFrom').value||'';
+  var dateTo=document.getElementById('dateTo').value||'';
+  var rangeLabel='';
+  if(dateFrom||dateTo){
+    rangeLabel='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">📅 ช่วงวัน: '+(dateFrom||'...')+' ถึง '+(dateTo||'...')+' ('+totalDays+' วัน)</div>';
+  } else if(currentPeriod==='daily'){
+    rangeLabel='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">📅 วันนี้</div>';
+  } else if(currentPeriod==='monthly'){
+    rangeLabel='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">📅 เดือนนี้</div>';
+  } else {
+    rangeLabel='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">📅 ทั้งปี ('+totalDays+' วันทำงาน)</div>';
+  }
+
+  // ── KPI summary cards ──
+  var grandCnbCount=0,grandCskCount=0,grandCnbWage=0,grandCskWage=0;
+  for(var stk=0;stk<stationKeys.length;stk++){
+    var st=stationTotals[stationKeys[stk]];
+    if(st){grandCnbCount+=st.cnbCount;grandCskCount+=st.cskCount;grandCnbWage+=st.cnbWages;grandCskWage+=st.cskWages;}
+  }
+  var grandCount=showBranch==='cnb'?grandCnbCount:showBranch==='csk'?grandCskCount:grandCnbCount+grandCskCount;
+  var grandWage=showBranch==='cnb'?grandCnbWage:showBranch==='csk'?grandCskWage:grandCnbWage+grandCskWage;
+
+  var h=srcLinksHtml(d,['cnb','csk'])+rangeLabel;
+  h+='<div class="cards">';
+  h+=kcard('รวมงานเสร็จ',grandCount,'blue');
+  h+=kcard('มหาราช (CNB)',grandCnbCount,'purple');
+  h+=kcard('ซีเอสเค (CSK)',grandCskCount,'pink');
+  h+=kcard('รวมค่าแรง (฿)',numFmt(grandWage),'green');
+  h+=kcard('จำนวนวันทำงาน',totalDays,'orange');
+  h+='</div>';
+
+  // ── Station-level KPI cards ──
+  var stationColors={knock:'#dc2626',patch:'#ea580c',squirt:'#d97706',assemble:'#059669',polish:'#2563eb',wash:'#7c3aed',deliver:'#059669'};
+  h+='<h3 style="margin:14px 0 8px;font-size:15px;color:var(--accent)">🔧 สรุปงานเสร็จแยกตามสถานี</h3>';
+  h+='<div class="kpi-grid">';
+  stationKeys.forEach(function(k){
+    var st=stationTotals[k]||{name:stationNames[k]||k,cnbCount:0,cskCount:0,cnbWages:0,cskWages:0};
+    var cnt=showBranch==='cnb'?st.cnbCount:showBranch==='csk'?st.cskCount:st.cnbCount+st.cskCount;
+    var wage=showBranch==='cnb'?st.cnbWages:showBranch==='csk'?st.cskWages:st.cnbWages+st.cskWages;
+    h+='<div class="kpi-card" style="border-left:3px solid '+(stationColors[k]||'#666')+';cursor:pointer" onclick="toggleStationDetail(\''+k+'\')">';
+    h+='<div class="kpi-label">'+(stationNames[k]||k)+'</div>';
+    h+='<div class="kpi-val" style="color:'+(stationColors[k]||'var(--accent)')+';font-size:22px">'+cnt+'</div>';
+    h+='<div class="kpi-sub">ค่าแรง '+numFmt(wage)+' ฿</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+
+  // ── Hidden vehicle detail panels for each station (with search filtering) ──
+  stationKeys.forEach(function(k){
+    var allStationVehicles = [];
+    dailyData.forEach(function(day){
+      ['cnb','csk'].forEach(function(bk){
+        var sd=day[bk];
+        if(!sd||!sd[k])return;
+        sd[k].vehicles.forEach(function(v){
+          allStationVehicles.push({v:v,bk:bk,day:day});
+        });
+      });
+    });
+    var filteredStationVehicles = searchQuery ? allStationVehicles.filter(function(item){return matchVehicle(item.v,searchQuery)}) : allStationVehicles;
+    var mvStCountText = searchQuery ? filteredStationVehicles.length+'/'+allStationVehicles.length : '';
+    h+='<div id="station-detail-'+k+'" style="display:none" class="section"><h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">📋 รายละเอียดรถงาน'+(stationNames[k]||k)+searchBoxHtml('ค้นหา ทะเบียน, SA, ประกัน...')+'</h3>';
+    h+='<table><thead><tr><th>ทะเบียน</th><th>สาขา</th><th>SA</th><th>ศูนย์</th><th>ยี่ห้อ</th><th>รุ่น</th><th>ประกัน</th><th>วันเสร็จ</th><th>ค่าแรงสุทธิ</th></tr></thead><tbody>';
+    filteredStationVehicles.forEach(function(item){
+      var v=item.v;
+      var brName=item.bk==='cnb'?'มหาราช':'ซีเอสเค';
+      h+='<tr><td><b>'+v.plate+'</b></td><td>'+brName+'</td><td>'+(v.sa||'-')+'</td><td>'+(v.saCenter||'-')+'</td><td>'+(v.brand||'-')+'</td><td>'+(v.model||'-')+'</td><td style="font-size:11px">'+(v.insurer||'-')+'</td><td>'+fmtDateShort(v.endDate)+'</td><td style="color:var(--green);font-weight:600">'+numFmt(v.netWage)+'</td></tr>';
+    });
+    h+='</tbody></table>'+(mvStCountText?'<div style="margin-top:4px;font-size:11px;color:var(--text3)">แสดง '+mvStCountText+' คัน</div>':'')+'</div>';
+  });
+
+  // ── Bar chart: completions by station ──
+  h+='<div class="section"><h3>📊 เปรียบเทียบจำนวนงานเสร็จตามสถานี</h3><div class="chart-box"><canvas id="mv-bar"></canvas></div></div>';
+
+  // ── Daily completion tables: CNB (left) + CSK (right) ──
+  h+='<div class="section"><h3>📅 รายวัน — งานเสร็จแยกตามสถานี <small style="color:var(--text3)">(คลิกตัวเลขเพื่อดูรายละเอียดรถ)</small></h3>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+
+  // Helper: build one daily table for a branch
+  function buildDailyTable(branchKey, branchName, branchColor){
+    var gtCount={}, gtWage={}, gtTotalC=0, gtTotalW=0;
+    stationKeys.forEach(function(k){gtCount[k]=0;gtWage[k]=0;});
+    var rows='';
+    dailyData.forEach(function(day){
+      var bk=day[branchKey]||{};
+      var dayC=0, dayW=0;
+      rows+='<tr><td style="font-weight:600;font-size:12px">'+fmtDateShort(day.date)+'</td>';
+      stationKeys.forEach(function(k){
+        var st=bk[k];
+        if(st&&st.count>0){
+          gtCount[k]+=st.count; gtWage[k]+=st.wages;
+          dayC+=st.count; dayW+=st.wages;
+          rows+='<td style="text-align:center;font-size:12px"><b class="clickable" onclick="showDayStationDetail(\''+day.date+'\',\''+branchKey+'\',\''+k+'\')" style="cursor:pointer;color:'+branchColor+'">'+st.count+'</b><br><span style="color:var(--green);font-size:11px">'+numFmt(st.wages)+'฿</span></td>';
+        }else{
+          rows+='<td style="text-align:center;color:var(--text3);font-size:11px">-</td>';
+        }
+      });
+      gtTotalC+=dayC; gtTotalW+=dayW;
+      rows+='<td style="text-align:center;font-weight:700;font-size:12px">'+dayC+'</td>';
+      rows+='<td style="text-align:right;font-weight:700;color:var(--green);font-size:12px">'+numFmt(dayW)+'</td>';
+      rows+='</tr>';
+    });
+    // Total row
+    var totalRow='<tr style="font-weight:bold;background:'+branchColor+'11"><td>รวม</td>';
+    stationKeys.forEach(function(k){totalRow+='<td style="text-align:center;font-size:11px">'+gtCount[k]+'<br><span style="color:var(--green);font-size:10px">'+numFmt(gtWage[k])+'฿</span></td>';});
+    totalRow+='<td style="text-align:center">'+gtTotalC+'</td>';
+    totalRow+='<td style="text-align:right;color:var(--green)">'+numFmt(gtTotalW)+'</td></tr>';
+
+    var th='<th style="min-width:60px;font-size:11px">วันที่</th>';
+    stationKeys.forEach(function(k){th+='<th style="font-size:11px">'+(stationNames[k]||k)+'<br><small style="color:var(--text3)">คัน/฿</small></th>';});
+    th+='<th>รวม<br>คัน</th><th>รวม<br>ค่าแรง</th>';
+
+    return '<div style="border:1px solid '+branchColor+'33;border-radius:8px;padding:8px;overflow-x:auto"><h4 style="margin:0 0 6px;color:'+branchColor+';font-size:14px">'+branchName+'</h4><table class="stn-table" style="font-size:12px"><thead><tr>'+th+'</tr></thead><tbody>'+rows+totalRow+'</tbody></table></div>';
+  }
+
+  h+=buildDailyTable('cnb','มหาราช (CNB)','var(--accent)');
+  h+=buildDailyTable('csk','ซีเอสเค (CSK)','var(--purple)');
+  h+='</div></div>';
+
+  // ── Day/Station detail popup (hidden) ──
+  h+='<div id="day-detail-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;overflow:auto" onclick="if(event.target===this)this.style.display=\'none\'">';
+  h+='<div style="background:#fff;max-width:800px;margin:40px auto;border-radius:12px;padding:20px;box-shadow:0 4px 20px rgba(0,0,0,.3)">'; 
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
+  h+='<h3 id="day-detail-title" style="margin:0;color:var(--accent)">📋 รายละเอียด</h3>';
+  h+='<button onclick="document.getElementById(\'day-detail-modal\').style.display=\'none\'" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text3)">&times;</button>';
+  h+='</div>';
+  h+='<div id="day-detail-content"></div>';
+  h+='</div></div>';
+
+  // Store movement data as global variable for click handlers (Caja strips <script type="application/json">)
+  window._movementDailyData=dailyData;
+
+  el.innerHTML=h;
+
+  // Render bar chart
+  var barCtx=document.getElementById('mv-bar');
+  if(barCtx && typeof Chart!=='undefined'){
+    charts.movement={};
+    var labels=stationKeys.map(function(k){return stationNames[k]||k});
+    var cnbData=stationKeys.map(function(k){return (stationTotals[k]||{}).cnbCount||0});
+    var cskData=stationKeys.map(function(k){return (stationTotals[k]||{}).cskCount||0});
+    charts.movement.bar=new Chart(barCtx.getContext('2d'),{
+      type:'bar',data:{labels:labels,datasets:[
+        {label:'มหาราช (CNB)',data:cnbData,backgroundColor:'rgba(37,99,235,.7)',borderRadius:4},
+        {label:'ซีเอสเค (CSK)',data:cskData,backgroundColor:'rgba(124,58,237,.7)',borderRadius:4}
+      ]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{font:{size:11}}}},scales:{y:{beginAtZero:true,title:{display:true,text:'จำนวนคันงานเสร็จ'}},x:{ticks:{font:{size:10}}}}}
+    });
+  }
+}
+
+// Toggle station detail KPI card
+function toggleStationDetail(stationKey){
+  var el=document.getElementById('station-detail-'+stationKey);
+  if(!el)return;
+  el.style.display=el.style.display==='none'?'block':'none';
+}
+
+// Show day/station detail popup
+function showDayStationDetail(dateKey,branchKey,stationKey){
+  var dailyData=window._movementDailyData||[];
+  var day=null;
+  for(var i=0;i<dailyData.length;i++){if(dailyData[i].date===dateKey){day=dailyData[i];break;}}
+  if(!day)return;
+  var brData=day[branchKey];
+  if(!brData||!brData[stationKey])return;
+  var vehicles=brData[stationKey].vehicles||[];
+  var stationNames={knock:'เคาะ',patch:'โป๊ว',squirt:'พ่น',assemble:'ประกอบ',polish:'ขัดสี',wash:'ล้าง',deliver:'ส่งมอบ'};
+  var branchNames={cnb:'มหาราช (CNB)',csk:'ซีเอสเค (CSK)'};
+  var totalWage=0;
+  var h='<table style="width:100%"><thead><tr><th>ทะเบียน</th><th>ยี่ห้อ</th><th>รุ่น</th><th>SA</th><th>ศูนย์</th><th>ประกัน</th><th style="text-align:right">ค่าแรงสุทธิ</th></tr></thead><tbody>';
+  vehicles.forEach(function(v){
+    totalWage+=v.netWage;
+    h+='<tr>';
+    h+='<td><b>'+v.plate+'</b></td>';
+    h+='<td>'+(v.brand||'-')+'</td>';
+    h+='<td>'+(v.model||'-')+'</td>';
+    h+='<td>'+(v.sa||'-')+'</td>';
+    h+='<td>'+(v.saCenter||'-')+'</td>';
+    h+='<td style="font-size:11px">'+(v.insurer||'-')+'</td>';
+    h+='<td style="text-align:right;font-weight:600;color:var(--green)">'+Number(v.netWage).toLocaleString('th-TH')+'</td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  h+='<div style="margin-top:10px;padding:10px;background:#f0f4ff;border-radius:8px;text-align:right;font-weight:700;font-size:16px;color:var(--green)">รวมค่าแรง: '+Number(totalWage).toLocaleString('th-TH')+' ฿</div>';
+  document.getElementById('day-detail-title').textContent='📋 '+fmtDateShortD(dateKey)+' | '+branchNames[branchKey]+' | งาน'+stationNames[stationKey]+' ('+vehicles.length+' คัน)';
+  document.getElementById('day-detail-content').innerHTML=h;
+  document.getElementById('day-detail-modal').style.display='block';
+}
+
+function fmtDateShortD(ds){
+  if(!ds)return'-';
+  var p=ds.split('-');
+  if(p.length!==3)return ds;
+  return parseInt(p[2],10)+'/'+parseInt(p[1],10)+'/'+(parseInt(p[0],10)-1957);
+}
+
+function fmtDateShort(ds){
+  if(!ds)return'';
+  if(typeof ds==='string'&&ds.length===10){
+    var p=ds.split('-');
+    return parseInt(p[2],10)+'/'+parseInt(p[1],10)+'/'+(parseInt(p[0],10)-1957);
+  }
+  return String(ds).substring(0,10);
+}
+
+/* ═══ Workflow Movement Tab ═══ */
+function renderWorkflow(el,d){
+  var vehicles=(d.vehicles||[]).filter(function(v){return v.delivered!==1&&v.status!=='ส่งมอบแล้ว'});
+  var STATION_ORDER=['เคาะ','โป๊ว','พ่น','ประกอบ','ขัดสี','ล้าง','SUP QC','SUP แก้ไขงาน','รอส่งมอบ'];
+  var STATION_COLORS={'เคาะ':'#ef4444','โป๊ว':'#f97316','พ่น':'#eab308','ประกอบ':'#22c55e','ขัดสี':'#3b82f6','ล้าง':'#a855f7','SUP QC':'#ec4899','SUP แก้ไขงาน':'#f43f5e','รอส่งมอบ':'#06b6d4'};
+  var STATION_ICONS={'เคาะ':'🔨','โป๊ว':'🧹','พ่น':'🎨','ประกอบ':'🔧','ขัดสี':'💎','ล้าง':'🚿','SUP QC':'🔍','SUP แก้ไขงาน':'⚠️','รอส่งมอบ':'🚚'};
+  var STATUS_SHORT={'เคาะ':'เคาะ','โป๊ว':'โป๊ว','พ่น':'พ่น','ประกอบ':'ประกอบ','ขัดสี':'ขัดสี','ล้าง':'ล้าง','SUP QC':'QC','SUP แก้ไขงาน':'แก้งาน','รอส่งมอบ':'รอส่ง'};
+  var POLISH_IDX=4; // ขัดสี index in STATION_ORDER
+  var today=new Date(); today.setHours(0,0,0,0);
+
+  // ── Compute risk for each vehicle ──
+  var rowIndex=0; // global row counter for unique IDs
+  vehicles.forEach(function(v){
+    var statusIdx=STATION_ORDER.indexOf(v.status);
+    v._statusIdx=statusIdx;
+    v._isAtRisk=false;
+    v._riskDays=null;
+    if(v.completionDate && statusIdx>=0){
+      var cd=new Date(v.completionDate); cd.setHours(0,0,0,0);
+      var deadline=new Date(cd.getTime()); deadline.setDate(deadline.getDate()-2);
+      v._riskDays=Math.round((cd-today)/(86400000));
+      if(statusIdx<POLISH_IDX && deadline<=today){
+        v._isAtRisk=true;
+      }
+    }
+  });
+
+  // ── Group by status ──
+  var groups={};
+  STATION_ORDER.forEach(function(s){groups[s]=[]});
+  var otherGroup=[];
+  vehicles.forEach(function(v){
+    if(groups[v.status])groups[v.status].push(v);
+    else otherGroup.push(v);
+  });
+
+  var atRiskCount=vehicles.filter(function(v){return v._isAtRisk}).length;
+  var cnbCount=vehicles.filter(function(v){return v.branch==='CNB'}).length;
+  var cskCount=vehicles.filter(function(v){return v.branch==='CSK'}).length;
+
+  // ── KPI Cards ──
+  var rescheduledCount=vehicles.filter(function(v){return v.rescheduleCount>0}).length;
+  var h=srcLinksHtml(d,['main'])+'<div class="cards">';
+  h+=kcard('รถในระหว่างซ่อม',vehicles.length,'blue');
+  h+=kcard('มหาราช (CNB)',cnbCount,'purple');
+  h+=kcard('ซีเอสเค (CSK)',cskCount,'pink');
+  h+='<div class="card red"><div class="label">⚠️ เสี่ยงเสร็จไม่ทัน</div><div class="value" style="font-size:28px">'+atRiskCount+'</div><div class="label" style="font-size:10px">นัดช่างเสร็จ -2วัน ยังไม่ถึงขัดสี</div></div>';
+  h+='<div class="card" style="background:#fef3c7;border-color:#fbbf24"><div class="label" style="color:#92400e">🔄 เลื่อนนัดส่งมอบ</div><div class="value" style="color:#92400e">'+rescheduledCount+'</div><div class="label" style="font-size:10px;color:#92400e">จาก '+vehicles.length+' คัน</div></div>';
+  h+='</div>';
+
+  // ── Pipeline progress overview ──
+  h+='<div class="section">';
+  h+='<h3 style="margin:0 0 10px;font-size:15px;color:var(--accent)">📊 จำนวนรถแยกตามสถานี</h3>';
+  h+='<div style="display:flex;align-items:center;gap:0;overflow-x:auto;padding:8px 0">';
+
+  var totalV=vehicles.length;
+  STATION_ORDER.forEach(function(s){
+    var cnt=groups[s]?groups[s].length:0;
+    var pct=totalV>0?(cnt/totalV*100):0;
+    var col=STATION_COLORS[s]||'#999';
+    var icon=STATION_ICONS[s]||'';
+    h+='<div style="text-align:center;flex:1;min-width:70px;position:relative">';
+    h+='<div style="font-size:10px;color:var(--text3);margin-bottom:2px">'+icon+' '+STATUS_SHORT[s]+'</div>';
+    h+='<div style="font-size:22px;font-weight:700;color:'+col+'">'+cnt+'</div>';
+    h+='<div style="height:4px;border-radius:2px;background:'+col+';margin:4px auto;width:80%;opacity:'+Math.max(0.2,pct/30)+'"></div>';
+    h+='</div>';
+    if(s!=='รอส่งมอบ') h+='<div style="color:var(--text3);font-size:14px;align-self:center;padding-bottom:16px">→</div>';
+  });
+  h+='</div></div>';
+
+  // ── At-risk vehicles (RED section) with search ──
+  var riskVehicles=vehicles.filter(function(v){return v._isAtRisk}).sort(function(a,b){
+    return(a._riskDays||0)-(b._riskDays||0);
+  });
+  var filteredRiskVehicles = searchQuery ? riskVehicles.filter(function(v){return matchVehicle(v,searchQuery)}) : riskVehicles;
+
+  if(filteredRiskVehicles.length>0){
+    h+='<div class="section" style="border:2px solid #ef4444;border-radius:10px;background:#fef2f2">';
+    h+='<h3 style="margin:0 0 8px;color:#dc2626;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">🔴 รถที่คาดว่าเสร็จไม่ทัน ('+riskVehicles.length+' คัน)'+searchBoxHtml('ค้นหา ทะเบียน, SA, ประกัน...')+'</h3>';
+    h+='<p style="margin:0 0 10px;font-size:11px;color:#991b1b">เกณฑ์: นัดช่างเสร็จ − 2 วัน แล้วยังไม่ถึงสถานะขัดสี ⇒ เสี่ยงส่งมอบล่าช้า</p>';
+    h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
+    h+='<thead><tr style="background:#fee2e2">';
+    h+='<th style="padding:6px 8px;text-align:left">ทะเบียน</th>';
+    h+='<th style="padding:6px 8px">สาขา</th>';
+    h+='<th style="padding:6px 8px">สถานะปัจจุบัน</th>';
+    h+='<th style="padding:6px 8px">นัดช่างเสร็จ</th>';
+    h+='<th style="padding:6px 8px">นัดส่งมอบ</th>';
+    h+='<th style="padding:6px 8px">เลื่อนนัด</th>';
+    h+='<th style="padding:6px 8px">เหลืออีก</th>';
+    h+='<th style="padding:6px 8px">SA</th>';
+    h+='<th style="padding:6px 8px">ประกัน</th>';
+    h+='<th style="padding:6px 8px;text-align:center">ความคืบหน้า</th>';
+    h+='<th style="padding:6px 8px;font-size:11px">จัดการ</th>';
+    h+='</tr></thead><tbody>';
+
+    filteredRiskVehicles.forEach(function(v){
+      var sIdx=v._statusIdx>=0?v._statusIdx:0;
+      var bg=v.branch==='CNB'?'#f5f3ff':'#fdf2f8';
+      var brCol=v.branch==='CNB'?'#7c3aed':'#ec4899';
+      // Progress bar
+      var totalStations=STATION_ORDER.length;
+      var pct=Math.round((sIdx+1)/totalStations*100);
+      var progress=pct;
+      var barH='<div style="position:relative;height:20px;background:#e5e7eb;border-radius:10px;overflow:hidden;min-width:120px">';
+      barH+='<div style="height:100%;width:'+Math.max(2,pct)+'%;background:'+STATION_COLORS[v.status]+';border-radius:10px;transition:width .3s"></div>';
+      barH+='<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:10px;font-weight:600;line-height:20px;color:#000">'+STATUS_SHORT[v.status]+' '+pct+'%</div>';
+      // Red danger zone marker at polish position
+      var polishPct=(POLISH_IDX+1)/(STATION_ORDER.length)*100;
+      barH+='<div style="position:absolute;top:0;left:'+polishPct+'%;height:100%;width:2px;background:#ef4444"></div>';
+      barH+='</div>';
+
+      var daysLeft=v._riskDays;
+      var daysLabel='';
+      if(daysLeft!==null){
+        if(daysLeft<0) daysLabel='<span style="color:#dc2626;font-weight:700">เลย '+Math.abs(daysLeft)+' วัน</span>';
+        else if(daysLeft===0) daysLabel='<span style="color:#dc2626;font-weight:700">วันนี้!</span>';
+        else daysLabel='<span style="color:#f97316;font-weight:600">'+daysLeft+' วัน</span>';
+      }
+
+      // Reschedule badge (clickable to expand details)
+      var rsCount=v.rescheduleCount||0;
+      var rsId='rs_risk_'+(rowIndex++);
+      var rsLabel='';
+      if(rsCount>0){
+        rsLabel='<span id="'+rsId+'_btn" style="background:#fbbf24;color:#78350f;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer" onclick="document.getElementById(\''+rsId+'\').style.display=document.getElementById(\''+rsId+'\').style.display===\'none\'?\'table-row\':\'none\'">🔄'+rsCount+' ▾</span>';
+      } else {
+        rsLabel='<span style="color:var(--text3);font-size:11px">-</span>';
+      }
+      // Reschedule detail row
+      var rsDetailRow='';
+      if(rsCount>0){
+        var rsDetails='<div style="padding:4px 8px">';
+        (v.reschedules||[]).forEach(function(r,i){
+          rsDetails+='<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed #fbbf2444">';
+          rsDetails+='<span style="background:#fbbf24;color:#78350f;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600">ครั้งที่ '+(i+1)+'</span>';
+          rsDetails+='<span style="font-size:12px;font-weight:600">📅 '+(r.date||'ยังไม่กำหนด')+'</span>';
+          if(r.reason) rsDetails+='<span style="font-size:11px;color:#78350f">สาเหตุ: '+r.reason+'</span>';
+          rsDetails+='</div>';
+        });
+        rsDetails+='</div>';
+        rsDetailRow='<tr id="'+rsId+'" style="display:none;background:#fffbeb;border-left:3px solid #fbbf24"><td colspan="11" style="padding:0">'+rsDetails+'</td></tr>';
+      }
+
+      h+='<tr style="background:'+bg+';border-left:3px solid '+brCol+'">';
+      h+='<td style="padding:6px 8px;font-weight:700;font-size:13px">'+v.plate+'</td>';
+      h+='<td style="padding:6px 8px;text-align:center"><span style="background:'+brCol+';color:#fff;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600">'+v.branch+'</span></td>';
+      h+='<td style="padding:6px 8px;text-align:center"><span style="background:'+STATION_COLORS[v.status]+';color:#fff;padding:2px 8px;border-radius:4px;font-size:11px">'+(STATION_ICONS[v.status]||'')+' '+v.status+'</span></td>';
+      h+='<td style="padding:6px 8px;text-align:center;font-size:12px">'+fmtDateShort(v.completionDate)+'</td>';
+      h+='<td style="padding:6px 8px;text-align:center;font-size:12px">'+fmtDateShort(v.deliveryDate)+'</td>';
+      h+='<td style="padding:6px 8px;text-align:center">'+rsLabel+'</td>';
+      h+='<td style="padding:6px 8px;text-align:center">'+daysLabel+'</td>';
+      h+='<td style="padding:6px 8px;font-size:12px">'+(v.sa||'-')+'</td>';
+      h+='<td style="padding:6px 8px;font-size:11px">'+(v.insurance||'-')+'</td>';
+      h+='<td style="padding:6px 8px">'+barH+'</td>';
+      h+='<td style="padding:6px 8px;font-size:10px;white-space:nowrap">'+actionButtonsHtml(v.plate,v.branch,v.status||'',v.rescheduleCount||0)+'</td>';
+      h+='</tr>';
+      if(rsDetailRow) h+=rsDetailRow;
+    });
+    h+='</tbody></table></div></div>';
+  }
+
+  // ── All vehicles by status (pipeline swimlanes) with search ──
+  h+='<div class="section">';
+  h+='<h3 style="margin:0 0 10px;font-size:15px;color:var(--accent);display:flex;align-items:center;gap:8px;flex-wrap:wrap">🚗 รถในระหว่างซ่อม — ตามสถานะ'+searchBoxHtml('ค้นหา ทะเบียน, SA, ประกัน...')+'</h3>';
+
+  // Branch filter
+  var showBranch=currentBranch;
+  var filteredVehicles=showBranch==='all'?vehicles:vehicles.filter(function(v){return v.branch===(showBranch==='cnb'?'CNB':'CSK')});
+
+  STATION_ORDER.forEach(function(s){
+    var grp=groups[s]||[];
+    if(showBranch!=='all') grp=grp.filter(function(v){return v.branch===(showBranch==='cnb'?'CNB':'CSK')});
+    if(searchQuery) grp=grp.filter(function(v){return matchVehicle(v,searchQuery)});
+    if(grp.length===0) return;
+
+    var col=STATION_COLORS[s]||'#999';
+    var icon=STATION_ICONS[s]||'';
+    var riskInGrp=grp.filter(function(v){return v._isAtRisk}).length;
+
+    h+='<div style="margin-bottom:12px;border:1px solid '+col+'44;border-radius:8px;overflow:hidden">';
+    h+='<div style="background:'+col+'18;padding:8px 12px;display:flex;align-items:center;gap:8px;cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'">';
+    h+='<span style="font-size:16px">'+icon+'</span>';
+    h+='<span style="font-weight:700;font-size:14px;color:'+col+'">'+s+'</span>';
+    h+='<span style="background:'+col+';color:#fff;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600">'+grp.length+'</span>';
+    if(riskInGrp>0) h+='<span style="background:#ef4444;color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">⚠️ '+riskInGrp+' เสี่ยง</span>';
+    h+='<span style="margin-left:auto;font-size:11px;color:var(--text3)">▼ คลิกเพื่อขยาย</span>';
+    h+='</div>';
+
+    // Collapsible vehicle list
+    h+='<div style="padding:8px;overflow-x:auto">';
+    h+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    h+='<thead><tr style="background:'+col+'11">';
+    h+='<th style="padding:4px 8px;text-align:left;font-size:11px">ทะเบียน</th>';
+    h+='<th style="padding:4px 8px;font-size:11px">สาขา</th>';
+    h+='<th style="padding:4px 8px;font-size:11px">นัดช่างเสร็จ</th>';
+    h+='<th style="padding:4px 8px;font-size:11px">นัดส่งมอบ</th>';
+    h+='<th style="padding:4px 8px;font-size:11px">เลื่อนนัด</th>';
+    h+='<th style="padding:4px 8px;font-size:11px">เหลืออีก</th>';
+    h+='<th style="padding:4px 8px;font-size:11px">SA</th>';
+    h+='<th style="padding:4px 8px;font-size:11px">ประกัน</th>';
+    h+='<th style="padding:4px 8px;font-size:11px;text-align:center">ความคืบหน้า</th>';
+    h+='<th style="padding:4px 8px;font-size:11px">จัดการ</th>';
+    h+='</tr></thead><tbody>';
+
+    // Sort: at-risk first, then by completion date
+    grp.sort(function(a,b){
+      if(a._isAtRisk!==b._isAtRisk) return a._isAtRisk?-1:1;
+      return (a.completionDate||'').localeCompare(b.completionDate||'');
+    });
+
+    grp.forEach(function(v){
+      var sIdx=v._statusIdx>=0?v._statusIdx:0;
+      var totalStations=STATION_ORDER.length;
+      var pct=Math.round((sIdx+1)/totalStations*100);
+      var brCol=v.branch==='CNB'?'#7c3aed':'#ec4899';
+      var rowBg=v._isAtRisk?'#fef2f2':'';
+
+      // Days left
+      var daysLeft=v._riskDays;
+      var daysLabel='-';
+      if(v.completionDate){
+        var cd=new Date(v.completionDate); cd.setHours(0,0,0,0);
+        var diff=Math.round((cd-today)/86400000);
+        if(diff<0) daysLabel='<span style="color:#dc2626;font-weight:700">เลย '+Math.abs(diff)+' วัน</span>';
+        else if(diff===0) daysLabel='<span style="color:#dc2626;font-weight:700">วันนี้!</span>';
+        else if(diff<=2&&!v._isAtRisk) daysLabel='<span style="color:#f97316">'+diff+' วัน</span>';
+        else daysLabel=diff+' วัน';
+      }
+
+      // Progress dots
+      var dots='<div style="display:flex;gap:2px;align-items:center;justify-content:center">';
+      STATION_ORDER.forEach(function(st,si){
+        var dotCol='#e5e7eb';
+        var dotSize=6;
+        if(v.status===st){dotCol=STATION_COLORS[st];dotSize=8;}
+        else if(si<sIdx){dotCol=STATION_COLORS[st];dotSize=5;}
+        dots+='<div style="width:'+dotSize+'px;height:'+dotSize+'px;border-radius:50%;background:'+dotCol+';flex-shrink:0" title="'+st+'"></div>';
+      });
+      dots+='</div>';
+
+      // Reschedule badge for swimlane (clickable)
+      var rsCount2=v.rescheduleCount||0;
+      var rsId2='rs_sw_'+(rowIndex++);
+      var rsLabel2='';
+      var rsDetailRow2='';
+      if(rsCount2>0){
+        rsLabel2='<span style="background:#fbbf24;color:#78350f;padding:2px 5px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer" onclick="document.getElementById(\''+rsId2+'\').style.display=document.getElementById(\''+rsId2+'\').style.display===\'none\'?\'table-row\':\'none\'">🔄'+rsCount2+' ▾</span>';
+        var rsDetails2='<div style="padding:4px 8px">';
+        (v.reschedules||[]).forEach(function(r,i){
+          rsDetails2+='<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed #fbbf2444">';
+          rsDetails2+='<span style="background:#fbbf24;color:#78350f;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600">ครั้งที่ '+(i+1)+'</span>';
+          rsDetails2+='<span style="font-size:12px;font-weight:600">📅 '+(r.date||'ยังไม่กำหนด')+'</span>';
+          if(r.reason) rsDetails2+='<span style="font-size:11px;color:#78350f">สาเหตุ: '+r.reason+'</span>';
+          rsDetails2+='</div>';
+        });
+        rsDetails2+='</div>';
+        rsDetailRow2='<tr id="'+rsId2+'" style="display:none;background:#fffbeb;border-left:3px solid #fbbf24"><td colspan="10" style="padding:0">'+rsDetails2+'</td></tr>';
+      } else {
+        rsLabel2='<span style="color:var(--text3);font-size:10px">-</span>';
+      }
+
+      h+='<tr style="background:'+rowBg+';border-left:3px solid '+(v._isAtRisk?'#ef4444':brCol)+'">';
+      h+='<td style="padding:5px 8px;font-weight:600;font-size:12px">'+v.plate+'</td>';
+      h+='<td style="padding:5px 8px;text-align:center"><span style="background:'+brCol+';color:#fff;padding:1px 5px;border-radius:3px;font-size:10px">'+v.branch+'</span></td>';
+      h+='<td style="padding:5px 8px;text-align:center;font-size:11px">'+fmtDateShort(v.completionDate)+'</td>';
+      h+='<td style="padding:5px 8px;text-align:center;font-size:11px">'+fmtDateShort(v.deliveryDate)+'</td>';
+      h+='<td style="padding:5px 8px;text-align:center">'+rsLabel2+'</td>';
+      h+='<td style="padding:5px 8px;text-align:center">'+daysLabel+'</td>';
+      h+='<td style="padding:5px 8px;font-size:11px">'+(v.sa||'-')+'</td>';
+      h+='<td style="padding:5px 8px;font-size:11px">'+(v.insurance||'-')+'</td>';
+      h+='<td style="padding:5px 8px;text-align:center">'+dots+'</td>';
+      h+='<td style="padding:5px 8px;font-size:10px;white-space:nowrap">'+actionButtonsHtml(v.plate,v.branch,v.status||'',v.rescheduleCount||0)+'</td>';
+      h+='</tr>';
+      if(rsDetailRow2) h+=rsDetailRow2;
+    });
+
+    h+='</tbody></table></div></div>';
+  });
+  h+='</div>';
+
+  el.innerHTML=h;
+}
+
+/* ═══ Daily Summary Tab (สรุปสั้น) ═══ */
+function renderSummary(el,d){
+  var h='';
+  var reportDate=d.reportDate||'-';
+  var yesterday=d.yesterday||reportDate;
+  var sl=d.sourceLinks||{};
+
+  // Header
+  h+='<div class="section">';
+  h+='<h2 style="margin:0 0 4px;font-size:18px">📋 สรุปสั้นประจำวัน</h2>';
+  h+='<p style="margin:0 0 12px;font-size:12px;color:var(--text3)">รายงานผลการทำงาน ณ วันที่ '+escHtml(fmtDateShort(yesterday))+'</p>';
+  h+=srcLinksHtml(d,['main','cnb','csk']);
+  h+='</div>';
+
+  // ═══ Section 1: เลื่อนนัดเมื่อวาน ═══
+  var resch=d.reschedules||{};
+  var reschVehicles=resch.vehicles||[];
+  h+='<div class="section" style="border:2px solid #f59e0b;border-radius:10px;background:#fffbeb">';
+  h+='<h3 style="margin:0 0 8px;color:#b45309;font-size:15px">📅 การเลื่อนนัด วันที่ '+escHtml(fmtDateShort(yesterday))+' <span style="font-size:14px;color:var(--text3)">( '+resch.count+' คัน )</span></h3>';
+  if(reschVehicles.length===0){
+    h+='<p style="color:var(--text3);font-size:13px">✅ ไม่มีรถเลื่อนนัดเมื่อวาน</p>';
+  }else{
+    h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
+    h+='<thead><tr style="background:#fef3c7">';
+    h+='<th style="padding:6px 8px;text-align:left">ทะเบียน</th>';
+    h+='<th style="padding:6px 8px">สาขา</th>';
+    h+='<th style="padding:6px 8px;text-align:left">สถานะ</th>';
+    h+='<th style="padding:6px 8px;text-align:left">นัดช่างเสร็จ</th>';
+    h+='<th style="padding:6px 8px;text-align:left">นัดส่งมอบ</th>';
+    h+='<th style="padding:6px 8px;text-align:center">เลื่อนนัด</th>';
+    h+='<th style="padding:6px 8px;text-align:left">สาเหตุ</th>';
+    h+='<th style="padding:6px 8px">SA</th>';
+    h+='<th style="padding:6px 8px;font-size:11px">ประกัน</th>';
+    h+='</tr></thead><tbody>';
+    for(var ri2=0;ri2<reschVehicles.length;ri2++){
+      var rv=reschVehicles[ri2];
+      var brCol=rv.branch==='CNB'?'#7c3aed':'#ec4899';
+      // Reschedule badge (expandable)
+      var rsCount2=rv.totalRescheduleCount||0;
+      var rsId2='rs_sum_'+ri2;
+      var rsLabel2='';
+      if(rsCount2>0){
+        rsLabel2='<span id="'+rsId2+'_btn" style="background:#fbbf24;color:#78350f;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer" onclick="document.getElementById(\''+rsId2+'\').style.display=document.getElementById(\''+rsId2+'\').style.display===\'none\'?\'table-row\':\'none\'">🔄ครั้งที่ '+rv.newRescheduleNo+'/'+rsCount2+' ▾</span>';
+      }
+      h+='<tr style="border-bottom:1px solid #fde68a;background:'+(rv.branch==='CNB'?'#faf5ff':'#fdf2f8')+'">';
+      h+='<td style="padding:6px 8px;font-weight:600">'+escHtml(rv.plate)+'</td>';
+      h+='<td style="padding:6px 8px;text-align:center"><span style="color:'+brCol+';font-weight:700">'+escHtml(rv.branch)+'</span></td>';
+      h+='<td style="padding:6px 8px">'+statusBadge(rv.status)+'</td>';
+      h+='<td style="padding:6px 8px;color:#b45309;font-weight:600">'+escHtml(fmtDateShort(rv.completionDate))+'</td>';
+      h+='<td style="padding:6px 8px;font-weight:600">'+escHtml(fmtDateShort(rv.deliveryDate))+'</td>';
+      h+='<td style="padding:6px 8px;text-align:center">'+rsLabel2+'</td>';
+      h+='<td style="padding:6px 8px;max-width:180px;font-size:11px">'+escHtml(rv.latestReason)+'</td>';
+      h+='<td style="padding:6px 8px">'+escHtml(rv.sa)+'</td>';
+      h+='<td style="padding:6px 8px;font-size:11px">'+escHtml(rv.insurance)+'</td>';
+      h+='</tr>';
+      // Expandable reschedule detail row
+      if(rsCount2>0){
+        var allRs=rv.allReschedules||[];
+        h+='<tr id="'+rsId2+'" style="display:none;border-bottom:1px dashed #fbbf24">';
+        h+='<td colspan="9" style="padding:4px 8px;background:#fffbeb">';
+        h+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+        for(var rdi=0;rdi<allRs.length;rdi++){
+          var rd=allRs[rdi];
+          var isNew=rd.date===yesterday;
+          var bg2=isNew?'#fbbf24':'#e5e7eb';
+          var col2=isNew?'#78350f':'#374151';
+          h+='<div style="background:'+bg2+';color:'+col2+';padding:3px 8px;border-radius:4px;font-size:10px;display:flex;gap:6px;align-items:center">';
+          h+='<span style="font-weight:700">ครั้งที่ '+rd.no+'</span>';
+          h+='<span>📅 '+escHtml(fmtDateShort(rd.date))+'</span>';
+          if(rd.reason) h+='<span style="opacity:0.8">'+escHtml(rd.reason)+'</span>';
+          h+='</div>';
+        }
+        h+='</div></td></tr>';
+      }
+    }
+    h+='</tbody></table></div>';
+  }
+  h+='</div>';
+
+  // ═══ Section 2: งานเสร็จประจำวัน (แยกสถานี + Sub) ═══
+  var comp=d.completions||{};
+  var compSummary=comp.summary||[];
+  var compDetail=comp.detail||{};
+  var compDate=comp.reportDate||yesterday;
+  h+='<div class="section" style="border-left:4px solid #10b981">';
+  h+='<h3 style="color:#059669">✅ งานเสร็จประจำวัน วันที่ '+escHtml(fmtDateShort(compDate))+'</h3>';
+  if(compSummary.length===0){
+    h+='<p style="color:var(--text3);font-size:13px">ไม่มีข้อมูล</p>';
+  }else{
+    // Summary cards — 1 card per station
+    h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:12px">';
+    for(var ci3=0;ci3<compSummary.length;ci3++){
+      var cs2=compSummary[ci3];
+      h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px">';
+      h+='<div style="font-weight:700;font-size:13px;color:var(--text1);margin-bottom:4px">'+escHtml(cs2.station)+'</div>';
+      if(cs2.cnb.count>0){
+        h+='<div style="font-size:12px"><span style="color:#7c3aed;font-weight:600">CNB</span> '+cs2.cnb.count+' คัน · <span style="color:#059669;font-weight:600">'+numFmt(cs2.cnb.wage)+' ฿</span></div>';
+      }
+      if(cs2.csk.count>0){
+        h+='<div style="font-size:12px"><span style="color:#ec4899;font-weight:600">CSK</span> '+cs2.csk.count+' คัน · <span style="color:#059669;font-weight:600">'+numFmt(cs2.csk.wage)+' ฿</span></div>';
+      }
+      h+='<div style="margin-top:4px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:4px">รวม '+cs2.total+' คัน · '+numFmt(cs2.totalWage)+' ฿</div>';
+      h+='</div>';
+    }
+    h+='</div>';
+
+    // Detail table — expandable per station
+    for(var di2=0;di2<compSummary.length;di2++){
+      var stnN=compSummary[di2].station;
+      var stnD=compDetail[stnN];
+      if(!stnD) continue;
+      var totalInStn=(stnD.cnb.vehicles||[]).length+(stnD.csk.vehicles||[]).length;
+      if(totalInStn===0) continue;
+      var stnId='comp_'+di2;
+      h+='<div style="margin-bottom:6px;border:1px solid var(--border);border-radius:8px;overflow:hidden">';
+      h+='<div style="background:var(--bg2);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="document.getElementById(\''+stnId+'\').style.display=document.getElementById(\''+stnId+'\').style.display===\'none\'?\'block\':\'none\'">';
+      h+='<span style="font-weight:700;font-size:13px">'+escHtml(stnN)+' ('+totalInStn+' คัน)</span>';
+      h+='<span style="color:#059669;font-weight:600;font-size:12px">'+numFmt(compSummary[di2].totalWage)+' ฿</span>';
+      h+='<span style="color:var(--text3);font-size:11px">▾ รายละเอียด</span>';
+      h+='</div>';
+      h+='<div id="'+stnId+'" style="display:none;padding:8px">';
+      // CNB vehicles
+      var cnbCars=stnD.cnb.vehicles||[];
+      if(cnbCars.length>0){
+        h+='<div style="margin-bottom:6px"><span style="color:#7c3aed;font-weight:600;font-size:12px">มหาราช (CNB) '+stnD.cnb.count+' คัน · '+numFmt(stnD.cnb.wage)+' ฿</span></div>';
+        h+='<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px">';
+        h+='<thead><tr style="background:#f5f3ff"><th style="padding:4px 6px;text-align:left">ทะเบียน</th><th style="padding:4px 6px">ช่าง</th><th style="padding:4px 6px;text-align:right">วันทำ</th><th style="padding:4px 6px;text-align:right">ค่าแรง</th></tr></thead><tbody>';
+        for(var cci=0;cci<cnbCars.length;cci++){
+          var cc=cnbCars[cci];
+          h+='<tr style="border-bottom:1px solid #ede9fe"><td style="padding:3px 6px;font-weight:600">'+escHtml(cc.plate)+'</td><td style="padding:3px 6px">'+escHtml(cc.man)+'</td><td style="padding:3px 6px;text-align:right">'+cc.workDays+'</td><td style="padding:3px 6px;text-align:right;color:#059669;font-weight:600">'+numFmt(cc.netWage)+'</td></tr>';
+        }
+        h+='</tbody></table>';
+      }
+      // CSK vehicles
+      var cskCars=stnD.csk.vehicles||[];
+      if(cskCars.length>0){
+        h+='<div style="margin-bottom:6px"><span style="color:#ec4899;font-weight:600;font-size:12px">ซีเอสเค (CSK) '+stnD.csk.count+' คัน · '+numFmt(stnD.csk.wage)+' ฿</span></div>';
+        h+='<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px">';
+        h+='<thead><tr style="background:#fdf2f8"><th style="padding:4px 6px;text-align:left">ทะเบียน</th><th style="padding:4px 6px">ช่าง</th><th style="padding:4px 6px;text-align:right">วันทำ</th><th style="padding:4px 6px;text-align:right">ค่าแรง</th></tr></thead><tbody>';
+        for(var csi=0;csi<cskCars.length;csi++){
+          var cs=cskCars[csi];
+          h+='<tr style="border-bottom:1px solid #fce7f3"><td style="padding:3px 6px;font-weight:600">'+escHtml(cs.plate)+'</td><td style="padding:3px 6px">'+escHtml(cs.man)+'</td><td style="padding:3px 6px;text-align:right">'+cs.workDays+'</td><td style="padding:3px 6px;text-align:right;color:#059669;font-weight:600">'+numFmt(cs.netWage)+'</td></tr>';
+        }
+        h+='</tbody></table>';
+      }
+      h+='</div></div>';
+    }
+  }
+  h+='</div>';
+
+  // ═══ Section 3: FinalCheck เมื่อวาน ═══
+  var fc=d.finalCheck||{};
+  var fcDaily=fc.daily||{};
+  var fcMonthly=fc.monthly||{};
+  h+='<div class="section" style="border-left:4px solid #6366f1">';
+  h+='<h3 style="color:#4f46e5">🔍 FinalCheck วันที่ '+escHtml(fmtDateShort(fcDaily.date||yesterday))+'</h3>';
+
+  // Daily FC card
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
+  h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px">';
+  h+='<div style="font-size:11px;color:var(--text3);margin-bottom:6px">📊 ประจำวัน</div>';
+  h+='<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">';
+  h+='<div style="text-align:center"><div style="font-size:24px;font-weight:700;color:var(--text1)">'+(fcDaily.total||0)+'</div><div style="font-size:10px;color:var(--text3)">ตรวจทั้งหมด</div></div>';
+  h+='<div style="text-align:center"><div style="font-size:24px;font-weight:700;color:#059669">'+(fcDaily.pass||0)+'</div><div style="font-size:10px;color:var(--text3)">ผ่าน</div></div>';
+  h+='<div style="text-align:center"><div style="font-size:24px;font-weight:700;color:#dc2626">'+(fcDaily.fail||0)+'</div><div style="font-size:10px;color:var(--text3)">ไม่ผ่าน</div></div>';
+  var passPct2=fcDaily.passPct||0;
+  var pctCol2=passPct2>=90?'#059669':passPct2>=70?'#b45309':'#dc2626';
+  h+='<div style="text-align:center"><div style="font-size:18px;font-weight:700;color:'+pctCol2+'">'+passPct2+'%</div><div style="font-size:10px;color:var(--text3)">อัตราผ่าน</div></div>';
+  h+='</div>';
+  if(fcDaily.supQcCount||fcDaily.supFixCount||fcDaily.deliveredCount){
+    h+='<div style="margin-top:8px;font-size:11px;color:var(--text3)">';
+    var fcParts=[];
+    if(fcDaily.deliveredCount) fcParts.push('ส่งมอบ '+fcDaily.deliveredCount);
+    if(fcDaily.supQcCount) fcParts.push('SUP QC '+fcDaily.supQcCount);
+    if(fcDaily.supFixCount) fcParts.push('<span style="color:#dc2626">ไม่ผ่าน '+fcDaily.supFixCount+'</span>');
+    h+=fcParts.join(' · ');
+    h+='</div>';
+  }
+  h+='</div>';
+
+  // Monthly summary card
+  if(fcMonthly){
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px">';
+    h+='<div style="font-size:11px;color:var(--text3);margin-bottom:6px">📊 สะสมประจำเดือน</div>';
+    h+='<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">';
+    h+='<div style="text-align:center"><div style="font-size:24px;font-weight:700;color:var(--text1)">'+(fcMonthly.total||0)+'</div><div style="font-size:10px;color:var(--text3)">ตรวจทั้งหมด</div></div>';
+    h+='<div style="text-align:center"><div style="font-size:24px;font-weight:700;color:#059669">'+(fcMonthly.pass||0)+'</div><div style="font-size:10px;color:var(--text3)">ผ่าน</div></div>';
+    h+='<div style="text-align:center"><div style="font-size:24px;font-weight:700;color:#dc2626">'+(fcMonthly.fail||0)+'</div><div style="font-size:10px;color:var(--text3)">ไม่ผ่าน</div></div>';
+    var mpct=fcMonthly.passPct||0;
+    var mcol=mpct>=90?'#059669':mpct>=70?'#b45309':'#dc2626';
+    h+='<div style="text-align:center"><div style="font-size:18px;font-weight:700;color:'+mcol+'">'+mpct+'%</div><div style="font-size:10px;color:var(--text3)">อัตราผ่าน</div></div>';
+    h+='</div>';
+    if(fcMonthly.supDelivered||fcMonthly.supOnTime||fcMonthly.supOverDue){
+      h+='<div style="margin-top:8px;font-size:11px;color:var(--text3)">';
+      h+='ส่งมอบ: '+(fcMonthly.supDelivered||0)+' คัน · ตรงเวลา: '+(fcMonthly.supOnTime||0)+' · เกินเวลา: <span style="color:#dc2626">'+(fcMonthly.supOverDue||0)+'</span>';
+      h+='</div>';
+    }
+    h+='</div>';
+  } else {
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text3);font-size:12px">';
+    h+='<div style="font-size:11px;margin-bottom:4px">📊 สะสมประจำเดือน</div>ไม่มีข้อมูล</div>';
+  }
+  h+='</div>';
+  h+='</div>';
+
+  // ═══ Section 4: รถที่คาดว่าจะเสร็จไม่ทัน ═══
+  // Same style as workflow tab's at-risk section
+  var STATION_ORDER_SUM=['รับรถเข้าซ่อมแล้ว รอเคาะ','รับรถเข้าซ่อมแล้ว รอโป๊ว','เคาะ','เคาะแล้ว รอโป๊ว','เคาะเสร็จแล้ว รอโป๊ว','โป๊ว','โป๊วแล้ว รอพ่น','พ่น','พ่นสีแล้ว รอประกอบ','ประกอบ','ประกอบแล้ว รอขัดสี','ขัดสี','ขัดสีแล้ว รอล้าง','ล้าง','SUP QC','SUP แก้ไขงาน','รอส่งมอบ'];
+  var POLISH_IDX_SUM=11;
+  var atRisk=d.atRisk||{};
+  var atRiskV=atRisk.vehicles||[];
+  h+='<div class="section" style="border:2px solid #ef4444;border-radius:10px;background:#fef2f2">';
+  h+='<h3 style="margin:0 0 8px;color:#dc2626;font-size:15px;display:flex;align-items:center;gap:8px">🔴 รถที่คาดว่าเสร็จไม่ทัน ('+atRisk.count+' คัน)</h3>';
+  h+='<p style="margin:0 0 10px;font-size:11px;color:#991b1b">เกณฑ์: นัดช่างเสร็จ − 2 วัน แล้วยังไม่ถึงสถานะขัดสี ⇒ เสี่ยงส่งมอบล่าช้า</p>';
+  if(atRiskV.length===0){
+    h+='<p style="color:var(--text3);font-size:13px">✅ ไม่มีรถเสร็จไม่ทัน</p>';
+  }else{
+    h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
+    h+='<thead><tr style="background:#fee2e2">';
+    h+='<th style="padding:6px 8px;text-align:left">ทะเบียน</th>';
+    h+='<th style="padding:6px 8px">สาขา</th>';
+    h+='<th style="padding:6px 8px;text-align:left">สถานะปัจจุบัน</th>';
+    h+='<th style="padding:6px 8px">นัดช่างเสร็จ</th>';
+    h+='<th style="padding:6px 8px">นัดส่งมอบ</th>';
+    h+='<th style="padding:6px 8px;text-align:center">เลื่อนนัด</th>';
+    h+='<th style="padding:6px 8px;text-align:center">เหลืออีก</th>';
+    h+='<th style="padding:6px 8px">SA</th>';
+    h+='<th style="padding:6px 8px;font-size:11px">ประกัน</th>';
+    h+='<th style="padding:6px 8px;text-align:center">ความคืบหน้า</th>';
+    h+='</tr></thead><tbody>';
+    for(var ai2=0;ai2<atRiskV.length;ai2++){
+      var arv=atRiskV[ai2];
+      var sIdx2=arv.statusIdx||0;
+      var bg2=arv.branch==='CNB'?'#f5f3ff':'#fdf2f8';
+      var brCol2=arv.branch==='CNB'?'#7c3aed':'#ec4899';
+      // Progress bar (same as movement tab)
+      var totalStations2=STATION_ORDER_SUM.length;
+      var pct2=Math.round((sIdx2+1)/totalStations2*100);
+      var barH2='<div style="position:relative;height:20px;background:#e5e7eb;border-radius:10px;overflow:hidden;min-width:120px">';
+      barH2+='<div style="height:100%;width:'+Math.max(2,pct2)+'%;background:'+(STATION_COLORS[arv.status]||'#999')+';border-radius:10px;transition:width .3s"></div>';
+      barH2+='<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:10px;font-weight:600;line-height:20px;color:#000">'+(STATUS_SHORT[arv.status]||arv.status)+' '+pct2+'%</div>';
+      var polishPct2=(POLISH_IDX_SUM+1)/totalStations2*100;
+      barH2+='<div style="position:absolute;top:0;left:'+polishPct2+'%;height:100%;width:2px;background:#ef4444"></div>';
+      barH2+='</div>';
+      // Days remaining
+      var daysLeft2=arv.daysToGo;
+      var daysLabel2='';
+      if(daysLeft2!==null&&daysLeft2!==undefined){
+        if(daysLeft2<0) daysLabel2='<span style="color:#dc2626;font-weight:700">เลย '+Math.abs(daysLeft2)+' วัน</span>';
+        else if(daysLeft2===0) daysLabel2='<span style="color:#dc2626;font-weight:700">วันนี้!</span>';
+        else if(daysLeft2<=2) daysLabel2='<span style="color:#f97316;font-weight:600">'+daysLeft2+' วัน</span>';
+        else daysLabel2='<span style="color:var(--text2)">'+daysLeft2+' วัน</span>';
+      }
+      // Reschedule badge (expandable)
+      var rsCount3=arv.rescheduleCount||0;
+      var rsId3='rs_ar_'+ai2;
+      var rsLabel3='';
+      if(rsCount3>0){
+        rsLabel3='<span id="'+rsId3+'_btn" style="background:#fbbf24;color:#78350f;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer" onclick="document.getElementById(\''+rsId3+'\').style.display=document.getElementById(\''+rsId3+'\').style.display===\'none\'?\'table-row\':\'none\'">🔄'+rsCount3+' ▾</span>';
+      } else {
+        rsLabel3='<span style="color:var(--text3);font-size:11px">-</span>';
+      }
+      h+='<tr style="background:'+bg2+';border-bottom:1px solid #fecaca">';
+      h+='<td style="padding:6px 8px;font-weight:600">'+escHtml(arv.plate)+'</td>';
+      h+='<td style="padding:6px 8px;text-align:center"><span style="color:'+brCol2+';font-weight:700">'+escHtml(arv.branch)+'</span></td>';
+      h+='<td style="padding:6px 8px">'+statusBadge(arv.status)+'</td>';
+      h+='<td style="padding:6px 8px;color:#b45309;font-weight:600">'+escHtml(fmtDateShort(arv.completionDate))+'</td>';
+      h+='<td style="padding:6px 8px;font-weight:600">'+escHtml(fmtDateShort(arv.dueDate))+'</td>';
+      h+='<td style="padding:6px 8px;text-align:center">'+rsLabel3+'</td>';
+      h+='<td style="padding:6px 8px;text-align:center">'+daysLabel2+'</td>';
+      h+='<td style="padding:6px 8px">'+escHtml(arv.sa)+'</td>';
+      h+='<td style="padding:6px 8px;font-size:11px">'+escHtml(arv.insurance)+'</td>';
+      h+='<td style="padding:6px 8px">'+barH2+'</td>';
+      h+='</tr>';
+      // Expandable reschedule detail row
+      if(rsCount3>0){
+        var arReschs=arv.reschedules||[];
+        h+='<tr id="'+rsId3+'" style="display:none;border-bottom:1px dashed #fbbf24">';
+        h+='<td colspan="10" style="padding:4px 8px;background:#fffbeb">';
+        h+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+        for(var ardi=0;ardi<arReschs.length;ardi++){
+          var arRd=arReschs[ardi];
+          h+='<div style="background:#fbbf24;color:#78350f;padding:3px 8px;border-radius:4px;font-size:10px;display:flex;gap:6px;align-items:center">';
+          h+='<span style="font-weight:700">ครั้งที่ '+arRd.no+'</span>';
+          h+='<span>📅 '+escHtml(fmtDateShort(arRd.date))+'</span>';
+          if(arRd.reason) h+='<span style="opacity:0.8">'+escHtml(arRd.reason)+'</span>';
+          h+='</div>';
+        }
+        h+='</div></td></tr>';
+      }
+    }
+    h+='</tbody></table></div>';
+  }
+  h+='</div>';
+
+  el.innerHTML=h;
+}
+
+/* ═══ Global Search ═══ */
+function onGlobalSearch(q){
+  searchQuery = q.toLowerCase().trim();
+  var d = tabDataCache[currentTab];
+  if(!d) return;
+  renderTab(currentTab, d);
+  // Restore focus & cursor position after DOM rebuild
+  var input = document.getElementById('globalSearch');
+  if(input){
+    input.value = q;
+    input.focus();
+    input.setSelectionRange(q.length, q.length);
+  }
+}
+
+function matchVehicle(v, q){
+  if(!q) return true;
+  var fields = [v.plate,v.license,v.status,v.branch,v.sa,v.saCenter,v.insurance,v.insurer,v.brand,v.model,v.repairDate,v.dateIn,v.completionDate,v.deliveryDate];
+  for(var i=0;i<fields.length;i++){
+    if(fields[i] && String(fields[i]).toLowerCase().indexOf(q)>=0) return true;
+  }
+  return false;
+}
+
+function searchBoxHtml(placeholder){
+  return '<div class="search-box"><span class="search-icon">🔍</span><input type="text" id="globalSearch" placeholder="'+(placeholder||'ค้นหา ทะเบียน, SA, ประกัน...')+'" oninput="onGlobalSearch(this.value)" value="'+escHtml(searchQuery)+'"><span class="search-count" id="searchCount"></span></div>';
+}
+
+function escHtml(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+/* Add style for clickable numbers */
+var cstyle=document.createElement('style');
+cstyle.innerHTML='.clickable:hover{text-decoration:underline !important}';
+document.head.appendChild(cstyle);
+
+/* ═══ Helpers ═══ */
+function kcard(label,val,color){
+  return '<div class="card '+color+'"><div class="label">'+label+'</div><div class="value">'+val+'</div></div>';
+}
+// Source link helper — generates a small "📋 ต้นทาง" link
+function srcLink(url,label){
+  if(!url)return'';
+  return '<a class="src-link" href="'+url+'" target="_blank" rel="noopener">📋 '+(label||'ต้นทาง')+'</a>';
+}
+// Source links per tab
+function srcLinksHtml(d,tabKeys){
+  var sl=d.sourceLinks||{};
+  var h='';
+  var labels={main:'PMG ต้นทาง',cnb:'มหาราช B2',csk:'ซีเอสเค B2'};
+  (tabKeys||['main','cnb','csk']).forEach(function(k){
+    if(sl[k])h+=srcLink(sl[k],labels[k]||k);
+  });
+  return h?'<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center"><span style="font-size:11px;color:var(--text3)">ข้อมูลจาก:</span>'+h+'</div>':'';
+}
+function statusBadge(status){
+  if(!status)return'gray';
+  var s=status;
+  if(s.indexOf('ส่งมอบ')>=0||s.indexOf('ผ่าน')>=0)return'green';
+  if(s.indexOf('รอ')>=0)return'orange';
+  if(s.indexOf('เคาะ')>=0)return'red';
+  if(s.indexOf('โป๊ว')>=0)return'orange';
+  if(s.indexOf('พ่น')>=0)return'yellow';
+  if(s.indexOf('ประกอบ')>=0)return'green';
+  if(s.indexOf('ขัดสี')>=0)return'blue';
+  if(s.indexOf('ล้าง')>=0)return'purple';
+  if(s.indexOf('SUP')>=0)return'pink';
+  if(s.indexOf('ไม่ผ่าน')>=0)return'red';
+  return'gray';
+}
+
+/* ═══ Action Modal & API ═══ */
+var STATION_MAP_TH={เคาะ:'knocker',โป๊ว:'filler',พ่น:'spray',ประกอบ:'assemble','ขัดสี':'polish',ล้าง:'wash','SUP QC':'supQC','SUP แก้ไขงาน':'supFix','รอส่งมอบ':'waitDelivery','ส่งมอบแล้ว':'delivered'};
+var STATION_MAP_EN={knocker:'เคาะ',filler:'โป๊ว',spray:'พ่น',assemble:'ประกอบ',polish:'ขัดสี',wash:'ล้าง',supQC:'SUP QC',supFix:'SUP แก้ไขงาน',waitDelivery:'รอส่งมอบ',delivered:'ส่งมอบแล้ว'};
+var STATION_NAMES=['เคาะ','โป๊ว','พ่น','ประกอบ','ขัดสี','ล้าง','SUP QC','รอส่งมอบ','ส่งมอบแล้ว'];
+
+function openModal(html){var o=document.getElementById('modal-overlay');var b=document.getElementById('modal-box');b.innerHTML=html;o.classList.add('active')}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('active')}
+
+function actionButtonsHtml(plate,branch,status,rescheduleCount){
+  var b=(branch==='CNB'||branch==='SUP1')?'cnb':(branch==='CSK'||branch==='SUP2')?'csk':'';
+  if(!b)return'';
+  var h='<span class="act-btn reschedule" onclick="openRescheduleModal(\''+escHtml(plate)+'\',\''+b+'\')">🔄เลื่อนนัด</span>';
+  h+='<span class="act-btn delivery" onclick="openDeliveryModal(\''+escHtml(plate)+'\',\''+b+'\')">📅นัดส่งมอบ</span>';
+  h+='<span class="act-btn move" onclick="openMoveModal(\''+escHtml(plate)+'\',\''+b+'\',\''+escHtml(status)+'\')">🔀เคลื่อน</span>';
+  return h;
+}
+
+function openRescheduleModal(plate,branch){
+  var h='<h3>🔄 เลื่อนนัดหมาย</h3>';
+  h+='<div style="font-size:13px;color:var(--text2);margin-bottom:8px">ทะเบียน: <b>'+escHtml(plate)+'</b> | สาขา: <b>'+(branch==='cnb'?'มหาราช':'ซีเอสเค')+'</b></div>';
+  h+='<label>📅 วันที่เลื่อนนัดใหม่</label>';
+  h+='<input type="date" id="rsDate" value="">';
+  h+='<label>📝 สาเหตุการเลื่อนนัด</label>';
+  h+='<textarea id="rsReason" placeholder="ระบุสาเหตุ เช่น รออะไหล่, ลูกค้าขอเลื่อน..."></textarea>';
+  h+='<div class="modal-status" id="rsStatus"></div>';
+  h+='<div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">ยกเลิก</button><button class="btn-save" id="rsSaveBtn" onclick="saveReschedule(\''+escHtml(plate)+'\',\''+branch+'\')">💾 บันทึก</button></div>';
+  openModal(h);
+}
+
+function openDeliveryModal(plate,branch){
+  var h='<h3>📅 นัดหมายส่งมอบใหม่</h3>';
+  h+='<div style="font-size:13px;color:var(--text2);margin-bottom:8px">ทะเบียน: <b>'+escHtml(plate)+'</b> | สาขา: <b>'+(branch==='cnb'?'มหาราช':'ซีเอสเค')+'</b></div>';
+  h+='<label>📅 วันที่นัดหมายส่งมอบ</label>';
+  h+='<input type="date" id="dlDate" value="">';
+  h+='<div class="modal-status" id="dlStatus"></div>';
+  h+='<div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">ยกเลิก</button><button class="btn-save" id="dlSaveBtn" onclick="saveDeliveryDate(\''+escHtml(plate)+'\',\''+branch+'\')">💾 บันทึก</button></div>';
+  openModal(h);
+}
+
+function openMoveModal(plate,branch,currentStatus){
+  var curTh=STATION_MAP_EN[currentStatus]||currentStatus;
+  var h='<h3>🔀 เคลื่อนสถานะงานซ่อน</h3>';
+  h+='<div style="font-size:13px;color:var(--text2);margin-bottom:8px">ทะเบียน: <b>'+escHtml(plate)+'</b> | สาขา: <b>'+(branch==='cnb'?'มหาราช':'ซีเอสเค')+'</b></div>';
+  h+='<label>สถานะปัจจุบัน</label>';
+  h+='<div style="padding:6px 12px;background:#f1f5f9;border-radius:6px;font-size:13px;margin-bottom:8px">'+escHtml(currentStatus||'-')+'</div>';
+  h+='<label>➡️ ย้ายไปสถานะใหม่</label>';
+  h+='<select id="mvNewStation">';
+  STATION_NAMES.forEach(function(n){
+    var sel=(n===currentStatus)?' selected':'';
+    h+='<option value="'+n+'"'+sel+'>'+n+'</option>';
+  });
+  h+='</select>';
+  h+='<label>📅 วันที่เคลื่อน (ค่าเริ่มต้น: วันนี้)</label>';
+  h+='<input type="date" id="mvDate" value="'+new Date().toISOString().substring(0,10)+'">';
+  h+='<div class="modal-status" id="mvStatus"></div>';
+  h+='<div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">ยกเลิก</button><button class="btn-save" id="mvSaveBtn" onclick="saveMoveStation(\''+escHtml(plate)+'\',\''+branch+'\',\''+escHtml(currentStatus)+'\')">💾 บันทึก</button></div>';
+  openModal(h);
+}
+
+function apiPost(action,data){
+  data.action=action;
+  // Google Apps Script Web Apps don't support direct POST with JSON body via fetch.
+  // Use an intermediate approach: POST via google.script.run (server-side function call).
+  // Since we can't use google.script.run from a standalone HTML, we'll use a trick:
+  // Send as a GET request with action & data encoded in URL params.
+  var params='?api=1&action='+encodeURIComponent(action)+'&data='+encodeURIComponent(JSON.stringify(data));
+  return fetch(SCRIPT_URL+params,{redirect:'follow',cache:'no-store'})
+    .then(function(r){return r.json()});
+}
+
+function saveReschedule(plate,branch){
+  var dateEl=document.getElementById('rsDate');
+  var reasonEl=document.getElementById('rsReason');
+  var statusEl=document.getElementById('rsStatus');
+  var btnEl=document.getElementById('rsSaveBtn');
+  var dateVal=dateEl.value;
+  if(!dateVal){statusEl.className='modal-status error';statusEl.style.display='block';statusEl.textContent='⚠️ กรุณาระบุวันที่เลื่อนนัด';return}
+  btnEl.disabled=true;
+  btnEl.textContent='กำลังบันทึก...';
+  statusEl.style.display='none';
+  apiPost('reschedule',{plate:plate,branch:branch,date:dateVal,reason:reasonEl.value.trim()})
+    .then(function(r){
+      btnEl.disabled=false;btnEl.textContent='💾 บันทึก';
+      if(r.success){
+        statusEl.className='modal-status success';statusEl.style.display='block';
+        statusEl.textContent='✅ บันทึกเลื่อนนัดสำเร็จ! (แถวที่ '+r.row+(r.slot?', ช่องที่ '+r.slot:'')+')';
+        setTimeout(function(){closeModal();loadTab(currentTab)},1500);
+      }else{
+        statusEl.className='modal-status error';statusEl.style.display='block';
+        statusEl.textContent='❌ '+escHtml(r.error||'เกิดข้อผิดพลาด');
+      }
+    })
+    .catch(function(e){
+      btnEl.disabled=false;btnEl.textContent='💾 บันทึก';
+      statusEl.className='modal-status error';statusEl.style.display='block';
+      statusEl.textContent='❌ '+escHtml(e.message);
+    });
+}
+
+function saveDeliveryDate(plate,branch){
+  var dateEl=document.getElementById('dlDate');
+  var statusEl=document.getElementById('dlStatus');
+  var btnEl=document.getElementById('dlSaveBtn');
+  var dateVal=dateEl.value;
+  if(!dateVal){statusEl.className='modal-status error';statusEl.style.display='block';statusEl.textContent='⚠️ กรุณาระบุวันที่นัดหมายส่งมอบ';return}
+  btnEl.disabled=true;btnEl.textContent='กำลังบันทึก...';
+  statusEl.style.display='none';
+  apiPost('deliveryDate',{plate:plate,branch:branch,deliveryDate:dateVal})
+    .then(function(r){
+      btnEl.disabled=false;btnEl.textContent='💾 บันทึก';
+      if(r.success){
+        statusEl.className='modal-status success';statusEl.style.display='block';
+        statusEl.textContent='✅ บันทึกนัดหมายส่งมอบสำเร็จ!';
+        setTimeout(function(){closeModal();loadTab(currentTab)},1500);
+      }else{
+        statusEl.className='modal-status error';statusEl.style.display='block';
+        statusEl.textContent='❌ '+escHtml(r.error||'เกิดข้อผิดพลาด');
+      }
+    })
+    .catch(function(e){
+      btnEl.disabled=false;btnEl.textContent='💾 บันทึก';
+      statusEl.className='modal-status error';statusEl.style.display='block';
+      statusEl.textContent='❌ '+escHtml(e.message);
+    });
+}
+
+function saveMoveStation(plate,branch,currentStatus){
+  var newStationEl=document.getElementById('mvNewStation');
+  var dateEl=document.getElementById('mvDate');
+  var statusEl=document.getElementById('mvStatus');
+  var btnEl=document.getElementById('mvSaveBtn');
+  var newStation=newStationEl.value;
+  var dateVal=dateEl.value||new Date().toISOString().substring(0,10);
+  if(newStation===currentStatus){statusEl.className='modal-status error';statusEl.style.display='block';statusEl.textContent='⚠️ สถานะใหม่ต้องไม่ซ้ำกับสถานะปัจจุบัน';return}
+  btnEl.disabled=true;btnEl.textContent='กำลังบันทึก...';
+  statusEl.style.display='none';
+  apiPost('moveStation',{plate:plate,branch:branch,currentStation:currentStatus,newStation:newStation,date:dateVal})
+    .then(function(r){
+      btnEl.disabled=false;btnEl.textContent='💾 บันทึก';
+      if(r.success){
+        statusEl.className='modal-status success';statusEl.style.display='block';
+        statusEl.textContent='✅ เคลื่อนสถานะสำเร็จ! '+escHtml(r.currentStation||'')+' → '+escHtml(r.newStation||'');
+        setTimeout(function(){closeModal();loadTab(currentTab)},1500);
+      }else{
+        statusEl.className='modal-status error';statusEl.style.display='block';
+        statusEl.textContent='❌ '+escHtml(r.error||'เกิดข้อผิดพลาด');
+      }
+    })
+    .catch(function(e){
+      btnEl.disabled=false;btnEl.textContent='💾 บันทึก';
+      statusEl.className='modal-status error';statusEl.style.display='block';
+      statusEl.textContent='❌ '+escHtml(e.message);
+    });
+}
+
+/* ═══ Init ═══ */
+function init(){if(typeof Chart!=='undefined'){loadTab('overview')}else{var _cl2=document.createElement('script');_cl2.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js';_cl2.onload=function(){loadTab('overview')};document.head.appendChild(_cl2)}}
+init();
+</script>
+<div style="position:fixed;bottom:0;left:0;right:0;background:linear-gradient(90deg,#dc2626,#b91c1c);color:white;text-align:center;font-size:.7rem;padding:4px 0;font-weight:700;letter-spacing:1px;z-index:9999">⛔ ข้อมูลลับ — ห้ามเผยแพร่ หรือ ส่งออกโดยไม่ได้รับอนุญาต (PDPA)</div>
+</body>
+</html>
