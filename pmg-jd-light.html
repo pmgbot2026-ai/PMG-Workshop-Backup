@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMG War Room — Job Description & Flowchart</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans Thai','JetBrains Mono',monospace;background:#f8fafc;min-height:100vh;padding:2rem;color:#1e293b}
+.container{max-width:1200px;margin:0 auto}
+.header{margin-bottom:2rem}
+.header-row{display:flex;align-items:center;gap:1rem;margin-bottom:0.5rem}
+.pulse-dot{width:12px;height:12px;background:#2563eb;border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+h1{font-size:1.5rem;font-weight:700;color:#0f172a;letter-spacing:-0.025em}
+.subtitle{color:#64748b;font-size:0.875rem;margin-left:1.75rem}
+h2{font-size:1.2rem;font-weight:600;color:#1d4ed8;margin:2rem 0 1rem;border-bottom:2px solid #e2e8f0;padding-bottom:0.5rem}
+.diagram-container{background:#fff;border-radius:1rem;border:1px solid #e2e8f0;padding:1.5rem;overflow-x:auto;margin-bottom:2rem;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+svg{width:100%;min-width:900px;display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-top:1.5rem}
+.card{background:#fff;border-radius:0.75rem;border:1px solid #e2e8f0;padding:1.25rem;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+.card-header{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem}
+.card-dot{width:8px;height:8px;border-radius:50%}
+.card-dot.cyan{background:#0891b2}
+.card-dot.emerald{background:#059669}
+.card-dot.violet{background:#7c3aed}
+.card-dot.amber{background:#d97706}
+.card-dot.rose{background:#e11d48}
+.card h3{font-size:0.875rem;font-weight:600;color:#1e293b}
+.card ul{list-style:none;color:#475569;font-size:0.75rem}
+.card li{margin-bottom:0.375rem}
+.jd-section{background:#fff;border-radius:0.75rem;border:1px solid #e2e8f0;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+.jd-section h3{color:#b45309;font-size:1rem;margin-bottom:0.75rem}
+.jd-section p,.jd-section li{color:#334155;font-size:0.85rem;line-height:1.6}
+.jd-section ul{list-style:none;padding-left:0}
+.jd-section li{padding-left:1.2rem;position:relative;margin-bottom:0.3rem}
+.jd-section li::before{content:'→';position:absolute;left:0;color:#2563eb}
+.footer{text-align:center;margin-top:1.5rem;color:#94a3b8;font-size:0.75rem}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-row">
+      <div class="pulse-dot"></div>
+      <h1>PMG War Room — Job Description & Flowchart</h1>
+    </div>
+    <p class="subtitle">สถาปัตยกรรมระบบ Dashboard สำหรับติดตามผลงาน PMG</p>
+  </div>
+
+  <h2>📋 Job Description — ระบบ PMG War Room</h2>
+
+  <div class="jd-section">
+    <h3>🎯 วัตถุประสงค์</h3>
+    <p>Dashboard แบบ Real-time สำหรับผู้บริหารและทีม PMG ติดตามผลงานขาย รายได้ กำไร และ KPI รายเดือน/รายปี เปรียบเทียบเป้าหมาย แสดงผลด้วยกราฟแท่ง เส้น และตาราง บนมือถือเป็นหลัก</p>
+  </div>
+
+  <div class="jd-section">
+    <h3>🏗️ สถาปัตยกรรม — 4 ชั้น</h3>
+    <ul>
+      <li><strong style="color:#d97706">Data Source:</strong> Google Spreadsheets 3 ไฟล์ — ไฟล์หลัก (D1_DTA1) + ไฟล์ประวัติ + ไฟล์เสริม</li>
+      <li><strong style="color:#059669">Backend:</strong> Google Apps Script (Code.gs) — อ่าน Sheets → แปลง → JSON → Cache</li>
+      <li><strong style="color:#7c3aed">Frontend:</strong> HTML/JS (Index.html) — รับ JSON → Chart.js → 13 tabs</li>
+      <li><strong style="color:#0891b2">Delivery:</strong> GAS Web App — URL เดียว เข้าดูได้ทุกอุปกรณ์</li>
+    </ul>
+  </div>
+
+  <div class="jd-section">
+    <h3>📊 แท็บข้อมูล 13 หน้า</h3>
+    <ul>
+      <li><strong>Dashboard</strong> — ภาพรวม KPI สำคัญ</li>
+      <li><strong>OKR/KPI</strong> — เป้าหมาย vs ผลจริง</li>
+      <li><strong>ปิดได้/ส่งมอบ</strong> — รถปิดได้ vs เป้า</li>
+      <li><strong>การเงิน</strong> — รายได้ กำไร GM%</li>
+      <li><strong>ประกันภัย</strong> — เบี้ยประกันแยกบริษัท</li>
+      <li><strong>ช่องทาง</strong> — ยอดขายแยกช่องทาง</li>
+      <li><strong>SA</strong> — ผลงาน SA รายบุคคล</li>
+      <li><strong>เชียร์เคลม</strong> — เคลมรถเช่าซื้อ</li>
+      <li><strong>YoY</strong> — เปรียบเทียบ 67/68/69</li>
+      <li><strong>DTA</strong> — ข้อมูล DTA รายเดือน</li>
+      <li><strong>ข้อมูลย้อนหลัง</strong> — สะสมหลายปี</li>
+      <li><strong>ประเภทซ่อม</strong> — แยกประเภทงานซ่อม</li>
+      <li><strong>ผลิตภัณฑ์เสริม</strong> — เบี้ยเสริม/SA/รายเดือน</li>
+    </ul>
+  </div>
+
+  <div class="jd-section">
+    <h3>⚙️ Tech Stack</h3>
+    <ul>
+      <li><strong style="color:#0891b2">Frontend:</strong> HTML5 + CSS3 + Vanilla JS — Mobile First</li>
+      <li><strong style="color:#059669">Charts:</strong> Chart.js 4.4.7 + DataLabels 2.2.0 (CDN)</li>
+      <li><strong style="color:#7c3aed">Backend:</strong> Google Apps Script — SpreadsheetApp + HtmlService</li>
+      <li><strong style="color:#d97706">Data:</strong> Google Sheets × 3 (private)</li>
+      <li><strong style="color:#e11d48">Deploy:</strong> clasp CLI → push → deploy</li>
+    </ul>
+  </div>
+
+  <h2>🔀 Flowchart — ขั้นตอนการทำงาน</h2>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 1100 920">
+      <defs>
+        <marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#94a3b8"/></marker>
+        <marker id="aB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2563eb"/></marker>
+        <marker id="aG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#059669"/></marker>
+        <marker id="aV" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#7c3aed"/></marker>
+        <marker id="aW" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#d97706"/></marker>
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 L0 0 0 40" fill="none" stroke="#f1f5f9" stroke-width="0.5"/></pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="#fff"/>
+      <rect width="100%" height="100%" fill="url(#grid)"/>
+
+      <!-- USER -->
+      <rect x="350" y="60" width="400" height="80" rx="12" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
+      <text x="550" y="88" fill="#1e293b" font-size="13" font-weight="700" text-anchor="middle">👤 ผู้ใช้ (มือถือ / Notebook)</text>
+      <text x="550" y="108" fill="#64748b" font-size="9" text-anchor="middle">Browser → GAS Web App URL → โหลด Index.html</text>
+      <text x="550" y="124" fill="#d97706" font-size="8" text-anchor="middle">https://script.google.com/macros/s/.../exec</text>
+      <line x1="550" y1="140" x2="550" y2="268" stroke="#d97706" stroke-width="2" marker-end="url(#aW)"/>
+      <text x="565" y="210" fill="#d97706" font-size="9">HTTPS</text>
+
+      <!-- FRONTEND -->
+      <rect x="40" y="270" width="1020" height="195" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="8,4"/>
+      <text x="60" y="292" fill="#2563eb" font-size="10" font-weight="600">FRONTEND LAYER — Index.html</text>
+
+      <rect x="70" y="310" width="180" height="60" rx="6" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="160" y="333" fill="#1e293b" font-size="11" font-weight="600" text-anchor="middle">⏳ loadData()</text>
+      <text x="160" y="349" fill="#64748b" font-size="9" text-anchor="middle">Progress + 13 async calls</text>
+
+      <rect x="290" y="310" width="220" height="60" rx="6" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="400" y="333" fill="#1e293b" font-size="11" font-weight="600" text-anchor="middle">📊 Chart.js 4.4.7</text>
+      <text x="400" y="349" fill="#64748b" font-size="9" text-anchor="middle">+ DataLabels Plugin 2.2.0</text>
+
+      <rect x="550" y="310" width="220" height="60" rx="6" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="660" y="333" fill="#1e293b" font-size="11" font-weight="600" text-anchor="middle">🎨 13 Render Functions</text>
+      <text x="660" y="349" fill="#64748b" font-size="9" text-anchor="middle">mkC() + dlCfg() helper</text>
+
+      <rect x="810" y="310" width="220" height="60" rx="6" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="920" y="333" fill="#1e293b" font-size="11" font-weight="600" text-anchor="middle">📑 Tab Navigation</text>
+      <text x="920" y="349" fill="#64748b" font-size="9" text-anchor="middle">Dashboard → 12 tabs</text>
+
+      <rect x="70" y="390" width="960" height="55" rx="6" fill="#fff" stroke="#2563eb" stroke-width="1" stroke-dasharray="4,4"/>
+      <text x="550" y="410" fill="#2563eb" font-size="10" font-weight="600" text-anchor="middle">⚙️ Data Labels: Cyan #00E5FF · Bold 15px · Black Stroke w6 · Transparent BG · clamp:true</text>
+      <text x="550" y="428" fill="#64748b" font-size="9" text-anchor="middle">Chart.register(ChartDataLabels) — mkC() auto-inject padding · dlCfg() universal config</text>
+
+      <line x1="250" y1="340" x2="288" y2="340" stroke="#2563eb" stroke-width="1.5" marker-end="url(#aB)"/>
+      <line x1="510" y1="340" x2="548" y2="340" stroke="#2563eb" stroke-width="1.5" marker-end="url(#aB)"/>
+      <line x1="770" y1="340" x2="808" y2="340" stroke="#2563eb" stroke-width="1.5" marker-end="url(#aB)"/>
+
+      <!-- BACKEND -->
+      <rect x="40" y="500" width="1020" height="190" rx="12" fill="#f0fdf4" stroke="#059669" stroke-width="1.5" stroke-dasharray="8,4"/>
+      <text x="60" y="522" fill="#059669" font-size="10" font-weight="600">BACKEND LAYER — Google Apps Script (Code.gs)</text>
+
+      <rect x="70" y="545" width="200" height="60" rx="6" fill="#fff" stroke="#059669" stroke-width="1.5"/>
+      <text x="170" y="568" fill="#1e293b" font-size="11" font-weight="600" text-anchor="middle">doGet()</text>
+      <text x="170" y="584" fill="#64748b" font-size="9" text-anchor="middle">createHtmlOutputFromFile</text>
+
+      <rect x="320" y="535" width="330" height="80" rx="8" fill="#fff" stroke="#059669" stroke-width="1.5"/>
+      <text x="485" y="558" fill="#1e293b" font-size="11" font-weight="600" text-anchor="middle">📥 13 Data Functions</text>
+      <text x="485" y="575" fill="#64748b" font-size="8" text-anchor="middle">getOKRData · getBCTData · getFinData · getInsData</text>
+      <text x="485" y="588" fill="#64748b" font-size="8" text-anchor="middle">getChData · getSAData · getShareClaimData</text>
+      <text x="485" y="601" fill="#64748b" font-size="8" text-anchor="middle">getYoYData · getDTAData · getHistoricalData</text>
+
+      <rect x="700" y="545" width="320" height="60" rx="6" fill="#fff" stroke="#059669" stroke-width="1.5"/>
+      <text x="860" y="568" fill="#1e293b" font-size="11" font-weight="600" text-anchor="middle">⚡ CacheService (5 min)</text>
+      <text x="860" y="584" fill="#64748b" font-size="9" text-anchor="middle">ลดการอ่าน Sheet ซ้ำ</text>
+
+      <rect x="700" y="620" width="320" height="50" rx="6" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="860" y="642" fill="#1e293b" font-size="11" font-weight="600" text-anchor="middle">🔄 google.script.run()</text>
+      <text x="860" y="658" fill="#64748b" font-size="9" text-anchor="middle">Async Frontend → Backend</text>
+
+      <line x1="650" y1="575" x2="700" y2="575" stroke="#059669" stroke-width="1.5" marker-end="url(#aG)"/>
+
+      <!-- DATA SOURCES -->
+      <rect x="40" y="730" width="1020" height="160" rx="12" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="8,4"/>
+      <text x="60" y="752" fill="#7c3aed" font-size="10" font-weight="600">DATA SOURCE LAYER — Google Spreadsheets (Private)</text>
+
+      <rect x="70" y="770" width="280" height="100" rx="8" fill="#fff" stroke="#7c3aed" stroke-width="1.5"/>
+      <text x="210" y="795" fill="#1e293b" font-size="12" font-weight="600" text-anchor="middle">📊 Spreadsheet หลัก</text>
+      <text x="210" y="813" fill="#64748b" font-size="9" text-anchor="middle">D1_DTA1 — OKR/การเงิน/ช่องทาง/SA</text>
+      <text x="210" y="829" fill="#64748b" font-size="9" text-anchor="middle">D1_DTA สรุปผลงาน — เป้า vs ผล</text>
+      <text x="210" y="845" fill="#7c3aed" font-size="8" text-anchor="middle">13+ sheets · Cache TTL 5 min</text>
+
+      <rect x="400" y="770" width="280" height="100" rx="8" fill="#fff" stroke="#7c3aed" stroke-width="1.5"/>
+      <text x="540" y="795" fill="#1e293b" font-size="12" font-weight="600" text-anchor="middle">📈 Spreadsheet ประวัติ</text>
+      <text x="540" y="813" fill="#64748b" font-size="9" text-anchor="middle">ข้อมูลย้อนหลัง (2567+)</text>
+      <text x="540" y="829" fill="#64748b" font-size="9" text-anchor="middle">Sheet: 2024, 2025, DTA_History</text>
+      <text x="540" y="845" fill="#7c3aed" font-size="8" text-anchor="middle">YoY · ข้อมูลย้อนหลัง</text>
+
+      <rect x="730" y="770" width="280" height="100" rx="8" fill="#fff" stroke="#7c3aed" stroke-width="1.5"/>
+      <text x="870" y="795" fill="#1e293b" font-size="12" font-weight="600" text-anchor="middle">🔧 Spreadsheet เสริม</text>
+      <text x="870" y="813" fill="#64748b" font-size="9" text-anchor="middle">ประกันภัย / เชียร์เคลม</text>
+      <text x="870" y="829" fill="#64748b" font-size="9" text-anchor="middle">ผลิตภัณฑ์เสริม / ประเภทซ่อม</text>
+      <text x="870" y="845" fill="#7c3aed" font-size="8" text-anchor="middle">ข้อมูลเชื่อมโยงอื่นๆ</text>
+
+      <!-- Arrows -->
+      <line x1="860" y1="500" x2="860" y2="475" stroke="#2563eb" stroke-width="1.5" marker-end="url(#aB)"/>
+      <text x="870" y="490" fill="#2563eb" font-size="8">google.script.run</text>
+
+      <line x1="485" y1="615" x2="485" y2="630" stroke="#059669" stroke-width="1.5"/>
+      <line x1="210" y1="630" x2="870" y2="630" stroke="#059669" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <line x1="210" y1="630" x2="210" y2="730" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#aV)"/>
+      <line x1="540" y1="630" x2="540" y2="730" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#aV)"/>
+      <line x1="870" y1="630" x2="870" y2="730" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#aV)"/>
+      <text x="540" y="670" fill="#059669" font-size="9" text-anchor="middle">SpreadsheetApp.openById() × 3</text>
+
+      <!-- DEPLOY -->
+      <rect x="40" y="160" width="280" height="90" rx="8" fill="#fff1f2" stroke="#e11d48" stroke-width="1" stroke-dasharray="4,4"/>
+      <text x="60" y="180" fill="#e11d48" font-size="10" font-weight="600">🚀 Deploy Pipeline</text>
+      <text x="60" y="198" fill="#64748b" font-size="9">1. rm Code.js (keep Code.gs)</text>
+      <text x="60" y="214" fill="#64748b" font-size="9">2. clasp push -f</text>
+      <text x="60" y="230" fill="#64748b" font-size="9">3. clasp deploy → New URL</text>
+
+      <!-- LEGEND -->
+      <rect x="830" y="60" width="230" height="130" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+      <text x="850" y="80" fill="#1e293b" font-size="10" font-weight="600">Legend</text>
+      <rect x="850" y="90" width="16" height="10" rx="2" fill="#eff6ff" stroke="#2563eb" stroke-width="1"/>
+      <text x="872" y="99" fill="#64748b" font-size="8">Frontend (HTML/JS)</text>
+      <rect x="850" y="106" width="16" height="10" rx="2" fill="#f0fdf4" stroke="#059669" stroke-width="1"/>
+      <text x="872" y="115" fill="#64748b" font-size="8">Backend (GAS)</text>
+      <rect x="850" y="122" width="16" height="10" rx="2" fill="#faf5ff" stroke="#7c3aed" stroke-width="1"/>
+      <text x="872" y="131" fill="#64748b" font-size="8">Data Source (Sheets)</text>
+      <rect x="850" y="138" width="16" height="10" rx="2" fill="#fffbeb" stroke="#d97706" stroke-width="1"/>
+      <text x="872" y="147" fill="#64748b" font-size="8">User / Delivery</text>
+      <rect x="850" y="154" width="16" height="10" rx="2" fill="#fff1f2" stroke="#e11d48" stroke-width="1"/>
+      <text x="872" y="163" fill="#64748b" font-size="8">Deploy Process</text>
+    </svg>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot cyan"></div>
+        <h3>Frontend (Index.html)</h3>
+      </div>
+      <ul>
+        <li>• Single-page HTML — ไม่มี framework</li>
+        <li>• Chart.js 4.4.7 + datalabels plugin</li>
+        <li>• 13 tabs, responsive, มือถือ First</li>
+        <li>• google.script.run → 13 async calls</li>
+        <li>• dlCfg() ตั้งค่า datalabels สีฟ้าสด</li>
+        <li>• mkC() สร้าง chart + auto-inject padding</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot emerald"></div>
+        <h3>Backend (Code.gs)</h3>
+      </div>
+      <ul>
+        <li>• doGet() → createHtmlOutputFromFile</li>
+        <li>• 13 data functions → JSON objects</li>
+        <li>• CacheService 5 min TTL</li>
+        <li>• Debug endpoints (?debug, ?api)</li>
+        <li>• SpreadsheetApp.openById() × 3</li>
+        <li>• ไม่มี HtmlTemplate (Caja issue)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot violet"></div>
+        <h3>Data Sources (3 Sheets)</h3>
+      </div>
+      <ul>
+        <li>• ไฟล์หลัก: OKR/การเงิน/ช่องทาง/SA</li>
+        <li>• ไฟล์ประวัติ: YoY/ข้อมูลย้อนหลัง</li>
+        <li>• ไฟล์เสริม: ประกันภัย/เคลม/ผลิตภัณฑ์</li>
+        <li>• Private → ต้องผ่าน GAS เท่านั้น</li>
+        <li>• v13.43 ใช้ google.script.run โหลดข้อมูล</li>
+        <li>• เคลือบแก้ว tab ถูกลบออกแล้ว</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="footer">PMG War Room v13.43 — Flowchart & JD — Generated by Hermes Agent</p>
+</div>
+</body>
+</html>

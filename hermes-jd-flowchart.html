@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hermes Agent — Job Description & Flowchart</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans Thai',sans-serif;background:#f8fafc;color:#1e293b;min-height:100vh;padding:1.5rem}
+.c{max-width:900px;margin:0 auto}
+h1{font-size:1.5rem;color:#0f172a;margin-bottom:0.3rem;display:flex;align-items:center;gap:0.5rem}
+.sub{color:#64748b;font-size:0.85rem;margin-bottom:1.5rem}
+.card{background:#fff;border-radius:0.75rem;border:1px solid #e2e8f0;padding:1.2rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.card h2{font-size:1rem;color:#1d4ed8;margin-bottom:0.6rem;display:flex;align-items:center;gap:0.4rem}
+.card ul{list-style:none;padding-left:0}
+.card li{padding-left:1.3rem;position:relative;margin-bottom:0.4rem;color:#334155;font-size:0.85rem;line-height:1.6}
+.card li::before{content:'✓';position:absolute;left:0;color:#10b981;font-weight:700;font-size:0.9rem}
+.flow-title{text-align:center;font-size:1rem;font-weight:700;color:#475569;margin:1.5rem 0 0.8rem}
+.flow{display:flex;flex-wrap:wrap;gap:0.6rem;align-items:center;justify-content:center;margin-bottom:1rem}
+.step{background:#eff6ff;border:2px solid #3b82f6;border-radius:0.6rem;padding:0.8rem 1rem;text-align:center;font-size:0.82rem;font-weight:600;color:#1e40af;min-width:120px;transition:transform 0.2s}
+.step:hover{transform:scale(1.05)}
+.step.gr{background:#f0fdf4;border-color:#10b981;color:#065f46}
+.step.vi{background:#faf5ff;border-color:#8b5cf6;color:#5b21b6}
+.step.am{background:#fffbeb;border-color:#f59e0b;color:#92400e}
+.arrow{font-size:1.4rem;color:#94a3b8;font-weight:700}
+.loop{background:#fef3c7;border:2px solid #f59e0b;border-radius:0.6rem;padding:0.6rem 1rem;font-size:0.8rem;color:#92400e;text-align:center;margin:0.5rem auto;max-width:500px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.5rem}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.step{min-width:90px;padding:0.6rem 0.7rem;font-size:0.75rem}}
+.badge{display:inline-block;background:#dbeafe;color:#1d4ed8;font-size:0.7rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:9999px;margin-left:0.3rem}
+.power{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:2px solid #3b82f6;border-radius:0.75rem;padding:1rem;margin:1rem 0}
+.power h3{color:#1e40af;font-size:0.9rem;margin-bottom:0.4rem}
+.power ul{columns:2;column-gap:1.5rem}
+@media(max-width:600px){.power ul{columns:1}}
+.power li{font-size:0.8rem;color:#334155;margin-bottom:0.2rem}
+.ft{text-align:center;color:#94a3b8;font-size:0.75rem;margin-top:1.5rem;padding-top:0.8rem;border-top:1px solid #e2e8f0}
+</style>
+</head>
+<body>
+<div class="c">
+
+<h1>🤖 Hermes Agent — Job Description</h1>
+<p class="sub">ผู้ช่วย AI ครบวงจร ทำงานร่วมกับมนุษย์แบบ end-to-end</p>
+
+<h2 id="flow">🔄 วงจรการทำงาน</h2>
+
+<div class="flow">
+<div class="step">📢 รับคำสั่ง<br><small>Telegram/CLI</small></div>
+<div class="arrow">➡</div>
+<div class="step gr">🔍 วิเคราะห์<br><small>อ่านโค้ด/ไฟล์</small></div>
+<div class="arrow">➡</div>
+<div class="step vi">✏️ เขียน/แก้โค้ด<br><small>HTML/CSS/JS/GAS</small></div>
+<div class="arrow">➡</div>
+<div class="step am">🚀 Deploy<br><small>clasp push+deploy</small></div>
+<div class="arrow">➡</div>
+<div class="step gr">🧪 ทดสอบ<br><small>curl/screenshot</small></div>
+<div class="arrow">➡</div>
+<div class="step">📨 ส่งผล<br><small>Telegram group</small></div>
+</div>
+
+<div class="loop">🔄 ถ้าผิดพลาด → รับ feedback → แก้ไข → วนใหม่ จนกว่าจะได้<br>
+<small>ไม่มีการมองเห็น แก้ไขจนเสร็จ</small></div>
+
+<h2 style="margin-top:1.5rem">📋 หน้าที่ละเอียด</h2>
+
+<div class="grid">
+
+<div class="card">
+<h2>🔧 พัฒนา & แก้โค้ด</h2>
+<ul>
+<li>เขียน/แก้ไข HTML, CSS, JavaScript, Google Apps Script</li>
+<li>ค้นหาบั๊ก แก้ไข และ deploy ได้ภายใน</li>
+<li>จัดการ version รวมถึง deployment pipeline</li>
+<li>สร้างกราฟ Chart.js + DataLabels plugin</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>🐛 ดีบั๊ก & แก้ปัญหา</h2>
+<ul>
+<li>วิเคราะห์หน้าจอ → หา root cause</li>
+<li>ทดสอบด้วย curl, browser, vision_analyze</li>
+<li>วนลูปแก้จนกว่าจะได้</li>
+<li>บันทึก lessons learned ใน memory + skills</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>🚀 Deploy & จัดการระบบ</h2>
+<ul>
+<li>clasp push -f → clasp deploy → ส่ง URL ใหม่</li>
+<li>จัดการ config, env, spreadsheet IDs</li>
+<li>รักษา memory ข้าม session</li>
+<li>ตั้ง Cron ส่งสรุปอัตโนมัติ</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>📨 สื่อสาร & ประสานงาน</h2>
+<ul>
+<li>ส่งไฟล์/ข้อความผ่าน Telegram group</li>
+<li>รับ feedback จากมือถือ → แก้ไข → ส่งกลับ</li>
+<li>สร้างเอกสาร HTML/flowchart/JD</li>
+<li>สรุป KPI ขั้นเคลื่อน ส่งทุกวัน 8:00</li>
+</ul>
+</div>
+
+</div>
+
+<div class="power">
+<h3>⚡ ความสามารถพิเศษ</h3>
+<ul>
+<li>อ่านไฟล์ Projectได้ทั้ง local และ remote</li>
+<li>ค้นหา code (grep/ripgrep) ได้เร็ว</li>
+<li>รัน shell command ได้ (build, test, deploy)</li>
+<li>เขียน/แก้ไขไฟล์ ได้ตรง</li>
+<li>วิเคราะห์ภาพหน้าจอ (screenshot)</li>
+<li>ดึงข้อมูลจาก API/web</li>
+<li>ส่งข้อความ/ไฟล์ผ่าน Telegram</li>
+<li>จำข้าม session (memory + skills)</li>
+<li>ตั้งคิว Cron job อัตโนมัติ</li>
+<li>มองเห็น แก้ไข จนเสร็จ ไม่มีการมองเห็น</li>
+</ul>
+</div>
+
+<h2 style="margin-top:1.5rem">🎯 โปรเจกต์ที่ทำร่วมกัน</h2>
+
+<div class="card">
+<h2>PMG War Room <span class="badge">v13.43+</span></h2>
+<ul>
+<li>Dashboard 13 แท็บ ข้อมูลรถยนต์</li>
+<li>Google Apps Script + Chart.js + DataLabels</li>
+<li>แก้บั๊ก Caja encoding, closing tags, CDN, datalabels</li>
+<li>ตั้ง Cron ส่งสรุป KPI ทุกวัน 08:00</li>
+</ul>
+</div>
+
+<p class="ft">Hermes Agent v1.0 | Built with ❤️ by Hermes AI</p>
+</div>
+</body>
+</html>
