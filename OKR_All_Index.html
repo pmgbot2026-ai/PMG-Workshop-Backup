@@ -1,0 +1,3388 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PMS/PMG OKR Dashboard — 5 กลุ่มงาน | CEO Contract 2.0</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --accent: #3b82f6;
+      --accent2: #8b5cf6;
+      --green: #10b981;
+      --red: #ef4444;
+      --orange: #f59e0b;
+      --pink: #ec4899;
+      --text: #1e293b;
+      --text2: #475569;
+      --text3: #94a3b8;
+      --border: #e2e8f0;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+      padding: 18px 24px;
+      box-shadow: 0 2px 10px rgba(59,130,246,0.15);
+    }
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header h1 {
+      font-size: 1.4rem;
+      color: #fff;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header .subtitle {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.85);
+      margin-top: 2px;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .last-update {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.18);
+      padding: 5px 12px;
+      border-radius: var(--radius-sm);
+    }
+    .refresh-btn {
+      background: rgba(255,255,255,0.25);
+      border: 1px solid rgba(255,255,255,0.4);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      transition: background 0.2s;
+      font-family: inherit;
+    }
+    .refresh-btn:hover { background: rgba(255,255,255,0.35); }
+
+    /* ── Tabs ── */
+    .tabs-bar {
+      background: #fff;
+      padding: 10px 24px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+    .tabs-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs-inner::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text2);
+      cursor: pointer;
+      font-size: 0.84rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .tab-btn:hover { background: #f0f4f8; color: var(--accent); }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(59,130,246,0.25);
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px 24px 60px;
+    }
+    .section { display: none; animation: fadeIn 0.3s ease; }
+    .section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .icon { color: var(--accent); }
+
+    /* ── Department summary cards (overview) ── */
+    .dept-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .dept-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      border-top: 4px solid var(--accent);
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .dept-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .dept-card .dc-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+    .dept-card .dc-stats {
+      display: flex;
+      gap: 14px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .dept-card .dc-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .dept-card .dc-stat-val {
+      font-size: 1.3rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .dept-card .dc-stat-label {
+      font-size: 0.7rem;
+      color: var(--text3);
+      margin-top: 3px;
+    }
+    .dept-card .dc-bar {
+      margin-top: 12px;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .dept-card .dc-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+
+    /* ── Stat cards ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .stat-card .stat-icon { font-size: 1.8rem; margin-bottom: 6px; }
+    .stat-card .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--accent); }
+    .stat-card .stat-label { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+
+    /* ── Cascade flow (overview) ── */
+    .cascade-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-bottom: 24px;
+    }
+    .cascade-step {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      text-align: center;
+      position: relative;
+    }
+    .cascade-step .cs-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .cascade-step .cs-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .cascade-step .cs-desc { font-size: 0.82rem; color: var(--text2); margin-top: 4px; }
+    .cascade-arrow {
+      text-align: center;
+      color: var(--text3);
+      font-size: 1.2rem;
+      padding: 6px 0;
+    }
+    .cs-org { border-left: 4px solid #3b82f6; }
+    .cs-org .cs-label { color: #3b82f6; }
+    .cs-dept { border-left: 4px solid #8b5cf6; }
+    .cs-dept .cs-label { color: #8b5cf6; }
+    .cs-team { border-left: 4px solid #f59e0b; }
+    .cs-team .cs-label { color: #f59e0b; }
+    .cs-person { border-left: 4px solid #ec4899; }
+    .cs-person .cs-label { color: #ec4899; }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow-x: auto;
+      margin-bottom: 16px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    thead th {
+      background: #f8fafc;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 700;
+      color: var(--text2);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      font-size: 0.78rem;
+    }
+    tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tbody tr:hover { background: #f8fafc; }
+    tbody tr:last-child td { border-bottom: none; }
+
+    /* ── KPI cell ── */
+    .kpi-cell { display: flex; flex-direction: column; gap: 3px; }
+    .kpi-value { font-weight: 700; color: var(--text); font-size: 0.82rem; }
+    .kpi-value.na { color: var(--text3); font-weight: 400; }
+    .kpi-badge {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 5px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      width: fit-content;
+    }
+    .badge-green { background: #d1fae5; color: #065f46; }
+    .badge-orange { background: #fef3c7; color: #92400e; }
+    .badge-gray { background: #f1f5f9; color: var(--text3); }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    .badge-purple { background: #ede9fe; color: #5b21b6; }
+    .badge-pink { background: #fce7f3; color: #9d174d; }
+
+    /* ── Department selector (กลุ่มงาน tab) ── */
+    .dept-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .dept-chip {
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 2px solid var(--border);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text2);
+      transition: all 0.2s;
+      white-space: nowrap;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dept-chip:hover { transform: translateY(-1px); }
+    .dept-chip .dc-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dept-chip.active { color: #fff; border-color: transparent; }
+
+    /* ── Person cards grid ── */
+    .person-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .person-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .person-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .person-card .pc-strip {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+    }
+    .person-card .pc-name {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 6px;
+      line-height: 1.3;
+    }
+    .person-card .pc-team {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+    .person-card .pc-role {
+      font-size: 0.76rem;
+      color: var(--text2);
+      margin-top: 6px;
+      line-height: 1.4;
+      min-height: 1.4em;
+    }
+    .person-card .pc-kr {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 0.74rem;
+      color: var(--text3);
+    }
+    .person-card .pc-kr-count {
+      font-weight: 700;
+      color: var(--text);
+    }
+    .person-card .pc-kr-count.empty { color: var(--text3); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15,23,42,0.55);
+      z-index: 1000;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 30px 16px;
+      overflow-y: auto;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: var(--card);
+      border-radius: var(--radius);
+      max-width: 800px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      animation: modalIn 0.25s ease;
+      margin-bottom: 40px;
+    }
+    @keyframes modalIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .modal-close {
+      position: sticky;
+      top: 0;
+      display: flex;
+      justify-content: flex-end;
+      padding: 10px 16px;
+      background: var(--card);
+      border-radius: var(--radius) var(--radius) 0 0;
+      z-index: 1;
+    }
+    .modal-close-btn {
+      background: #f1f5f9;
+      border: none;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.1rem;
+      color: var(--text2);
+      transition: background 0.2s;
+      font-family: inherit;
+    }
+    .modal-close-btn:hover { background: #e2e8f0; }
+    .modal-content { padding: 0 24px 24px; }
+
+    /* ── Person detail ── */
+    .person-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .person-name { font-size: 1.3rem; font-weight: 800; color: var(--text); }
+    .person-meta { font-size: 0.84rem; color: var(--text2); margin-top: 4px; }
+    .person-meta span { margin-right: 14px; }
+    .team-tag {
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .subsection-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 18px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .acc-list { list-style: none; }
+    .acc-item {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 0.84rem;
+      color: var(--text2);
+      line-height: 1.6;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .acc-num {
+      min-width: 24px; height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── Objective blocks ── */
+    .obj-block {
+      background: #f8fafc;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--accent);
+    }
+    .obj-block.obj-business { border-left-color: #3b82f6; }
+    .obj-block.obj-team { border-left-color: #10b981; }
+    .obj-block.obj-personal { border-left-color: #8b5cf6; }
+    .obj-block.obj-community { border-left-color: #f59e0b; }
+    .obj-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .obj-type-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+    .tb-business { background: #dbeafe; color: #1e40af; }
+    .tb-team { background: #d1fae5; color: #065f46; }
+    .tb-personal { background: #ede9fe; color: #5b21b6; }
+    .tb-community { background: #fef3c7; color: #92400e; }
+    .obj-weight { font-size: 0.78rem; color: var(--text3); font-weight: 600; }
+    .obj-label { font-size: 0.86rem; color: var(--text); font-weight: 600; margin-bottom: 8px; line-height: 1.5; }
+    .kr-list { list-style: none; padding-left: 4px; }
+    .kr-item {
+      font-size: 0.82rem;
+      color: var(--text2);
+      padding: 5px 0 5px 16px;
+      position: relative;
+      line-height: 1.5;
+    }
+    .kr-item::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 11px;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* ── Weight bars ── */
+    .weight-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .weight-label { font-size: 0.78rem; font-weight: 600; color: var(--text2); min-width: 90px; }
+    .weight-bar-bg {
+      flex: 1;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .weight-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    .wbf-business { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .wbf-team { background: linear-gradient(90deg, #10b981, #34d399); }
+    .wbf-personal { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+    .wbf-community { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .weight-pct { font-size: 0.78rem; font-weight: 700; color: var(--text); min-width: 40px; text-align: right; }
+
+    .empty-placeholder {
+      font-size: 0.82rem;
+      color: var(--text3);
+      font-style: italic;
+      padding: 12px;
+      background: #f8fafc;
+      border-radius: var(--radius-sm);
+      text-align: center;
+    }
+
+    /* ── Connection Map ── */
+    .map-container {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow-x: auto;
+      margin-bottom: 16px;
+    }
+    .map-svg-wrap { min-width: 900px; }
+    .map-legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text2);
+    }
+    .legend-dot {
+      width: 14px; height: 14px;
+      border-radius: 4px;
+    }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .filter-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text2);
+    }
+    .filter-select {
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-size: 0.82rem;
+      font-family: inherit;
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    /* ── Loading / Error ── */
+    .loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 300px;
+      color: var(--text2);
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-msg { color: var(--red); font-size: 0.86rem; text-align: center; }
+
+    /* ── Chart container ── */
+    .chart-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .chart-wrap {
+      position: relative;
+      height: 320px;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .header h1 { font-size: 1.1rem; }
+      .header { padding: 14px 16px; }
+      .container { padding: 14px 14px 40px; }
+      .tabs-bar { padding: 8px 14px; }
+      .tab-btn { padding: 6px 12px; font-size: 0.76rem; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .dept-grid { grid-template-columns: 1fr; }
+      .section-title { font-size: 1rem; }
+      table { font-size: 0.76rem; }
+      thead th { padding: 8px 8px; }
+      tbody td { padding: 8px 8px; }
+      .person-grid { grid-template-columns: 1fr; }
+      .modal-overlay { padding: 12px 8px; }
+      .modal-content { padding: 0 14px 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═════════ Header ═════════ -->
+  <div class="header">
+    <div class="header-inner">
+      <div>
+        <h1>🎯 PMS/PMG OKR Dashboard — 5 กลุ่มงาน</h1>
+        <div class="subtitle">CEO Contract 2.0 / LIA 2.0 — Contract of Extreme Ownership</div>
+      </div>
+      <div class="header-right">
+        <div class="last-update" id="lastUpdate">กำลังโหลดข้อมูล...</div>
+        <button class="refresh-btn" onclick="refreshData()">🔄 รีเฟรช</button>
+        <button class="refresh-btn" id="editToggleBtn" onclick="toggleEditMode()" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.25)">✏️ แก้ไข</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════ Tabs ═════════ -->
+  <div class="tabs-bar">
+    <div class="tabs-inner" id="tabsBar">
+      <!-- Tabs are rendered dynamically from TAB_CONFIG by renderTabs() -->
+    </div>
+  </div>
+
+  <!-- ═════════ Content ═════════ -->
+  <div class="container">
+    <div id="loadingScreen" class="loading-screen">
+      <div class="spinner"></div>
+      <div>กำลังโหลดข้อมูล OKR 5 กลุ่มงาน...</div>
+    </div>
+
+    <div id="section-overview" class="section" style="display:none"></div>
+    <div id="section-departments" class="section" style="display:none"></div>
+    <div id="section-kpi" class="section" style="display:none"></div>
+    <div id="section-linkage" class="section" style="display:none"></div>
+    <div id="section-mentors" class="section" style="display:none"></div>
+    <div id="section-audit" class="section" style="display:none"></div>
+  </div>
+
+  <!-- ═════════ Person Modal ═════════ -->
+  <div class="modal-overlay" id="personModal" onclick="closeModalOnOverlay(event)">
+    <div class="modal-box">
+      <div class="modal-close">
+        <button class="modal-close-btn" onclick="closePersonModal()">✕</button>
+      </div>
+      <div class="modal-content" id="personModalContent"></div>
+    </div>
+  </div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   PMS/PMG Multi-Department OKR Dashboard — Client logic
+   ═══════════════════════════════════════════════════ */
+var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
+// Fallback: if placeholder wasn't replaced by server (local testing), use window.location
+if (SCRIPT_URL === 'SCRIPT_URL_PLACEHOLDER' || !SCRIPT_URL) {
+  SCRIPT_URL = window.location.origin + window.location.pathname;
+}
+
+var D = null;             // Full data object { departments, lastUpdate }
+var EMBEDDED_DATA = null; // Server can inject cached data here for instant load
+var currentDept = 0;       // Selected department index for กลุ่มงาน tab
+var kpiFilterDept = -1;    // KPI tab filter: -1 = all, 0..4 = specific dept
+var personModalDept = '';  // Dept name for person modal (for edit)
+var personModalSheet = ''; // Sheet name for person modal (for edit)
+var personModalEditOn = false; // Edit mode for person modal
+var editMode = false;      // Edit mode toggle for KR editing
+
+// ═══ TAB CONFIG ═══
+// Edit this array to reorder/rename tabs. Each tab: { id, label, icon }
+// To hide a tab, remove it from the array.
+// To rename a tab, change the label or icon.
+var TAB_CONFIG = [
+  { id: 'overview',    icon: '📊', label: 'ภาพรวมทั้งองค์กร' },
+  { id: 'linkage',     icon: '🔗', label: 'CEO : PMSG' },
+  { id: 'departments', icon: '👤', label: 'CEO รายบุคคล' },
+  { id: 'kpi',         icon: '🎯', label: 'KPI & ตัววัดผล' },
+  { id: 'mentors',     icon: '👥', label: 'Mentor' },
+  { id: 'audit',       icon: '🔍', label: 'ตรวจสอบ' }
+];
+
+function renderTabs() {
+  var bar = document.getElementById('tabsBar');
+  if (!bar) return;
+  var html = '';
+  TAB_CONFIG.forEach(function(t, i) {
+    html += '<button class="tab-btn' + (i === 0 ? ' active' : '') + '" onclick="switchTab(\'' + t.id + '\', this)">' + t.icon + ' ' + t.label + '</button>';
+  });
+  bar.innerHTML = html;
+}
+var overviewChart = null;  // Chart.js instance for overview
+
+/* Department color map — keeps ordering stable */
+var DEPT_COLORS = {
+  'PMG/PMGI':           { color: '#3b82f6', bg: '#dbeafe', text: '#1e40af', badge: 'badge-blue' },
+  'PMS ช่าง 4 สาขา':    { color: '#f59e0b', bg: '#fef3c7', text: '#92400e', badge: 'badge-orange' },
+  'PMS ขาย':            { color: '#10b981', bg: '#d1fae5', text: '#065f46', badge: 'badge-green' },
+  'PMS ศูนย์บริการ':    { color: '#8b5cf6', bg: '#ede9fe', text: '#5b21b6', badge: 'badge-purple' },
+  'PMS/PMG Backoffice': { color: '#ec4899', bg: '#fce7f3', text: '#9d174d', badge: 'badge-pink' }
+};
+
+/* Friendly headers for known KPI column keys */
+var KPI_HEADER_MAP = {
+  kpi: 'KPI',
+  pkgYear: 'PKG (ปี)',
+  pmsgMonth: 'PMSG (เดือน)',
+  pmggMonth: 'PMGG (เดือน)',
+  teamCenter: 'ทีมศูนย์สี',
+  teamSA: 'ทีม SA',
+  teamPMGISell: 'ทีม PMGI',
+  teamParts: 'อะไหล่',
+  somsak: 'สมศักดิ์'
+};
+
+/* ── Initialize ── */
+function init() {
+  renderTabs(); // Build tab buttons from TAB_CONFIG
+  loadData();
+}
+
+function loadData() {
+  // Check if server embedded cached data directly in the page
+  if (EMBEDDED_DATA && EMBEDDED_DATA.departments) {
+    D = EMBEDDED_DATA;
+    EMBEDDED_DATA = null; // free memory
+    onLoaded();
+    return;
+  }
+  var url = SCRIPT_URL;
+  if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
+  else url += '?okrall=1&view=data';
+
+  // Show loading with progress message — user sees the page immediately
+  var ls = document.getElementById('loadingScreen');
+  if (ls) {
+    ls.innerHTML = '<div style="text-align:center;padding:40px">' +
+      '<div style="font-size:1.4rem;margin-bottom:12px">📊 กำลังโหลดข้อมูล OKR...</div>' +
+      '<div style="font-size:0.85rem;color:var(--text3);margin-bottom:16px" id="loadProgress">กรุณารอสักครู่ — อ่านข้อมูลจาก 5 กลุ่มงาน</div>' +
+      '<div class="spinner"></div>' +
+      '</div>';
+  }
+
+  // Progress timer: update message every 10 seconds so user knows it's working
+  var elapsed = 0;
+  var progressTimer = setInterval(function() {
+    elapsed += 10;
+    var pe = document.getElementById('loadProgress');
+    if (pe) {
+      if (elapsed < 30) pe.textContent = 'กรุณารอสักครู่ — อ่านข้อมูลจาก 5 กลุ่มงาน (' + elapsed + ' วินาที)';
+      else if (elapsed < 60) pe.textContent = 'กำลังประมวลผลข้อมูล... (' + elapsed + ' วินาที)';
+      else if (elapsed < 120) pe.textContent = 'เกือบเสร็จแล้ว กรุณารออีกสักครู่... (' + elapsed + ' วินาที)';
+      else pe.textContent = 'ใช้เวลานานกว่าปกติ — กรุณารอต่อ... (' + elapsed + ' วินาที)';
+    }
+  }, 10000);
+
+  // Use 5-minute timeout (cold cache can take 3 min)
+  var controller = new AbortController();
+  var timeoutId = setTimeout(function() { controller.abort(); }, 300000);
+
+  fetch(url, { signal: controller.signal, cache: 'no-store' })
+    .then(function(r) { clearTimeout(timeoutId); clearInterval(progressTimer); return r.json(); })
+    .then(function(data) {
+      D = data;
+      onLoaded();
+    })
+    .catch(function(err) {
+      clearTimeout(timeoutId);
+      clearInterval(progressTimer);
+      var msg = err.message;
+      if (err.name === 'AbortError') msg = 'หมดเวลารอ (5 นาที) — กรุณาลองใหม่อีกครั้ง';
+      document.getElementById('loadingScreen').innerHTML =
+        '<div class="error-msg">❌ ไม่สามารถโหลดข้อมูลได้<br>' + esc(msg) + '<br><br><button onclick="loadData()" style="padding:8px 20px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;cursor:pointer">🔄 ลองใหม่</button></div>';
+    });
+}
+
+function refreshUrl() {
+  var url = SCRIPT_URL;
+  var t = '_t=' + Date.now();
+  if (url.indexOf('?') > -1) url += '&okrall=1&view=data&' + t;
+  else url += '?okrall=1&view=data&' + t;
+  return url;
+}
+
+function onLoaded() {
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('section-overview').style.display = 'block';
+  document.getElementById('section-overview').classList.add('active');
+
+  if (D && D.lastUpdate) {
+    try {
+      var d = new Date(D.lastUpdate);
+      document.getElementById('lastUpdate').textContent =
+        'อัปเดตล่าสุด: ' + d.toLocaleString('th-TH');
+    } catch(e) {
+      document.getElementById('lastUpdate').textContent = 'อัปเดตล่าสุด: ' + D.lastUpdate;
+    }
+  }
+
+  // Lazy render: only render overview on load, others on tab click
+  renderOverview();
+}
+
+function refreshData() {
+  document.getElementById('lastUpdate').textContent = 'กำลังรีเฟรช... (อาจใช้เวลา 1-2 นาที)';
+  // First: clear server cache via ?view=refresh
+  var refreshClearUrl = SCRIPT_URL;
+  if (refreshClearUrl.indexOf('?') > -1) refreshClearUrl += '&okrall=1&view=refresh';
+  else refreshClearUrl += '?okrall=1&view=refresh';
+  
+  fetch(refreshClearUrl, { cache: 'no-store' })
+    .then(function(r) { return r.json(); })
+    .then(function() {
+      // Cache cleared on server — now fetch fresh data
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function() { controller.abort(); }, 180000);
+      fetch(refreshUrl(), { signal: controller.signal, cache: 'no-store' })
+        .then(function(r) { clearTimeout(timeoutId); return r.json(); })
+        .then(function(data) {
+          D = data;
+          // Reset lazy-render flags so tabs re-render with fresh data
+          document.querySelectorAll('.section').forEach(function(s) { delete s.dataset.rendered; });
+          onLoaded();
+          renderOverview();
+          renderDepartments();
+          renderKPI();
+          renderLinkage();
+        })
+        .catch(function(err) {
+          clearTimeout(timeoutId);
+          document.getElementById('lastUpdate').textContent = '❌ รีเฟรชล้มเหลว: ' + esc(err.message);
+        });
+    })
+    .catch(function(err) {
+      // Fallback: just fetch directly
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function() { controller.abort(); }, 180000);
+      fetch(refreshUrl(), { signal: controller.signal, cache: 'no-store' })
+        .then(function(r) { clearTimeout(timeoutId); return r.json(); })
+        .then(function(data) {
+          D = data;
+          document.querySelectorAll('.section').forEach(function(s) { delete s.dataset.rendered; });
+          onLoaded();
+          renderOverview();
+          renderDepartments();
+          renderKPI();
+          renderLinkage();
+        })
+        .catch(function(err2) {
+          clearTimeout(timeoutId);
+          document.getElementById('lastUpdate').textContent = '❌ รีเฟรชล้มเหลว: ' + esc(err2.message);
+        });
+    });
+}
+
+/* ── Tab switching ── */
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.section').forEach(function(s) {
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(function(t) {
+    t.classList.remove('active');
+  });
+  var section = document.getElementById('section-' + tabId);
+  if (section) {
+    section.style.display = 'block';
+    section.classList.add('active');
+  }
+  if (btn) btn.classList.add('active');
+
+  // Lazy-render: only render when tab is first opened
+  if (tabId === 'departments' && !section.dataset.rendered) { renderDepartments(); section.dataset.rendered = '1'; }
+  if (tabId === 'kpi' && !section.dataset.rendered) { renderKPI(); section.dataset.rendered = '1'; }
+  if (tabId === 'linkage' && !section.dataset.rendered) { renderLinkage(); section.dataset.rendered = '1'; }
+  if (tabId === 'mentors') renderMentors();
+  if (tabId === 'audit') renderAudit();
+}
+
+/* ═══════════════════════════════════════════════════
+   Helpers
+   ═══════════════════════════════════════════════════ */
+function esc(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function getDeptColor(name) {
+  var c = DEPT_COLORS[name];
+  return c ? c.color : '#64748b';
+}
+function getDeptMeta(name) {
+  var c = DEPT_COLORS[name];
+  return c ? c : { color: '#64748b', bg: '#f1f5f9', text: '#334155', badge: 'badge-gray' };
+}
+
+/* ── classifyKR: filter out non-KR items (names, labels, descriptions, meta) ── */
+/* Hoisted to top-level so all pages (overview, KPI, audit) use the same filter. */
+function classifyKR(text) {
+  var n = text.replace(/\s+/g, ' ').trim();
+  // Remove prefix for classification
+  for (var pi = 0; pi < 3; pi++) {
+    n = n.replace(/^(KR\s*\d+\s*[:\.]?\s*|KPI\s*\d+\s*[:\.]?\s*|O\d+-KR\d+\s*[:\.]?\s*|\d+\s*[:\.\-)]\s*)/i, '');
+  }
+  n = n.replace(/[\(\)"]/g, '').trim();
+  var lower = n.toLowerCase().trim();
+  var len = n.replace(/\s/g, '').length;
+
+  // Too short to be a real KR
+  if (len < 10) return 'skip';
+
+  // Person name (Thai name, no numbers, no action verbs, short)
+  if (len < 25 && !/\d/.test(n) && !/(ลบ|ล้าน|บาท|คัน|เดือน|ปี|คน|%|≥|GM|CBNP|CSI|SSI|PMS|PMG|PMGG|MR|MAPP|AI|Digital|Service|Experience|Revenue|Profit|Growth|Target|Goal|Score|Ranking|Quality|Coaching|Workflow|Opportunity|Efficiency|Adoption|Insurance|Channel)/i.test(n)) {
+    return 'skip';
+  }
+
+  // Multi-person names with # or / separator
+  if (!/\d/.test(n) && len < 80) {
+    if (/[ก-๛]+\s+[ก-๛]+\s*#\s*[ก-๛]+\s+[ก-๛]+/.test(n)) return 'skip';
+    if (/[ก-๛]+\s+[ก-๛]+\s*\/\s*[ก-๛]+\s+[ก-๛]+/.test(n)) return 'skip';
+    if (/>>/.test(n) && len < 60) return 'skip';
+  }
+
+  // Pure English category labels in parens
+  if (/^\([a-z\s\/]+\)$/i.test(text.trim())) return 'skip';
+
+  // KPI labels — filter if they are just category labels (no measurable target after stripping prefix)
+  if (/^KPI\s*\d+/i.test(text.trim())) {
+    // Keep if the remaining text has numbers/targets, skip if it's just a label
+    if (len < 80 && !/(บาท|ล้าน|ลบ|คัน|%|≥|คะแนน|ไม่ต่ำกว่า|ไม่น้อยกว่า)/.test(n)) return 'skip';
+  }
+
+  // Descriptions: "วัดว่า..."
+  if (/^วัดว่า/i.test(n) || /^วัด ว่า/i.test(n)) return 'skip';
+
+  // Short descriptive phrases without targets
+  if (len < 22 && !/\d/.test(n) && !/(ลบ|ล้าน|บาท|คัน|เดือน|ปี|คน|%|≥)/i.test(n)) return 'skip';
+
+  // Team/group names
+  if (/^(ทีม|กรุ๊ป|กลุ่ม)/i.test(n) && len < 50 && !/\d/.test(n)) return 'skip';
+  // "กรุ๊ปรถเล็ก 1" etc
+  if (/^กรุ๊ป/i.test(n) && len < 30) return 'skip';
+
+  // Meta: ผู้เกี่ยวข้อง, GO-TO, Alignment/สวัสดีตอนเย็น
+  if (lower === 'ผู้เกี่ยวข้อง' || n === 'ผู้เกี่ยวข้อง') return 'skip';
+  if (/^(GO-TO|GOTO|go-to|goto)/i.test(n) && len < 30) return 'skip';
+  if (/^(alignment|สวัสดีตอนเย็น)/i.test(lower) && len < 60) return 'skip';
+  if (/alig(ement|nment)/i.test(lower) && /สวัสดีตอนเย็น/.test(n)) return 'skip';
+  if (/ผลการดำเนินงานpmsg|ผลการดำเนินงานPMSG/i.test(n) && /สวัสดีตอนเย็น/.test(n)) return 'skip';
+  if (/^alignment\s+(goto|สวัสดี)/i.test(lower)) return 'skip';
+
+  // Generic category labels
+  if (/^ประสิทธิภาพและการขับเคลื่อนผลลัพธ์/i.test(n)) return 'skip';
+  if (/^เสริมศักยภาพการเป็นผู้นำเชิงกลยุทธ์/i.test(n)) return 'skip';
+  if (/^สร้าง customer experience แบบ omni-channel/i.test(lower)) return 'skip';
+  // "Customer-Centric / Experience" — English category label
+  if (/^customer/i.test(lower) && len < 60 && !/[ก-๛]/.test(n)) return 'skip';
+  // "(Digital Adoption):" — English prefix labels
+  if (/^\(?\s*digital adoption\s*\)?[:\s]/i.test(n) && len < 80) return 'skip';
+  // KPI category labels like "Revenue & Gross Margin Quality"
+  if (/^[a-z]+\s*&\s*[a-z]/i.test(n) && !/[ก-๛]/.test(n) && len < 60) return 'skip';
+  // "Content Creator" label
+  if (/^content creator/i.test(lower) && len < 30) return 'skip';
+
+  if (len < 20 && !/\d/.test(n)) return 'skip';
+
+  // PMSG group labels
+  if (/^(pmsg\s*-\s*กรุ๊ป|กรุ๊ปรถ)/i.test(n) && !/(ให้ได้|บรรลุ|เพิ่ม|ลด|สร้าง|พัฒนา|บริหารจัดการ)/.test(n)) return 'skip';
+
+  // Metric labels
+  if (/^csi\s*\//i.test(lower)) return 'skip';
+  if (/^cbnp\s*\//i.test(lower)) return 'skip';
+  if (/^inventory\s*&/i.test(lower)) return 'skip';
+  if (/^up\s*skill\s+ด้าน/i.test(lower) && !/\d/.test(n)) return 'skip';
+  if (/^[a-z]/.test(lower) && !/[ก-๛]/.test(n) && len < 60) return 'skip';
+
+  // ACTIVITY/TASK descriptions (not measurable KRs) — filter if no numbers AND no measurable target
+  if (!/\d/.test(n)) {
+    // Planning/organizing tasks
+    if (/^(วางแผน|กำหนด|จัดทำ|ประชุม|ทบทวน|ประเมินผล|ให้คำแนะนำ|ร่วมวางแผน|รับการสนับสนุน|บริหารแผน|ฝึกทักษะ|จัดอบรม|จัดเตรียม|ประชาสัมพันธ์)/.test(n) && len < 120) {
+      if (!/(ให้ได้|บรรลุ|เพิ่ม|ลด|สร้าง|พัฒนา|บริหารจัดการ|ติดตาม|รักษา|ผลักดัน|ขยาย|ยกระดับ|สนับสนุน|ควบคุม|เป้า|บาท|ล้าน|คัน|%|คะแนน|≥|ราย)/.test(n)) return 'skip';
+    }
+    // "การ..." prefix activity descriptions
+    if (/^การ/.test(n) && len < 100) {
+      if (!/(ให้ได้|บรรลุ|เพิ่ม|ลด|สร้าง|พัฒนา|ปรับปรุง|บริหารจัดการ|ติดตาม|รักษา|ผลักดัน|ขยาย|ยกระดับ|สนับสนุน|ควบคุม|เป้า|บาท|ล้าน|คัน|%|คะแนน|≥|ราย)/.test(n)) return 'skip';
+    }
+    // "กำกับ..." tasks
+    if (/^กำกับ/.test(n) && len < 100) {
+      if (!/(ให้ได้|บรรลุ|เพิ่ม|ลด|สร้าง|พัฒนา|บริหารจัดการ|ติดตาม|รักษา|ผลักดัน|ขยาย|ยกระดับ|สนับสนุน|ควบคุม|เป้า|บาท|ล้าน|คัน|%|คะแนน|≥|ราย)/.test(n)) return 'skip';
+    }
+    // Fragments and role labels
+    if (/^รับการสนับสนุน/.test(n) && len < 80) return 'skip';
+    if (/กิจกรรมงาน/.test(n) && />>/.test(n)) return 'skip';
+    if (/^(ข้อมูล|การดูแลลูกค้า#)/.test(n) && len < 80) return 'skip';
+    if (/^(ความถูกต้อง|ความชัดเจน|ความพร้อม)/.test(n) && len < 80) return 'skip';
+    if (/^ผู้รับใช้ทีม/.test(n) && len < 80) return 'skip';
+    if (/^สมาชิก/.test(n) && len < 80) return 'skip';
+    if (/^ทีมรักษาสัมพันธ์/.test(n) && len < 100) return 'skip';
+    if (/^ผ่านการอบรม/.test(n) && len < 80) return 'skip';
+    if (/^สมาชิกทุกคน/.test(n) && len < 100) return 'skip';
+    if (/^ทุก bu/i.test(n) && len < 100) return 'skip';
+    if (/^ลูกค้า/.test(n) && len < 100) return 'skip';
+    if (/^เป้าหมาย/.test(n) && len < 50) return 'skip';
+    if (/^มาตรฐานการ/.test(n) && len < 120) return 'skip';
+    if (/^มี\s/.test(n) && len < 80) return 'skip';
+    if (/^(เอกสาร|รายงานการเงิน|รายการรับ)/.test(n) && len < 80) return 'skip';
+    if (/^(เงินสด|ผลประมิน|ผลลัพธ์การนัดหมาย|สรุปสั้น|สรุปและนำเสนอ)/.test(n) && len < 100) return 'skip';
+    if (/^(แคมเปญ|แนะนำ|อธิบาย|อัพเดต)/.test(n) && len < 100) return 'skip';
+    if (/^แผน/.test(n) && len < 120) return 'skip';
+    if (/^ไม่มี/.test(n) && len < 80) return 'skip';
+    if (/^โครงการ/.test(n) && len < 80) return 'skip';
+    if (/^ส่งเสริมการเรียนรู้/.test(n) && len < 100) return 'skip';
+    if (/^หาแนวทาง/.test(n) && len < 120) return 'skip';
+    if (/^สร้างมาตรฐาน/.test(n) && len < 80) return 'skip';
+    if (/^สร้าง ?community/i.test(n) && len < 80) return 'skip';
+    if (/^สร้างโอกาส/.test(n) && len < 60) return 'skip';
+    if (/^สามารถระบุ/.test(n) && len < 80) return 'skip';
+    if (/^รักษา(ฐานลูกค้า|มาตรฐาน|มาตราฐาน)/.test(n) && len < 100) return 'skip';
+    if (/^รายได้จาก/.test(n) && len < 60) return 'skip';
+    if (/^ลดขั้นตอน/.test(n) && len < 100) return 'skip';
+    if (/^ใช้ ai/i.test(n) && len < 120) return 'skip';
+    if (/^ใช้เครื่องมือ/.test(n) && len < 100) return 'skip';
+    if (/^ใช้เทคโนโลยี/.test(n) && len < 120) return 'skip';
+    if (/^ในการวิเคราะห์/.test(n) && len < 80) return 'skip';
+    if (/^นำ( ai| feedback| ข้อเสนอ|เครื่องมือ)/i.test(n) && len < 120) return 'skip';
+    if (/^พัฒนา/.test(n) && len < 80 && !/(หลักสูตร|ครั้ง|ราย|บาท|ล้าน|คัน|%|≥|คะแนน)/.test(n)) return 'skip';
+    if (/^เพิ่ม/.test(n) && len < 60 && !/(บาท|ล้าน|คัน|%|≥|คะแนน|ราย)/.test(n)) return 'skip';
+    if (/^สร้าง/.test(n) && len < 60 && !/(บาท|ล้าน|คัน|%|≥|คะแนน|ราย)/.test(n)) return 'skip';
+    if (/^ปรับปรุง/.test(n) && len < 80) return 'skip';
+    if (/^ยกระดับประสิทธิภาพ/.test(n) && len < 100) return 'skip';
+    if (/^(ตั้งทีม|ดาวน์โหลด)/.test(n) && len < 100) return 'skip';
+    if (/^ติดตาม/.test(n) && len < 120) return 'skip';
+    if (/^บรรลุ cbnp รวม/i.test(n) && len < 80) return 'skip';
+    if (/^ปิด/.test(n) && len < 80) return 'skip';
+    if (/^บริหารและกำกับ/.test(n) && len < 100) return 'skip';
+    if (/^บริหารแผน/.test(n) && len < 120) return 'skip';
+    if (/^(อัตราการมีส่วนร่วม|อัตราการสำเร็จ|อัพเดต)/.test(n) && len < 80) return 'skip';
+    if (/^(เรียนรู้|วัดผล)/.test(n) && len < 80) return 'skip';
+    if (/^สรรหา/.test(n) && len < 80) return 'skip';
+    if (/^แสวงหาคู่ค้า/.test(n) && len < 100) return 'skip';
+    if (/^มีการ/.test(n) && len < 80) return 'skip';
+    if (/^ทักษะ/.test(n) && len < 100) return 'skip';
+    if (/^(ผลตอบแทน|ผลการ)/.test(n) && len < 60) return 'skip';
+    if (/^สร้างระบบ/.test(n) && len < 80) return 'skip';
+    if (/^\*\*/.test(n)) return 'skip';
+    // Additional no-number filters
+    if (/^(กำไรขั้นต้น|คุณภาพงาน|ประสิทธิภาพงบ|รายการรับ|เป้าหมายgm|เพิ่มผลผลิต|เอกสาร|เงินสด|สร้างยอด)/.test(n) && len < 100) return 'skip';
+    if (/^(จำนวนการนัดหมาย|จำนวนลูกค้าสนใจ|จำนวนลูกค้าใหม่)/.test(n) && /ตามเป้า/.test(n) && len < 100) return 'skip';
+    if (/^(สนับสนุนการปิด|สนับสนุนรายชื่อ)/.test(n) && len < 100) return 'skip';
+    if (/^สร้างยอดขาย/.test(n) && /ตามเป้า/.test(n) && len < 100) return 'skip';
+    if (/^สร้างรายได้และกำไร/.test(n) && len < 100) return 'skip';
+    if (/เป็นไปตามเป้าหมาย/.test(n) && len < 100) return 'skip';
+    if (/^พัฒนาระบบ/.test(n) && len < 100) return 'skip';
+    if (/^พัฒนาและประสิทธิภาพ/.test(n) && len < 100) return 'skip';
+    if (/^พัฒนาทีม/.test(n) && len < 120) return 'skip';
+    if (/^พัฒนาการวางแผน/.test(n) && len < 100) return 'skip';
+    if (/^สร้างcommunity/i.test(n) && len < 80) return 'skip';
+    if (/^ให้คำแนะนำ/.test(n) && len < 80) return 'skip';
+    if (/^นำข้อเสนอ/.test(n) && len < 120) return 'skip';
+    if (/^สร้างยอดรถ/.test(n) && len < 80) return 'skip';
+    if (/^เพิ่มและสนับสนุน/.test(n) && len < 120) return 'skip';
+    if (/^ลูกค้าใน/.test(n) && len < 80) return 'skip';
+    if (/^แนะนำ/.test(n) && len < 120) return 'skip';
+    if (/^วางแผน/.test(n) && len < 120) return 'skip';
+    if (/^ใช้ ai/i.test(n) && len < 120) return 'skip';
+    if (/^บริหารและกำกับ/.test(n) && len < 100) return 'skip';
+    if (/^ประชุมทีมงาน/.test(n) && len < 120) return 'skip';
+    if (/^ประเมินผล/.test(n) && len < 120) return 'skip';
+    if (/^สร้างยอดขาย/.test(n) && len < 100) return 'skip';
+    if (/^จำนวน/.test(n) && /ตามเป้า/.test(n) && len < 100) return 'skip';
+    if (/^สร้างรายได้และกำไร/.test(n) && len < 100) return 'skip';
+    if (/^ผลตอบแทน/.test(n) && /ตามเป้า/.test(n) && len < 100) return 'skip';
+    // CATCH-ALL: If no digit AND no % sign at all → NOT a measurable KR
+    // (real KRs have targets like "90%", "210,000 บาท", "≥ 95%", etc.)
+    // Exception: keep items with ≥ or คะแนน that imply a measurable target
+    if (!/[0-9%]/.test(n) && !/≥/.test(n)) return 'skip';
+    // Also skip if only has % but no action verb and no measurable structure
+    if (/%/.test(n) && !/[0-9]/.test(n) && !/(ให้ได้|บรรลุ|เพิ่ม|ลด|สร้าง|พัฒนา|บริหารจัดการ|ติดตาม|รักษา|ผลักดัน|ขยาย|ยกระดับ|สนับสนุน|ควบคุม|คะแนน|ไม่ต่ำกว่า|ไม่น้อยกว่า|≥)/.test(n)) return 'skip';
+  }
+
+  return 'kr';
+}
+
+/* ── normKR: deep semantic normalization for grouping/dedup ── */
+/* Hoisted to top-level so all pages use the same merge key. */
+function normKR(text) {
+  var cleaned = text.replace(/\s+/g, ' ').trim();
+  // Strip ALL types of quotes (Thai + English)
+  cleaned = cleaned.replace(/["'""'']/g, '');
+  // Repeat prefix stripping 5x to catch nested prefixes like "KR 1. O1-KR1:"
+  for (var pi = 0; pi < 5; pi++) {
+    cleaned = cleaned.replace(/^(KR\s*\d+\s*[:\.]?\s*|KRN*\s*[:\.]?\s*|O\d+-KR\d+[\.\d]*\s*::?\s*|KPI\s*\d+\s*[:\.]?\s*|คร\s*\d+\s*[:\.]?\s*|Obj\s*\d*\s*[:\.]?\s*|O\d+\s*[:\.]?\s*)/i, '');
+    cleaned = cleaned.replace(/^\d+\s*[:\.\-)]\s*/, '');
+    cleaned = cleaned.replace(/^\(\d+\)\s*/, '');
+  }
+  // Strip leading colons/dashes/dots
+  cleaned = cleaned.replace(/^[:\-\.\s]+/, '');
+  // Remove parenthetical category labels (English) — but keep Thai parens for now
+  cleaned = cleaned.replace(/\([a-zA-Z\s\/\&\-]+\)/g, '');
+  // Remove GMของสาขา prefix
+  cleaned = cleaned.replace(/^GMของสาขา\s*/g, '');
+  // Fix common typos
+  cleaned = cleaned.replace(/servive/gi, 'service');
+  cleaned = cleaned.replace(/aligement|aligment/gi, 'alignment');
+  // Remove ALL parenthetical content (Thai + English)
+  cleaned = cleaned.replace(/\s*\([^)]*\)\s*/g, ' ');
+  // Normalize whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+  // ── DEEP SEMANTIC MERGES (before number normalization) ──
+
+  // 1. CSI/SSI — merge ALL variants: "บรรลุคะแนนความพึงพอใจลูกค้า (CSI) ภายนอกของศูนย์บริการที่ 98% ทั้ง 4 สาขา"
+  //    → "บรรลุคะแนนความพึงพอใจลูกค้า csi ภายนอก #"
+  cleaned = cleaned.replace(/บรรลุคะแนนความพึงพอใจลูกค้า\s*\(?\s*csi\s*\)?\s*ภายนอกของศูนย์บริการที่\s*/gi, 'บรรลุคะแนนความพึงพอใจลูกค้า csi ภายนอก ');
+  cleaned = cleaned.replace(/บรรลุคะแนนความพึงพอใจลูกค้า\s*\(?\s*csi\s*\)?\s*ภายนอกที่\s*/gi, 'บรรลุคะแนนความพึงพอใจลูกค้า csi ภายนอก ');
+  cleaned = cleaned.replace(/บรรลุคะแนนความพึงพอใจลูกค้า\s*\(?\s*csi\s*\)?\s*ศูนย์บริการ\s*\w*\s*ที่\s*/gi, 'บรรลุคะแนนความพึงพอใจลูกค้า csi ภายนอก ');
+  cleaned = cleaned.replace(/บรรลุคะแนนความพึงพอใจลูกค้า\s*\(?\s*csi\s*\)?\s*ภายนอก\s*/gi, 'บรรลุคะแนนความพึงพอใจลูกค้า csi ภายนอก ');
+  // Also merge "รักษาคะแนนความพึงพอใจลูกค้า (CSI & SSI) ภายนอกให้ได้ 98%" → same
+  cleaned = cleaned.replace(/รักษาคะแนนความพึงพอใจลูกค้า\s*\(?\s*csi\s*&?\s*ssi\s*\)?\s*ภายนอกให้ได้\s*/gi, 'บรรลุคะแนนความพึงพอใจลูกค้า csi ภายนอก ');
+  // "คะแนน CSI / SSI ≥ ...% ต่อเนื่องทุกไตรมาส" → "คะแนน csi/ssi ≥ # ต่อเนื่อง"
+  cleaned = cleaned.replace(/คะแนน\s*csi\s*\/\s*ssi\s*≥\s*[.\d]+\s*%\s*ต่อเนื่องทุกไตรมาส/gi, 'คะแนน csi/ssi ≥ # ต่อเนื่อง');
+  // "CSI หลังการขายไม่ต่ำกว่า 98 %" → "csi หลังการขาย ≥ #"
+  cleaned = cleaned.replace(/csi\s*หลังการขายไม่ต่ำกว่า\s*[\d.]+\s*%/gi, 'csi หลังการขาย ≥ #');
+  cleaned = cleaned.replace(/ssi\s*หลังการขายไม่ต่ำกว่า\s*[\d.]+\s*%/gi, 'ssi หลังการขาย ≥ #');
+
+  // 2. 4C/PMSG meeting — merge ALL variants (สวัสดีตอนเย็น/เช้า, เดือนละ 1 ครั้ง, เวทีผู้รับใช้, GO-TO, Goto)
+  cleaned = cleaned.replace(/ผลการดำเนินงาน\s*pmsg\s*เพื่อ?(?:การ)?\s*เรียนรู้?\s*และ(?:\s*เติบโต|โต)\s*.*/gi, 'ผลการดำเนินงานpmsg เพื่อการเรียนรู้ และเติบโต');
+
+  // 3. AI in daily work — merge variants
+  cleaned = cleaned.replace(/นำ\s*ai\s*มาช่วย(?:ในการทำงานประจำวัน|วิเคราะห์การโทร)?.*/gi, 'นำ ai มาช่วยในการทำงานประจำวัน');
+  cleaned = cleaned.replace(/^ใช้\s*ai\s*(?:ช่วยลดการทำมือ|ช่วยตรวจสอบ|วิเคราะห์|เป็นผู้ช่วย|ในการทำงาน|tool).*/gi, 'ใช้ ai ในการทำงานประจำวัน');
+
+  // 4. Revenue targets — merge "สร้างรายได้" with "บรรลุ" when same topic
+  cleaned = cleaned.replace(/สร้างรายได้รวมจาก\s*cbnp\s*pmsg/gi, 'บรรลุรายได้ cbnp pmsg');
+  cleaned = cleaned.replace(/สร้างรายได้จาก\s*cbnp\s*pms/gi, 'บรรลุรายได้ cbnp pms');
+  cleaned = cleaned.replace(/บรรลุรายได้\s*cbnp\s*pmsg\s*#\s*ล้านบาท\s*และ\s*(?:บรรลุรายได้|สร้างรายได้|บรรลุ)\s*cbnp\s*pms\s*#\s*ล้านบาท.*/gi, 'บรรลุรายได้ cbnp pmsg # ล้านบาท และ cbnp pms # ล้านบาท');
+  // "บรรลุรายได้ CBNP PMSG 39 ล้านบาท (3.25 ล้าน/เดือน) และ CBNP PMS 29" → same
+  cleaned = cleaned.replace(/บรรลุรายได้\s*cbnp\s*pmsg\s*#\s*ล้านบาท\s*\(.*?\)\s*และ\s*cbnp\s*pms\s*#.*/gi, 'บรรลุรายได้ cbnp pmsg # ล้านบาท และ cbnp pms # ล้านบาท');
+
+  // 5. GM ผลิตภัณฑ์เสริม — merge "เพิ่ม gm" with "สร้าง gm จาก"
+  cleaned = cleaned.replace(/เพิ่ม\s*gm\s*ผลิตภัณฑ์เสริมให้ได้\s*/gi, 'สร้าง gm ผลิตภัณฑ์เสริม ');
+  cleaned = cleaned.replace(/สร้าง\s*gm\s*(?:จาก)?ผลิตภัณฑ์เสริมเฉลี่ย\s*/gi, 'สร้าง gm ผลิตภัณฑ์เสริม ');
+  // "นำเสนอผลิตภัณฑ์เสริม ให้มี gm" → "สร้าง gm ผลิตภัณฑ์เสริม"
+  cleaned = cleaned.replace(/นำเสนอผลิตภัณฑ์เสริม\s*ให้มี\s*gm\s*/gi, 'สร้าง gm ผลิตภัณฑ์เสริม ');
+  cleaned = cleaned.replace(/นำเสนอผลิตภัณฑ์ใหม่\s*ให้มี\s*gm\s*/gi, 'สร้าง gm ผลิตภัณฑ์ใหม่ ');
+
+  // 6. Wage targets — merge individual/team variants
+  // "บรรลุผลงานรายได้ ค่าแรงต่อเดือน #" → "บรรลุค่าแรงต่อเดือน #"
+  cleaned = cleaned.replace(/บรรลุผลงานรายได้\s*ค่าแรงต่อเดือน/gi, 'บรรลุค่าแรงต่อเดือน');
+  cleaned = cleaned.replace(/บรรลุผลงานรายได้\s*ทีม(?:รถเล็ก\s*#|iq service|รถใหญ่)\s*ค่าแรงต่อเดือน/gi, 'บรรลุค่าแรงต่อเดือน');
+  cleaned = cleaned.replace(/บรรลุเป้าผลงานรายได้\s*ค่าแรง(?:ทีม)?\s*ต่อเดือน/gi, 'บรรลุค่าแรงต่อเดือน');
+  // "รายได้ค่าแรงรวม #" → "บรรลุค่าแรงต่อเดือน #"
+  cleaned = cleaned.replace(/^รายได้ค่าแรงรวม\s*/gi, 'บรรลุค่าแรงต่อเดือน ');
+  cleaned = cleaned.replace(/^รายได้ค่าแรง\s*/gi, 'บรรลุค่าแรงต่อเดือน ');
+  // "รักษาผลงานค่าแรงในแต่ละเดือน ไม่ต่ำกว่า #" → "รักษาค่าแรง ≥ #"
+  cleaned = cleaned.replace(/รักษาผลงานค่าแรงในแต่ละเดือน\s*ไม่ต่ำกว่า\s*/gi, 'รักษาค่าแรง ≥ ');
+
+  // 7. "บรรลุยอดขายสินค้าประดับยนต์กลุ่มงานรถใหม่รายได้ # ลบ/เดือน" → "บรรลุยอดขายประดับยนต์ # ลบ/เดือน"
+  cleaned = cleaned.replace(/บรรลุยอดขายสินค้าประดับยนต์กลุ่มงานรถใหม่รายได้/gi, 'บรรลุยอดขายประดับยนต์รายได้');
+  cleaned = cleaned.replace(/บรรลุยอดขายประดับยนต์รายได้\s*#\s*ลบ\/เดือน/gi, 'บรรลุยอดขายประดับยนต์ # ลบ/เดือน');
+
+  // 8. Alignment/4C activity — normalize all to "alignment ประจำวัน" 
+  cleaned = cleaned.replace(/alignment\s*(?:สวัสดีตอนเย็น|สวัสดีตอนเช้า)\s*ทุกวัน/gi, 'alignment ประจำวัน');
+  cleaned = cleaned.replace(/alignment\s*(?:goto|go-to)\s*ศูนย์บริการ\s*\S*/gi, 'alignment goto ศูนย์บริการ');
+  cleaned = cleaned.replace(/alignment\s*ผรช\.?\s*pms/gi, 'alignment ผรช. pms');
+
+  // 9. Department/branch suffix removal
+  cleaned = cleaned.replace(/\s*ทั้ง\s*#\s*สาขา/gi, '');  // "ทั้ง 4 สาขา"
+  cleaned = cleaned.replace(/\s*ทั่ง\s*\w+/gi, '');  // "ทั่ง PKG" (typo for ทั้ง)
+  cleaned = cleaned.replace(/\s*ในส่วนของ\s*\w+/gi, '');  // "ในส่วนของ PMSG"
+
+  // 10. "ติดตามเป้าหมายค่าแรงของตัวเองผ่านรายงานประจำวัน..." → "ติดตามค่าแรงผ่านรายงานประจำวัน"
+  cleaned = cleaned.replace(/ติดตามเป้าหมายค่าแรงของตัวเองผ่านรายงานประจำวันให้ทราบสถานการณ์และวางแผนให้บรรลุเป้าหมาย.*/gi, 'ติดตามค่าแรงผ่านรายงานประจำวัน');
+  cleaned = cleaned.replace(/ติดตามของตัวเองผ่านรายงานประจำวัน.*/gi, 'ติดตามค่าแรงผ่านรายงานประจำวัน');
+
+  // 11. "สร้างกลุ่มไลน์ ให้ครบ 100% ทั้งงานขาย" → "สร้างกลุ่มไลน์ ครบ #%"
+  cleaned = cleaned.replace(/สร้างกลุ่มไลน์\s*ให้ครบ\s*[\d.]+\s*%\s*ทั้งงานขาย/gi, 'สร้างกลุ่มไลน์ ครบ #%');
+  cleaned = cleaned.replace(/สร้างกลุ่ม(?:line|ไลน์)\s*(?:และโหลด app|และโหลดแอพ|ให้กับลูกค้า).*/gi, 'สร้างกลุ่มไลน์ โหลด app');
+  cleaned = cleaned.replace(/สร้างกลุ่มรับใช้\s*(?:ครบ|ให้กับลูกค้านัดหมาย)\s*[\d.]+\s*%?/gi, 'สร้างกลุ่มรับใช้ #%');
+
+  // 12. Up Skill — merge "Up Skill ด้านงานขาย" / "Up Skill ด้านงานศูนย์บริการ" → "up skill ด้านงาน"
+  cleaned = cleaned.replace(/up\s*skill\s*ด้านงาน\s*\S+/gi, 'up skill ด้านงาน');
+
+  // 13. "เป้าหมายยอดขาย #คันต่อเดือน" → "เป้าหมายยอดขาย # คัน/เดือน"
+  cleaned = cleaned.replace(/เป้าหมายยอดขาย\s*[\d,]+\s*คันต่อเดือน/gi, 'เป้าหมายยอดขาย # คัน/เดือน');
+  // "เป้าหมายมุ่งหวัง # ต่อเดือน" → "เป้าหมายมุ่งหวัง # ต่อเดือน" (already has #)
+  cleaned = cleaned.replace(/เป้าหมายมุ่งหวัง\s*[\d,]+\s*ต่อเดือน/gi, 'เป้าหมายมุ่งหวัง # ต่อเดือน');
+
+  // 14. MAPP download targets — merge variants
+  cleaned = cleaned.replace(/ขยายmapp\s*ให้มียอดดาวน์โหลดสะสม\s*[\d,]+\s*ราย\s*ภายในสิ้นปี.*/gi, 'ขยายmapp ดาวน์โหลด # ราย');
+  cleaned = cleaned.replace(/ขยายmapp\s*\/\s*สาขาไม่ต่ำกว่า\s*[\d,]+\s*รายต่อคนต่อเดือน.*/gi, 'ขยายmapp สาขา # รายต่อคนต่อเดือน');
+  cleaned = cleaned.replace(/โหลดแอพ\s*prachakij\s*ครบ\s*[\d.]+\s*%/gi, 'โหลดแอพ prachakij ครบ #%');
+  cleaned = cleaned.replace(/เป้าหมายการโหลดแอพ\s*prachakij\s*ครบ\s*[\d.]+\s*%/gi, 'โหลดแอพ prachakij ครบ #%');
+
+  // 15. "บริหารงานได้คุณภาพตามสเปคที่กำหนด 100%" / "บริหารงานได้ตามงบประมาณที่กำหนด 100%" / "บริหารงานได้ตามระยะเวลาที่กำหนด 100%"
+  // These are 3 different KRs (quality/budget/time), keep separate
+
+  // 16. "สร้างกำไรขั้นต้น (GM) จากงานขายและประดับยนต์เฉลี่ย #" → "สร้างกำไร จากงานขายและประดับยนต์เฉลี่ย #"
+  // "กำไรขั้นต้น (GM) จากงานขายและประดับยนต์เฉลี่ย #" (no สร้าง prefix) → same
+  cleaned = cleaned.replace(/^กำไรขั้นต้น\s*\(gm\)\s*จากงานขายและประดับยนต์เฉลี่ย/gi, 'สร้างกำไร จากงานขายและประดับยนต์เฉลี่ย');
+  cleaned = cleaned.replace(/^กำไรขั้นต้น\s*\(gm\)\s*จากงานอะไหล่ไม่ต่ำกว่า/gi, 'สร้างกำไร จากงานอะไหล่');
+  cleaned = cleaned.replace(/^กำไรขั้นต้น\s*\(gm\)\s*จากงานงานบริการ\s*ไม่ต่ำกว่า/gi, 'สร้างกำไร จากงานบริการ');
+  cleaned = cleaned.replace(/^กำไรขั้นต้น\s*\(gm\)\s*จากงานประกันภัย\s*ไม่ต่ำกว่า/gi, 'สร้างกำไร จากงานประกันภัย');
+
+  // 17. "บริหารจัดการยอดรถเข้าใช้บริการให้ได้ตามเป้าหมาย # คันต่อปี" 
+  // vs "ยอดรถเข้าใช้บริการบรรลุเป้าหมายประจำเดือน ค่าเฉลี่ย # คัน"
+  // vs "ยอดรถเข้ารับบริการ # คัน/เดือน"
+  // vs "บริหารจัดการยอดรถเข้าศูนย์สีให้ได้ตามเป้าเฉลี่ย # คัน/เดือน"
+  // These are different (total vs monthly vs color shop) — keep separate but normalize
+  cleaned = cleaned.replace(/บริหารจัดการยอดรถเข้าใช้บริการให้ได้ตามเป้าหมาย\s*[\d,]+\s*คันต่อปี.*/gi, 'บริหารจัดการรถเข้าใช้บริการ # คัน/ปี');
+  cleaned = cleaned.replace(/ยอดรถเข้าใช้บริการบรรลุเป้าหมายประจำเดือน\s*ค่าเฉลี่ย\s*[\d,]+\s*คัน.*/gi, 'บริหารจัดการรถเข้าใช้บริการ # คัน/เดือน');
+  cleaned = cleaned.replace(/^ยอดรถเข้ารับบริการ\s*[\d,]+\s*คัน\/เดือน/gi, 'บริหารจัดการรถเข้าใช้บริการ # คัน/เดือน');
+  cleaned = cleaned.replace(/^ยอดรถเข้าใช้บริการบรรลุเป้าหมาย.*/gi, 'บริหารจัดการรถเข้าใช้บริการ # คัน/เดือน');
+
+  // 18. "รถนอกระยะเติบโตขึ้น#% มียอดรถ = # คันในปี #" → "รถนอกระยะเติบโต #% มียอดรถ # คัน"
+  cleaned = cleaned.replace(/รถนอกระยะเข้าใช้บริการเพิ่มขึ้น\s*[\d.]+\s*%\s*เทียบปีที่ผ่านมา/gi, 'รถนอกระยะเข้าใช้บริการเพิ่มขึ้น #% เทียบปีก่อน');
+  cleaned = cleaned.replace(/รถนอกระยะเติบโตขึ้น\s*[\d.]+\s*%\s*มียอดรถ\s*=\s*[\d,]+\s*คันในปี\s*[\d]+/gi, 'รถนอกระยะเติบโตขึ้น #% มียอดรถ # คัน');
+
+  // 19. "สร้างกลุ่มรับใช้ #" / "สร้างกลุ่มรับใช้ครบ #%" → "สร้างกลุ่มรับใช้ #%"
+  cleaned = cleaned.replace(/สร้างกลุ่มรับใช้\s*ครบ\s*[\d.]+\s*%/gi, 'สร้างกลุ่มรับใช้ #%');
+
+  // 20. "ผลักดัน gm อะไหล่ทางเลือก pmgi ให้แตะ # บาท/เดือน" → "ผลักดัน gm อะไหล่ทางเลือก pmgi # บาท/เดือน"
+  cleaned = cleaned.replace(/ผลักดัน\s*gm\s*อะไหล่ทางเลือก\s*pmgi\s*ให้แตะ/gi, 'ผลักดัน gm อะไหล่ทางเลือก pmgi');
+  // "ผลักดัน gm จากกลุ่มคู่ค้า mr ให้ได้ # บาทต่อเดือน" → "ผลักดัน gm คู่ค้า mr # บาท/เดือน"
+  cleaned = cleaned.replace(/ผลักดัน\s*gm\s*จากกลุ่มคู่ค้า\s*mr\s*ให้ได้/gi, 'ผลักดัน gm คู่ค้า mr');
+  cleaned = cleaned.replace(/สร้างความร่วมมือในเครือข่ายเพื่อให้เกิด\s*gm\s*จากเครือข่าย\s*mr\s*[\d,]+\s*บาท\/เดือน/gi, 'ผลักดัน gm คู่ค้า mr # บาท/เดือน');
+
+  // ── ADDITIONAL DEEP MERGES (batch 2) ──
+
+  // A1. CSI variants — "ศูนย์บริการ pmsg ที่" → "csi ภายนอก"
+  cleaned = cleaned.replace(/บรรลุคะแนนความพึงพอใจลูกค้า\s*\(*\s*csi\s*\)*\s*ศูนย์บริการ\s*pmsg\s*ที่/gi, 'บรรลุคะแนนความพึงพอใจลูกค้า csi ภายนอก');
+  // A1b. "csi ภายนอก #% ทั่ง pkg" / "csi ภายนอก #% ทั้ง # สาขา" / "csi ภายนอก ที่ #%" → "csi ภายนอก #%"
+  cleaned = cleaned.replace(/csi\s*ภายนอก\s*[\d.]+\s*%\s*ทั่ง\s*pkg/gi, 'csi ภายนอก #');
+  cleaned = cleaned.replace(/csi\s*ภายนอก\s*[\d.]+\s*%\s*ทั้ง\s*[\d]+\s*สาขา/gi, 'csi ภายนอก #');
+  cleaned = cleaned.replace(/csi\s*ภายนอก\s*ที่\s*[\d.]+\s*%/gi, 'csi ภายนอก #');
+
+  // A2. GM ผลิตภัณฑ์เสริม — merge "# บาท/เดือน เติบโต +#%", "# บาท/เดือน ในปี #เติบโต +..%", "# ล้านบาทต่อเดือน โดยมีเป้าหมาย gm ผลิตภัณฑ์เสริม"
+  cleaned = cleaned.replace(/[\d,.]+\s*บาท\/เดือน\s*เติบโต\s*\+[\d.]+%/gi, 'สร้าง gm ผลิตภัณฑ์เสริม # บาท/เดือน');
+  cleaned = cleaned.replace(/[\d,.]+\s*บาท\/เดือน\s*ในปี\s*[\d]+\s*เติบโต\s*\+[\d.]+%/gi, 'สร้าง gm ผลิตภัณฑ์เสริม # บาท/เดือน');
+  cleaned = cleaned.replace(/[\d,.]+\s*ล้านบาทต่อเดือน\s*โดยมีเป้าหมาย\s*gm\s*ผลิตภัณฑ์เสริม/gi, 'สร้าง gm ผลิตภัณฑ์เสริม # บาท/เดือน');
+
+  // A3. บรรลุค่าแรงต่อเดือน — merge "# บาท" and "# บาท/เดือน" variants
+  cleaned = cleaned.replace(/บรรลุค่าแรงต่อเดือน\s*[\d,]+\s*บาท\/เดือน/gi, 'บรรลุค่าแรงต่อเดือน # บาท');
+  cleaned = cleaned.replace(/บรรลุค่าแรงต่อเดือน\s*[\d,]+\s*บาท$/gi, 'บรรลุค่าแรงต่อเดือน # บาท');
+
+  // A4. MAPP — merge "/ สาขาไม่ต่ำต่ำกว่า #" and "ให้มียอดดาวน์โหลดสะสม"
+  cleaned = cleaned.replace(/ขยายแอปพลิเคชัน\s*mapp\s*\/\s*สาขาไม่ต่ำต่ำกว่า\s*[\d]+/gi, 'ขยาย mapp ดาวน์โหลด # ราย');
+  cleaned = cleaned.replace(/ขยายแอปพลิเคชัน\s*mapp\s*ให้มียอดดาวน์โหลดสะสม.*/gi, 'ขยาย mapp ดาวน์โหลด # ราย');
+
+  // A5. สร้างกลุ่มไลน์ — remove "และหลังการขาย"
+  cleaned = cleaned.replace(/(ทั้งงานขาย)\s*และหลังการขาย/gi, '$1');
+
+  // A6. กำไรขั้นต้น GM จากงานประกันภัย — merge "# สาขา ไม่ต่ำกว่า # % ต่อเดือ(น)" variants
+  cleaned = cleaned.replace(/จากงานประกันภัย\s*[\d]+\s*สาขา\s*ไม่ต่ำกว่า\s*[\d.]+\s*%\s*ต่อเดือน?/gi, 'จากงานประกันภัย ไม่ต่ำกว่า # %');
+  cleaned = cleaned.replace(/จากงานประกันภัย\s*ไม่ต่ำกว่า\s*[\d.]+\s*%\s*ต่อเดือน/gi, 'จากงานประกันภัย ไม่ต่ำกว่า # %');
+
+  // A7. รักษาอัตรากำไรขั้นต้น — "ให้ได้ไม่ต่ำกว่า # บ./เดือน" → "ผู้ใช้รถยนต์ให้เฉลี่ยไม่ต่ำกว่า # ล้าน"
+  cleaned = cleaned.replace(/ผู้ใช้รถยนต์\s*ให้ได้ไม่ต่ำกว่า\s*[\d,.]+\s*บ\.?\/?เดือน/gi, 'ผู้ใช้รถยนต์ให้เฉลี่ยไม่ต่ำกว่า # ล้าน');
+
+  // A8. Process time — merge "pmsg" prefix variants
+  cleaned = cleaned.replace(/process\s*time\s*pmsg\s*≥\s*[\d.]+\s*%/gi, 'process time ≥ #');
+  cleaned = cleaned.replace(/process\s*time\s*≥\s*[\d.]+\s*%/gi, 'process time ≥ #');
+
+  // A9. ปิดงบการเงิน — merge "ของ cu", "ของทุก pmsg" → "ของทุก bu"
+  cleaned = cleaned.replace(/ปิดงบการเงิน\s*ของ\s*cu/gi, 'ปิดงบการเงิน ของทุก bu');
+  cleaned = cleaned.replace(/ปิดงบการเงิน\s*ของ\s*ทุก\s*pmsg/gi, 'ปิดงบการเงิน ของทุก bu');
+
+  // A10. สร้างกลุ่มรับใช้ — "ให้กับลูกค้านัดหมาย #%" / "ให้กับลูกค้าสนใจ #%" → "ให้กับลูกค้า #%"
+  cleaned = cleaned.replace(/ให้กับลูกค้า\s*(นัดหมาย|สนใจ)\s*[\d.]+\s*%/gi, 'ให้กับลูกค้า #%');
+
+  // A11. เป้าหมายยอดเข้ารับบริการ — merge "ของสาขาไม่ต่ำกว่า #%" / "ไม่ต่ำกว่า #%"
+  cleaned = cleaned.replace(/เป้าหมายยอดเข้ารับบริการ\s*ของสาขาไม่ต่ำกว่า\s*[\d.]+\s*%/gi, 'เป้าหมายยอดเข้ารับบริการ ไม่ต่ำกว่า #% ต่อเดือน');
+  cleaned = cleaned.replace(/เป้าหมายยอดเข้ารับบริการ\s*ไม่ต่ำกว่า\s*[\d.]+\s*%(?!\s*ต่อเดือน)/gi, 'เป้าหมายยอดเข้ารับบริการ ไม่ต่ำกว่า #% ต่อเดือน');
+
+  // A12. อะไหล่ — "อะไหล่หน้าร้าน อู่สี #%" / "อะไหล่โรงซ่อม #%" → "อะไหล่ #%"
+  cleaned = cleaned.replace(/อะไหล่\s*(หน้าร้าน\s*อู่สี|โรงซ่อม)\s*[\d.]+\s*%/gi, 'อะไหล่ #%');
+
+  // A13. จัดส่งเอกสารเบิกเงินตรีเพชร — "และมี kickback กลับมาครบ #%" → "ให้ครบ #% ต่อเดือน"
+  cleaned = cleaned.replace(/และมี\s*kickback\s*กลับมาครบ\s*[\d.]+\s*%/gi, 'ให้ครบ #% ต่อเดือน');
+
+  // A14. SSI — "ssi หลังการขายไม่ต่ำกว่า #%" → "ssi หลังการขาย ≥ #" (handled at line 1226, kept for safety)
+  cleaned = cleaned.replace(/ssi\s*หลังการขายไม่ต่ำกว่า\s*[\d.]+\s*%/gi, 'ssi หลังการขาย ≥ #');
+
+  // A15. GM ของสาขา — fix double-งาน typo "จากงานงานบริการ" → "จากงานบริการ"
+  cleaned = cleaned.replace(/จากงานงานบริการ/gi, 'จากงานบริการ');
+
+  // ── STRUCTURAL NORMALIZATION ──
+  // Replace all numbers with #
+  cleaned = cleaned.replace(/[\d,]+\.?\d*/g, '#');
+  // Normalize whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  // Strip leading/trailing #
+  cleaned = cleaned.replace(/^#\s+/, '').replace(/\s+#$/, '');
+  // Strip leading colons/dashes again
+  cleaned = cleaned.replace(/^[:\-\.\s]+/, '').trim();
+
+  // SEMANTIC VERB NORMALIZATION — merge similar action verbs
+  cleaned = cleaned.replace(/(บรรลุผลงานรายได้|บรรลุรายได้|บรรลุผลงาน)/g, 'บรรลุ');
+  cleaned = cleaned.replace(/(สร้างรายได้รวมจาก|สร้างรายได้จาก|สร้างรายได้รวม)/g, 'สร้างรายได้');
+  cleaned = cleaned.replace(/(สร้างกำไรขั้นต้น|สร้างกำไร)/g, 'สร้างกำไร');
+  cleaned = cleaned.replace(/(เพิ่มทักษะการนำเสนอ|เพิ่มทักษะ)/g, 'เพิ่มทักษะ');
+  cleaned = cleaned.replace(/(พัฒนาทักษะ|พัฒนาศักยภาพ|พัฒนาการสื่อสาร|พัฒนาการดำเนินงาน)/g, 'พัฒนา');
+  cleaned = cleaned.replace(/(บริหารจัดการยอด|บริหารจัดการรายได้|บริหารจัดการรถเข้า|บริหารจัดการ)/g, 'บริหารจัดการ');
+  cleaned = cleaned.replace(/(ติดตามเป้าหมายค่าแรง|ติดตามเป้าหมาย)/g, 'ติดตาม');
+  cleaned = cleaned.replace(/(รักษาค่าเฉลี่ยกำไร|รักษาคะแนนความพึงพอใจ|รักษาคะแนน|รักษาระดับคะแนน|รักษาลำดับ)/g, 'รักษา');
+  cleaned = cleaned.replace(/(ผลักดันกำไร|ผลักดันยอด)/g, 'ผลักดัน');
+  cleaned = cleaned.replace(/(ขยายฐานผู้ใช้งาน|ขยายฐานลูกค้า|ขยายฐาน)/g, 'ขยาย');
+  cleaned = cleaned.replace(/(ยกระดับการขาย|ยกระดับ)/g, 'ยกระดับ');
+  cleaned = cleaned.replace(/(สนับสนุนให้เกิด|สนับสนุนให้|สนับสนุน)/g, 'สนับสนุน');
+  // Fix common typos
+  cleaned = cleaned.replace(/บุลคล/g, 'บุคคล');
+  cleaned = cleaned.replace(/ผลัท์|ผลลัพท์/g, 'ผลลัพธ์');
+  cleaned = cleaned.replace(/มุ่งจอง/g, 'มุ่งหวัง');
+  cleaned = cleaned.replace(/วิเคราห์/g, 'วิเคราะห์');
+  cleaned = cleaned.replace(/เพิ่อ/g, 'เพื่อ');
+  cleaned = cleaned.replace(/ทักษระ/g, 'ทักษะ');
+  cleaned = cleaned.replace(/สร้าง community/gi, 'สร้างcommunity');
+  // Merge variants
+  cleaned = cleaned.replace(/ของตัวเองและทีม/g, 'ของตัวเอง');
+  cleaned = cleaned.replace(/ค่าแรงส่วนบุคคล/g, 'ค่าแรง');
+  cleaned = cleaned.replace(/ค่าแรงทีม/g, 'ค่าแรง');
+  // CSI/SSI merge (post-number-normalization)
+  cleaned = cleaned.replace(/คะแนน csi \/ ssi/gi, 'คะแนน csi/ssi');
+  cleaned = cleaned.replace(/คะแนน ssi /g, 'คะแนน csi/ssi ');
+  // Remove ... patterns (from decimal normalization artifacts)
+  cleaned = cleaned.replace(/\.+\.+/g, '');
+  // MAPP app variants
+  cleaned = cleaned.replace(/แอปพลิเคชัน mapp/gi, 'mapp');
+  cleaned = cleaned.replace(/แอป mapp/gi, 'mapp');
+  // Typo fix
+  cleaned = cleaned.replace(/ไม่ต่ำต่ำกว่า/g, 'ไม่ต่ำกว่า');
+  // พึงพอใจ typo
+  cleaned = cleaned.replace(/พึ่งพอใจ/g, 'พึงพอใจ');
+
+  // FINAL MERGE: "บรรลุ ค่าแรง" = "บรรลุค่าแรง" (space after บรรลุ from verb normalization)
+  cleaned = cleaned.replace(/^บรรลุ\s+/g, 'บรรลุ');
+  // "สร้างกำไร " = "สร้างกำไร " (normalize space)
+  cleaned = cleaned.replace(/^สร้างกำไร\s+/g, 'สร้างกำไร');
+
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  return cleaned.toLowerCase().substring(0, 150);
+}
+
+/* Count KRs for a person — filled vs total (4 types) */
+/* Uses classifyKR to filter out non-KR items (names, labels, descriptions) — same as KPI page. */
+function countKRs(person) {
+  var filled = 0, total = 0;
+  if (person.objectives) {
+    person.objectives.forEach(function(o) {
+      total++;
+      if (o.keyResults && o.keyResults.length > 0) {
+        // A KR slot is "filled" only if it contains at least one real KR (passes classifyKR)
+        var hasReal = o.keyResults.some(function(kr) {
+          if (!kr) return false;
+          var krText = String(kr).trim();
+          if (krText.length < 4) return false;
+          if (/^[\d.,\s%+-]+$/.test(krText)) return false;
+          return classifyKR(krText) !== 'skip';
+        });
+        if (hasReal) filled++;
+      }
+    });
+  }
+  // Always 4 growth dimensions expected
+  if (total < 4) total = 4;
+  return { filled: filled, total: total };
+}
+
+/* Count filled vs total people (those with at least 1 KR) */
+function deptStats(dept) {
+  var people = dept.people || [];
+  var peopleCount = people.length;
+  var krFilled = 0, krTotal = 0;
+  people.forEach(function(p) {
+    var c = countKRs(p);
+    krFilled += c.filled;
+    krTotal += c.total;
+  });
+  return {
+    peopleCount: peopleCount,
+    krFilled: krFilled,
+    krTotal: krTotal,
+    pct: krTotal > 0 ? Math.round((krFilled / krTotal) * 100) : 0,
+    kpiCount: (dept.kpiSummary || []).length
+  };
+}
+
+/* Collect all unique teams across a department */
+function deptTeams(dept) {
+  var teams = {};
+  (dept.people || []).forEach(function(p) {
+    if (p.team) teams[p.team] = (teams[p.team] || 0) + 1;
+  });
+  return teams;
+}
+
+/* ═══════════════════════════════════════════════════
+   TAB 1: Overview — ภาพรวมทั้งองค์กร
+   ═══════════════════════════════════════════════════ */
+function renderOverview() {
+  if (!D || !D.departments) return;
+  var depts = D.departments;
+  var html = '';
+
+  // ── Cascade flow ──
+  html += '<div class="section-title"><span class="icon">📋</span> การไหลลงของเป้าหมาย (Cascade)</div>';
+  html += '<div class="cascade-flow">';
+  html += '<div class="cascade-step cs-org"><div class="cs-label">องค์กร — PMS/PMG</div><div class="cs-title">ทุ่มเท รับใช้ผู้ใช้รถยนต์ อย่างใกล้ชิด</div><div class="cs-desc">CEO Contract 2.0 / LIA 2.0 — ทุกคนมี OKR เป็นของตน</div></div>';
+  html += '<div class="cascade-arrow">⬇</div>';
+  html += '<div class="cascade-step cs-dept"><div class="cs-label">กลุ่มงาน — 5 Departments</div><div class="cs-title">' + depts.length + ' กลุ่มงาน ทำงานร่วมกัน</div><div class="cs-desc">' + depts.map(function(d){ return esc(d.name); }).join(' • ') + '</div></div>';
+  html += '<div class="cascade-arrow">⬇</div>';
+  html += '<div class="cascade-step cs-team"><div class="cs-label">ทีม — Teams</div><div class="cs-title">แต่ละกลุ่มงานแบ่งเป็นทีมย่อย</div><div class="cs-desc">แบ่งเป้าหมายลงสู่ทีมย่อยตามภารกิจรับใช้</div></div>';
+  html += '<div class="cascade-arrow">⬇</div>';
+  html += '<div class="cascade-step cs-person"><div class="cs-label">บุคคล — NCASS</div><div class="cs-title">สมาชิกแต่ละคนมี OKR / NCASS เป็นของตน</div><div class="cs-desc">Business Growth + Team Growth + Personal Growth + Community</div></div>';
+  html += '</div>';
+
+  // ── Organization summary stat cards ──
+  var totalPeople = 0, totalKRFilled = 0, totalKRTotal = 0, totalKPIs = 0;
+  depts.forEach(function(d) {
+    var s = deptStats(d);
+    totalPeople += s.peopleCount;
+    totalKRFilled += s.krFilled;
+    totalKRTotal += s.krTotal;
+    totalKPIs += s.kpiCount;
+  });
+  var orgPct = totalKRTotal > 0 ? Math.round((totalKRFilled / totalKRTotal) * 100) : 0;
+
+  html += '<div class="section-title"><span class="icon">📊</span> สรุปภาพรวมทั้งองค์กร</div>';
+  html += '<div class="stat-grid">';
+  html += '<div class="stat-card"><div class="stat-icon">🏢</div><div class="stat-value">' + depts.length + '</div><div class="stat-label">กลุ่มงาน</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value">' + totalPeople + '</div><div class="stat-label">บุคลากรทั้งหมด</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">📝</div><div class="stat-value">' + totalKRFilled + '/' + totalKRTotal + '</div><div class="stat-label">KR กรอกแล้ว/ทั้งหมด</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-value">' + totalKPIs + '</div><div class="stat-label">ตัวชี้วัด KPI</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value">' + orgPct + '%</div><div class="stat-label">ความคืบหน้ารวม</div></div>';
+  html += '</div>';
+
+  // ── Department cards ──
+  html += '<div class="section-title"><span class="icon">🏢</span> สรุปตามกลุ่มงาน</div>';
+  html += '<div class="dept-grid">';
+  depts.forEach(function(d, i) {
+    var s = deptStats(d);
+    var meta = getDeptMeta(d.name);
+    var pctColor = s.pct >= 75 ? 'var(--green)' : (s.pct >= 40 ? 'var(--orange)' : 'var(--red)');
+    html += '<div class="dept-card" style="border-top-color:' + meta.color + '" onclick="goToDept(' + i + ')">';
+    html += '<div class="dc-name">' + esc(d.name) + '</div>';
+    if (d.error) {
+      html += '<div style="font-size:0.72rem;color:var(--red);margin-top:4px">⚠️ โหลดข้อมูลไม่ได้</div>';
+    }
+    html += '<div class="dc-stats">';
+    html += '<div class="dc-stat"><div class="dc-stat-val" style="color:' + meta.color + '">' + s.peopleCount + '</div><div class="dc-stat-label">คน</div></div>';
+    html += '<div class="dc-stat"><div class="dc-stat-val" style="color:' + meta.color + '">' + s.krFilled + '/' + s.krTotal + '</div><div class="dc-stat-label">KR</div></div>';
+    html += '<div class="dc-stat"><div class="dc-stat-val" style="color:' + meta.color + '">' + s.kpiCount + '</div><div class="dc-stat-label">KPI</div></div>';
+    html += '</div>';
+    html += '<div class="dc-bar"><div class="dc-bar-fill" style="width:' + s.pct + '%;background:' + pctColor + '"></div></div>';
+    html += '<div style="font-size:0.72rem;color:var(--text3);margin-top:6px;text-align:right">ความคืบหน้า ' + s.pct + '%</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // ── Cross-department comparison chart ──
+  html += '<div class="section-title" style="margin-top:24px"><span class="icon">📈</span> เปรียบเทียบข้ามกลุ่มงาน</div>';
+  html += '<div class="chart-card"><div class="chart-wrap"><canvas id="deptCompareChart"></canvas></div></div>';
+
+  // ── Cross-department comparison table ──
+  html += '<div class="section-title"><span class="icon">📋</span> ตารางเปรียบเทียบ</div>';
+  html += '<div class="table-wrap"><table>';
+  html += '<thead><tr><th>กลุ่มงาน</th><th>บุคลากร</th><th>KR กรอกแล้ว</th><th>KR ทั้งหมด</th><th>ความคืบหน้า</th><th>KPI</th><th>ทีม</th></tr></thead><tbody>';
+  depts.forEach(function(d) {
+    var s = deptStats(d);
+    var teams = deptTeams(d);
+    var teamCount = Object.keys(teams).length;
+    var pctColor = s.pct >= 75 ? 'var(--green)' : (s.pct >= 40 ? 'var(--orange)' : 'var(--red)');
+    var meta = getDeptMeta(d.name);
+    html += '<tr>';
+    html += '<td><strong style="color:' + meta.color + '">' + esc(d.name) + '</strong></td>';
+    html += '<td>' + s.peopleCount + '</td>';
+    html += '<td>' + s.krFilled + '</td>';
+    html += '<td>' + s.krTotal + '</td>';
+    html += '<td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;max-width:120px;height:7px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div style="height:100%;width:' + s.pct + '%;background:' + pctColor + ';border-radius:4px"></div></div><span style="font-size:0.76rem;font-weight:700;color:' + pctColor + '">' + s.pct + '%</span></div></td>';
+    html += '<td>' + s.kpiCount + '</td>';
+    html += '<td>' + teamCount + '</td>';
+    html += '</tr>';
+  });
+  // Totals row
+  html += '<tr style="background:#f8fafc;font-weight:700">';
+  html += '<td>รวมทั้งหมด</td>';
+  html += '<td>' + totalPeople + '</td>';
+  html += '<td>' + totalKRFilled + '</td>';
+  html += '<td>' + totalKRTotal + '</td>';
+  html += '<td><span style="font-weight:700;color:' + (orgPct >= 75 ? 'var(--green)' : (orgPct >= 40 ? 'var(--orange)' : 'var(--red)')) + '">' + orgPct + '%</span></td>';
+  html += '<td>' + totalKPIs + '</td>';
+  var allTeams = 0;
+  depts.forEach(function(d) { allTeams += Object.keys(deptTeams(d)).length; });
+  html += '<td>' + allTeams + '</td>';
+  html += '</tr>';
+  html += '</tbody></table></div>';
+
+  // ── Organization cascade detail ──
+  html += '<div class="section-title" style="margin-top:24px"><span class="icon">🏗️</span> โครงสร้างองค์กร — องค์กร → กลุ่มงาน → ทีม → บุคคล</div>';
+  html += '<div class="card">';
+  // Top level
+  html += '<div style="text-align:center;margin-bottom:8px"><div style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;padding:10px 24px;border-radius:8px;font-weight:700;font-size:0.9rem">PMS/PMG — องค์กร</div></div>';
+  html += '<div style="text-align:center;margin-bottom:12px;color:var(--text3)">⬇ แบ่งเป็น 5 กลุ่มงาน</div>';
+  // Departments row
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">';
+  depts.forEach(function(d) {
+    var meta = getDeptMeta(d.name);
+    var teams = deptTeams(d);
+    var teamNames = Object.keys(teams);
+    var s = deptStats(d);
+    html += '<div style="background:' + meta.bg + ';border:1px solid ' + meta.color + '40;border-radius:10px;padding:12px">';
+    html += '<div style="font-weight:700;color:' + meta.text + ';margin-bottom:6px;font-size:0.84rem">' + esc(d.name) + '</div>';
+    html += '<div style="font-size:0.72rem;color:var(--text2);margin-bottom:6px">' + s.peopleCount + ' คน • ' + teamNames.length + ' ทีม</div>';
+    if (teamNames.length > 0) {
+      html += '<div style="font-size:0.72rem;color:var(--text2);margin-bottom:4px"><strong>ทีม:</strong></div>';
+      teamNames.forEach(function(t) {
+        html += '<div style="font-size:0.72rem;padding:2px 0;color:var(--text2)">• ' + esc(t) + ' (' + teams[t] + ')</div>';
+      });
+    } else {
+      html += '<div style="font-size:0.72rem;color:var(--text3)">— ไม่มีทีม</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '</div>';
+
+  document.getElementById('section-overview').innerHTML = html;
+
+  // Render the comparison chart after DOM is set
+  setTimeout(renderDeptCompareChart, 50);
+}
+
+function goToDept(idx) {
+  currentDept = idx;
+  switchTab('departments', null);
+  // Activate the departments tab button
+  var btns = document.querySelectorAll('.tab-btn');
+  btns.forEach(function(b) {
+    if (b.textContent.indexOf('กลุ่มงาน') >= 0) b.classList.add('active');
+    else b.classList.remove('active');
+  });
+  // Re-select dept chip
+  setTimeout(function() {
+    var chips = document.querySelectorAll('#deptSelector .dept-chip');
+    chips.forEach(function(c, i) { c.classList.toggle('active', i === idx); });
+  }, 50);
+}
+
+function renderDeptCompareChart() {
+  if (!D || !D.departments) return;
+  var ctx = document.getElementById('deptCompareChart');
+  if (!ctx) return;
+  if (overviewChart) overviewChart.destroy();
+
+  var labels = [], peopleData = [], krFilledData = [], krTotalData = [], colors = [];
+  D.departments.forEach(function(d) {
+    var s = deptStats(d);
+    var meta = getDeptMeta(d.name);
+    labels.push(d.name.length > 18 ? d.name.substring(0, 16) + '..' : d.name);
+    peopleData.push(s.peopleCount);
+    krFilledData.push(s.krFilled);
+    krTotalData.push(s.krTotal);
+    colors.push(meta.color);
+  });
+
+  overviewChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'บุคลากร', data: peopleData, backgroundColor: colors, borderRadius: 6, borderSkipped: false },
+        { label: 'KR กรอกแล้ว', data: krFilledData, backgroundColor: colors.map(function(c){ return c + '99'; }), borderRadius: 6, borderSkipped: false },
+        { label: 'KR ทั้งหมด', data: krTotalData, backgroundColor: colors.map(function(c){ return c + '44'; }), borderRadius: 6, borderSkipped: false }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11 } } },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f1f5f9' } }
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   TAB 2: Departments — กลุ่มงาน
+   ═══════════════════════════════════════════════════ */
+function renderDepartments() {
+  if (!D || !D.departments) return;
+  var html = '<div class="section-title"><span class="icon">📁</span> กลุ่มงาน — เลือกกลุ่มงานเพื่อดูรายละเอียด</div>';
+
+  // Department selector
+  html += '<div class="dept-selector" id="deptSelector">';
+  D.departments.forEach(function(d, i) {
+    var meta = getDeptMeta(d.name);
+    var activeCls = (i === currentDept) ? ' active' : '';
+    var style = activeCls ? 'background:' + meta.color + ';border-color:' + meta.color : '';
+    html += '<button class="dept-chip' + activeCls + '" style="' + style + '" onclick="selectDept(' + i + ', this)">';
+    html += '<span class="dc-dot" style="background:' + meta.color + '"></span>';
+    html += esc(d.name);
+    html += '</button>';
+  });
+  html += '</div>';
+
+  // Department content container
+  html += '<div id="deptContent"></div>';
+
+  document.getElementById('section-departments').innerHTML = html;
+  renderDeptContent(currentDept);
+}
+
+function selectDept(idx, btn) {
+  currentDept = idx;
+  document.querySelectorAll('#deptSelector .dept-chip').forEach(function(c) {
+    c.classList.remove('active');
+    c.style.background = '';
+    c.style.borderColor = '';
+  });
+  if (btn) {
+    var meta = getDeptMeta(D.departments[idx].name);
+    btn.classList.add('active');
+    btn.style.background = meta.color;
+    btn.style.borderColor = meta.color;
+  }
+  renderDeptContent(idx);
+}
+
+function renderDeptContent(idx) {
+  if (!D || !D.departments || idx < 0 || idx >= D.departments.length) return;
+  var dept = D.departments[idx];
+  var meta = getDeptMeta(dept.name);
+  var s = deptStats(dept);
+  var html = '';
+
+  // Dept header card
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid ' + meta.color + '">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">';
+  html += '<div>';
+  html += '<div style="font-size:1.2rem;font-weight:800;color:' + meta.text + '">' + esc(dept.name) + '</div>';
+  if (dept.error) {
+    html += '<div style="font-size:0.8rem;color:var(--red);margin-top:6px">⚠️ โหลดข้อมูลไม่ได้: ' + esc(dept.error) + '</div>';
+  } else {
+    html += '<div style="font-size:0.82rem;color:var(--text2);margin-top:4px">' + s.peopleCount + ' บุคลากร • KR ' + s.krFilled + '/' + s.krTotal + ' • KPI ' + s.kpiCount + '</div>';
+  }
+  html += '</div>';
+  html += '<div style="text-align:right">';
+  html += '<div style="font-size:1.6rem;font-weight:800;color:' + meta.color + '">' + s.pct + '%</div>';
+  html += '<div style="font-size:0.72rem;color:var(--text3)">ความคืบหน้า</div>';
+  html += '</div>';
+  html += '</div>';
+  html += '</div>';
+
+  // ── Dept summary: Weights status ──
+  var noWeightsCount = 0;
+  var partialWeightsCount = 0;
+  var fullWeightsCount = 0;
+  var noWeightsList = [];
+  if (dept.people && dept.people.length > 0) {
+    dept.people.forEach(function(p) {
+      var wB = p.weightBusiness || 0, wT = p.weightTeam || 0, wP = p.weightPersonal || 0, wC = p.weightCommunity || 0;
+      var totalW = wB + wT + wP + wC;
+      if (totalW === 0) {
+        noWeightsCount++;
+        noWeightsList.push(p.name);
+      } else if (totalW < 0.5) {
+        partialWeightsCount++;
+      } else {
+        fullWeightsCount++;
+      }
+    });
+  }
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid ' + (noWeightsCount > 0 ? 'var(--orange)' : 'var(--green)') + '">';
+  html += '<div style="font-weight:700;font-size:0.9rem;color:' + (noWeightsCount > 0 ? 'var(--orange)' : 'var(--green)') + ';margin-bottom:10px">⚖️ สรุปสัดส่วนความรับผิดชอบต่อผล (Weights)</div>';
+  html += '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:10px">';
+  html += '<div style="text-align:center"><span style="font-size:1.4rem;font-weight:800;color:var(--green)">' + fullWeightsCount + '</span><div style="font-size:0.72rem;color:var(--text3)">กรอกครบ/ใกล้ครบ</div></div>';
+  html += '<div style="text-align:center"><span style="font-size:1.4rem;font-weight:800;color:var(--orange)">' + partialWeightsCount + '</span><div style="font-size:0.72rem;color:var(--text3)">กรอกไม่ครบ</div></div>';
+  html += '<div style="text-align:center"><span style="font-size:1.4rem;font-weight:800;color:var(--red)">' + noWeightsCount + '</span><div style="font-size:0.72rem;color:var(--text3)">ยังไม่ใส่เลย ⚠️</div></div>';
+  html += '</div>';
+  if (noWeightsCount > 0) {
+    html += '<div style="font-size:0.78rem;color:var(--orange)">⚠️ ยังไม่ใส่ Weights: ' + noWeightsList.map(esc).join(', ') + '</div>';
+  }
+  html += '</div>';
+
+  // Person grid
+  html += '<div class="section-title" style="margin-top:16px"><span class="icon">👥</span> บุคลากรในกลุ่มงาน</div>';
+  if (!dept.people || dept.people.length === 0) {
+    html += '<div class="card"><div class="empty-placeholder">ยังไม่มีข้อมูลบุคลากรในกลุ่มงานนี้</div></div>';
+  } else {
+    html += '<div class="person-grid">';
+    dept.people.forEach(function(p, pi) {
+      var c = countKRs(p);
+      var krColor = c.filled === 0 ? 'var(--text3)' : (c.filled >= c.total ? 'var(--green)' : (c.filled >= 2 ? 'var(--orange)' : 'var(--text3)'));
+      var wB = p.weightBusiness || 0, wT = p.weightTeam || 0, wP = p.weightPersonal || 0, wC = p.weightCommunity || 0;
+      var totalW = wB + wT + wP + wC;
+      var noWeight = totalW === 0;
+      html += '<div class="person-card" onclick="openPersonModal(' + idx + ',' + pi + ')" style="' + (noWeight ? 'border:2px solid var(--orange);' : '') + '">';
+      html += '<div class="pc-strip" style="background:' + meta.color + '"></div>';
+      html += '<div class="pc-name">' + esc(p.name) + (noWeight ? ' <span style="font-size:0.65rem;background:var(--orange);color:#fff;padding:1px 5px;border-radius:4px;vertical-align:middle">⚠️ ไม่มี Weight</span>' : '') + '</div>';
+      if (p.team) {
+        html += '<span class="pc-team" style="background:' + meta.bg + ';color:' + meta.text + '">' + esc(p.team) + '</span>';
+      }
+      html += '<div class="pc-role">' + esc(p.role || '—') + '</div>';
+      html += '<div class="pc-kr">';
+      html += '<span>KR</span>';
+      html += '<span class="pc-kr-count' + (c.filled === 0 ? ' empty' : '') + '" style="color:' + krColor + '">' + c.filled + '/' + c.total + '</span>';
+      html += '</div>';
+      if (!noWeight) {
+        html += '<div style="margin-top:4px;font-size:0.68rem;color:var(--text3)">⚖️ ' + Math.round(totalW * 100) + '%</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('deptContent').innerHTML = html;
+}
+
+/* ── Person modal ── */
+function openPersonModal(deptIdx, personIdx) {
+  if (!D || !D.departments) return;
+  var dept = D.departments[deptIdx];
+  if (!dept || !dept.people || personIdx < 0 || personIdx >= dept.people.length) return;
+  var p = dept.people[personIdx];
+  var meta = getDeptMeta(dept.name);
+  
+  // Store for editing
+  personModalDept = dept.name;
+  personModalSheet = p.sheetName || '';
+  personModalEditOn = false;
+
+  var html = '';
+  // Header with edit toggle
+  html += '<div class="person-header">';
+  html += '<div>';
+  html += '<div class="person-name">' + esc(p.name) + '</div>';
+  html += '<div class="person-meta">';
+  html += '<span>🏢 กลุ่มงาน: <strong>' + esc(dept.name) + '</strong></span>';
+  html += '<span>👥 ทีม: <strong>' + esc(p.team || '—') + '</strong></span>';
+  html += '<span>👤 บทบาท: <strong>' + esc(p.role || '—') + '</strong></span>';
+  if (p.mentors && p.mentors.length > 0) {
+    var uniqueMentors = p.mentors.filter(function(m, i, a) { return a.indexOf(m) === i; });
+    html += '<span>🧑‍🏫 พี่เลี้ยง: <strong>' + uniqueMentors.map(esc).join(', ') + '</strong></span>';
+  }
+  html += '</div>';
+  html += '</div>';
+  html += '<div style="display:flex;align-items:center;gap:8px">';
+  if (p.team) {
+    html += '<span class="team-tag" style="background:' + meta.bg + ';color:' + meta.text + '">' + esc(p.team) + '</span>';
+  }
+  html += '<button id="personEditToggle" onclick="togglePersonEdit()" style="padding:6px 14px;font-size:0.78rem;border:1px solid rgba(255,255,255,0.25);border-radius:8px;background:rgba(255,255,255,0.15);color:#fff;cursor:pointer;font-weight:600;white-space:nowrap">✏️ แก้ไข</button>';
+  html += '</div>';
+  html += '</div>';
+
+  // Weights progress bars
+  html += '<div class="subsection-label" style="margin-top:8px">⚖️ สัดส่วนความรับผิดชอบต่อผล (Weights)</div>';
+  html += '<div class="weight-row"><span class="weight-label">Business</span><div class="weight-bar-bg"><div class="weight-bar-fill wbf-business" style="width:' + ((p.weightBusiness || 0) * 100) + '%"></div></div><span class="weight-pct">' + Math.round((p.weightBusiness || 0) * 100) + '%</span></div>';
+  html += '<div class="weight-row"><span class="weight-label">Team</span><div class="weight-bar-bg"><div class="weight-bar-fill wbf-team" style="width:' + ((p.weightTeam || 0) * 100) + '%"></div></div><span class="weight-pct">' + Math.round((p.weightTeam || 0) * 100) + '%</span></div>';
+  html += '<div class="weight-row"><span class="weight-label">Personal</span><div class="weight-bar-bg"><div class="weight-bar-fill wbf-personal" style="width:' + ((p.weightPersonal || 0) * 100) + '%"></div></div><span class="weight-pct">' + Math.round((p.weightPersonal || 0) * 100) + '%</span></div>';
+  html += '<div class="weight-row"><span class="weight-label">Community</span><div class="weight-bar-bg"><div class="weight-bar-fill wbf-community" style="width:' + ((p.weightCommunity || 0) * 100) + '%"></div></div><span class="weight-pct">' + Math.round((p.weightCommunity || 0) * 100) + '%</span></div>';
+
+  // Key Accountabilities
+  html += '<div class="subsection-label" style="margin-top:18px">📋 Key Accountabilities — หน้าที่ความรับผิดชอบ</div>';
+  if (p.accountability && p.accountability.length > 0) {
+    html += '<ul class="acc-list">';
+    p.accountability.forEach(function(a, i) {
+      html += '<li class="acc-item"><span class="acc-num">' + (i + 1) + '</span>' + esc(a);
+      html += '<span class="edit-btn-grp" style="display:none;margin-left:6px"><button onclick="editPersonField(\'accountability\',' + JSON.stringify(JSON.stringify(a)) + ')" style="padding:1px 6px;font-size:0.65rem;border:1px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff;cursor:pointer">✏️</button></span>';
+      html += '</li>';
+    });
+    html += '</ul>';
+  } else {
+    html += '<div class="empty-placeholder">ยังไม่ได้กรอกข้อมูล Accountabilities</div>';
+  }
+
+  // Growth Objectives
+  html += '<div class="subsection-label" style="margin-top:18px">🚀 Growth Objectives &amp; Key Results</div>';
+  var types = [
+    { key: 'Business Growth', cls: 'obj-business', badge: 'tb-business', label: 'Business Growth' },
+    { key: 'Team Growth',      cls: 'obj-team',     badge: 'tb-team',     label: 'Team Growth' },
+    { key: 'Personal Growth',  cls: 'obj-personal', badge: 'tb-personal', label: 'Personal Growth' },
+    { key: 'Community',        cls: 'obj-community', badge: 'tb-community', label: 'Community' }
+  ];
+
+  var hasAnyObj = false;
+  types.forEach(function(t) {
+    var objs = (p.objectives || []).filter(function(o) { return o.type === t.key; });
+    if (objs.length > 0) {
+      hasAnyObj = true;
+      objs.forEach(function(o) {
+        html += '<div class="obj-block ' + t.cls + '">';
+        html += '<div class="obj-head">';
+        html += '<span class="obj-type-badge ' + t.badge + '">' + esc(t.label) + '</span>';
+        if (o.weight > 0) {
+          html += '<span class="obj-weight">น้ำหนัก ' + Math.round(o.weight * 100) + '%</span>';
+        }
+        html += '<span class="edit-btn-grp" style="display:none;margin-left:4px"><button onclick="editPersonLabel(' + JSON.stringify(JSON.stringify(t.key)) + ',' + JSON.stringify(JSON.stringify(o.label || '')) + ')" style="padding:1px 6px;font-size:0.65rem;border:1px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff;cursor:pointer">✏️ ชื่อวัตถุประสงค์</button></span>';
+        html += '</div>';
+        if (o.label && o.label.trim()) {
+          html += '<div class="obj-label">' + esc(o.label) + '</div>';
+        }
+        var realKRs = (o.keyResults || []).filter(function(kr) { return kr && String(kr).trim().length > 3; });
+        if (realKRs.length > 0) {
+          html += '<ul class="kr-list">';
+          realKRs.forEach(function(kr) {
+            html += '<li class="kr-item">' + esc(kr);
+            html += '<span class="edit-btn-grp" style="display:none;margin-left:6px"><button onclick="editPersonField(\'kr\',' + JSON.stringify(JSON.stringify(kr)) + ')" style="padding:1px 6px;font-size:0.65rem;border:1px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff;cursor:pointer">✏️</button></span>';
+            html += '</li>';
+          });
+          html += '</ul>';
+        } else {
+          html += '<div class="empty-placeholder">ยังไม่ได้กรอก Key Results</div>';
+        }
+        html += '</div>';
+      });
+    }
+  });
+
+  // If no objectives at all, show placeholder blocks for all types
+  if (!hasAnyObj) {
+    types.forEach(function(t) {
+      html += '<div class="obj-block ' + t.cls + '">';
+      html += '<div class="obj-head"><span class="obj-type-badge ' + t.badge + '">' + esc(t.label) + '</span></div>';
+      html += '<div class="empty-placeholder">ยังไม่ได้กรอก</div>';
+      html += '</div>';
+    });
+  }
+
+  document.getElementById('personModalContent').innerHTML = html;
+  document.getElementById('personModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePersonModal() {
+  document.getElementById('personModal').classList.remove('active');
+  document.body.style.overflow = '';
+  personModalEditOn = false;
+}
+
+function togglePersonEdit() {
+  personModalEditOn = !personModalEditOn;
+  var btn = document.getElementById('personEditToggle');
+  var groups = document.querySelectorAll('#personModalContent .edit-btn-grp');
+  if (personModalEditOn) {
+    btn.textContent = '✏️ แก้ไข ON';
+    btn.style.background = 'var(--orange)';
+    btn.style.color = '#fff';
+    btn.style.borderColor = 'var(--orange)';
+    groups.forEach(function(g) { g.style.display = 'inline'; });
+  } else {
+    btn.textContent = '✏️ แก้ไข';
+    btn.style.background = 'rgba(255,255,255,0.15)';
+    btn.style.color = '#fff';
+    btn.style.borderColor = 'rgba(255,255,255,0.25)';
+    groups.forEach(function(g) { g.style.display = 'none'; });
+  }
+}
+
+function editPersonField(field, oldText) {
+  var newText = prompt('แก้ไข ' + (field === 'kr' ? 'Key Result' : 'Accountability') + ':', oldText);
+  if (newText === null || newText.trim() === oldText.trim()) return;
+  if (newText.trim() === '') { alert('ไม่สามารถว่างได้'); return; }
+
+  var payload = {
+    action: 'personEdit',
+    deptName: personModalDept,
+    sheetName: personModalSheet,
+    field: field,
+    oldText: oldText,
+    newText: newText.trim()
+  };
+
+  // Use google.script.run to call server function directly (no CORS issue)
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.success) {
+        alert('✅ อัปเดตสำเร็จ — กำลังรีโหลดหน้า...');
+        window.location.reload();
+      } else {
+        alert('❌ อัปเดตไม่สำเร็จ: ' + (res ? (res.error || res.message || 'ไม่ทราบสาเหตุ') : 'ไม่มีการตอบกลับ'));
+      }
+    })
+    .withFailureHandler(function(err) {
+      alert('❌ ข้อผิดพลาด: ' + (err && err.message ? err.message : String(err)));
+    })
+    .gsSavePersonEdit(payload);
+}
+
+function editPersonLabel(objectType, oldLabel) {
+  var newLabel = prompt('แก้ไขชื่อวัตถุประสงค์ (' + objectType + '):', oldLabel);
+  if (newLabel === null) return;
+
+  var payload = {
+    action: 'personEdit',
+    deptName: personModalDept,
+    sheetName: personModalSheet,
+    field: 'label',
+    objectType: objectType,
+    oldText: oldLabel,
+    newText: newLabel.trim()
+  };
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.success) {
+        alert('✅ อัปเดตสำเร็จ — กำลังรีโหลดหน้า...');
+        window.location.reload();
+      } else {
+        alert('❌ อัปเดตไม่สำเร็จ: ' + (res ? (res.error || res.message || 'ไม่ทราบสาเหตุ') : 'ไม่มีการตอบกลับ'));
+      }
+    })
+    .withFailureHandler(function(err) {
+      alert('❌ ข้อผิดพลาด: ' + (err && err.message ? err.message : String(err)));
+    })
+    .gsSavePersonEdit(payload);
+}
+
+function closeModalOnOverlay(event) {
+  if (event.target === document.getElementById('personModal')) {
+    closePersonModal();
+  }
+}
+
+// Close modal on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closePersonModal();
+});
+
+/* ═══════════════════════════════════════════════════
+   TAB 3: KPI & ตัววัดผล — รวมตัววัดผลซ้ำ + ผู้รับผิดชอบ + น้ำหนัก%
+   ═══════════════════════════════════════════════════ */
+var kpiSortMode = 'owners';
+
+function renderKPI() {
+  if (!D || !D.departments) return;
+  var html = '<div class="section-title"><span class="icon">🎯</span> KPI &amp; ตัววัดผล — เป้าหมายและผู้รับผิดชอบ</div>';
+
+  // Filter bar
+  html += '<div class="filter-bar">';
+  html += '<span class="filter-label">กรองตามกลุ่มงาน:</span>';
+  html += '<select class="filter-select" id="kpiDeptFilter" onchange="filterKPI()">';
+  html += '<option value="-1"' + (kpiFilterDept === -1 ? ' selected' : '') + '>ทุกกลุ่มงาน (รวม)</option>';
+  D.departments.forEach(function(d, i) {
+    var sel = (i === kpiFilterDept) ? ' selected' : '';
+    html += '<option value="' + i + '"' + sel + '>' + esc(d.name) + '</option>';
+  });
+  html += '</select>';
+  html += '<span class="filter-label" style="margin-left:12px">เรียงตาม:</span>';
+  html += '<select class="filter-select" id="kpiSortFilter" onchange="changeKPISort()">';
+  html += '<option value="owners"' + (kpiSortMode === 'owners' ? ' selected' : '') + '>จำนวนผู้รับผิดชอบ (มาก→น้อย)</option>';
+  html += '<option value="type"' + (kpiSortMode === 'type' ? ' selected' : '') + '>ประเภทการเติบโต</option>';
+  html += '<option value="dept"' + (kpiSortMode === 'dept' ? ' selected' : '') + '>กลุ่มงาน</option>';
+  html += '</select>';
+  html += '</div>';
+
+  html += '<div id="kpiTableContainer"></div>';
+  document.getElementById('section-kpi').innerHTML = html;
+  renderKPITable(kpiFilterDept);
+}
+
+function filterKPI() {
+  var sel = document.getElementById('kpiDeptFilter');
+  if (!sel) return;
+  kpiFilterDept = parseInt(sel.value);
+  renderKPITable(kpiFilterDept);
+}
+
+function changeKPISort() {
+  var sel = document.getElementById('kpiSortFilter');
+  if (!sel) return;
+  kpiSortMode = sel.value;
+  renderKPITable(kpiFilterDept);
+}
+
+function renderKPITable(deptIdx) {
+  var container = document.getElementById('kpiTableContainer');
+  if (!container) return;
+
+  // ── Collect all KRs from all people, filtered by dept ──
+  // Deep classification: filter out non-KR items (names, labels, descriptions, meta)
+  // classifyKR + normKR are now top-level functions (hoisted) — shared across all pages.
+  var allKRs = [];
+  D.departments.forEach(function(d, di) {
+    if (deptIdx !== -1 && di !== deptIdx) return;
+    var meta = getDeptMeta(d.name);
+    (d.people || []).forEach(function(p) {
+      (p.objectives || []).forEach(function(o) {
+        (o.keyResults || []).forEach(function(kr) {
+          var krText = String(kr).trim();
+          if (krText.length < 4) return;
+          if (/^[\d.,\s%+-]+$/.test(krText)) return;  // pure numbers
+
+          // Classify and filter
+          var krClass = classifyKR(krText);
+          if (krClass === 'skip') return;
+
+          allKRs.push({
+            kr: krText,
+            type: o.type || 'Other',
+            person: p.name,
+            team: p.team || '',
+            dept: d.name,
+            deptIdx: di,
+            weight: o.weight || 0,
+            deptColor: meta.color,
+            deptBg: meta.bg,
+            deptText: meta.text,
+            krClass: krClass  // 'kr', 'label', 'desc'
+          });
+        });
+      });
+    });
+  });
+
+  // ── Normalize KR for grouping — deep semantic normalization ──
+  // normKR is now a top-level function (hoisted) — shared across all pages.
+
+  // ── Merge duplicates — dedup same person appearing in multiple objectives ──
+  // Also merge KPI labels with their descriptions (same KR group)
+  var merged = {};
+  allKRs.forEach(function(k) {
+    var key = normKR(k.kr);
+    if (!merged[key]) {
+      merged[key] = {
+        krText: k.kr,
+        type: k.type,
+        owners: [],
+        ownerSet: {},  // track unique person+dept to prevent dups
+        depts: {},
+        krClass: k.krClass,
+        allTexts: []  // collect all text variants for picking best display
+      };
+    }
+    // Track all text variants — prefer the longest, most descriptive one for display
+    merged[key].allTexts.push(k.kr);
+    // Pick best display text: longest 'kr' class text, or longest overall
+    if (k.krClass === 'kr' && k.kr.length > merged[key].krText.length) {
+      merged[key].krText = k.kr;
+    } else if (merged[key].krClass !== 'kr' && k.krClass === 'kr') {
+      merged[key].krText = k.kr;
+      merged[key].krClass = 'kr';
+    }
+    // Dedup: only add this person once per KR group (even if KR appears in multiple objectives)
+    var ownerKey = k.person + '|' + k.dept;
+    if (merged[key].ownerSet[ownerKey]) return;  // already added this person for this KR
+    merged[key].ownerSet[ownerKey] = true;
+    merged[key].owners.push({
+      person: k.person,
+      team: k.team,
+      dept: k.dept,
+      deptIdx: k.deptIdx,
+      weight: k.weight,
+      deptColor: k.deptColor,
+      deptBg: k.deptBg,
+      deptText: k.deptText
+    });
+    merged[key].depts[k.dept] = (merged[key].depts[k.dept] || 0) + 1;
+  });
+
+  var mergedArr = Object.values(merged);
+
+  // ── Sort ──
+  // Sort by level: Business Growth (org/business level) → Team Growth (team level) → Personal Growth (personal) → Community
+  // Then within each level, sort by owner count (most owners first)
+  mergedArr.sort(function(a, b) {
+    var order = { 'Business Growth': 0, 'Team Growth': 1, 'Personal Growth': 2, 'Community': 3 };
+    var r = (order[a.type] || 4) - (order[b.type] || 4);
+    if (r !== 0) return r;
+    return b.owners.length - a.owners.length;
+  });
+
+  // ── KPI Quality Score (15-point Checklist) ──
+  // Count KRs per person from allKRs (for Q14: 5-25 KRs per person)
+  var personKRCount = {};
+  allKRs.forEach(function(k) {
+    var pk = k.person + '|' + k.dept;
+    personKRCount[pk] = (personKRCount[pk] || 0) + 1;
+  });
+  // Average KRs per person (fallback if person not found)
+  var avgKRsPerPerson = allKRs.length > 0 ? Math.round(Object.keys(personKRCount).reduce(function(s, k) { return s + personKRCount[k]; }, 0) / Object.keys(personKRCount).length) : 10;
+
+  function scoreKR(krText, krType, hasOwner, numPersonKRs) {
+    var score = 0;
+    var maxScore = 15;
+    var checks = [];
+
+    // Remove prefixes for analysis
+    var clean = krText.replace(/\s+/g, ' ').trim();
+    for (var pi = 0; pi < 3; pi++) {
+      clean = clean.replace(/^(KR\s*\d+\s*[:\.]?\s*|KPI\s*\d+\s*[:\.]?\s*|O\d+-KR\d+\s*[:\.]?\s*|\d+\s*[:\.\-)]\s*)/i, '');
+    }
+    clean = clean.replace(/[\(\)"]/g, '').trim();
+
+    var hasNum = /\d/.test(clean);
+    var hasUnit = /(บาท|ลบ|ล้าน|คัน|คน|%|≥|GM|CSI|SSI|คะแนน|ยอด|รายได้|กำไร|เป้าหมาย)/i.test(clean);
+    var hasNumUnit = /(\d+[,\.]?\d*\s*(บาท|ลบ|ล้าน|คัน|คน|ครั้ง|%|เดือน|ปี))/i.test(clean);
+    var hasAuditWord = /(รายงาน|รายการ|ยอด|สถิติ|ติดตาม|วัด|คะแนน|CSI|SSI)/i.test(clean);
+    var hasThreshold = /(≥|>=|ไม่น้อยกว่า|ไม่ต่ำกว่า|เป้าหมาย|target)/i.test(clean) || hasNum;
+    var hasControl = krType === 'Personal Growth' || /(ตัวเอง|ของตัวเอง|ทีม|สาขา)/i.test(clean);
+    var hasAction = /(เพิ่ม|ลด|สร้าง|บรรลุ|รักษา|พัฒนา|ขยาย|ผลักดัน|ปรับ|ติดตาม|บริหาร)/i.test(clean);
+
+    // A. Strategic Alignment (4 ข้อ)
+    if (krType === 'Business Growth' || krType === 'Team Growth') { score++; checks.push('Q1✅'); } else { checks.push('Q1❌'); }
+    if (hasOwner) { score++; checks.push('Q2✅'); } else { checks.push('Q2❌'); }
+    if (hasNum) { score++; checks.push('Q3✅'); } else { checks.push('Q3❌'); }
+    score++; checks.push('Q4✅');
+
+    // B. KPI Quality (4 ข้อ)
+    if (hasUnit) { score++; checks.push('Q5✅'); } else { checks.push('Q5❌'); }
+    if (hasNumUnit) { score++; checks.push('Q6✅'); } else { checks.push('Q6❌'); }
+    if (hasAuditWord) { score++; checks.push('Q7✅'); } else { checks.push('Q7❌'); }
+    if (hasThreshold) { score++; checks.push('Q8✅'); } else { checks.push('Q8❌'); }
+
+    // C. Owner & Execution (3 ข้อ)
+    if (hasControl) { score++; checks.push('Q9✅'); } else { checks.push('Q9❌'); }
+    if (hasOwner) { score++; checks.push('Q10✅'); } else { checks.push('Q10❌'); }
+    if (hasAction) { score++; checks.push('Q11✅'); } else { checks.push('Q11❌'); }
+
+    // D. KPI Portfolio Balance (2 ข้อ)
+    score++; checks.push('Q12✅');
+    if (krType === 'Business Growth' || krType === 'Team Growth' || krType === 'Personal Growth' || krType === 'Community') { score++; checks.push('Q13✅'); } else { checks.push('Q13❌'); }
+
+    // E. KPI Quantity & Focus (2 ข้อ)
+    if (numPersonKRs >= 5 && numPersonKRs <= 25) { score++; checks.push('Q14✅'); } else { checks.push('Q14❌'); }
+    if (hasNum) { score++; checks.push('Q15✅'); } else { checks.push('Q15❌'); }
+
+    // Red Flags
+    var redFlags = [];
+    if (!hasOwner) redFlags.push('ไม่มีเจ้าของ');
+    if (!hasUnit) redFlags.push('ไม่มีสูตรคำนวณ');
+    if (!hasNumUnit) redFlags.push('วัดไม่ได้จริง');
+    if (krType !== 'Business Growth' && krType !== 'Team Growth' && !hasNum) redFlags.push('ไม่เชื่อมโยงองค์กร');
+    if (!hasControl) redFlags.push('เจ้าของควบคุมไม่ได้');
+
+    var grade = '';
+    var gradeColor = '';
+    if (score >= 13) { grade = 'Excellent'; gradeColor = '#10b981'; }
+    else if (score >= 10) { grade = 'Good'; gradeColor = '#3b82f6'; }
+    else if (score >= 8) { grade = 'Fair'; gradeColor = '#f59e0b'; }
+    else { grade = 'ควรปรับปรุง'; gradeColor = '#ef4444'; }
+
+    return { score: score, maxScore: maxScore, grade: grade, gradeColor: gradeColor, checks: checks, redFlags: redFlags };
+  }
+
+  // ── Compute scores for all merged KRs ──
+  var allScores = [];
+  mergedArr.forEach(function(m) {
+    var hasOwner = m.owners.length > 0;
+    // Use the first owner's KR count, fallback to average
+    var numPersonKRs = avgKRsPerPerson;
+    if (m.owners.length > 0) {
+      var firstOwnerKey = m.owners[0].person + '|' + m.owners[0].dept;
+      numPersonKRs = personKRCount[firstOwnerKey] || avgKRsPerPerson;
+    }
+    m.kpiScore = scoreKR(m.krText, m.type, hasOwner, numPersonKRs);
+    allScores.push(m.kpiScore.score);
+  });
+  var avgScore = allScores.length > 0 ? (allScores.reduce(function(a, b) { return a + b; }, 0) / allScores.length) : 0;
+  var avgScoreRounded = Math.round(avgScore * 10) / 10;
+  var avgGrade = avgScore >= 13 ? 'Excellent' : avgScore >= 10 ? 'Good' : avgScore >= 8 ? 'Fair' : 'ควรปรับปรุง';
+  var avgGradeColor = avgScore >= 13 ? '#10b981' : avgScore >= 10 ? '#3b82f6' : avgScore >= 8 ? '#f59e0b' : '#ef4444';
+  var lowScoreCount = allScores.filter(function(s) { return s < 8; }).length;
+
+  // ── Summary stats ──
+  var totalUnique = mergedArr.length;
+  var totalShared = mergedArr.filter(function(m) { return m.owners.length > 1; }).length;
+  var totalOwners = 0;
+  var ownerSet = {}; // track unique owners across all KRs
+  mergedArr.forEach(function(m) { totalOwners += m.owners.length; m.owners.forEach(function(o) { ownerSet[o.person + '|' + o.dept] = true; }); });
+  var totalUniqueOwners = Object.keys(ownerSet).length;
+
+  var html = '';
+  html += '<div class="card" style="margin-bottom:16px;display:flex;gap:24px;flex-wrap:wrap;align-items:center">';
+  html += '<div style="text-align:center"><div style="font-size:1.6rem;font-weight:800;color:var(--accent)">' + totalUnique + '</div><div style="font-size:0.78rem;color:var(--text2)">ตัววัดผลไม่ซ้ำ</div></div>';
+  html += '<div style="width:1px;height:36px;background:var(--border)"></div>';
+  html += '<div style="text-align:center"><div style="font-size:1.6rem;font-weight:800;color:var(--accent2)">' + totalShared + '</div><div style="font-size:0.78rem;color:var(--text2)">มีหลายคนรับผิดชอบ</div></div>';
+  html += '<div style="width:1px;height:36px;background:var(--border)"></div>';
+  html += '<div style="text-align:center"><div style="font-size:1.6rem;font-weight:800;color:var(--green)">' + totalUniqueOwners + '</div><div style="font-size:0.78rem;color:var(--text2)">ผู้รับผิดชอบ (ไม่ซ้ำ)</div></div>';
+  html += '<div style="width:1px;height:36px;background:var(--border)"></div>';
+  html += '<div style="text-align:center"><div style="font-size:1.6rem;font-weight:800;color:' + avgGradeColor + '">' + avgScoreRounded + '/15</div><div style="font-size:0.78rem;color:var(--text2)">KPI Quality (เฉลี่ย · ' + avgGrade + ')</div></div>';
+  if (lowScoreCount > 0) {
+    html += '<div style="width:1px;height:36px;background:var(--border)"></div>';
+    html += '<div style="text-align:center"><div style="font-size:1.6rem;font-weight:800;color:#ef4444">' + lowScoreCount + '</div><div style="font-size:0.78rem;color:var(--text2)">KR ควรปรับปรุง (&lt;8)</div></div>';
+  }
+  html += '</div>';
+
+  // ── Group merged KRs by type ──
+  var types = {};
+  mergedArr.forEach(function(m) {
+    if (!types[m.type]) types[m.type] = [];
+    types[m.type].push(m);
+  });
+
+  var typeOrder = ['Business Growth', 'Team Growth', 'Personal Growth', 'Community'];
+  var typeIcons = { 'Business Growth': '💰', 'Team Growth': '👥', 'Personal Growth': '🎓', 'Community': '🤝' };
+  var typeColors = { 'Business Growth': '#10b981', 'Team Growth': '#3b82f6', 'Personal Growth': '#f59e0b', 'Community': '#ec4899' };
+  var typeLabels = { 'Business Growth': 'Business Growth', 'Team Growth': 'Team Growth', 'Personal Growth': 'Personal Growth', 'Community': 'Community' };
+
+  typeOrder.forEach(function(type) {
+    if (!types[type]) return;
+    var krs = types[type];
+    var color = typeColors[type] || '#64748b';
+    var icon = typeIcons[type] || '📋';
+    var label = typeLabels[type] || type;
+
+    html += '<div class="card" style="margin-bottom:16px;border-left:4px solid ' + color + '">';
+    html += '<div style="font-weight:700;font-size:0.9rem;color:' + color + ';margin-bottom:12px;display:flex;align-items:center;gap:8px">';
+    html += '<span>' + icon + '</span>';
+    html += '<span>' + esc(label) + '</span>';
+    html += '<span style="font-size:0.78rem;color:var(--text3);font-weight:400">— ' + krs.length + ' ตัววัดผล</span>';
+    html += '</div>';
+
+    krs.forEach(function(m, idx) {
+      var ownerCount = m.owners.length;
+      var isShared = ownerCount > 1;
+      var deptCount = Object.keys(m.depts).length;
+
+      html += '<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:' + (idx < krs.length - 1 ? '1px solid var(--border)' : 'none') + '">';
+      // KR text + owner count badge
+      html += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">';
+      html += '<div style="flex:1;font-size:0.85rem;line-height:1.5;color:var(--text)">' + esc(m.krText) + '</div>';
+      if (editMode) {
+        var firstOwner = m.owners[0] || {};
+        html += '<button onclick="editKR(' + JSON.stringify(JSON.stringify(m.krText)) + ', ' + JSON.stringify(JSON.stringify(firstOwner.person || '')) + ', ' + JSON.stringify(JSON.stringify(m.type)) + ', ' + JSON.stringify(JSON.stringify(firstOwner.dept || '')) + ')" style="flex-shrink:0;margin-left:4px;padding:2px 8px;font-size:0.72rem;border:1px solid var(--accent);border-radius:6px;background:var(--accent);color:#fff;cursor:pointer">✏️</button>';
+        html += '<button onclick="deleteKR(' + JSON.stringify(JSON.stringify(m.krText)) + ', ' + JSON.stringify(JSON.stringify(firstOwner.person || '')) + ', ' + JSON.stringify(JSON.stringify(m.type)) + ')" style="flex-shrink:0;margin-left:2px;padding:2px 8px;font-size:0.72rem;border:1px solid var(--red);border-radius:6px;background:var(--red);color:#fff;cursor:pointer">🗑️</button>';
+      }
+      if (isShared) {
+        html += '<span style="flex-shrink:0;background:var(--accent2);color:#fff;font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:9999px;white-space:nowrap">' + ownerCount + ' คน' + (deptCount > 1 ? ' · ' + deptCount + ' กลุ่มงาน' : '') + '</span>';
+      } else {
+        html += '<span style="flex-shrink:0;background:var(--border);color:var(--text2);font-size:0.72rem;font-weight:600;padding:3px 10px;border-radius:9999px;white-space:nowrap">1 คน</span>';
+      }
+      // KPI Quality Score badge
+      var ks = m.kpiScore;
+      html += '<span style="flex-shrink:0;background:' + ks.gradeColor + '20;color:' + ks.gradeColor + ';border:1px solid ' + ks.gradeColor + ';font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:9999px;white-space:nowrap" title="' + ks.checks.join(' ') + '">' + ks.score + '/15 ' + ks.grade + '</span>';
+      html += '</div>';
+      // Red flags (if any)
+      if (ks.redFlags.length > 0) {
+        html += '<div style="margin-left:4px;margin-bottom:6px"><span style="background:#fef2f2;color:#dc2626;font-size:0.72rem;padding:2px 8px;border-radius:5px;font-weight:600">⚠️ ' + ks.redFlags.join(' · ') + '</span></div>';
+      }
+      // Owners list
+      html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-left:4px">';
+      // Sort owners by dept then name
+      m.owners.sort(function(a, b) {
+        if (a.dept !== b.dept) return a.dept.localeCompare(b.dept);
+        return (a.person || '').localeCompare(b.person || '');
+      });
+      m.owners.forEach(function(o) {
+        var weightStr = o.weight > 0 ? ' ' + Math.round(o.weight * 100) + '%' : '';
+        html += '<span style="background:' + o.deptBg + ';color:' + o.deptText + ';font-size:0.75rem;padding:3px 8px;border-radius:6px;border:1px solid ' + o.deptColor + '20;white-space:nowrap">';
+        html += esc(o.person);
+        if (weightStr) html += ' <strong>' + weightStr + '</strong>';
+        html += '</span>';
+      });
+      html += '</div>';
+      html += '</div>';
+    });
+
+    html += '</div>';
+    if (editMode) {
+      html += '<button onclick="addKR(' + JSON.stringify(JSON.stringify(type)) + ')" style="margin:8px 0 4px;padding:6px 16px;font-size:0.78rem;border:1px solid ' + color + ';border-radius:8px;background:' + color + '20;color:' + color + ';cursor:pointer;font-weight:600">➕ เพิ่ม KR (' + esc(label) + ')</button>';
+    }
+  });
+
+  // Other types
+  Object.keys(types).forEach(function(type) {
+    if (typeOrder.indexOf(type) !== -1) return;
+    var krs = types[type];
+    html += '<div class="card" style="margin-bottom:16px;border-left:4px solid #64748b">';
+    html += '<div style="font-weight:700;font-size:0.9rem;color:#64748b;margin-bottom:12px">📋 ' + esc(type) + ' — ' + krs.length + ' ตัววัดผล</div>';
+    krs.forEach(function(m, idx) {
+      var ks2 = m.kpiScore;
+      html += '<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:' + (idx < krs.length - 1 ? '1px solid var(--border)' : 'none') + '">';
+      html += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px">';
+      html += '<div style="flex:1;font-size:0.85rem;color:var(--text)">' + esc(m.krText) + '</div>';
+      if (ks2) html += '<span style="flex-shrink:0;background:' + ks2.gradeColor + '20;color:' + ks2.gradeColor + ';border:1px solid ' + ks2.gradeColor + ';font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:9999px;white-space:nowrap" title="' + ks2.checks.join(' ') + '">' + ks2.score + '/15 ' + ks2.grade + '</span>';
+      html += '</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:5px">';
+      m.owners.forEach(function(o) {
+        html += '<span style="background:' + o.deptBg + ';color:' + o.deptText + ';font-size:0.75rem;padding:3px 8px;border-radius:6px">' + esc(o.person) + '</span>';
+      });
+      html += '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+
+  if (mergedArr.length === 0) {
+    html += '<div class="card"><div class="empty-placeholder">ยังไม่มีข้อมูล KR — ข้อมูลจะแสดงเมื่อบุคลากรกรอก CEO Contract ในชีทต้นทาง</div></div>';
+  }
+
+  container.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════
+   TAB 4: Connection Map — ความเชื่อมโยง (4 ระดับ)
+   ═══════════════════════════════════════════════════ */
+
+/* ── Linkage detail modal helpers ── */
+
+// Local normKR — mirrors the one inside renderLinkage (used for matching KR text across people)
+function linkageNormKR(s) {
+  var cleaned = String(s || '').replace(/\s+/g, ' ').trim();
+  cleaned = cleaned.replace(/[""''']/g, '');
+  for (var pi = 0; pi < 5; pi++) {
+    cleaned = cleaned.replace(/^(KR\s*\d+\s*[:\.]?\s*|KRN*\s*[:\.]?\s*|O\d+-KR\d+\s*[:\.]?\s*|KPI\s*\d+\s*[:\.]?\s*|คร\s*\d+\s*[:\.]?\s*)/i, '');
+    cleaned = cleaned.replace(/^\d+\s*[:\.\-)]\s*/, '');
+    cleaned = cleaned.replace(/^\(\d+\)\s*/, '');
+  }
+  cleaned = cleaned.replace(/\([a-zA-Z\s\/\&\-]+\)/g, '');
+  cleaned = cleaned.replace(/^GMของสาขา\s*/, '');
+  cleaned = cleaned.replace(/servive/gi, 'service');
+  cleaned = cleaned.replace(/aligement/gi, 'alignment');
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  cleaned = cleaned.replace(/[\d,]+\.?\d*/g, '#');
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  cleaned = cleaned.replace(/^#\s+/, '').replace(/\s+#$/, '');
+  return cleaned.toLowerCase().substring(0, 120);
+}
+
+// Build modal HTML for a KR — searches all depts for matching owners
+function showLinkageDetail(krText) {
+  if (!D || !D.departments) return;
+  var nk = linkageNormKR(krText);
+  var owners = [];
+  D.departments.forEach(function(d) {
+    var meta = getDeptMeta(d.name);
+    (d.people || []).forEach(function(p) {
+      (p.objectives || []).forEach(function(o) {
+        (o.keyResults || []).forEach(function(kr) {
+          if (linkageNormKR(kr) === nk) {
+            owners.push({
+              name: p.name,
+              dept: d.name,
+              team: p.team || '—',
+              type: o.type || '—',
+              weight: o.weight || 0,
+              kpiScore: p.kpiScore || null
+            });
+          }
+        });
+      });
+    });
+  });
+
+  var html = '';
+  html += '<div class="person-header">';
+  html += '<div>';
+  html += '<div class="person-name" style="font-size:1.15rem;line-height:1.4">🔗 KR: ' + esc(krText) + '</div>';
+  html += '<div class="person-meta">';
+  html += '<span>👥 ผู้รับผิดชอบ: <strong>' + owners.length + ' คน</strong></span>';
+  if (owners.length > 0) {
+    var types = {};
+    owners.forEach(function(o) { types[o.type] = (types[o.type] || 0) + 1; });
+    html += '<span>📊 ประเภท: <strong>' + Object.keys(types).map(function(t){ return esc(t) + ' (' + types[t] + ')'; }).join(', ') + '</strong></span>';
+  }
+  html += '</div>';
+  html += '</div>';
+  html += '</div>';
+
+  if (owners.length === 0) {
+    html += '<div class="empty-placeholder">ไม่พบผู้รับผิดชอบที่มี KR นี้</div>';
+  } else {
+    html += '<div class="subsection-label" style="margin-top:8px">📋 ผู้รับผิดชอบทั้งหมด (' + owners.length + ' คน)</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">';
+    owners.forEach(function(o) {
+      var meta = getDeptMeta(o.dept);
+      html += '<div style="padding:10px 12px;background:' + meta.bg + ';border-radius:8px;border:1px solid ' + meta.color + '30">';
+      html += '<div style="font-weight:700;color:' + meta.text + ';margin-bottom:4px">' + esc(o.name) + '</div>';
+      html += '<div style="font-size:0.76rem;color:var(--text2);margin-bottom:2px"><span class="' + meta.badge + '" style="padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:600">' + esc(o.dept) + '</span></div>';
+      html += '<div style="font-size:0.76rem;color:var(--text2)">👥 ทีม: ' + esc(o.team) + '</div>';
+      html += '<div style="font-size:0.76rem;color:var(--text2)">📊 ประเภท: ' + esc(o.type) + '</div>';
+      if (o.weight > 0) html += '<div style="font-size:0.76rem;color:var(--text2)">⚖️ น้ำหนัก: ' + Math.round(o.weight * 100) + '%</div>';
+      if (o.kpiScore !== null && o.kpiScore !== undefined) html += '<div style="font-size:0.76rem;color:#6d28d9;font-weight:600">🏆 KPI Score: ' + esc(o.kpiScore) + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('personModalContent').innerHTML = html;
+  document.getElementById('personModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+// Build modal HTML for a person in the linkage tab — find them across all depts by name
+function showLinkagePersonDetail(personName) {
+  if (!D || !D.departments) return;
+  var deptIdx = -1, personIdx = -1;
+  for (var i = 0; i < D.departments.length; i++) {
+    var people = D.departments[i].people || [];
+    for (var j = 0; j < people.length; j++) {
+      if (people[j].name === personName) { deptIdx = i; personIdx = j; break; }
+    }
+    if (deptIdx >= 0) break;
+  }
+  if (deptIdx < 0) return;
+  openPersonModal(deptIdx, personIdx);
+}
+
+// Build modal HTML for an org target — find all KRs mentioning related keywords
+function showOrgTargetDetail(targetLabel) {
+  if (!D || !D.departments) return;
+  // Build keyword from label (e.g. "CBNP PMSG", "GM", "รถนอกเข้าซ่อม")
+  var kw = String(targetLabel || '').toLowerCase().trim();
+  var matches = [];
+  D.departments.forEach(function(d) {
+    var meta = getDeptMeta(d.name);
+    (d.people || []).forEach(function(p) {
+      (p.objectives || []).forEach(function(o) {
+        (o.keyResults || []).forEach(function(kr) {
+          var krl = String(kr).toLowerCase();
+          if (krl.indexOf(kw) >= 0) {
+            matches.push({
+              name: p.name, dept: d.name, team: p.team || '—',
+              type: o.type || '—', kr: kr, weight: o.weight || 0
+            });
+          }
+        });
+      });
+    });
+  });
+
+  var html = '';
+  html += '<div class="person-header">';
+  html += '<div>';
+  html += '<div class="person-name" style="font-size:1.15rem">🎯 เป้าหมายองค์กร: ' + esc(targetLabel) + '</div>';
+  html += '<div class="person-meta"><span>🔗 KRs ที่เกี่ยวข้อง: <strong>' + matches.length + '</strong></span></div>';
+  html += '</div></div>';
+
+  if (matches.length === 0) {
+    html += '<div class="empty-placeholder">ไม่พบ KR ที่เกี่ยวข้องกับเป้าหมายนี้</div>';
+  } else {
+    // Group by dept
+    var byDept = {};
+    matches.forEach(function(m) { if (!byDept[m.dept]) byDept[m.dept] = []; byDept[m.dept].push(m); });
+    Object.keys(byDept).forEach(function(dn) {
+      var meta = getDeptMeta(dn);
+      html += '<div class="subsection-label" style="margin-top:12px"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:' + meta.color + ';margin-right:6px"></span>' + esc(dn) + ' (' + byDept[dn].length + ' KRs)</div>';
+      byDept[dn].forEach(function(m) {
+        html += '<div style="font-size:0.82rem;padding:6px 12px;border-left:3px solid ' + meta.color + ';margin-bottom:4px;background:#f8fafc;border-radius:0 4px 4px 0">';
+        html += '<span style="font-weight:600;color:' + meta.text + '">' + esc(m.name) + '</span>';
+        html += ' <span style="font-size:0.74rem;color:var(--text3)">· ' + esc(m.type) + '</span>';
+        if (m.weight > 0) html += ' <span style="font-size:0.74rem;color:var(--text3)">· ' + Math.round(m.weight*100) + '%</span>';
+        html += '<br><span style="color:var(--text2)">' + esc(m.kr) + '</span>';
+        html += '</div>';
+      });
+    });
+  }
+
+  document.getElementById('personModalContent').innerHTML = html;
+  document.getElementById('personModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function renderLinkage() {
+  if (!D || !D.departments) return;
+  var html = '<div class="section-title"><span class="icon">🔗</span> ความเชื่อมโยง — Cascade Map (4 ระดับ) พร้อมเป้าหมายเชิงตัวเลข</div>';
+
+  // Legend
+  html += '<div class="map-legend">';
+  D.departments.forEach(function(d) {
+    var meta = getDeptMeta(d.name);
+    html += '<div class="legend-item"><div class="legend-dot" style="background:' + meta.color + '"></div> ' + esc(d.name) + '</div>';
+  });
+  html += '<div class="legend-item"><div class="legend-dot" style="background:#cbd5e1"></div> บุคคล</div>';
+  html += '</div>';
+
+  // ── Targets Cascade (top-level org targets summary) ──
+  var orgTargets = [
+    { label: 'CBNP PMSG', value: '39 ลบ./ปี', sub: '3.25 ลบ./เดือน' },
+    { label: 'CBNP PMS', value: '29 ลบ./ปี', sub: '2.42 ลบ./เดือน' },
+    { label: 'CBNP PMGG', value: '9 ลบ./ปี', sub: '' },
+    { label: 'GM', value: '> 9.5 ลบ./เดือน', sub: '' },
+    { label: 'GM ลูกค้าองค์กร', value: '1 ลบ. ปี69 → 2 ลบ. ปี70', sub: 'เติบโต 100%' },
+    { label: 'รถนอกเข้าซ่อม', value: '2,500 คัน/ปี', sub: '' },
+    { label: 'รถเข้าบริการ', value: '2,900 คัน/เดือน', sub: '' },
+    { label: 'GM ผลิตภัณฑ์เสริม', value: '1.8 ลบ./เดือน', sub: '' },
+    { label: 'GM PMGI อะไหล่ทางเลือก', value: '300,000 บาท/เดือน', sub: '' },
+    { label: 'รถศูนย์สี', value: '3,400 คัน/ปี', sub: '280/เดือน' },
+    { label: 'รายได้/คัน', value: '1,650 บาท', sub: '' }
+  ];
+
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid #3b82f6;background:linear-gradient(135deg,#eff6ff,#dbeafe)">';
+  html += '<div style="font-weight:700;font-size:0.95rem;color:#1e40af;margin-bottom:12px">🎯 เป้าหมายเชิงตัวเลขระดับองค์กร (CBNP Targets)</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">';
+  orgTargets.forEach(function(t) {
+    html += '<div style="padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #bfdbfe;cursor:pointer" data-linkage-target="' + esc(t.label) + '">';
+    html += '<div style="font-size:0.74rem;color:#64748b;font-weight:600">' + esc(t.label) + '</div>';
+    html += '<div style="font-size:0.92rem;font-weight:700;color:#1e40af;margin:2px 0">' + esc(t.value) + '</div>';
+    if (t.sub) html += '<div style="font-size:0.7rem;color:#94a3b8">' + esc(t.sub) + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '</div>';
+
+  // ── Target flow visualization ──
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid #8b5cf6">';
+  html += '<div style="font-weight:700;font-size:0.9rem;color:#6d28d9;margin-bottom:10px">🔄 การไหลของเป้าหมาย: องค์กร → กลุ่มงาน → ทีม → บุคคล</div>';
+  html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:0.8rem">';
+  html += '<span style="padding:6px 14px;background:#3b82f6;color:#fff;border-radius:20px;font-weight:600">🏢 องค์กร: CBNP Targets</span>';
+  html += '<span style="color:#94a3b8">→</span>';
+  html += '<span style="padding:6px 14px;background:#8b5cf6;color:#fff;border-radius:20px;font-weight:600">🏪 ธุรกิจ: Business Growth KRs</span>';
+  html += '<span style="color:#94a3b8">→</span>';
+  html += '<span style="padding:6px 14px;background:#10b981;color:#fff;border-radius:20px;font-weight:600">👥 ทีม: Team Growth KRs</span>';
+  html += '<span style="color:#94a3b8">→</span>';
+  html += '<span style="padding:6px 14px;background:#f59e0b;color:#fff;border-radius:20px;font-weight:600">👤 บุคคล: NCASS 4 มิติ</span>';
+  html += '</div>';
+  html += '<div style="margin-top:10px;font-size:0.78rem;color:var(--text2);line-height:1.6">';
+  html += 'ตัวเลขเป้าหมาย (CBNP PMSG 39 ลบ., GM 9.5 ลบ./เดือน, GM ลูกค้าองค์กร 1 ลบ.→2 ลบ., รถนอก 2,500 คัน, รถเข้าซ่อม 2,900 คัน/เดือน, GM ผลิตภัณฑ์เสริม 1.8 ลบ./เดือน) ไหลลงสู่ Business Growth KRs ของแต่ละกลุ่มงาน แล้วต่อเนื่องสู่ทีมและรายบุคคลผ่าน NCASS';
+  html += '</div>';
+  html += '</div>';
+
+  // SVG cascade diagram
+  html += '<div class="map-container"><div class="map-svg-wrap">';
+  html += renderCascadeSVG();
+  html += '</div></div>';
+
+  // ── Level detail cards ──
+  html += '<div class="section-title" style="margin-top:24px"><span class="icon">📊</span> ตัววัดผลแต่ละระดับและผู้รับผิดชอบ (พร้อมเป้าหมายเชิงตัวเลข)</div>';
+
+  // Helper: normalize KR text for dedup — use top-level normKR for consistency
+  var numRe = /(\d[\d,]*\s*(คัน|ลบ|ล้าน|บาท|เดือน|ปี|คน|\/|%|บาท\/คัน))/i;
+
+  // ── Level 1: Organization — use actual KRs from กาญจนา, ชุติมา, สมศักดิ์ (exclude Personal Growth) ──
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid #3b82f6">';
+  html += '<div style="font-weight:700;font-size:0.9rem;color:#1e40af;margin-bottom:8px">🏢 ระดับองค์กร — PMS/PMG</div>';
+  html += '<div style="font-size:0.82rem;color:var(--text2);margin-bottom:8px">ทุ่มเท รับใช้ผู้ใช้รถยนต์ อย่างใกล้ชิด — เป้าหมายองค์กรจาก CEO Contract ของ กาญจนา, ชุติมา, สมศักดิ์</div>';
+  
+  // Collect KRs from กาญจนา, ชุติมา, สมศักดิ์ (Business Growth + Team Growth only, exclude Personal Growth)
+  var orgLeaders = ['กาญจนา', 'ชุติมา', 'สมศักดิ์', 'สมศักด์'];
+  var orgKRs = {};
+  D.departments.forEach(function(d) {
+    (d.people || []).forEach(function(p) {
+      var isLeader = orgLeaders.some(function(l) { return p.name && p.name.indexOf(l) >= 0; });
+      if (!isLeader) return;
+      (p.objectives || []).forEach(function(o) {
+        if (o.type === 'Personal Growth') return; // exclude Personal Growth
+        (o.keyResults || []).forEach(function(kr) {
+          var krText = String(kr).trim();
+          if (krText.length < 15) return;
+          if (/^[\d.,\s%+-]+$/.test(krText)) return; // skip pure numbers
+          var key = krText.replace(/\s+/g,' ').replace(/^["'']+|["'']+$/g,'').trim().toLowerCase().substring(0,80);
+          if (!orgKRs[key]) {
+            orgKRs[key] = { kr: krText, type: o.type, source: p.name };
+          }
+        });
+      });
+    });
+  });
+  
+  // Display org KRs grouped by type
+  var orgByType = {};
+  Object.values(orgKRs).forEach(function(k) {
+    if (!orgByType[k.type]) orgByType[k.type] = [];
+    orgByType[k.type].push(k);
+  });
+  
+  ['Business Growth', 'Team Growth', 'Community'].forEach(function(type) {
+    if (!orgByType[type]) return;
+    var typeColor = type === 'Business Growth' ? '#10b981' : type === 'Team Growth' ? '#3b82f6' : '#ec4899';
+    html += '<div style="margin-bottom:10px">';
+    html += '<div style="font-size:0.82rem;font-weight:700;color:' + typeColor + ';margin-bottom:4px">' + (type === 'Business Growth' ? '💰' : type === 'Team Growth' ? '👥' : '🤝') + ' ' + esc(type) + ' (' + orgByType[type].length + ' KRs)</div>';
+    orgByType[type].forEach(function(k) {
+      var hasNum = /(\d[\d,]*\s*(คัน|ลบ|ล้าน|บาท|เดือน|ปี|คน|%))/.test(k.kr);
+      html += '<div style="font-size:0.8rem;color:var(--text2);padding:4px 12px;border-left:3px solid ' + typeColor + ';margin-bottom:3px;background:#f8fafc;border-radius:0 4px 4px 0">' + (hasNum ? '🎯 ' : '') + '<span style="cursor:pointer;color:var(--accent);text-decoration:underline" data-linkage-kr="' + esc(k.kr) + '">' + esc(k.kr) + '</span></div>';
+    });
+    html += '</div>';
+  });
+  
+  // Also show org targets grid for quick reference
+  html += '<div style="margin-top:10px"><div style="font-size:0.82rem;font-weight:600;color:var(--text);margin-bottom:6px">เป้าหมายเชิงตัวเลขสรุป:</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px">';
+  orgTargets.forEach(function(t) {
+    html += '<div style="padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:0.8rem;cursor:pointer" data-linkage-target="' + esc(t.label) + '">';
+    html += '<span style="font-weight:600;color:#1e40af">' + esc(t.label) + '</span>';
+    html += ' <span style="color:var(--text2)">→ ' + esc(t.value) + '</span>';
+    if (t.sub) html += ' <span style="font-size:0.72rem;color:var(--text3)">(' + esc(t.sub) + ')</span>';
+    html += '</div>';
+  });
+  html += '</div></div>';
+  html += '</div>';
+
+  // ── Level 2: Business / Department — Business Growth KRs with numbers ──
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid #8b5cf6">';
+  html += '<div style="font-weight:700;font-size:0.9rem;color:#6d28d9;margin-bottom:10px">🏪 ระดับธุรกิจ — 5 กลุ่มงาน (Business Growth KRs พร้อมเป้าหมายเชิงตัวเลข)</div>';
+
+  D.departments.forEach(function(d) {
+    var meta = getDeptMeta(d.name);
+    var s = deptStats(d);
+    // Collect unique Business Growth KRs (content-normalized dedup)
+    var bizKRs = {};
+    (d.people || []).forEach(function(p) {
+      (p.objectives || []).forEach(function(o) {
+        if (o.type === 'Business Growth') {
+          (o.keyResults || []).forEach(function(kr) {
+            var nk = normKR(kr);
+            if (!bizKRs[nk]) bizKRs[nk] = { kr: kr, owners: 0, hasNum: numRe.test(String(kr)) };
+            bizKRs[nk].owners++;
+          });
+        }
+      });
+    });
+    var bizArr = Object.values(bizKRs);
+    var numericKRs = bizArr.filter(function(k) { return k.hasNum; });
+    var otherKRs = bizArr.filter(function(k) { return !k.hasNum; });
+
+    html += '<div style="margin-bottom:12px;padding:10px;background:' + meta.bg + ';border-radius:8px">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+    html += '<span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:' + meta.color + '"></span>';
+    html += '<span style="font-weight:700;font-size:0.85rem;color:' + meta.text + '">' + esc(d.name) + '</span>';
+    html += '<span style="font-size:0.75rem;color:var(--text3)">' + s.peopleCount + ' คน · ' + bizArr.length + ' Biz KRs (' + numericKRs.length + ' ตัวเลข)</span>';
+    html += '</div>';
+    // Numeric targets highlighted first
+    if (numericKRs.length > 0) {
+      html += '<div style="margin-bottom:6px"><div style="font-size:0.72rem;color:#6d28d9;font-weight:600;margin-bottom:3px">🎯 เป้าหมายเชิงตัวเลข:</div>';
+      numericKRs.slice(0, 6).forEach(function(k) {
+        html += '<div style="font-size:0.8rem;color:var(--text);padding:4px 12px;border-left:3px solid ' + meta.color + ';margin-bottom:3px;background:rgba(255,255,255,0.4);font-weight:600">🎯 <span style="cursor:pointer;color:var(--accent);text-decoration:underline" data-linkage-kr="' + esc(k.kr) + '">' + esc(k.kr) + '</span> <span style="font-size:0.72rem;color:var(--text3);font-weight:400;cursor:pointer" data-linkage-kr="' + esc(k.kr) + '">(' + k.owners + ' คน)</span></div>';
+      });
+      if (numericKRs.length > 6) html += '<div style="font-size:0.72rem;color:var(--text3);margin-top:2px">+' + (numericKRs.length - 6) + ' ตัวเลข</div>';
+      html += '</div>';
+    }
+    // Other KRs
+    otherKRs.slice(0, 4).forEach(function(k) {
+      html += '<div style="font-size:0.8rem;color:var(--text2);padding:4px 12px;border-left:3px solid ' + meta.color + '40;margin-bottom:3px"><span style="cursor:pointer;color:var(--accent);text-decoration:underline" data-linkage-kr="' + esc(k.kr) + '">' + esc(k.kr) + '</span> <span style="font-size:0.72rem;color:var(--text3);cursor:pointer" data-linkage-kr="' + esc(k.kr) + '">(' + k.owners + ' คน)</span></div>';
+    });
+    if (otherKRs.length > 4) html += '<div style="font-size:0.72rem;color:var(--text3);margin-top:3px">+' + (otherKRs.length - 4) + ' KRs อื่น</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // ── Level 3: Team — Team Growth KRs per team ──
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid #10b981">';
+  html += '<div style="font-weight:700;font-size:0.9rem;color:#059669;margin-bottom:10px">👥 ระดับทีม — Team Growth KRs ของแต่ละทีมย่อย (พร้อมจำนวนผู้รับผิดชอบ)</div>';
+
+  D.departments.forEach(function(d) {
+    var meta = getDeptMeta(d.name);
+    var teams = deptTeams(d);
+    var teamNames = Object.keys(teams);
+
+    teamNames.forEach(function(tn) {
+      var teamKRs = {};
+      (d.people || []).forEach(function(p) {
+        if (p.team !== tn) return;
+        (p.objectives || []).forEach(function(o) {
+          if (o.type === 'Team Growth') {
+            (o.keyResults || []).forEach(function(kr) {
+              var nk = normKR(kr);
+              if (!teamKRs[nk]) teamKRs[nk] = { kr: kr, owners: 0, hasNum: numRe.test(String(kr)) };
+              teamKRs[nk].owners++;
+            });
+          }
+        });
+      });
+      var krArr = Object.values(teamKRs);
+      if (krArr.length === 0) return;
+
+      var numericTeam = krArr.filter(function(k) { return k.hasNum; });
+      html += '<div style="margin-bottom:10px;padding:8px 12px;background:#f0fdf4;border-radius:6px">';
+      html += '<div style="font-weight:600;font-size:0.82rem;color:var(--text);margin-bottom:4px">' + esc(d.name) + ' › ' + esc(tn) + ' (' + teams[tn] + ' คน)';
+      if (numericTeam.length > 0) html += ' <span style="font-size:0.7rem;color:#059669;font-weight:600">· 🎯 ' + numericTeam.length + ' ตัวเลข</span>';
+      html += '</div>';
+      krArr.slice(0, 4).forEach(function(k) {
+        var prefix = k.hasNum ? '🎯 ' : '';
+        html += '<div style="font-size:0.78rem;color:var(--text2);padding:3px 10px;border-left:3px solid ' + meta.color + ';margin-bottom:2px">' + prefix + '<span style="cursor:pointer;color:var(--accent);text-decoration:underline" data-linkage-kr="' + esc(k.kr) + '">' + esc(k.kr) + '</span> <span style="font-size:0.72rem;color:var(--text3);cursor:pointer" data-linkage-kr="' + esc(k.kr) + '">(' + k.owners + ' คน)</span></div>';
+      });
+      if (krArr.length > 4) html += '<div style="font-size:0.72rem;color:var(--text3);margin-top:2px">+' + (krArr.length - 4) + ' KRs</div>';
+      html += '</div>';
+    });
+  });
+  html += '</div>';
+
+  // ── Level 4: Personal — NCASS weights per person ──
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid #f59e0b">';
+  html += '<div style="font-weight:700;font-size:0.9rem;color:#d97706;margin-bottom:8px">👤 ระดับบุคคล — NCASS (Business + Team + Personal + Community)</div>';
+  html += '<div style="font-size:0.78rem;color:var(--text2);margin-bottom:10px">แต่ละคนมี 4 มิติการเติบโต พร้อมน้ำหนักการรับผิดชอบ — เชื่อมโยงกับเป้าหมายระดับทีมและธุรกิจ</div>';
+
+  D.departments.forEach(function(d) {
+    var meta = getDeptMeta(d.name);
+    (d.people || []).forEach(function(p) {
+      var c = countKRs(p);
+      var wB = p.weightBusiness || 0, wT = p.weightTeam || 0, wP = p.weightPersonal || 0, wC = p.weightCommunity || 0;
+      html += '<div style="display:inline-block;margin:3px;padding:4px 10px;background:' + meta.bg + ';border-radius:6px;border:1px solid ' + meta.color + '20;font-size:0.76rem;cursor:pointer" data-linkage-person="' + esc(p.name) + '">';
+      html += '<span style="font-weight:600;color:' + meta.text + '">' + esc(p.name) + '</span>';
+      html += '<span style="color:var(--text3);font-size:0.72rem"> · KR ' + c.filled + '/' + c.total + '</span>';
+      if (wB > 0) html += ' <span style="font-size:0.68rem;color:#10b981;font-weight:600">B' + Math.round(wB * 100) + '%</span>';
+      if (wT > 0) html += ' <span style="font-size:0.68rem;color:#3b82f6;font-weight:600">T' + Math.round(wT * 100) + '%</span>';
+      if (wP > 0) html += ' <span style="font-size:0.68rem;color:#f59e0b;font-weight:600">P' + Math.round(wP * 100) + '%</span>';
+      if (wC > 0) html += ' <span style="font-size:0.68rem;color:#ec4899;font-weight:600">C' + Math.round(wC * 100) + '%</span>';
+      html += '</div>';
+    });
+  });
+  html += '</div>';
+
+  // ── Summary ──
+  html += '<div class="card" style="margin-top:20px;background:linear-gradient(135deg,#dbeafe,#ede9fe);border:none">';
+  html += '<div style="font-size:0.9rem;font-weight:700;color:#1e40af;margin-bottom:10px">✅ สรุป: ความสอดคล้องของตัววัดผล 4 ระดับ (พร้อมเป้าหมายเชิงตัวเลข)</div>';
+  html += '<div style="font-size:0.84rem;color:var(--text2);line-height:1.8">';
+  html += '<p>✅ <strong>ระดับองค์กร → ระดับธุรกิจ → ระดับทีม → ระดับบุคคล</strong> — เป้าหมายเชิงตัวเลขไหลลงจากบนสู่ล่าง สอดคล้องกันทุกระดับ</p>';
+  html += '<p>🎯 <strong>CBNP Targets</strong> — PMSG 39 ลบ., PMS 29 ลบ., PMGG 9 ลบ., GM 9.5 ลบ./เดือน, GM ลูกค้าองค์กร 1 ลบ.(69)→2 ลบ.(70), รถนอก 2,500 คัน, รถเข้าซ่อม 2,900 คัน/เดือน, GM ผลิตภัณฑ์เสริม 1.8 ลบ./เดือน</p>';
+  html += '<p>✅ <strong>Business Growth KRs</strong> — ตัววัดผลระดับธุรกิจ ที่มีเป้าหมายเชิงตัวเลข (เน้นด้วย 🎯)</p>';
+  html += '<p>✅ <strong>Team Growth KRs</strong> — ตัววัดผลระดับทีม ขับเคลื่อนโดยทีมย่อย</p>';
+  html += '<p>✅ <strong>NCASS รายบุคคล</strong> — Business + Team + Personal + Community พร้อมน้ำหนัก %</p>';
+  html += '</div></div>';
+
+  document.getElementById('section-linkage').innerHTML = html;
+  
+  // Event delegation: handle clicks on data-linkage-kr, data-linkage-person, data-linkage-target
+  var linkageSection = document.getElementById('section-linkage');
+  if (linkageSection && !linkageSection.dataset.delegated) {
+    linkageSection.addEventListener('click', function(e) {
+      var el = e.target;
+      // Walk up to find element with data-linkage-kr or data-linkage-person or data-linkage-target
+      while (el && el !== linkageSection) {
+        if (el.dataset && el.dataset.linkageKr) {
+          showLinkageDetail(el.dataset.linkageKr);
+          return;
+        }
+        if (el.dataset && el.dataset.linkagePerson) {
+          showLinkagePersonDetail(el.dataset.linkagePerson);
+          return;
+        }
+        if (el.dataset && el.dataset.linkageTarget) {
+          showOrgTargetDetail(el.dataset.linkageTarget);
+          return;
+        }
+        el = el.parentElement;
+      }
+    });
+    linkageSection.dataset.delegated = '1';
+  }
+}
+
+function renderCascadeSVG() {
+  if (!D || !D.departments) return '';
+  var depts = D.departments;
+  var n = depts.length;
+
+  // Key CBNP target lines shown inside org box
+  var orgTargetLines = [
+    'CBNP PMSG 39 ลบ. | PMS 29 ลบ.',
+    'PMGG 9 ลบ. | GM 9.5 ลบ./ด.',
+    'GM ลูกค้าองค์กร 1→2 ลบ.',
+    'รถนอก 2,500 | รถเข้า 2,900/ด.',
+    'GM เสริม 1.8 ลบ./ด.'
+  ];
+
+  var numRe = /(\d[\d,]*\s*(คัน|ลบ|ล้าน|บาท|เดือน|ปี|คน|\/|%))/i;
+
+  // Get first numeric Business Growth KR for a dept (dedup by normalized text)
+  function firstNumericBizKR(dept) {
+    var seen = {};
+    var found = null;
+    (dept.people || []).forEach(function(p) {
+      if (found) return;
+      (p.objectives || []).forEach(function(o) {
+        if (found) return;
+        if (o.type === 'Business Growth') {
+          (o.keyResults || []).forEach(function(kr) {
+            if (found) return;
+            var nk = String(kr).trim().replace(/\s+/g, ' ').toLowerCase();
+            if (seen[nk]) return;
+            seen[nk] = true;
+            if (numRe.test(String(kr))) found = String(kr);
+          });
+        }
+      });
+    });
+    return found;
+  }
+
+  var W = 1000;
+  var orgX = W / 2;
+  var orgY = 20;
+  var orgW = 320, orgH = 125;
+
+  // Department (Business) level
+  var bizY = 200;
+  var bizW = 175, bizH = 80;
+  var bizGap = (W - n * bizW) / (n + 1);
+  var bizPos = [];
+  for (var i = 0; i < n; i++) {
+    bizPos.push({ x: bizGap + i * (bizW + bizGap), y: bizY, w: bizW, h: bizH, dept: depts[i] });
+  }
+
+  // Count teams for sizing
+  var maxTeams = 0;
+  depts.forEach(function(d) {
+    var tc = Object.keys(deptTeams(d)).length;
+    if (tc > maxTeams) maxTeams = tc;
+  });
+
+  var teamY = 330;
+  var teamH = 18;
+  var personY = teamY + maxTeams * (teamH + 4) + 30;
+
+  var totalPeople = 0;
+  depts.forEach(function(d) { totalPeople += (d.people || []).length; });
+
+  var svgH = personY + 115;
+
+  var svg = '';
+  svg += '<svg width="100%" height="' + svgH + '" viewBox="0 0 ' + W + ' ' + svgH + '" xmlns="http://www.w3.org/2000/svg" style="max-width:100%">';
+
+  // Defs — arrow markers
+  svg += '<defs>';
+  depts.forEach(function(d, i) {
+    var meta = getDeptMeta(d.name);
+    svg += '<marker id="arr' + i + '" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="' + meta.color + '"/></marker>';
+  });
+  svg += '<marker id="arrOrg" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#3b82f6"/></marker>';
+  svg += '</defs>';
+
+  // ── Level 1: Organization ──
+  svg += '<rect x="' + (orgX - orgW / 2) + '" y="' + orgY + '" width="' + orgW + '" height="' + orgH + '" rx="12" fill="#3b82f6" opacity="0.95"/>';
+  svg += '<text x="' + orgX + '" y="' + (orgY + 22) + '" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">PMS/PMG — องค์กร</text>';
+  svg += '<text x="' + orgX + '" y="' + (orgY + 36) + '" text-anchor="middle" fill="#dbeafe" font-size="9">🎯 CBNP Targets</text>';
+  orgTargetLines.forEach(function(line, li) {
+    svg += '<text x="' + orgX + '" y="' + (orgY + 52 + li * 14) + '" text-anchor="middle" fill="#bfdbfe" font-size="8.5">' + esc(line) + '</text>';
+  });
+
+  // Lines from org to each department (arrows carrying targets down)
+  bizPos.forEach(function(bp, i) {
+    var meta = getDeptMeta(bp.dept.name);
+    var cx = bp.x + bp.w / 2;
+    svg += '<path d="M' + orgX + ',' + (orgY + orgH) + ' L' + orgX + ',' + (orgY + orgH + 15) + ' L' + cx + ',' + (orgY + orgH + 15) + ' L' + cx + ',' + (bp.y - 5) + '" fill="none" stroke="' + meta.color + '" stroke-width="2" marker-end="url(#arr' + i + ')"/>';
+  });
+
+  // ── Level 2: Department / Business ──
+  bizPos.forEach(function(bp, i) {
+    var meta = getDeptMeta(bp.dept.name);
+    var s = deptStats(bp.dept);
+    var cx = bp.x + bp.w / 2;
+    var shortName = bp.dept.name.length > 18 ? bp.dept.name.substring(0, 16) + '..' : bp.dept.name;
+
+    svg += '<rect x="' + bp.x + '" y="' + bp.y + '" width="' + bp.w + '" height="' + bp.h + '" rx="10" fill="' + meta.color + '" opacity="0.92"/>';
+    svg += '<text x="' + cx + '" y="' + (bp.y + 18) + '" text-anchor="middle" fill="#fff" font-size="10.5" font-weight="700">' + esc(shortName) + '</text>';
+    svg += '<text x="' + cx + '" y="' + (bp.y + 32) + '" text-anchor="middle" fill="#fff" font-size="8.5" opacity="0.85">' + s.peopleCount + ' คน · KR ' + s.krFilled + '/' + s.krTotal + '</text>';
+    // Top numeric Business Growth KR
+    var topKR = firstNumericBizKR(bp.dept);
+    if (topKR) {
+      var krShort = topKR.length > 26 ? topKR.substring(0, 24) + '..' : topKR;
+      svg += '<text x="' + cx + '" y="' + (bp.y + 46) + '" text-anchor="middle" fill="#fff" font-size="7.5" opacity="0.9">🎯 ' + esc(krShort) + '</text>';
+    }
+    svg += '<text x="' + cx + '" y="' + (bp.y + 62) + '" text-anchor="middle" fill="#fff" font-size="8" opacity="0.7">KPI ' + s.kpiCount + '</text>';
+
+    // ── Level 3: Teams with Team Growth indicators ──
+    var teams = deptTeams(bp.dept);
+    var teamNames = Object.keys(teams);
+    if (teamNames.length > 0) {
+      svg += '<line x1="' + cx + '" y1="' + (bp.y + bp.h) + '" x2="' + cx + '" y2="' + (teamY - 5) + '" stroke="' + meta.color + '" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.5"/>';
+      // Collect Team Growth KRs per team (deduped)
+      teamNames.slice(0, 6).forEach(function(tn, ti) {
+        var ty = teamY + ti * (teamH + 4);
+        svg += '<rect x="' + (bp.x + 5) + '" y="' + ty + '" width="' + (bp.w - 10) + '" height="' + teamH + '" rx="5" fill="' + meta.bg + '" stroke="' + meta.color + '" stroke-width="0.8" opacity="0.9"/>';
+        var tShort = tn.length > 13 ? tn.substring(0, 11) + '..' : tn;
+        // Count Team Growth KRs for this team
+        var teamGrowthCount = 0;
+        (bp.dept.people || []).forEach(function(p) {
+          if (p.team !== tn) return;
+          (p.objectives || []).forEach(function(o) {
+            if (o.type === 'Team Growth') {
+              (o.keyResults || []).forEach(function(kr) {
+                if (classifyKR(String(kr)) !== 'skip') teamGrowthCount++;
+              });
+            }
+          });
+        });
+        svg += '<text x="' + cx + '" y="' + (ty + 12) + '" text-anchor="middle" fill="' + meta.text + '" font-size="8" font-weight="600">' + esc(tShort) + ' (' + teams[tn] + ')' + (teamGrowthCount > 0 ? ' · 📊' + teamGrowthCount : '') + '</text>';
+      });
+      if (teamNames.length > 6) {
+        svg += '<text x="' + cx + '" y="' + (teamY + 6 * (teamH + 4) + 10) + '" text-anchor="middle" fill="' + meta.color + '" font-size="7.5">+' + (teamNames.length - 6) + ' ทีม</text>';
+      }
+    }
+  });
+
+  // ── Level labels (left side) ──
+  var labelX = 10;
+  svg += '<text x="' + labelX + '" y="' + (orgY + 45) + '" fill="#3b82f6" font-size="10" font-weight="700">ระดับองค์กร</text>';
+  svg += '<text x="' + labelX + '" y="' + (orgY + 58) + '" fill="#94a3b8" font-size="8">Organization</text>';
+
+  svg += '<text x="' + labelX + '" y="' + (bizY + 38) + '" fill="#8b5cf6" font-size="10" font-weight="700">ระดับธุรกิจ</text>';
+  svg += '<text x="' + labelX + '" y="' + (bizY + 51) + '" fill="#94a3b8" font-size="8">Business / Dept</text>';
+
+  svg += '<text x="' + labelX + '" y="' + (teamY - 5) + '" fill="#10b981" font-size="10" font-weight="700">ระดับทีม</text>';
+  svg += '<text x="' + labelX + '" y="' + (teamY + 8) + '" fill="#94a3b8" font-size="8">Team</text>';
+
+  svg += '<text x="' + labelX + '" y="' + (personY - 5) + '" fill="#f59e0b" font-size="10" font-weight="700">ระดับบุคคล</text>';
+  svg += '<text x="' + labelX + '" y="' + (personY + 8) + '" fill="#94a3b8" font-size="8">Personal / NCASS</text>';
+
+  // ── Level 4: Personal summary at bottom ──
+  // Count unique KRs at personal level
+  var personalKRCount = 0;
+  var peopleWithWeights = 0;
+  D.departments.forEach(function(d) {
+    (d.people || []).forEach(function(p) {
+      var c = countKRs(p);
+      if (c.filled > 0) personalKRCount += c.filled;
+      if ((p.weightBusiness || 0) + (p.weightTeam || 0) + (p.weightPersonal || 0) + (p.weightCommunity || 0) > 0) peopleWithWeights++;
+    });
+  });
+
+  svg += '<rect x="' + (W / 2 - 240) + '" y="' + personY + '" width="480" height="95" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>';
+  svg += '<text x="' + (W / 2) + '" y="' + (personY + 20) + '" text-anchor="middle" fill="#92400e" font-size="11" font-weight="700">👤 ระดับบุคคล — NCASS 4 มิติ</text>';
+  svg += '<text x="' + (W / 2) + '" y="' + (personY + 36) + '" text-anchor="middle" fill="#a16207" font-size="9">' + totalPeople + ' คน · 📊 ' + personalKRCount + ' ตัววัดผล · ' + peopleWithWeights + ' คนมีน้ำหนัก</text>';
+  svg += '<text x="' + (W / 2) + '" y="' + (personY + 50) + '" text-anchor="middle" fill="#a16207" font-size="8">Business Growth · Team Growth · Personal Growth · Community</text>';
+  svg += '<text x="' + (W / 2) + '" y="' + (personY + 64) + '" text-anchor="middle" fill="#a16207" font-size="8">น้ำหนัก % ต่อมิติ → เชื่อมโยงกับเป้าหมายระดับทีมและธุรกิจ</text>';
+  svg += '<text x="' + (W / 2) + '" y="' + (personY + 78) + '" text-anchor="middle" fill="#a16207" font-size="7.5" opacity="0.7">คลิกที่ชื่อบุคคลในระดับล่างเพื่อดูตัววัดผลเฉพาะบุคคล</text>';
+
+  // Arrows from teams to personal level
+  bizPos.forEach(function(bp, i) {
+    var meta = getDeptMeta(bp.dept.name);
+    var cx = bp.x + bp.w / 2;
+    var teams = deptTeams(bp.dept);
+    var teamNames = Object.keys(teams);
+    var lastTeamY = teamY + Math.min(teamNames.length, 6) * (teamH + 4);
+    if (teamNames.length > 0) {
+      svg += '<line x1="' + cx + '" y1="' + (lastTeamY + 2) + '" x2="' + cx + '" y2="' + (personY - 3) + '" stroke="' + meta.color + '" stroke-width="1" stroke-dasharray="3,2" opacity="0.4" marker-end="url(#arr' + i + ')"/>';
+    }
+  });
+
+  svg += '</svg>';
+  return svg;
+}
+
+
+/* ═══════════════════════════════════════════════════
+   TAB 5: Mentor Network
+   ═══════════════════════════════════════════════════ */
+function renderMentors() {
+  if (!D || !D.departments) return;
+  var html = '<div class="section-title"><span class="icon">👥</span> Mentor Network</div>';
+
+  // ── Build mentor map: mentor name → [mentees] ──
+  var mentorMap = {};
+  var noMentors = [];
+  var totalPeople = 0;
+
+  D.departments.forEach(function(d) {
+    var meta = getDeptMeta(d.name);
+    (d.people || []).forEach(function(p) {
+      totalPeople++;
+      var mentors = p.mentors || [];
+      if (!mentors || mentors.length === 0 || (mentors.length === 1 && !mentors[0])) {
+        noMentors.push({ name: p.name, dept: d.name, team: p.team || '', role: p.role || '' });
+      } else {
+        mentors.forEach(function(mn) {
+          mn = String(mn || '').trim();
+          if (!mn) return;
+          if (!mentorMap[mn]) mentorMap[mn] = [];
+          mentorMap[mn].push({ name: p.name, dept: d.name, team: p.team || '', role: p.role || '' });
+        });
+      }
+    });
+  });
+
+  // ── Summary stats ──
+  var totalMentees = 0;
+  Object.keys(mentorMap).forEach(function(mn) { totalMentees += mentorMap[mn].length; });
+  var mentorCount = Object.keys(mentorMap).length;
+
+  html += '<div class="stat-grid">';
+  html += '<div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value">' + mentorCount + '</div><div class="stat-label">Mentor ทั้งหมด</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">🤝</div><div class="stat-value">' + totalMentees + '</div><div class="stat-label">Mentee ทั้งหมด</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">🚫</div><div class="stat-value" style="color:var(--red)">' + noMentors.length + '</div><div class="stat-label">ไม่มี Mentor</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">📊</div><div class="stat-value" style="color:var(--green)">' + totalPeople + '</div><div class="stat-label">บุคลากรทั้งหมด</div></div>';
+  html += '</div>';
+
+  // ── Top mentors by mentee count ──
+  var mentorArr = Object.keys(mentorMap).map(function(mn) {
+    return { mentor: mn, mentees: mentorMap[mn] };
+  }).sort(function(a, b) { return b.mentees.length - a.mentees.length; });
+
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid var(--accent2)">';
+  html += '<div style="font-weight:700;font-size:0.9rem;color:var(--accent2);margin-bottom:12px">🏆 Top Mentors — เรียงตามจำนวน Mentee</div>';
+  html += '<div class="table-wrap"><table><thead><tr><th>#</th><th>Mentor</th><th>จำนวน Mentee</th></tr></thead><tbody>';
+  mentorArr.forEach(function(m, idx) {
+    html += '<tr><td>' + (idx + 1) + '</td><td style="font-weight:600">' + esc(m.mentor) + '</td><td><span style="background:var(--accent2);color:#fff;padding:2px 10px;border-radius:9999px;font-size:0.78rem;font-weight:700">' + m.mentees.length + '</span></td></tr>';
+  });
+  html += '</tbody></table></div>';
+  html += '</div>';
+
+  // ── Full mentor-mentee table ──
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid var(--accent)">';
+  html += '<div style="font-weight:700;font-size:0.9rem;color:var(--accent);margin-bottom:12px">📋 Mentor — Mentee (รายชื่อ)</div>';
+  html += '<div class="table-wrap"><table><thead><tr><th>Mentor</th><th>Mentee</th><th>กลุ่มงาน</th><th>ทีม</th></tr></thead><tbody>';
+  mentorArr.forEach(function(m) {
+    m.mentees.forEach(function(mee, idx) {
+      var meta = getDeptMeta(mee.dept);
+      html += '<tr>';
+      if (idx === 0) html += '<td style="font-weight:600;vertical-align:top" rowspan="' + m.mentees.length + '">' + esc(m.mentor) + '</td>';
+      html += '<td>' + esc(mee.name) + '</td>';
+      html += '<td><span style="background:' + meta.bg + ';color:' + meta.text + ';padding:2px 8px;border-radius:5px;font-size:0.75rem">' + esc(mee.dept) + '</span></td>';
+      html += '<td style="font-size:0.82rem;color:var(--text2)">' + esc(mee.team) + '</td>';
+      html += '</tr>';
+    });
+  });
+  html += '</tbody></table></div>';
+  html += '</div>';
+
+  // ── People without mentors (red alert) ──
+  if (noMentors.length > 0) {
+    html += '<div class="card" style="margin-bottom:16px;border-left:4px solid var(--red)">';
+    html += '<div style="font-weight:700;font-size:0.9rem;color:var(--red);margin-bottom:12px">🚨 บุคลากรที่ไม่มี Mentor (' + noMentors.length + ' คน)</div>';
+    html += '<div class="table-wrap"><table><thead><tr><th>ชื่อ</th><th>กลุ่มงาน</th><th>ทีม</th><th>ตำแหน่ง</th></tr></thead><tbody>';
+    noMentors.forEach(function(p) {
+      var meta = getDeptMeta(p.dept);
+      html += '<tr style="background:#fef2f2">';
+      html += '<td style="font-weight:600">' + esc(p.name) + '</td>';
+      html += '<td><span style="background:' + meta.bg + ';color:' + meta.text + ';padding:2px 8px;border-radius:5px;font-size:0.75rem">' + esc(p.dept) + '</span></td>';
+      html += '<td style="font-size:0.82rem">' + esc(p.team) + '</td>';
+      html += '<td style="font-size:0.82rem;color:var(--text2)">' + esc(p.role) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    html += '</div>';
+  }
+
+  document.getElementById('section-mentors').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════
+   TAB 6: Audit — ตรวจสอบความครบถ้วน
+   ═══════════════════════════════════════════════════ */
+function renderAudit() {
+  if (!D || !D.departments) return;
+  var html = '<div class="section-title"><span class="icon">🔍</span> ตรวจสอบความครบถ้วน — Comprehensive Audit</div>';
+
+  // ── Collect data ──
+  var totalPeople = 0, totalKRs = 0, krsWithoutOwners = 0, peopleWithoutMentors = 0;
+  var noMentorList = [];
+  var allWeightZero = [];
+  var singleOwnerKRs = [];
+  var noAccountability = [];
+
+  // Use classifyKR + normKR for consistent KR counting (same as KPI page)
+  var auditAllKRs = [];
+  D.departments.forEach(function(d, di) {
+    var meta = getDeptMeta(d.name);
+    (d.people || []).forEach(function(p) {
+      totalPeople++;
+      var hasMentor = p.mentors && p.mentors.length > 0 && p.mentors.some(function(m) { return m && String(m).trim(); });
+      if (!hasMentor) {
+        peopleWithoutMentors++;
+        noMentorList.push({ name: p.name, dept: d.name, team: p.team || '' });
+      }
+      var allZero = true;
+      var hasObj = false;
+      (p.objectives || []).forEach(function(o) {
+        hasObj = true;
+        if ((o.weight || 0) > 0) allZero = false;
+        (o.keyResults || []).forEach(function(kr) {
+          var krText = String(kr).trim();
+          if (krText.length < 4) return;
+          if (/^[\d.,\s%+-]+$/.test(krText)) return;
+          var krClass = classifyKR(krText);
+          if (krClass === 'skip') return;
+          totalKRs++;
+          auditAllKRs.push({
+            kr: krText,
+            type: o.type || 'Other',
+            person: p.name,
+            dept: d.name,
+            deptIdx: di
+          });
+        });
+      });
+      if (hasObj && allZero) allWeightZero.push({ name: p.name, dept: d.name });
+      if (!p.accountability || String(p.accountability).trim() === '') noAccountability.push({ name: p.name, dept: d.name });
+    });
+  });
+
+  // Merge KRs using normKR (same as KPI page)
+  var auditMerged = {};
+  auditAllKRs.forEach(function(k) {
+    var key = normKR(k.kr);
+    if (!auditMerged[key]) {
+      auditMerged[key] = { krText: k.kr, owners: [], type: k.type, ownerSet: {} };
+    }
+    var ownerKey = k.person + '|' + k.dept;
+    if (auditMerged[key].ownerSet[ownerKey]) return;
+    auditMerged[key].ownerSet[ownerKey] = true;
+    auditMerged[key].owners.push({ person: k.person, dept: k.dept });
+  });
+  var auditTotalUnique = Object.keys(auditMerged).length;
+  Object.values(auditMerged).forEach(function(m) {
+    if (m.owners.length === 1) singleOwnerKRs.push(m);
+  });
+
+  // ── Summary stats at top ──
+  html += '<div class="stat-grid">';
+  html += '<div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value">' + totalPeople + '</div><div class="stat-label">บุคลากรทั้งหมด</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-value" style="color:var(--green)">' + auditTotalUnique + '</div><div class="stat-label">ตัววัดผลไม่ซ้ำ</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">🔗</div><div class="stat-value" style="color:var(--accent2)">' + singleOwnerKRs.length + '</div><div class="stat-label">KRs ที่มี 1 คน</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">🚫</div><div class="stat-value" style="color:' + (peopleWithoutMentors > 0 ? 'var(--red)' : 'var(--green)') + '">' + peopleWithoutMentors + '</div><div class="stat-label">ไม่มี Mentor</div></div>';
+  html += '</div>';
+
+  // ── 2. People without mentors (red alert) ──
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid ' + (noMentorList.length > 0 ? 'var(--red)' : 'var(--green)') + '">';
+  html += '<div style="font-weight:700;font-size:0.9rem;color:' + (noMentorList.length > 0 ? 'var(--red)' : 'var(--green)') + ';margin-bottom:12px">🚨 บุคลากรที่ไม่มี Mentor (' + noMentorList.length + ')</div>';
+  if (noMentorList.length === 0) {
+    html += '<div style="font-size:0.82rem;color:var(--green)">✅ ทุกคนมี Mentor</div>';
+  } else {
+    html += '<div class="table-wrap"><table><thead><tr><th>ชื่อ</th><th>กลุ่มงาน</th><th>ทีม</th></tr></thead><tbody>';
+    noMentorList.forEach(function(p) {
+      html += '<tr style="background:#fef2f2"><td style="font-weight:600">' + esc(p.name) + '</td><td>' + esc(p.dept) + '</td><td>' + esc(p.team) + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+
+  // ── 3. People with all objectives weight=0 (orange warning) ──
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid ' + (allWeightZero.length > 0 ? 'var(--orange)' : 'var(--green)') + '">';
+  html += '<div style="font-weight:700;font-size:0.9rem;color:' + (allWeightZero.length > 0 ? 'var(--orange)' : 'var(--green)') + ';margin-bottom:12px">⚠️ บุคลากรที่น้ำหนักทุกมิติเป็น 0 (' + allWeightZero.length + ')</div>';
+  if (allWeightZero.length === 0) {
+    html += '<div style="font-size:0.82rem;color:var(--green)">✅ ทุกคนมีน้ำหนักอย่างน้อย 1 มิติ</div>';
+  } else {
+    html += '<div class="table-wrap"><table><thead><tr><th>ชื่อ</th><th>กลุ่มงาน</th></tr></thead><tbody>';
+    allWeightZero.forEach(function(p) {
+      html += '<tr style="background:#fffbeb"><td style="font-weight:600">' + esc(p.name) + '</td><td>' + esc(p.dept) + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+
+  // ── 4. KRs with only 1 owner (info) ──
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid var(--accent2)">';
+  html += '<div style="font-weight:700;font-size:0.9rem;color:var(--accent2);margin-bottom:12px">ℹ️ KRs ที่มีผู้รับผิดชอบเพียง 1 คน (' + singleOwnerKRs.length + ') — อาจต้องการผู้รับผิดชอบเพิ่ม</div>';
+  if (singleOwnerKRs.length === 0) {
+    html += '<div style="font-size:0.82rem;color:var(--green)">✅ ทุก KR มีผู้รับผิดชอบมากกว่า 1 คน</div>';
+  } else {
+    html += '<div style="max-height:400px;overflow-y:auto">';
+    html += '<div class="table-wrap"><table><thead><tr><th>KR</th><th>ประเภท</th><th>ผู้รับผิดชอบ</th></tr></thead><tbody>';
+    singleOwnerKRs.forEach(function(m) {
+      html += '<tr><td style="font-size:0.82rem">' + esc(m.krText.substring(0, 80)) + (m.krText.length > 80 ? '...' : '') + '</td><td style="font-size:0.78rem">' + esc(m.type) + '</td><td style="font-size:0.78rem">' + esc(m.owners[0].person) + ' (' + esc(m.owners[0].dept) + ')</td></tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+  html += '</div>';
+
+  // ── 5. People without accountability (warning) ──
+  html += '<div class="card" style="margin-bottom:16px;border-left:4px solid ' + (noAccountability.length > 0 ? 'var(--orange)' : 'var(--green)') + '">';
+  html += '<div style="font-weight:700;font-size:0.9rem;color:' + (noAccountability.length > 0 ? 'var(--orange)' : 'var(--green)') + ';margin-bottom:12px">⚠️ บุคลากรที่ไม่มี Accountability (' + noAccountability.length + ')</div>';
+  if (noAccountability.length === 0) {
+    html += '<div style="font-size:0.82rem;color:var(--green)">✅ ทุกคนมี Accountability</div>';
+  } else {
+    html += '<div class="table-wrap"><table><thead><tr><th>ชื่อ</th><th>กลุ่มงาน</th></tr></thead><tbody>';
+    noAccountability.forEach(function(p) {
+      html += '<tr style="background:#fffbeb"><td style="font-weight:600">' + esc(p.name) + '</td><td>' + esc(p.dept) + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+
+  document.getElementById('section-audit').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════
+   Edit Mode — แก้ไข KR (Add / Edit / Delete)
+   ═══════════════════════════════════════════════════ */
+function toggleEditMode() {
+  editMode = !editMode;
+  var btn = document.getElementById('editToggleBtn');
+  if (btn) {
+    if (editMode) {
+      btn.textContent = '✏️ แก้ไข ON';
+      btn.style.background = 'var(--orange)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = 'var(--orange)';
+    } else {
+      btn.textContent = '✏️ แก้ไข';
+      btn.style.background = 'rgba(255,255,255,0.15)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = 'rgba(255,255,255,0.25)';
+    }
+  }
+  // Re-render KPI to show/hide edit buttons
+  renderKPITable(kpiFilterDept);
+}
+
+function showEditStatus(msg, isError) {
+  var div = document.getElementById('editStatusDiv');
+  if (!div) return;
+  div.textContent = msg;
+  div.style.display = 'block';
+  div.style.background = isError ? '#fef2f2' : '#f0fdf4';
+  div.style.color = isError ? 'var(--red)' : 'var(--green)';
+  setTimeout(function() { div.style.display = 'none'; }, 5000);
+}
+
+function editKR(krText, personName, type, dept) {
+  var newText = prompt('แก้ไข KR:', krText);
+  if (newText === null) return;
+  if (newText.trim() === '') { alert('KR ไม่สามารถว่างได้'); return; }
+
+  var payload = {
+    action: 'editKR',
+    sheetName: dept,
+    oldKR: krText,
+    newKR: newText.trim()
+  };
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.success !== false) {
+        showEditStatus('✅ แก้ไข KR สำเร็จ — กำลังรีโหลด...', false);
+        setTimeout(function() { window.location.reload(); }, 1000);
+      } else {
+        showEditStatus('❌ แก้ไขไม่สำเร็จ: ' + (res ? (res.error || res.message || 'ไม่ทราบสาเหตุ') : 'ไม่มีการตอบกลับ'), true);
+      }
+    })
+    .withFailureHandler(function(err) {
+      showEditStatus('❌ ข้อผิดพลาด: ' + (err && err.message ? err.message : String(err)), true);
+    })
+    .gsSaveEditKR(payload);
+}
+
+function deleteKR(krText, personName, type) {
+  if (!confirm('ต้องการลบ KR นี้ใช่หรือไม่?\n\n' + krText)) return;
+
+  var payload = {
+    action: 'deleteKR',
+    krText: krText
+  };
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.success !== false) {
+        showEditStatus('✅ ลบ KR สำเร็จ — กำลังรีโหลด...', false);
+        setTimeout(function() { window.location.reload(); }, 1000);
+      } else {
+        showEditStatus('❌ ลบไม่สำเร็จ: ' + (res ? (res.error || res.message || 'ไม่ทราบสาเหตุ') : 'ไม่มีการตอบกลับ'), true);
+      }
+    })
+    .withFailureHandler(function(err) {
+      showEditStatus('❌ ข้อผิดพลาด: ' + (err && err.message ? err.message : String(err)), true);
+    })
+    .gsSaveDeleteKR(payload);
+}
+
+function addKR(type) {
+  var newText = prompt('เพิ่ม KR ใหม่สำหรับ: ' + type + '\n\nกรุณากรอกชื่อบุคคลและ KR (คั่นด้วย | )\nเช่น: สมศักดิ์ | เพิ่มยอดขาย 20%');
+  if (newText === null || newText.trim() === '') return;
+
+  var parts = newText.split('|');
+  var personName = parts[0] ? parts[0].trim() : '';
+  var krContent = parts[1] ? parts[1].trim() : '';
+
+  if (!personName || !krContent) {
+    alert('กรุณากรอกในรูปแบบ: ชื่อบุคคล | KR text');
+    return;
+  }
+
+  var payload = {
+    action: 'addKR',
+    personName: personName,
+    growthType: type,
+    krText: krContent
+  };
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.success !== false) {
+        showEditStatus('✅ เพิ่ม KR สำเร็จ — กำลังรีโหลด...', false);
+        setTimeout(function() { window.location.reload(); }, 1000);
+      } else {
+        showEditStatus('❌ เพิ่มไม่สำเร็จ: ' + (res ? (res.error || res.message || 'ไม่ทราบสาเหตุ') : 'ไม่มีการตอบกลับ'), true);
+      }
+    })
+    .withFailureHandler(function(err) {
+      showEditStatus('❌ ข้อผิดพลาด: ' + (err && err.message ? err.message : String(err)), true);
+    })
+    .gsSaveAddKR(payload);
+}
+
+/* ── Start ── */
+init();
+</script>
+</body>
+</html>
