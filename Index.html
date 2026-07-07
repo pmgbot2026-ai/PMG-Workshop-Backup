@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PMG OKR Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0e1a;
+      --bg-secondary: #111827;
+      --bg-card: #1a2035;
+      --bg-card-hover: #1f2847;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-purple: #8b5cf6;
+      --accent-pink: #ec4899;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-color: #1e293b;
+      --gradient-blue: linear-gradient(135deg, #3b82f6, #06b6d4);
+      --gradient-green: linear-gradient(135deg, #10b981, #06b6d4);
+      --gradient-purple: linear-gradient(135deg, #8b5cf6, #3b82f6);
+      --gradient-amber: linear-gradient(135deg, #f59e0b, #ef4444);
+      --gradient-pink: linear-gradient(135deg, #ec4899, #8b5cf6);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Noto Sans Thai', 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Background animation */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: 
+        radial-gradient(ellipse at 20% 50%, rgba(59,130,246,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 60% 80%, rgba(6,182,212,0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 40px 20px 30px;
+      position: relative;
+    }
+    .header h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: var(--gradient-blue);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .header .subtitle {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+    .header .update-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    /* Navigation Tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .nav-tab {
+      padding: 10px 20px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.3s ease;
+      font-family: inherit;
+    }
+    .nav-tab:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+    .nav-tab.active {
+      background: var(--gradient-blue);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 4px 15px rgba(59,130,246,0.3);
+    }
+    .nav-tab i { margin-right: 6px; }
+
+    /* Sections */
+    .section { display: none; animation: fadeIn 0.4s ease; }
+    .section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Vision Card */
+    .vision-card {
+      background: linear-gradient(135deg, #1a1f3a 0%, #0f1729 100%);
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .vision-card::before {
+      content: '';
+      position: absolute;
+      top: -50%; right: -20%;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .vision-card h2 {
+      font-size: 1.1rem;
+      color: var(--accent-cyan);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .vision-card .purpose {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .vision-card .vision-text {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      line-height: 1.8;
+    }
+    .vision-card .vision-highlight {
+      background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(6,182,212,0.15));
+      padding: 12px 16px;
+      border-radius: 12px;
+      border-left: 3px solid var(--accent-cyan);
+      margin-top: 16px;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    /* Org Chart */
+    .org-chart {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .org-level {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      position: relative;
+    }
+    .org-connector {
+      width: 2px;
+      height: 20px;
+      background: var(--border-color);
+      margin: 0 auto;
+    }
+    .org-node {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 16px 20px;
+      min-width: 160px;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+    }
+    .org-node:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+    .org-node.leader {
+      background: linear-gradient(135deg, #1e3a5f, #0f2847);
+      border-color: var(--accent-blue);
+      box-shadow: 0 4px 20px rgba(59,130,246,0.2);
+    }
+    .org-node.team-pm gg { border-color: var(--accent-cyan); }
+    .org-node.team-pmgi { border-color: var(--accent-green); }
+    .org-node .name { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+    .org-node .role-label { font-size: 0.75rem; color: var(--text-muted); }
+    .org-node .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+    .badge-pkg { background: rgba(59,130,246,0.2); color: var(--accent-blue); }
+    .badge-pmg { background: rgba(6,182,212,0.2); color: var(--accent-cyan); }
+    .badge-pmgi { background: rgba(16,185,129,0.2); color: var(--accent-green); }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card:hover { transform: translateY(-2px); border-color: rgba(59,130,246,0.3); }
+    .kpi-card .kpi-name {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .kpi-card .kpi-values {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .kpi-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+    }
+    .kpi-row .label { font-size: 0.78rem; color: var(--text-muted); }
+    .kpi-row .value { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+    .kpi-row .value.highlight { color: var(--accent-cyan); }
+    .kpi-row .value.green { color: var(--accent-green); }
+    .kpi-row .value.amber { color: var(--accent-amber); }
+
+    /* Person Cards */
+    .person-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .person-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .person-card:hover { transform: translateY(-2px); border-color: rgba(59,130,246,0.3); }
+    .person-card.expanded { grid-column: 1 / -1; }
+    .person-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .person-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .person-team {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .team-pmg { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+    .team-pmgi { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+    .person-role {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .person-mentor {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .person-mentor i { color: var(--accent-amber); margin-right: 4px; }
+
+    /* Objective Bars */
+    .obj-section {
+      margin-top: 12px;
+    }
+    .obj-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .obj-type {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .obj-business { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+    .obj-team { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+    .obj-personal { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+    .obj-weight {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .weight-bar {
+      height: 4px;
+      background: var(--border-color);
+      border-radius: 2px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .weight-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.6s ease;
+    }
+    .fill-business { background: var(--gradient-blue); }
+    .fill-team { background: var(--gradient-green); }
+    .fill-personal { background: var(--gradient-purple); }
+
+    /* KR List */
+    .kr-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .kr-item {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      padding: 4px 0 4px 16px;
+      position: relative;
+      line-height: 1.5;
+    }
+    .kr-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 11px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+    }
+    .kr-item.highlight::before { background: var(--accent-green); }
+    .kr-item .number {
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    /* Strategy Cards */
+    .strategy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .strategy-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      transition: all 0.3s ease;
+    }
+    .strategy-card:hover { transform: translateY(-2px); border-color: rgba(139,92,246,0.3); }
+    .strategy-code {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: rgba(139,92,246,0.15);
+      color: var(--accent-purple);
+      margin-bottom: 10px;
+    }
+    .strategy-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+    .obj-item {
+      background: rgba(59,130,246,0.05);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      border-left: 3px solid var(--accent-blue);
+    }
+    .obj-item .obj-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .obj-item .kr {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      padding: 2px 0;
+      line-height: 1.5;
+    }
+
+    /* Accountability Section */
+    .acc-list {
+      list-style: none;
+      padding: 0;
+    }
+    .acc-item {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(30,41,59,0.5);
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .acc-num {
+      min-width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--gradient-blue);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* Section titles */
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title i {
+      color: var(--accent-cyan);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header h1 { font-size: 1.5rem; }
+      .person-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: 1fr; }
+      .strategy-grid { grid-template-columns: 1fr; }
+      .nav-tab { padding: 8px 14px; font-size: 0.78rem; }
+    }
+
+    /* Loading */
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 400px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Accountability section in person card */
+    .acc-section {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+    .acc-section-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-amber);
+      margin-bottom: 8px;
+    }
+
+    /* Linkage map */
+    .linkage-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .linkage-kpi {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(30,41,59,0.5);
+    }
+    .linkage-kpi:last-child { border-bottom: none; }
+    .linkage-kpi-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      min-width: 140px;
+      flex-shrink: 0;
+    }
+    .linkage-people {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .linkage-person {
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.68rem;
+      font-weight: 500;
+    }
+    .lp-pmg { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+    .lp-pmgi { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+    .lp-leader { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+
+    /* Weight summary */
+    .weight-summary {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      margin-bottom: 12px;
+    }
+    .weight-chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .weight-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .dot-business { background: var(--accent-blue); }
+    .dot-team { background: var(--accent-green); }
+    .dot-personal { background: var(--accent-purple); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-bullseye"></i> PMG OKR Dashboard</h1>
+      <div class="subtitle">CEO Contract 2.0 — Contract of Extreme Ownership</div>
+      <div class="update-time" id="updateTime">กำลังโหลดข้อมูล...</div>
+    </div>
+
+    <div class="nav-tabs" id="navTabs">
+      <button class="nav-tab active" onclick="showSection('overview')"><i class="fas fa-home"></i> ภาพรวม</button>
+      <button class="nav-tab" onclick="showSection('org')"><i class="fas fa-sitemap"></i> โครงสร้าง</button>
+      <button class="nav-tab" onclick="showSection('kpi')"><i class="fas fa-chart-line"></i> KPI สรุป</button>
+      <button class="nav-tab" onclick="showSection('people')"><i class="fas fa-users"></i> ทีม & NCASS</button>
+      <button class="nav-tab" onclick="showSection('strategy')"><i class="fas fa-chess"></i> 5 กลยุทธ์</button>
+      <button class="nav-tab" onclick="showSection('linkage')"><i class="fas fa-link"></i> ความเชื่อมโยง</button>
+    </div>
+
+    <div id="loading" class="loading"><div class="spinner"></div></div>
+
+    <!-- Overview Section -->
+    <div id="sec-overview" class="section">
+      <div class="vision-card">
+        <h2><i class="fas fa-star"></i> Purpose — จุดมุ่งหมาย</h2>
+        <div class="purpose" id="purpose"></div>
+        <h2><i class="fas fa-eye"></i> Vision — ภาพความสำเร็จ</h2>
+        <div class="vision-text" id="vision"></div>
+        <div class="vision-highlight" id="visionHighlight"></div>
+      </div>
+      <div class="section-title"><i class="fas fa-building"></i> โครงสร้างทีม</div>
+      <div id="teamSummary"></div>
+    </div>
+
+    <!-- Org Section -->
+    <div id="sec-org" class="section">
+      <div class="section-title"><i class="fas fa-sitemap"></i> โครงสร้างองค์กร & สายพี่เลี้ยง</div>
+      <div id="orgChart"></div>
+    </div>
+
+    <!-- KPI Section -->
+    <div id="sec-kpi" class="section">
+      <div class="section-title"><i class="fas fa-chart-line"></i> KPI สรุป — เป้าหมายตัวเลขรวม</div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+    </div>
+
+    <!-- People Section -->
+    <div id="sec-people" class="section">
+      <div class="section-title"><i class="fas fa-users"></i> NCASS & Goal รายบุคคล</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;" id="teamFilter">
+        <button class="nav-tab active" onclick="filterPeople('all')">ทั้งหมด</button>
+        <button class="nav-tab" onclick="filterPeople('PMGG')">PMGG (ศูนย์สี)</button>
+        <button class="nav-tab" onclick="filterPeople('PMGI')">PMGI (อะไหล่)</button>
+        <button class="nav-tab" onclick="filterPeople('leader')">ผู้นำทีม</button>
+      </div>
+      <div class="person-grid" id="personGrid"></div>
+    </div>
+
+    <!-- Strategy Section -->
+    <div id="sec-strategy" class="section">
+      <div class="section-title"><i class="fas fa-chess"></i> 5 กลยุทธ์แห่งการเปลี่ยนผ่าน</div>
+      <div class="strategy-grid" id="strategyGrid"></div>
+    </div>
+
+    <!-- Linkage Section -->
+    <div id="sec-linkage" class="section">
+      <div class="section-title"><i class="fas fa-link"></i> ความเชื่อมโยง — ใครรับผิดชอบ KPI อะไร</div>
+      <div id="linkageMap"></div>
+    </div>
+  </div>
+
+  <script>
+    let DATA = null;
+    
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('sec-' + id).classList.add('active');
+      event.target.closest('.nav-tab').classList.add('active');
+    }
+
+    function filterPeople(team) {
+      document.querySelectorAll('#teamFilter .nav-tab').forEach(t => t.classList.remove('active'));
+      event.target.closest('.nav-tab').classList.add('active');
+      renderPeople(team);
+    }
+
+    function init() {
+      google.script.run
+        .withSuccessHandler(function(data) {
+          DATA = data;
+          document.getElementById('loading').style.display = 'none';
+          renderAll();
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('loading').innerHTML = '<p style="color:var(--accent-red)">Error: ' + err.message + '</p>';
+        })
+        .getOKRData();
+    }
+
+    function renderAll() {
+      if (!DATA) return;
+      document.getElementById('updateTime').textContent = 'อัปเดตล่าสุด: ' + new Date(DATA.lastUpdate).toLocaleString('th-TH');
+      renderOverview();
+      renderOrg();
+      renderKPI();
+      renderPeople('all');
+      renderStrategy();
+      renderLinkage();
+      document.getElementById('sec-overview').classList.add('active');
+    }
+
+    function renderOverview() {
+      document.getElementById('purpose').textContent = 'ทุ่มเท รับใช้ผู้ใช้รถยนต์ อย่างใกล้ชิด ให้ประสบความสำเร็จ';
+      document.getElementById('vision').textContent = 'ธุรกิจสำหรับผู้ใช้รถยนต์ — ในธุรกิจบริการผู้ใช้รถยนต์มีสัดส่วน Gross Margin เป็น 70% ของธุรกิจทั้งหมด';
+      document.getElementById('visionHighlight').innerHTML = '🎯 เป้าหมาย: งานบริการผู้ใช้รถยนต์ <b>70 : ขาย 30</b> — CBNP 49 ลบ./ปี (PMSG 39 + PMGG 10)';
+
+      // Team summary
+      var html = '<div class="org-chart">';
+      html += '<div class="org-level">';
+      html += '<div class="org-node leader"><div class="name">ประวิทย์ ผ่องโสภา</div><div class="role-label">ผู้นำ PKG</div></div>';
+      html += '</div><div class="org-connector"></div>';
+      html += '<div class="org-level">';
+      html += '<div class="org-node leader"><div class="name">สมศักดิ์ ธัมมะปาละ</div><div class="role-label">ผู้รับใช้ทีม PKG</div><span class="badge badge-pkg">PMSG + PMGI</span></div>';
+      html += '</div><div class="org-connector"></div>';
+      html += '<div class="org-level">';
+      html += '<div class="org-node" style="border-color:var(--accent-cyan)"><div class="name">ทีม PMGG</div><div class="role-label">ศูนย์ซ่อมตัวถังและสี</div><span class="badge badge-pmg">SA + ช่างสี</span></div>';
+      html += '<div class="org-node" style="border-color:var(--accent-green)"><div class="name">ทีม PMGI</div><div class="role-label">อะไหล่ & ธุรกิจใหม่</div><span class="badge badge-pmgi">อู่ + สานฯ + อะไหล่</span></div>';
+      html += '</div></div>';
+      document.getElementById('teamSummary').innerHTML = html;
+    }
+
+    function renderOrg() {
+      if (!DATA || !DATA.people) return;
+      var html = '<div class="org-chart">';
+      
+      // Top
+      html += '<div class="org-level"><div class="org-node leader" style="min-width:220px"><div class="name">ประวิทย์ ผ่องโสภา</div><div class="role-label">ผู้นำ PKG</div></div></div>';
+      html += '<div class="org-connector"></div>';
+      html += '<div class="org-level"><div class="org-node leader" style="min-width:280px"><div class="name">สมศักดิ์ ธัมมะปาละ</div><div class="role-label">ผู้รับใช้ทีม PKG — กำกับทั้ง PMGG + PMGI</div><span class="badge badge-pkg">PMSG 39 ลบ. + PMGG 10 ลบ.</span></div></div>';
+      html += '<div class="org-connector"></div>';
+
+      // PMGG team
+      var pmggPeople = DATA.people.filter(function(p) { return p.team === 'PMGG' || p.team === 'PMG' || (p.role && p.role.indexOf('SA') >= 0); });
+      var pmgiPeople = DATA.people.filter(function(p) { return p.team === 'PMGI' || (p.role && p.role === 'สมาชิก'); });
+
+      // Identify leaders
+      var pmggLeader = pmggPeople.find(function(p) { return p.role && p.role.indexOf('ผู้รับใช้ทีม') >= 0 && (p.team === 'PMGG' || p.team === 'PMG'); });
+      var pmgiLeader = pmgiPeople.find(function(p) { return p.role && p.role.indexOf('ผู้รับใช้ทีม') >= 0 && p.team === 'PMGI'; });
+
+      html += '<div class="org-level">';
+      
+      // PMGG column
+      html += '<div style="display:flex;flex-direction:column;align-items:center;gap:12px">';
+      html += '<div class="org-node" style="border-color:var(--accent-cyan);min-width:200px"><div class="name" style="color:var(--accent-cyan)">ทีม PMGG</div><div class="role-label">ศูนย์ซ่อมตัวถังและสี</div>';
+      if (pmggLeader) html += '<div style="font-weight:700;margin-top:6px">' + pmggLeader.name + '</div><div style="font-size:0.7rem;color:var(--text-muted)">ผู้รับใช้ทีม</div>';
+      html += '</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">';
+      pmggPeople.forEach(function(p) {
+        if (p === pmggLeader) return;
+        html += '<div class="org-node" style="min-width:120px;padding:10px"><div class="name" style="font-size:0.85rem">' + p.name + '</div>';
+        html += '<div class="role-label">' + (p.role || p.team) + '</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+
+      // PMGI column
+      html += '<div style="display:flex;flex-direction:column;align-items:center;gap:12px">';
+      html += '<div class="org-node" style="border-color:var(--accent-green);min-width:200px"><div class="name" style="color:var(--accent-green)">ทีม PMGI</div><div class="role-label">อะไหล่ & ธุรกิจใหม่</div>';
+      if (pmgiLeader) html += '<div style="font-weight:700;margin-top:6px">' + pmgiLeader.name + '</div><div style="font-size:0.7rem;color:var(--text-muted)">ผู้รับใช้ทีม</div>';
+      html += '</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">';
+      pmgiPeople.forEach(function(p) {
+        if (p === pmgiLeader) return;
+        html += '<div class="org-node" style="min-width:120px;padding:10px"><div class="name" style="font-size:0.85rem">' + p.name + '</div>';
+        html += '<div class="role-label">' + (p.role || p.team) + '</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+
+      html += '</div></div>';
+      document.getElementById('orgChart').innerHTML = html;
+    }
+
+    function renderKPI() {
+      if (!DATA || !DATA.kpiSummary) return;
+      var html = '';
+      DATA.kpiSummary.forEach(function(kpi) {
+        html += '<div class="kpi-card">';
+        html += '<div class="kpi-name">' + kpi.kpi + '</div>';
+        html += '<div class="kpi-values">';
+        if (kpi.pkgYear) html += '<div class="kpi-row"><span class="label">PKG (ปี)</span><span class="value highlight">' + kpi.pkgYear + '</span></div>';
+        if (kpi.pmsgMonth) html += '<div class="kpi-row"><span class="label">PMSG (เดือน)</span><span class="value">' + kpi.pmsgMonth + '</span></div>';
+        if (kpi.pmggMonth) html += '<div class="kpi-row"><span class="label">PMGG (เดือน)</span><span class="value">' + kpi.pmggMonth + '</span></div>';
+        if (kpi.teamCenterMonth && kpi.teamCenterMonth !== '—') html += '<div class="kpi-row"><span class="label">ทีมศูนย์ซ่อม</span><span class="value green">' + kpi.teamCenterMonth + '</span></div>';
+        if (kpi.teamSAMonth && kpi.teamSAMonth !== '—') html += '<div class="kpi-row"><span class="label">ทีม SA</span><span class="value green">' + kpi.teamSAMonth + '</span></div>';
+        if (kpi.teamPMGISellMonth && kpi.teamPMGISellMonth !== '—') html += '<div class="kpi-row"><span class="label">PMGI ขาย</span><span class="value amber">' + kpi.teamPMGISellMonth + '</span></div>';
+        if (kpi.somsakMonth && kpi.somsakMonth !== '—') html += '<div class="kpi-row"><span class="label">สมศักดิ์</span><span class="value highlight">' + kpi.somsakMonth + '</span></div>';
+        html += '</div></div>';
+      });
+      document.getElementById('kpiGrid').innerHTML = html;
+    }
+
+    function renderPeople(filter) {
+      if (!DATA || !DATA.people) return;
+      var people = DATA.people;
+      if (filter === 'PMGG') {
+        people = people.filter(function(p) { return p.team === 'PMGG' || p.team === 'PMG' || (p.role && p.role.indexOf('SA') >= 0); });
+      } else if (filter === 'PMGI') {
+        people = people.filter(function(p) { return p.team === 'PMGI'; });
+      } else if (filter === 'leader') {
+        people = people.filter(function(p) { return p.role && p.role.indexOf('ผู้รับใช้ทีม') >= 0; });
+      }
+
+      var html = '';
+      people.forEach(function(p) {
+        var teamClass = (p.team === 'PMGI') ? 'team-pmgi' : 'team-pmg';
+        var teamLabel = (p.team === 'PMGI') ? 'PMGI' : ((p.team === 'PMG' || p.team === 'PMGG') ? 'PMGG' : p.team);
+
+        html += '<div class="person-card">';
+        html += '<div class="person-header">';
+        html += '<div><div class="person-name">' + (p.name || p.sheetName) + '</div>';
+        html += '<div class="person-role">' + (p.role || 'สมาชิก') + ' — ID: ' + (p.id || '') + '</div></div>';
+        html += '<span class="person-team ' + teamClass + '">' + teamLabel + '</span>';
+        html += '</div>';
+
+        if (p.mentors && p.mentors.length > 0) {
+          html += '<div class="person-mentor"><i class="fas fa-user-tie"></i> พี่เลี้ยง: ' + p.mentors.filter(function(m,i,a){return a.indexOf(m)===i}).join(', ') + '</div>';
+        }
+
+        // Accountability
+        if (p.accountability && p.accountability.length > 0) {
+          html += '<div class="acc-section"><div class="acc-section-title"><i class="fas fa-list-check"></i> Accountability</div>';
+          html += '<ul class="acc-list">';
+          p.accountability.forEach(function(a, idx) {
+            html += '<li class="acc-item"><span class="acc-num">' + (idx+1) + '</span> ' + a + '</li>';
+          });
+          html += '</ul></div>';
+        }
+
+        // Weight summary
+        if (p.weightBusiness || p.weightTeam || p.weightPersonal) {
+          html += '<div class="weight-summary">';
+          if (p.weightBusiness) html += '<div class="weight-chip"><span class="weight-dot dot-business"></span> Business ' + (p.weightBusiness*100) + '%</div>';
+          if (p.weightTeam) html += '<div class="weight-chip"><span class="weight-dot dot-team"></span> Team ' + (p.weightTeam*100) + '%</div>';
+          if (p.weightPersonal) html += '<div class="weight-chip"><span class="weight-dot dot-personal"></span> Personal ' + (p.weightPersonal*100) + '%</div>';
+          html += '</div>';
+        }
+
+        // Objectives
+        if (p.objectives && p.objectives.length > 0) {
+          p.objectives.forEach(function(obj) {
+            var typeClass = obj.type === 'Business Growth' ? 'obj-business' : (obj.type === 'Team Growth' ? 'obj-team' : 'obj-personal');
+            var fillClass = obj.type === 'Business Growth' ? 'fill-business' : (obj.type === 'Team Growth' ? 'fill-team' : 'fill-personal');
+            var weight = obj.type === 'Business Growth' ? p.weightBusiness : (obj.type === 'Team Growth' ? p.weightTeam : p.weightPersonal);
+
+            html += '<div class="obj-section">';
+            html += '<div class="obj-header"><span class="obj-type ' + typeClass + '">' + obj.type + '</span>';
+            html += '<span class="obj-weight">' + (weight ? (weight*100)+'%' : '') + '</span></div>';
+            if (weight) html += '<div class="weight-bar"><div class="weight-fill ' + fillClass + '" style="width:' + (weight*100) + '%"></div></div>';
+            if (obj.label) html += '<div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px;line-height:1.5">' + obj.label + '</div>';
+            if (obj.keyResults && obj.keyResults.length > 0) {
+              html += '<ul class="kr-list">';
+              obj.keyResults.forEach(function(kr) {
+                if (kr.length > 3) html += '<li class="kr-item">' + kr + '</li>';
+              });
+              html += '</ul>';
+            }
+            html += '</div>';
+          });
+        }
+
+        html += '</div>';
+      });
+      document.getElementById('personGrid').innerHTML = html || '<p style="color:var(--text-muted);text-align:center;padding:40px">ไม่พบข้อมูล</p>';
+    }
+
+    function renderStrategy() {
+      if (!DATA || !DATA.strategies) return;
+      var html = '';
+      var strategies = DATA.strategies;
+      if (!strategies || strategies.length === 0) {
+        // Use static strategy data from the sheet
+        html = renderStaticStrategies();
+      } else {
+        strategies.forEach(function(s) {
+          html += '<div class="strategy-card">';
+          html += '<div class="strategy-code">' + (s.code || '') + '</div>';
+          html += '<div class="strategy-name">' + (s.name || '') + '</div>';
+          if (s.objectives) {
+            s.objectives.forEach(function(obj) {
+              html += '<div class="obj-item">';
+              html += '<div class="obj-label">' + (obj.objective || '') + '</div>';
+              if (obj.keyResults) {
+                obj.keyResults.forEach(function(kr) {
+                  html += '<div class="kr">→ ' + kr + '</div>';
+                });
+              }
+              html += '</div>';
+            });
+          }
+          html += '</div>';
+        });
+      }
+      document.getElementById('strategyGrid').innerHTML = html;
+    }
+
+    function renderStaticStrategies() {
+      var data = [
+        { code: 'PIT', name: 'เปลี่ยนกระบวนการทำงานเดิมให้เป็น Workflow as Code และ Automation > 85%', objectives: [
+          { kr: 'เปลี่ยนกระบวนการหลักเป็น workflow as code ≥ 90% ในปี 2027' },
+          { kr: 'PKG-Automation Level ≥ 85% ภายในปี 2027' }
+        ]},
+        { code: 'DIN', name: 'Software Architecture + Cybersecurity + Data Intelligence + AI', objectives: [
+          { kr: 'สร้าง PKG NEW Architecture ผ่าน POC 100% ภายในปี 2026' },
+          { kr: 'ระบบความปลอดภัยระดับ Enterprise Grade ผ่าน Audit 100%' },
+          { kr: 'จัดสร้าง Data Warehouse PKG รองรับ PKGA ครบ 100%' },
+          { kr: 'จัดทำ AIOS เป็นพื้นฐาน AI-Agent ให้ PKG ใช้งาน' }
+        ]},
+        { code: 'PAC', name: 'ผลิตภาพสูง / รายได้สูง / ความผูกพันสูง (High Productivity/Income/Engagement)', objectives: [
+          { kr: 'CBNP PMSG 39 ลบ./ปี + PMGG 10 ลบ./ปี' },
+          { kr: 'GM ผู้ใช้รถยนต์เฉลี่ย > 9.5 ลบ./เดือน' },
+          { kr: 'ยอดรถศูนย์สี 3,400 คัน/ปี' },
+          { kr: 'GM ผลิตภัณฑ์เสริม 280,000 บ./เดือน (+18%)' }
+        ]},
+        { code: 'CIX', name: 'เปลี่ยนโมเดลธุรกิจเดิมให้อยู่บนหน้าร้านดิจิทัลทั้งหมด', objectives: [
+          { kr: 'BU มีรายได้จากช่องทางดิจิทัล >80% ในปี 2027' },
+          { kr: 'ลูกค้าทำรายการผ่าน "หน้าร้านดิจิทัล"' },
+          { kr: 'ติดตั้ง Relationship as Service ใน appBU' }
+        ]},
+        { code: 'OBF', name: 'นำ AI และ Automation มาเพิ่มประสิทธิภาพ และยกระดับการตัดสินใจ', objectives: [
+          { kr: 'นำ AI ไปใช้งานจริงอย่างน้อย 3 เรื่อง' },
+          { kr: 'สมาชิกใช้ AI เป็นผู้ช่วย ≥ 90%' },
+          { kr: 'ธุรกิจใหม่ใช้ AI-Agent ทดแทนการเพิ่มคน > 50%' }
+        ]}
+      ];
+
+      var html = '';
+      data.forEach(function(s) {
+        html += '<div class="strategy-card">';
+        html += '<div class="strategy-code">' + s.code + '</div>';
+        html += '<div class="strategy-name">' + s.name + '</div>';
+        s.objectives.forEach(function(obj) {
+          html += '<div class="obj-item"><div class="kr">→ ' + obj.kr + '</div></div>';
+        });
+        html += '</div>';
+      });
+      return html;
+    }
+
+    function renderLinkage() {
+      if (!DATA || !DATA.people) return;
+      
+      // Map which KPIs each person is responsible for
+      var kpiLinks = [
+        { name: 'CBNP PMSG 39 ลบ./ปี', people: ['สมศักดิ์'] },
+        { name: 'CBNP PMGG 10 ลบ./ปี', people: ['สมศักดิ์', 'Nuchnapha', 'Kenika', 'Sansanee'] },
+        { name: 'GM ผู้ใช้รถยนต์ > 9.5 ลบ./เดือน', people: ['สมศักดิ์'] },
+        { name: 'ยอดรถศูนย์สี 3,400 คัน/ปี', people: ['สมศักดิ์', 'Nuchnapha', 'Kwanruean', 'Oranuch'] },
+        { name: 'GM ผลิตภัณฑ์เสริม 280K บ./เดือน', people: ['สมศักดิ์', 'ทีมศูนย์ซ่อม', 'ทีม SA'] },
+        { name: 'GM อะไหล่ทางเลือก PMGI 300K บ./เดือน', people: ['Piyawat', 'Siripong', 'Piyathath', 'Arthit', 'Verawat'] },
+        { name: 'ยอดรถเข้าซ่อม PMGI 200 คัน/เดือน', people: ['Piyawat', 'Siripong', 'Piyathath'] },
+        { name: 'เชียร์เคลม Chain Model 240K บ./เดือน', people: ['ทีมศูนย์ซ่อม', 'ทีม SA'] },
+        { name: 'เคลือบแก๊ส 50 คัน/เดือน', people: ['สมศักดิ์', 'ทีมศูนย์ซ่อม'] },
+        { name: 'GM เครือข่าย MR 50K บ./เดือน', people: ['Piyawat', 'Siripong', 'Piyathath'] },
+        { name: 'คะแนนผู้จำหน่าย ≤ อันดับ 29', people: ['สมศักดิ์'] },
+        { name: 'CSI 9.6', people: ['ทีมศูนย์ซ่อม', 'ทีม SA'] }
+      ];
+
+      // Add per-person KPIs from PMGI team
+      DATA.people.forEach(function(p) {
+        if (p.name === 'Adisak') {
+          kpiLinks.push({ name: 'ทีมสานฯ: รถ 80 คัน/เดือน, รายได้ 200K/เดือน', people: ['Adisak'] });
+        }
+        if (p.name === 'Siripong' || p.name === 'Piyathath' || p.name === 'Arthit' || p.name === 'Verawat') {
+          // Already covered above
+        }
+      });
+
+      var html = '<div class="linkage-card">';
+      html += '<div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px"><i class="fas fa-info-circle" style="color:var(--accent-cyan)"></i> แสดงความเชื่อมโยงระหว่าง KPI และผู้รับผิดชอบ ทุกคนมุ่งสู่เป้าหมายเดียวกัน</div>';
+
+      kpiLinks.forEach(function(link) {
+        html += '<div class="linkage-kpi">';
+        html += '<div class="linkage-kpi-name">' + link.name + '</div>';
+        html += '<div class="linkage-people">';
+        link.people.forEach(function(person) {
+          var cls = 'lp-leader';
+          if (person.indexOf('ทีม') >= 0) cls = person.indexOf('ศูนย์') >= 0 ? 'lp-pmg' : 'lp-pmgi';
+          else if (['Piyawat','Siripong','Piyathath','Arthit','Verawat','Adisak','Natchol'].indexOf(person) >= 0) cls = 'lp-pmgi';
+          else if (['Nuchnapha','Kenika','Kwanruean','Oranuch','Sansanee','Jiraphorn','Krittanai','Treewalan'].indexOf(person) >= 0) cls = 'lp-pmg';
+          html += '<span class="linkage-person ' + cls + '">' + person + '</span>';
+        });
+        html += '</div></div>';
+      });
+      html += '</div>';
+
+      html += '<div class="vision-card" style="margin-top:16px">';
+      html += '<h2><i class="fas fa-check-circle"></i> สรุป: ทุกคนมุ่งสู่เป้าหมายเดียวกัน</h2>';
+      html += '<div style="font-size:0.9rem;color:var(--text-secondary);line-height:1.8">';
+      html += '<p>✅ <b>Cascade จากบนลงล่าง</b> — PKG → PMSG → ทีมรับใช้ → ทีมย่อย → สมาชิก</p>';
+      html += '<p>✅ <b>CBNP 49 ลบ./ปี</b> = PMSG 39 + PMGG 10 → สมศักดิ์รับผิดชอบทั้งสองส่วน</p>';
+      html += '<p>✅ <b>GM > 9.5 ลบ./เดือน</b> → แบ่งลงทีมศูนย์ซ่อม 2.3 ลบ. + PMGI อะไหล่</p>';
+      html += '<p>✅ <b>ยอดรถ 3,400 คัน/ปี (280/เดือน)</b> → ทีมศูนย์สี + SA รับผิดชอบ</p>';
+      html += '<p>✅ <b>GM ผลิตภัณฑ์เสริม 280K</b> → แบ่ง 150K (ศูนย์สี) + 130K (SA)</p>';
+      html += '<p>✅ <b>GM อะไหล่ทางเลือก 300K</b> → ทีม PMGI ขาย รับผิดชอบหลัก</p>';
+      html += '</div></div>';
+
+      document.getElementById('linkageMap').innerHTML = html;
+    }
+
+    // Initialize
+    init();
+  </script>
+</body>
+</html>
