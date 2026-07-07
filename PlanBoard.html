@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📋 วางแผนซ่อม — หัวหน้าโรงซ่อม</title>
+<style>
+:root{--bg:#f0f4f8;--card:#fff;--accent:#2563eb;--accent2:#7c3aed;--green:#059669;--red:#dc2626;--orange:#ea580c;--text:#1e293b;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;padding-bottom:40px}
+.header{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:12px 16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(37,99,235,.25)}
+.header h1{font-size:18px;color:#fff;display:flex;align-items:center;gap:6px}
+.header .sub{font-size:12px;color:rgba(255,255,255,.7);margin-top:2px}
+.tabs{display:flex;gap:4px;margin-top:8px;overflow-x:auto;padding-bottom:4px}
+.tab-btn{background:rgba(255,255,255,.15);color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap}
+.tab-btn.active{background:#fff;color:#1e3a5f;font-weight:600}
+.content{padding:12px 16px}
+.section{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.section h3{font-size:15px;font-weight:600;margin-bottom:10px;color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f8fafc;padding:8px 6px;text-align:left;font-weight:600;color:var(--text2);border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:6px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:hover{background:#f8fafc}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge.green{background:#d1fae5;color:var(--green)}
+.badge.orange{background:#ffedd5;color:var(--orange)}
+.badge.blue{background:#dbeafe;color:var(--accent)}
+.badge.gray{background:#f1f5f9;color:#64748b}
+.badge.red{background:#fee2e2;color:var(--red)}
+.station-check{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.station-check label{display:flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;transition:.2s}
+.station-check label:hover{background:#e8f0fe}
+.station-check input{margin:0}
+.station-check label.checked{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{padding:8px 16px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.loading{text-align:center;padding:40px;color:var(--text3)}
+.empty{text-align:center;padding:40px;color:var(--text3)}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.modal-box{background:#fff;border-radius:12px;padding:20px;width:90%;max-width:500px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.modal-box h3{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:12px}
+.modal-box label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin:8px 0 4px}
+.modal-box input,.modal-box select,.modal-box textarea{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box}
+.modal-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.modal-actions button{padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.modal-actions .btn-save{background:var(--accent2);color:#fff}
+.modal-actions .btn-cancel{background:#f1f5f9;color:var(--text2);border:1px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>📋 วางแผนซ่อม</h1>
+<div class="sub" id="branchLabel">—</div>
+<div class="tabs">
+<button class="tab-btn active" data-tab="new" onclick="switchTab('new')">🆕 รถใหม่ (ยังไม่ได้จ่ายงาน)</button>
+<button class="tab-btn" data-tab="active" onclick="switchTab('active')">🔧 งานที่จ่ายแล้ว</button>
+</div>
+</div>
+<div class="content" id="content">
+<div class="loading">กำลังโหลด...</div>
+</div>
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+<div class="modal-box" id="modalBox"></div>
+</div>
+<script>
+var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
+var currentBranch = 'cnb';
+var currentTab = 'new';
+var vehicles = [];
+var orders = [];
+var stationNames = {knock:'เคาะ',patch:'โป๊ว',squirt:'พ่น',assemble:'ประกอบ',polish:'ขัดสี',wash:'ล้าง',supQC:'SUP QC',deliver:'ส่งมอบ'};
+var stationOrder = ['knock','patch','squirt','assemble','polish','wash','supQC','deliver'];
+var stationColors = {knock:'#dc2626',patch:'#ea580c',squirt:'#d97706',assemble:'#059669',polish:'#2563eb',wash:'#7c3aed',supQC:'#db2777',deliver:'#16a34a'};
+
+function init() {
+  var params = new URLSearchParams(window.location.search);
+  currentBranch = params.get('branch') || 'cnb';
+  document.getElementById('branchLabel').textContent = currentBranch === 'cnb' ? 'มหาราช (CNB)' : 'ซีเอสเค (CSK)';
+  loadData();
+}
+
+function switchTab(t) {
+  currentTab = t;
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.tab === t); });
+  render();
+}
+
+function loadData() {
+  Promise.all([
+    fetch(SCRIPT_URL + '?api=1&action=getVehicles&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch}))).then(function(r) { return r.json(); }),
+    fetch(SCRIPT_URL + '?api=1&action=getRepairOrders&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch}))).then(function(r) { return r.json(); })
+  ]).then(function(results) {
+    var vRes = results[0], oRes = results[1];
+    vehicles = (vRes.success ? vRes.vehicles : []).filter(function(v) {
+      return v.status.indexOf('ส่งมอบ') < 0;
+    });
+    orders = oRes.success ? oRes.orders : [];
+    render();
+  }).catch(function(e) {
+    document.getElementById('content').innerHTML = '<div class="empty">❌ ' + esc(e.message) + '</div>';
+  });
+}
+
+function render() {
+  var html = '';
+  if (currentTab === 'new') {
+    // Show vehicles from B2 that don't have orders yet
+    var orderPlates = orders.map(function(o) { return o.plate; });
+    var newVehicles = vehicles.filter(function(v) { return orderPlates.indexOf(v.plate) < 0; });
+    
+    html += '<div class="section"><h3>🆕 รถที่รับเข้ามา (' + newVehicles.length + ' คัน) — ยังไม่ได้จ่ายงาน</h3>';
+    if (newVehicles.length === 0) {
+      html += '<div class="empty">ไม่มีรถใหม่ — รถทั้งหมดได้จ่ายงานแล้วหรือส่งมอบแล้ว</div>';
+    } else {
+      html += '<table><thead><tr><th>ทะเบียน</th><th>สถานะ</th><th>SA</th><th>ยี่ห้อ</th><th>ประกัน</th><th>วันรับ</th><th></th></tr></thead><tbody>';
+      newVehicles.forEach(function(v) {
+        html += '<tr>';
+        html += '<td><b>' + esc(v.plate) + '</b></td>';
+        html += '<td><span class="badge blue">' + esc(v.status) + '</span></td>';
+        html += '<td>' + esc(v.sa) + '</td>';
+        html += '<td>' + esc(v.brand) + ' ' + esc(v.model||'') + '</td>';
+        html += '<td>' + esc(v.insurer) + '</td>';
+        html += '<td>' + esc(v.repairDate) + '</td>';
+        html += '<td><button class="btn btn-primary" onclick="openAssignModal(\'' + esc(v.plate) + '\',\'' + esc(v.sa) + '\',\'' + esc(v.brand) + '\',\'' + esc(v.model||'') + '\',\'' + esc(v.insurer) + '\',\'' + esc(v.repairDate) + '\')">📋 จ่ายงาน</button></td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+  } else {
+    // Show active orders
+    var activeOrders = orders.filter(function(o) { return o.status !== 'completed' && o.status !== 'delivered'; });
+    html += '<div class="section"><h3>🔧 งานที่จ่ายแล้ว (' + activeOrders.length + ' คัน)</h3>';
+    if (activeOrders.length === 0) {
+      html += '<div class="empty">ยังไม่มีงานที่จ่าย</div>';
+    } else {
+      html += '<table><thead><tr><th>ทะเบียน</th><th>สถานะ</th><th>สถานีปัจจุบัน</th><th>SA</th><th>สถานีที่ต้องผ่าน</th><th></th></tr></thead><tbody>';
+      activeOrders.forEach(function(o) {
+        html += '<tr>';
+        html += '<td><b>' + esc(o.plate) + '</b></td>';
+        var statusBadge = o.status === 'in_progress' ? '<span class="badge orange">กำลังทำ</span>' : o.status === 'assigned' ? '<span class="badge blue">รอช่าง</span>' : '<span class="badge gray">' + esc(o.status) + '</span>';
+        html += '<td>' + statusBadge + '</td>';
+        html += '<td><span class="badge" style="background:' + (stationColors[o.currentStation]||'#999') + '20;color:' + (stationColors[o.currentStation]||'#999') + '">' + (stationNames[o.currentStation]||o.currentStation) + '</span></td>';
+        html += '<td>' + esc(o.sa) + '</td>';
+        var pills = (o.stations||[]).map(function(s) {
+          return '<span style="background:' + (stationColors[s]||'#999') + '20;color:' + (stationColors[s]||'#999') + ';padding:1px 6px;border-radius:8px;font-size:10px;margin:1px">' + (stationNames[s]||s) + '</span>';
+        }).join(' ');
+        html += '<td>' + pills + '</td>';
+        html += '<td><button class="btn btn-primary" onclick="openEditModal(\'' + esc(o.orderId) + '\',\'' + esc(o.plate) + '\')">✏️ แก้ไขสถานี</button></td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+  }
+  document.getElementById('content').innerHTML = html;
+}
+
+function openAssignModal(plate, sa, brand, model, insurer, repairDate) {
+  var html = '<h3>📋 จ่ายงาน: ' + esc(plate) + '</h3>';
+  html += '<div style="font-size:13px;color:var(--text2);margin-bottom:10px">';
+  html += 'SA: ' + esc(sa) + ' | ' + esc(brand) + ' ' + esc(model) + ' | ' + esc(insurer) + ' | วันรับ: ' + esc(repairDate);
+  html += '</div>';
+  html += '<label>เลือกสถานีที่ต้องผ่าน (เรียงตามลำดับ)</label>';
+  html += '<div class="station-check" id="stationCheck">';
+  stationOrder.forEach(function(s, i) {
+    html += '<label id="lbl_' + s + '" onclick="toggleStation(\'' + s + '\')"><input type="checkbox" id="chk_' + s + '" onchange="toggleStation(\'' + s + '\')"> ' + (stationNames[s]) + '</label>';
+  });
+  html += '</div>';
+  html += '<label>หมายเหตุ / ความเสียหาย</label>';
+  html += '<textarea id="assignDamage" placeholder="ระบุความเสียหาย..." style="width:100%;min-height:60px"></textarea>';
+  html += '<div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">ยกเลิก</button><button class="btn-save" onclick="doAssign(\'' + esc(plate) + '\',\'' + esc(sa) + '\',\'' + esc(brand) + '\',\'' + esc(model) + '\',\'' + esc(insurer) + '\',\'' + esc(repairDate) + '\')">💾 จ่ายงาน</button></div>';
+  openModal(html);
+}
+
+var selectedStations = [];
+function toggleStation(s) {
+  var idx = selectedStations.indexOf(s);
+  if (idx >= 0) {
+    selectedStations.splice(idx, 1);
+    document.getElementById('lbl_' + s).classList.remove('checked');
+    document.getElementById('chk_' + s).checked = false;
+  } else {
+    selectedStations.push(s);
+    document.getElementById('lbl_' + s).classList.add('checked');
+    document.getElementById('chk_' + s).checked = true;
+  }
+}
+
+function doAssign(plate, sa, brand, model, insurer, repairDate) {
+  if (selectedStations.length === 0) { alert('เลือกสถานีอย่างน้อย 1 สถานี'); return; }
+  var damage = document.getElementById('assignDamage').value.trim();
+  
+  // First create order
+  var createData = {
+    branch: currentBranch, plate: plate, sa: sa, brand: brand, model: model,
+    insurance: insurer, repairDate: repairDate, damageDesc: damage
+  };
+  fetch(SCRIPT_URL + '?api=1&action=createRepairOrder&data=' + encodeURIComponent(JSON.stringify(createData))
+  ).then(function(r) { return r.json(); }).then(function(r) {
+    if (!r.success) { alert('❌ สร้าง order ไม่สำเร็จ: ' + r.error); return; }
+    // Then assign stations
+    var assignData = { orderId: r.orderId, stations: selectedStations };
+    return fetch(SCRIPT_URL + '?api=1&action=assignStations&data=' + encodeURIComponent(JSON.stringify(assignData))).then(function(r2) { return r2.json(); });
+  }).then(function(r2) {
+    if (r2 && r2.success) {
+      alert('✅ จ่ายงานสำเร็จ!\nสถานี: ' + selectedStations.map(function(s) { return stationNames[s]; }).join(' → '));
+      selectedStations = [];
+      closeModal();
+      loadData();
+    } else {
+      alert('❌ จ่ายงานไม่สำเร็จ: ' + (r2 ? r2.error : 'error'));
+    }
+  }).catch(function(e) { alert('❌ ' + e.message); });
+}
+
+function openEditModal(orderId, plate) {
+  var order = orders.find(function(o) { return o.orderId === orderId; });
+  if (!order) return;
+  selectedStations = (order.stations || []).slice();
+  var html = '<h3>✏️ แก้ไขสถานี: ' + esc(plate) + '</h3>';
+  html += '<label>สถานีที่ต้องผ่าน</label>';
+  html += '<div class="station-check" id="stationCheck">';
+  stationOrder.forEach(function(s) {
+    var checked = selectedStations.indexOf(s) >= 0;
+    html += '<label id="lbl_' + s + '" class="' + (checked ? 'checked' : '') + '" onclick="toggleStation(\'' + s + '\')"><input type="checkbox" id="chk_' + s + '" ' + (checked ? 'checked' : '') + '> ' + stationNames[s] + '</label>';
+  });
+  html += '</div>';
+  html += '<div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">ยกเลิก</button><button class="btn-save" onclick="doEdit(\'' + esc(orderId) + '\')">💾 บันทึก</button></div>';
+  openModal(html);
+}
+
+function doEdit(orderId) {
+  if (selectedStations.length === 0) { alert('เลือกสถานีอย่างน้อย 1'); return; }
+  var data = { orderId: orderId, stations: selectedStations };
+  fetch(SCRIPT_URL + '?api=1&action=assignStations&data=' + encodeURIComponent(JSON.stringify(data))
+  ).then(function(r) { return r.json(); }).then(function(r) {
+    if (r.success) {
+      alert('✅ แก้ไขสำเร็จ');
+      selectedStations = [];
+      closeModal();
+      loadData();
+    } else { alert('❌ ' + r.error); }
+  });
+}
+
+function openModal(html) { document.getElementById('modalBox').innerHTML = html; document.getElementById('modalOverlay').classList.add('active'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); selectedStations = []; }
+function esc(s) { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+init();
+</script>
+</body>
+</html>

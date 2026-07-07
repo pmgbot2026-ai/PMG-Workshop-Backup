@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🔧 ช่างซ่อม — รับ/จบงาน</title>
+<style>
+:root{--bg:#f0f4f8;--card:#fff;--accent:#2563eb;--accent2:#7c3aed;--green:#059669;--red:#dc2626;--orange:#ea580c;--text:#1e293b;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;padding-bottom:60px}
+.header{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:12px 16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(37,99,235,.25)}
+.header h1{font-size:18px;color:#fff;display:flex;align-items:center;gap:6px}
+.header .sub{font-size:12px;color:rgba(255,255,255,.7);margin-top:2px}
+.station-bar{display:flex;gap:4px;padding:8px 16px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:48px;z-index:90}
+.station-btn{padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap;transition:.2s;color:var(--text2)}
+.station-btn.active{color:#fff;font-weight:600}
+.station-btn .count{display:inline-block;background:var(--border);color:var(--text);padding:1px 6px;border-radius:10px;font-size:11px;margin-left:4px}
+.station-btn.active .count{background:rgba(255,255,255,.25);color:#fff}
+.content{padding:12px 16px}
+.job-card{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.job-card.active{border-color:var(--accent);border-width:2px}
+.job-card.done{opacity:.6}
+.job-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.job-plate{font-size:18px;font-weight:700;color:var(--text)}
+.job-status{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600}
+.job-status.waiting{background:#fef3c7;color:#d97706}
+.job-status.active{background:#dbeafe;color:#2563eb}
+.job-status.done{background:#d1fae5;color:#059669}
+.job-info{font-size:13px;color:var(--text2);margin-bottom:6px}
+.job-info span{margin-right:12px}
+.job-stations{display:flex;gap:3px;flex-wrap:wrap;margin:8px 0}
+.station-pill{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.station-pill.current{box-shadow:0 0 0 2px rgba(37,99,235,.4)}
+.btn{width:100%;padding:12px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s}
+.btn-accept{background:var(--green);color:#fff}
+.btn-accept:hover{background:#047857}
+.btn-finish{background:var(--red);color:#fff}
+.btn-finish:hover{background:#b91c1c}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.timer{font-size:13px;color:var(--orange);font-weight:600;margin-top:4px}
+.loading{text-align:center;padding:40px;color:var(--text3)}
+.empty{text-align:center;padding:40px;color:var(--text3)}
+.empty .icon{font-size:48px;margin-bottom:8px}
+.mechanic-name{background:#fff;border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:8px}
+.mechanic-name input{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;flex:1}
+.mechanic-name label{font-size:12px;color:var(--text3);white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>🔧 ช่างซ่อม</h1>
+<div class="sub" id="branchLabel">—</div>
+</div>
+<div class="mechanic-name">
+<label>ชื่อช่าง:</label>
+<input type="text" id="mechanicName" placeholder="พิมพ์ชื่อของคุณ..." list="mechanicList">
+<datalist id="mechanicList"></datalist>
+</div>
+<div class="station-bar" id="stationBar"></div>
+<div class="content" id="jobList">
+<div class="loading">กำลังโหลด...</div>
+</div>
+<script>
+var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
+var currentBranch = 'cnb';
+var currentStation = '';
+var mechanicName = '';
+var jobs = [];
+var stationColors = {
+  knock:'#dc2626', patch:'#ea580c', squirt:'#d97706',
+  assemble:'#059669', polish:'#2563eb', wash:'#7c3aed',
+  supQC:'#db2777', deliver:'#16a34a'
+};
+var stationNames = {
+  knock:'เคาะ', patch:'โป๊ว', squirt:'พ่น',
+  assemble:'ประกอบ', polish:'ขัดสี', wash:'ล้าง',
+  supQC:'SUP QC', deliver:'ส่งมอบ'
+};
+var stationOrder = ['knock','patch','squirt','assemble','polish','wash','supQC','deliver'];
+
+function init() {
+  var params = new URLSearchParams(window.location.search);
+  currentBranch = params.get('branch') || 'cnb';
+  document.getElementById('branchLabel').textContent = (currentBranch === 'cnb' ? 'มหาราช (CNB)' : 'ซีเอสเค (CSK)') + ' — เลือกสถานีของคุณ';
+  
+  // Restore mechanic name
+  var savedName = localStorage.getItem('rf_mechanic_' + currentBranch);
+  if (savedName) {
+    mechanicName = savedName;
+    document.getElementById('mechanicName').value = savedName;
+  }
+  
+  document.getElementById('mechanicName').addEventListener('change', function() {
+    mechanicName = this.value.trim();
+    localStorage.setItem('rf_mechanic_' + currentBranch, mechanicName);
+  });
+  
+  loadMechanics();
+  renderStationBar();
+  loadJobs();
+  setInterval(loadJobs, 30000); // refresh every 30s
+  setInterval(updateTimers, 1000);
+}
+
+function loadMechanics() {
+  fetch(SCRIPT_URL + '?api=1&action=getMechanics&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch}))
+  ).then(function(r) { return r.json(); }).then(function(r) {
+    if (r.success && r.mechanics) {
+      var dl = document.getElementById('mechanicList');
+      dl.innerHTML = r.mechanics.map(function(m) { return '<option value="' + esc(m.name) + '">' + esc(m.name) + ' — ' + esc(stationNames[m.station] || m.station) + '</option>'; }).join('');
+    }
+  }).catch(function(e) {});
+}
+
+function renderStationBar() {
+  var html = '';
+  stationOrder.forEach(function(s) {
+    var count = jobs.filter(function(j) { return j.currentStation === s; }).length;
+    var color = stationColors[s];
+    var bg = currentStation === s ? color : '#fff';
+    var fg = currentStation === s ? '#fff' : 'var(--text2)';
+    html += '<button class="station-btn' + (currentStation === s ? ' active' : '') + '" style="' + (currentStation === s ? 'background:' + color + ';color:#fff' : '') + '" onclick="selectStation(\'' + s + '\')">' + stationNames[s] + ' <span class="count">' + count + '</span></button>';
+  });
+  html += '<button class="station-btn' + (currentStation === '' ? ' active' : '') + '" style="' + (currentStation === '' ? 'background:var(--accent);color:#fff' : '') + '" onclick="selectStation(\'\')">ทั้งหมด <span class="count">' + jobs.length + '</span></button>';
+  document.getElementById('stationBar').innerHTML = html;
+}
+
+function selectStation(s) {
+  currentStation = s;
+  renderStationBar();
+  renderJobs();
+}
+
+function loadJobs() {
+  fetch(SCRIPT_URL + '?api=1&action=getMechanicJobs&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch, station: currentStation}))
+  ).then(function(r) { return r.json(); }).then(function(r) {
+    if (r.success) {
+      jobs = r.jobs || [];
+      renderStationBar();
+      renderJobs();
+    } else {
+      document.getElementById('jobList').innerHTML = '<div class="empty">❌ ' + esc(r.error || 'โหลดไม่ได้') + '</div>';
+    }
+  }).catch(function(e) {
+    document.getElementById('jobList').innerHTML = '<div class="empty">❌ ' + esc(e.message) + '</div>';
+  });
+}
+
+function renderJobs() {
+  if (jobs.length === 0) {
+    document.getElementById('jobList').innerHTML = '<div class="empty"><div class="icon">📭</div>ไม่มีงานในสถานีนี้</div>';
+    return;
+  }
+  var html = '';
+  jobs.forEach(function(j) {
+    var isAccepted = j.isAccepted;
+    var cardClass = isAccepted ? ' active' : '';
+    
+    // Station pills
+    var pillsHtml = '';
+    (j.stations || []).forEach(function(s) {
+      var isCurrent = s === j.currentStation;
+      var color = stationColors[s] || '#999';
+      var bg = isCurrent ? color : '#f1f5f9';
+      var fg = isCurrent ? '#fff' : '#64748b';
+      pillsHtml += '<span class="station-pill' + (isCurrent ? ' current' : '') + '" style="background:' + bg + ';color:' + fg + '">' + (stationNames[s] || s) + '</span>';
+    });
+    
+    var statusBadge = '';
+    if (isAccepted) {
+      statusBadge = '<span class="job-status active">🔴 กำลังทำ</span>';
+    } else {
+      statusBadge = '<span class="job-status waiting">⏳ รอรับงาน</span>';
+    }
+    
+    var timer = '';
+    if (isAccepted && j.acceptTime) {
+      timer = '<div class="timer" id="timer_' + j.orderId + '" data-accept="' + j.acceptTime + '">⏱️ 0:00</div>';
+    }
+    
+    var button = '';
+    if (isAccepted) {
+      if (j.acceptedBy === mechanicName || !j.acceptedBy) {
+        button = '<button class="btn btn-finish" onclick="finishJob(\'' + j.orderId + '\',\'' + j.plate + '\',\'' + (j.currentStation||'') + '\')">✅ จบงาน</button>';
+      } else {
+        button = '<div class="timer">🔴 ' + esc(j.acceptedBy) + ' กำลังทำ</div>';
+      }
+    } else {
+      button = '<button class="btn btn-accept" onclick="acceptJob(\'' + j.orderId + '\',\'' + j.plate + '\',\'' + (j.currentStation||'') + '\')">👉 รับงาน</button>';
+    }
+    
+    html += '<div class="job-card' + cardClass + '">';
+    html += '<div class="job-head"><span class="job-plate">' + esc(j.plate) + '</span>' + statusBadge + '</div>';
+    html += '<div class="job-info">';
+    if (j.brand) html += '<span>🚙 ' + esc(j.brand) + ' ' + esc(j.model||'') + '</span>';
+    if (j.sa) html += '<span>👤 SA: ' + esc(j.sa) + '</span>';
+    if (j.insurance) html += '<span>🛡️ ' + esc(j.insurance) + '</span>';
+    html += '</div>';
+    if (j.damageDesc) html += '<div class="job-info">📝 ' + esc(j.damageDesc.substring(0, 100)) + '</div>';
+    html += '<div class="job-stations">' + pillsHtml + '</div>';
+    html += timer;
+    html += button;
+    html += '</div>';
+  });
+  document.getElementById('jobList').innerHTML = html;
+}
+
+function acceptJob(orderId, plate, station) {
+  if (!mechanicName) { alert('กรุณาพิมพ์ชื่อของคุณก่อน'); document.getElementById('mechanicName').focus(); return; }
+  if (!confirm('รับงาน: ' + plate + ' (' + (stationNames[station]||station) + ')?')) return;
+  
+  var data = { orderId: orderId, branch: currentBranch, plate: plate, station: station, mechanicName: mechanicName };
+  fetch(SCRIPT_URL + '?api=1&action=acceptJob&data=' + encodeURIComponent(JSON.stringify(data))
+  ).then(function(r) { return r.json(); }).then(function(r) {
+    if (r.success) {
+      loadJobs();
+    } else {
+      alert('❌ ' + (r.error || 'รับงานไม่สำเร็จ'));
+      loadJobs();
+    }
+  }).catch(function(e) { alert('❌ ' + e.message); });
+}
+
+function finishJob(orderId, plate, station) {
+  if (!confirm('จบงาน: ' + plate + ' (' + (stationNames[station]||station) + ')?\n\nรถจะเคลื่อนไปสถานีถัดไปอัตโนมัติ')) return;
+  
+  var data = { orderId: orderId, branch: currentBranch, plate: plate, station: station, mechanicName: mechanicName };
+  fetch(SCRIPT_URL + '?api=1&action=finishJob&data=' + encodeURIComponent(JSON.stringify(data))
+  ).then(function(r) { return r.json(); }).then(function(r) {
+    if (r.success) {
+      var msg = '✅ จบงานสำเร็จ!\n⏱️ ใช้เวลา: ' + r.durationMin + ' นาที';
+      alert(msg);
+      loadJobs();
+    } else {
+      alert('❌ ' + (r.error || 'จบงานไม่สำเร็จ'));
+    }
+  }).catch(function(e) { alert('❌ ' + e.message); });
+}
+
+function updateTimers() {
+  document.querySelectorAll('[id^="timer_"]').forEach(function(el) {
+    var acceptTime = el.getAttribute('data-accept');
+    if (!acceptTime) return;
+    var mins = Math.floor((new Date() - new Date(acceptTime)) / 60000);
+    var secs = Math.floor((new Date() - new Date(acceptTime)) / 1000) % 60;
+    el.textContent = '⏱️ ' + mins + ':' + (secs < 10 ? '0' : '') + secs + ' นาที';
+  });
+}
+
+function esc(s) { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PMG Repair Flow</title>
+<style>
+:root{--bg:#f0f4f8;--card:#fff;--accent:#2563eb;--accent2:#7c3aed;--green:#059669;--red:#dc2626;--orange:#ea580c;--text:#1e293b;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.header{text-align:center;margin-bottom:30px}
+.header h1{font-size:28px;color:var(--accent);display:flex;align-items:center;gap:8px;justify-content:center}
+.header p{color:var(--text2);font-size:14px;margin-top:6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;max-width:800px;width:100%}
+.card{background:var(--card);border-radius:var(--radius);padding:24px;text-align:center;box-shadow:var(--shadow);border:1px solid var(--border);cursor:pointer;transition:.2s;text-decoration:none;color:var(--text);display:block}
+.card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.12);border-color:var(--accent)}
+.card .icon{font-size:36px;margin-bottom:8px}
+.card .title{font-size:16px;font-weight:600;color:var(--text)}
+.card .desc{font-size:12px;color:var(--text3);margin-top:4px}
+.card.mechanic{border-left:4px solid var(--orange)}
+.card.plan{border-left:4px solid var(--accent)}
+.card.dash{border-left:4px solid var(--green)}
+.card.receive{border-left:4px solid var(--accent2)}
+.branch-toggle{display:flex;gap:8px;margin-bottom:16px;justify-content:center}
+.branch-btn{padding:8px 20px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:14px;font-weight:600;transition:.2s}
+.branch-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>🚗 PMG Repair Flow</h1>
+<p>ระบบบริหารงานซ่อมแบบ Real-time — ช่างคลิกรับ/จบงานเอง</p>
+</div>
+<div class="branch-toggle">
+<button class="branch-btn active" onclick="setBranch('cnb')">มหาราช (CNB)</button>
+<button class="branch-btn" onclick="setBranch('csk')">ซีเอสเค (CSK)</button>
+</div>
+<div class="cards">
+<a class="card receive" id="card-receive" href="#">
+<div class="icon">🚗</div>
+<div class="title">รับรถเข้าซ่อม</div>
+<div class="desc">SA / ฝ่ายรับรถ</div>
+</a>
+<a class="card plan" id="card-plan" href="#">
+<div class="icon">📋</div>
+<div class="title">วางแผนซ่อม</div>
+<div class="desc">หัวหน้าโรงซ่อม — จ่ายงานดิจิทัล</div>
+</a>
+<a class="card mechanic" id="card-mechanic" href="#">
+<div class="icon">🔧</div>
+<div class="title">ช่างซ่อม</div>
+<div class="desc">รับงาน / จบงาน (มือถือ)</div>
+</a>
+<a class="card dash" id="card-dash" href="#">
+<div class="icon">📊</div>
+<div class="title">Dashboard</div>
+<div class="desc">ดูสถานะ real-time</div>
+</a>
+</div>
+<script>
+var currentBranch = 'cnb';
+var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
+
+function setBranch(b) {
+  currentBranch = b;
+  document.querySelectorAll('.branch-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.textContent.indexOf(b.toUpperCase()) >= 0);
+  });
+  updateLinks();
+}
+
+function updateLinks() {
+  var base = SCRIPT_URL;
+  document.getElementById('card-receive').href = base + '?receive=1&branch=' + currentBranch;
+  document.getElementById('card-plan').href = base + '?plan=1&branch=' + currentBranch;
+  document.getElementById('card-mechanic').href = base + '?mechanic=1&branch=' + currentBranch;
+  document.getElementById('card-dash').href = base + '?dash=1&branch=' + currentBranch;
+}
+
+updateLinks();
+</script>
+</body>
+</html>
