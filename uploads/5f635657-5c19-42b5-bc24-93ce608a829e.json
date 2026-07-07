@@ -1,0 +1,54 @@
+{
+  "customer": {
+    "name_th": "",
+    "name_en": "",
+    "id_card": "",
+    "address": "",
+    "phone": "",
+    "email": ""
+  },
+  "vehicle": {
+    "brand": "Toyota",
+    "model": "โธ!0ลเทญู1",
+    "year": "2023",
+    "color": "",
+    "license_plate": "",
+    "province": "",
+    "chassis_no": "",
+    "engine_no": "",
+    "cc": "",
+    "vehicle_type": "",
+    "registration_date": "",
+    "owner_name": ""
+  },
+  "insurance": {
+    "company": "",
+    "policy_number": "POL-2026-12345",
+    "policy_type": "ประเภท 1",
+    "effective_date": "01/01/2569",
+    "expiry_date": "31/12/2569",
+    "premium": "15000",
+    "por_ror_bor_premium": "",
+    "total_premium": "",
+    "deductible": "",
+    "sum_insured": "",
+    "coverage_details": ""
+  },
+  "tax": {
+    "tax_amount": "",
+    "tax_year": "",
+    "tax_paid_date": "",
+    "tax_receipt_no": ""
+  },
+  "driving_license": {
+    "license_number": "",
+    "license_type": "",
+    "license_holder": "",
+    "license_expiry": "",
+    "license_issued_date": ""
+  },
+  "session_id": "5f635657-5c19-42b5-bc24-93ce608a829e",
+  "ocr_raw": {
+    "policy_type1": "แรรรรธรรธรธรรธรรธรรรรรงรธรธรง 1\n\nสรรรธรรรธรรรธรรท [รรธรง (ธรรธรๆ\nแรรรรรรรชร POL-2026-12345\n\nแรรรรธรรธรรธรรรา กธรรธรรรก าชร\n\nแรรรรธรร1 £1234 EEE\nแพรรรห Toyota โธ!0ลเทญู1 2023\nแรรรรรธง ABO123456789\n\nแรรรรธรรธรร 15.000 ธร\n\nรรรรรรรธรง 01/01/2569 - 31/12/2569"
+  }
+}

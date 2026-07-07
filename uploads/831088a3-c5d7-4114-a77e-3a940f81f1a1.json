@@ -1,0 +1,54 @@
+{
+  "customer": {
+    "name_th": "",
+    "name_en": "",
+    "id_card": "",
+    "address": "",
+    "phone": "",
+    "email": ""
+  },
+  "vehicle": {
+    "brand": "Honda",
+    "model": "Civic",
+    "year": "",
+    "color": "",
+    "license_plate": "กธ 5678",
+    "province": "กรุงเทพมหานคร",
+    "chassis_no": "",
+    "engine_no": "",
+    "cc": "",
+    "vehicle_type": "",
+    "registration_date": "",
+    "owner_name": ""
+  },
+  "insurance": {
+    "company": "Thai Insurance Co., Ltd.",
+    "policy_number": "TH-2026-7890",
+    "policy_type": "",
+    "effective_date": "",
+    "expiry_date": "",
+    "premium": "25,000",
+    "por_ror_bor_premium": "",
+    "total_premium": "",
+    "deductible": "",
+    "sum_insured": "",
+    "coverage_details": ""
+  },
+  "tax": {
+    "tax_amount": "",
+    "tax_year": "",
+    "tax_paid_date": "",
+    "tax_receipt_no": ""
+  },
+  "driving_license": {
+    "license_number": "",
+    "license_type": "",
+    "license_holder": "",
+    "license_expiry": "",
+    "license_issued_date": ""
+  },
+  "ocr_raw": {
+    "policy_type1": "Policy No: TH-2026-7890\n\nCompany. Thai Insurance Co, Ltd.\n\nBrand: Honda, Modet Civic\n\nLicense: 835678\n\n9999099002000)\n\nPremium: 25,000 Baht"
+  },
+  "session_id": "831088a3-c5d7-4114-a77e-3a940f81f1a1"
+}

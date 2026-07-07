@@ -1,0 +1,54 @@
+{
+  "customer": {
+    "name_th": "",
+    "name_en": "",
+    "id_card": "",
+    "address": "",
+    "phone": "",
+    "email": ""
+  },
+  "vehicle": {
+    "brand": "",
+    "model": "",
+    "year": "",
+    "color": "",
+    "license_plate": "",
+    "province": "",
+    "chassis_no": "",
+    "engine_no": "",
+    "cc": "",
+    "vehicle_type": "",
+    "registration_date": "",
+    "owner_name": ""
+  },
+  "insurance": {
+    "company": "",
+    "policy_number": "TEST-999",
+    "policy_type": "ประเภท 1",
+    "effective_date": "",
+    "expiry_date": "",
+    "premium": "",
+    "por_ror_bor_premium": "",
+    "total_premium": "",
+    "deductible": "",
+    "sum_insured": "",
+    "coverage_details": ""
+  },
+  "tax": {
+    "tax_amount": "",
+    "tax_year": "",
+    "tax_paid_date": "",
+    "tax_receipt_no": ""
+  },
+  "driving_license": {
+    "license_number": "",
+    "license_type": "",
+    "license_holder": "",
+    "license_expiry": "",
+    "license_issued_date": ""
+  },
+  "session_id": "fc2852ff-b9f1-4dfa-8ed5-2c3cb3954717",
+  "ocr_raw": {
+    "policy_type1": "Policy. TEST-999"
+  }
+}

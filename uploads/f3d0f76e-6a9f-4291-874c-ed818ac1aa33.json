@@ -1,0 +1,54 @@
+{
+  "customer": {
+    "name_th": "",
+    "name_en": "",
+    "id_card": "",
+    "address": "",
+    "phone": "",
+    "email": ""
+  },
+  "vehicle": {
+    "brand": "",
+    "model": "",
+    "year": "",
+    "color": "",
+    "license_plate": "",
+    "province": "",
+    "chassis_no": "",
+    "engine_no": "",
+    "cc": "",
+    "vehicle_type": "",
+    "registration_date": "",
+    "owner_name": ""
+  },
+  "insurance": {
+    "company": "",
+    "policy_number": "",
+    "policy_type": "",
+    "effective_date": "",
+    "expiry_date": "",
+    "premium": "",
+    "por_ror_bor_premium": "",
+    "total_premium": "",
+    "deductible": "",
+    "sum_insured": "",
+    "coverage_details": ""
+  },
+  "tax": {
+    "tax_amount": "",
+    "tax_year": "",
+    "tax_paid_date": "",
+    "tax_receipt_no": ""
+  },
+  "driving_license": {
+    "license_number": "",
+    "license_type": "",
+    "license_holder": "",
+    "license_expiry": "",
+    "license_issued_date": ""
+  },
+  "ocr_raw": {
+    "policy_type1": "10:22 ๑                                               NES?! ED\n\n( 2 rycloudflarecom + :\n\n\\\n\nกําลังอ่านข้อมูล...\n\n| กําลังวิเคราะห์รูปภาพของคุณ\n\nM4 อัปโหลดรูปภาพ\n[ง /แวิเคราะห์เอกสาร\n\n6 เรียบเรียงข้อมูล\n\nIII      O      <"
+  },
+  "session_id": "f3d0f76e-6a9f-4291-874c-ed818ac1aa33"
+}

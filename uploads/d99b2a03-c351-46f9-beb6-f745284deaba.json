@@ -1,0 +1,54 @@
+{
+  "customer": {
+    "name_th": "เซธรระทาย",
+    "name_en": "",
+    "id_card": "",
+    "address": "1234 Bangkok",
+    "phone": "",
+    "email": ""
+  },
+  "vehicle": {
+    "brand": "Toyota",
+    "model": "Camry",
+    "year": "2023",
+    "color": "",
+    "license_plate": "1234",
+    "province": "Bangkok",
+    "chassis_no": "",
+    "engine_no": "",
+    "cc": "",
+    "vehicle_type": "",
+    "registration_date": "",
+    "owner_name": "เซธรระทาย"
+  },
+  "insurance": {
+    "company": "",
+    "policy_number": "",
+    "policy_type": "",
+    "effective_date": "",
+    "expiry_date": "",
+    "premium": "",
+    "por_ror_bor_premium": "",
+    "total_premium": "",
+    "deductible": "",
+    "sum_insured": "",
+    "coverage_details": ""
+  },
+  "tax": {
+    "tax_amount": "",
+    "tax_year": "",
+    "tax_paid_date": "",
+    "tax_receipt_no": ""
+  },
+  "driving_license": {
+    "license_number": "",
+    "license_type": "",
+    "license_holder": "",
+    "license_expiry": "",
+    "license_issued_date": ""
+  },
+  "session_id": "d99b2a03-c351-46f9-beb6-f745284deaba",
+  "ocr_raw": {
+    "car_registration": "เซธรระทาย 1234 Bangkok\nToyota Camry 2023,"
+  }
+}

@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>สแกนเอกสารประกันรถยนต์</title>
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --success: #34a853;
+            --warning: #fbbc04;
+            --danger: #ea4335;
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text: #202124;
+            --text-secondary: #5f6368;
+            --border: #dadce0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.15);
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 100px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(26,115,232,0.3);
+        }
+
+        .header-icon {
+            width: 42px; height: 42px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 11px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .header-text h1 { font-size: 18px; font-weight: 700; }
+        .header-text p { font-size: 12px; opacity: 0.85; }
+
+        /* Stepper */
+        .stepper {
+            display: flex;
+            padding: 14px 20px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            gap: 4px;
+        }
+
+        .step { flex: 1; text-align: center; }
+
+        .step-circle {
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            background: var(--border);
+            color: var(--text-secondary);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 4px;
+            font-size: 13px; font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .step.active .step-circle { background: var(--primary); color: white; box-shadow: 0 2px 6px rgba(26,115,232,0.3); }
+        .step.done .step-circle { background: var(--success); color: white; }
+        .step-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+        .step.active .step-label { color: var(--primary); font-weight: 700; }
+        .step.done .step-label { color: var(--success); }
+
+        /* Connector line between steps */
+        .step-connector {
+            display: flex;
+            align-items: center;
+            padding: 14px 0;
+            background: var(--card-bg);
+        }
+        .step-connector::after {
+            content: '';
+            flex: 1;
+            height: 2px;
+            background: var(--border);
+            margin: 0 -8px;
+            align-self: flex-start;
+            margin-top: 15px;
+        }
+        .step.done + .step-connector::after,
+        .step-connector.done::after { background: var(--success); }
+
+        /* Main content */
+        .main { padding: 16px; }
+
+        /* Page sections */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* Hint box */
+        .hint-box {
+            background: #e8f0fe;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 13px;
+            color: #1a73e8;
+            line-height: 1.5;
+        }
+        .hint-box .icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+
+        /* Upload card */
+        .upload-section { margin-bottom: 12px; }
+
+        .upload-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+            border: 2px dashed var(--border);
+            transition: all 0.3s;
+            cursor: pointer;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-card:hover, .upload-card.dragover {
+            border-color: var(--primary);
+            background: #f0f6ff;
+        }
+
+        .upload-card.has-image {
+            border-style: solid;
+            border-color: var(--success);
+            padding: 8px;
+        }
+
+        .upload-card input[type="file"] {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .upload-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .upload-action-btn {
+            flex: 1;
+            padding: 10px 8px;
+            border-radius: 10px;
+            border: 1.5px solid var(--border);
+            background: var(--card-bg);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+            font-family: inherit;
+            color: var(--text);
+        }
+
+        .upload-action-btn:hover {
+            border-color: var(--primary);
+            background: #f0f6ff;
+        }
+
+        .upload-action-btn:active {
+            transform: scale(0.97);
+        }
+
+        .upload-action-btn.camera-btn {
+            background: #e8f0fe;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .upload-action-btn.camera-btn:hover {
+            background: #d2e3fc;
+        }
+
+        .upload-action-btn.gallery-btn {
+            background: #fef7e0;
+            border-color: #f9a825;
+            color: #b06000;
+        }
+
+        .upload-action-btn.gallery-btn:hover {
+            background: #fdecc8;
+        }
+
+        /* Hidden file inputs - use opacity/position instead of display:none for better iOS compatibility */
+        .hidden-file-input {
+            position: absolute;
+            width: 0;
+            height: 0;
+            opacity: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .upload-inner {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            text-align: left;
+        }
+
+        .upload-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            background: #f1f3f4;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .upload-card.has-image .upload-icon { background: #e6f4ea; }
+
+        .upload-info { flex: 1; min-width: 0; }
+        .upload-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+        .upload-subtitle { font-size: 12px; color: var(--text-secondary); }
+        .upload-status { font-size: 11px; margin-top: 3px; font-weight: 600; }
+        .upload-status.ready { color: var(--success); }
+        .upload-status.pending { color: var(--text-secondary); }
+
+        .upload-badge {
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            background: #fef7e0;
+            color: #b06000;
+            display: inline-block;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        /* Preview image inside card */
+        .preview-wrap {
+            margin-top: 8px;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .preview-img {
+            width: 100%;
+            max-height: 180px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #f8f9fa;
+            display: block;
+        }
+
+        .preview-remove {
+            position: absolute;
+            top: 6px; right: 6px;
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: rgba(234,67,53,0.9);
+            color: white;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 3;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Data result cards */
+        .data-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            margin-bottom: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .data-card-header {
+            padding: 14px 16px;
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .data-card-header:active { background: #f8f9fa; }
+        .data-card-header .icon { font-size: 20px; }
+        .data-card-header .toggle {
+            margin-left: auto;
+            transition: transform 0.3s;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .data-card-header.collapsed .toggle { transform: rotate(-90deg); }
+
+        .data-card-body { padding: 12px 16px; }
+        .data-card-body.collapsed { display: none; }
+
+        .field-row {
+            display: flex;
+            align-items: flex-start;
+            padding: 7px 0;
+            border-bottom: 1px solid #f1f3f4;
+            gap: 8px;
+        }
+        .field-row:last-child { border-bottom: none; }
+
+        .field-label {
+            min-width: 110px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            flex-shrink: 0;
+            padding-top: 8px;
+        }
+
+        .field-value { flex: 1; }
+
+        .field-value input,
+        .field-value textarea {
+            width: 100%;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s, background 0.2s;
+            background: #f8f9fa;
+            color: var(--text);
+        }
+
+        .field-value input:focus,
+        .field-value textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(26,115,232,0.1);
+        }
+
+        .field-value textarea { min-height: 60px; resize: vertical; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 10px;
+            border: none;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 2px 8px rgba(26,115,232,0.3);
+        }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-success { background: var(--success); color: white; }
+        .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+        .btn-block { width: 100%; }
+        .btn-lg { padding: 16px 32px; font-size: 17px; border-radius: 14px; }
+
+        /* Action bar */
+        .action-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            padding: 12px 16px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            background: var(--card-bg);
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            gap: 10px;
+            z-index: 99;
+        }
+        .action-bar .btn { flex: 1; }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .loading-overlay.active { display: flex; }
+
+        .loading-box {
+            background: white;
+            border-radius: 16px;
+            padding: 32px 36px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            max-width: 300px;
+            width: 90%;
+        }
+
+        .loading-spinner {
+            width: 48px; height: 48px;
+            border: 3px solid #e8f0fe;
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-text { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+        .loading-subtext { font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
+
+        .loading-steps {
+            margin-top: 16px;
+            text-align: left;
+        }
+        .loading-step {
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding: 3px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .loading-step.done { color: var(--success); }
+        .loading-step.active { color: var(--primary); font-weight: 600; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-120px);
+            background: #323232;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 300;
+            transition: transform 0.3s ease;
+            font-weight: 500;
+            max-width: 90%;
+            text-align: center;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* Summary */
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f3f4;
+            gap: 12px;
+        }
+        .summary-item:last-child { border-bottom: none; }
+        .summary-label { color: var(--text-secondary); font-size: 14px; flex-shrink: 0; }
+        .summary-value { font-weight: 700; font-size: 14px; text-align: right; word-break: break-word; }
+
+        .summary-section-title {
+            font-weight: 700; font-size: 14px;
+            margin-top: 12px; margin-bottom: 4px;
+            color: var(--primary);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .summary-section-title:first-child { margin-top: 0; }
+
+        /* Responsive */
+        @media (min-width: 768px) {
+            .main { max-width: 540px; margin: 0 auto; }
+            .action-bar { justify-content: center; }
+            .action-bar .btn { max-width: 240px; }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <div class="header-icon">🚗</div>
+    <div class="header-text">
+        <h1>สแกนเอกสารประกันรถยนต์</h1>
+        <p>ถ่ายรูป → AI อ่านข้อมูล → ตรวจสอบ → บันทึก</p>
+    </div>
+</div>
+
+<!-- Stepper -->
+<div class="stepper">
+    <div class="step active" id="step1"><div class="step-circle">1</div><div class="step-label">ถ่ายรูป</div></div>
+    <div class="step" id="step2"><div class="step-circle">2</div><div class="step-label">ตรวจข้อมูล</div></div>
+    <div class="step" id="step3"><div class="step-circle">3</div><div class="step-label">บันทึก</div></div>
+</div>
+
+<!-- ============ PAGE 1: UPLOAD ============ -->
+<div class="page active" id="page1">
+    <div class="main">
+        <div class="hint-box">
+            <span class="icon">📸</span>
+            <span>ถ่ายรูปให้ชัด แสงสว่างพอ เอกสารอยู่ตรงกลางภาพ จะอ่านข้อมูลได้แม่นยำขึ้น ถ่ายแต่ละใบแยกกัน</span>
+        </div>
+
+        <!-- 1. กรมธรรม์ ประเภท 1 -->
+        <div class="upload-section">
+            <div class="upload-card" id="card-policy_type1">
+                <div class="upload-inner">
+                    <div class="upload-icon" id="uicon-policy_type1">📄</div>
+                    <div class="upload-info">
+                        <div class="upload-title">กรมธรรม์ประกันภัย ประเภท 1</div>
+                        <div class="upload-subtitle" id="usub-policy_type1">ถ่ายรูป หรือ เลือกจากเครื่อง</div>
+                        <div class="upload-status pending" id="ustat-policy_type1">ยังไม่ได้เลือก</div>
+                    </div>
+                </div>
+                <div class="upload-actions">
+                    <button class="upload-action-btn camera-btn" onclick="openCamera('policy_type1')">📸 ถ่ายรูป</button>
+                    <button class="upload-action-btn gallery-btn" onclick="openGallery('policy_type1')">🖼️ เลือกจากเครื่อง</button>
+                    <input type="file" accept="image/*" capture="environment" id="cam-policy_type1" class="hidden-file-input">
+                    <input type="file" accept="image/*" id="gal-policy_type1" class="hidden-file-input">
+                </div>
+                <div id="preview-policy_type1" style="display:none">
+                    <div class="preview-wrap">
+                        <img class="preview-img" id="img-policy_type1">
+                        <button class="preview-remove" id="rm-policy_type1">✕</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. พ.ร.บ. -->
+        <div class="upload-section">
+            <div class="upload-card" id="card-por_ror_bor">
+                <div class="upload-inner">
+                    <div class="upload-icon" id="uicon-por_ror_bor">📋</div>
+                    <div class="upload-info">
+                        <div class="upload-title">พ.ร.บ. คุ้มครองผู้ได้รับบาดเจ็บ</div>
+                        <div class="upload-subtitle" id="usub-por_ror_bor">ถ่ายรูป หรือ เลือกจากเครื่อง</div>
+                        <div class="upload-status pending" id="ustat-por_ror_bor">ยังไม่ได้เลือก</div>
+                    </div>
+                </div>
+                <div class="upload-actions">
+                    <button class="upload-action-btn camera-btn" onclick="openCamera('por_ror_bor')">📸 ถ่ายรูป</button>
+                    <button class="upload-action-btn gallery-btn" onclick="openGallery('por_ror_bor')">🖼️ เลือกจากเครื่อง</button>
+                    <input type="file" accept="image/*" capture="environment" id="cam-por_ror_bor" class="hidden-file-input">
+                    <input type="file" accept="image/*" id="gal-por_ror_bor" class="hidden-file-input">
+                </div>
+                <div id="preview-por_ror_bor" style="display:none">
+                    <div class="preview-wrap">
+                        <img class="preview-img" id="img-por_ror_bor">
+                        <button class="preview-remove" id="rm-por_ror_bor">✕</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. ใบขับขี่ -->
+        <div class="upload-section">
+            <div class="upload-card" id="card-driving_license">
+                <div class="upload-inner">
+                    <div class="upload-icon" id="uicon-driving_license">🪪</div>
+                    <div class="upload-info">
+                        <div class="upload-title">ใบขับขี่</div>
+                        <div class="upload-subtitle" id="usub-driving_license">ถ่ายรูป หรือ เลือกจากเครื่อง</div>
+                        <div class="upload-status pending" id="ustat-driving_license">ยังไม่ได้เลือก</div>
+                    </div>
+                </div>
+                <div class="upload-actions">
+                    <button class="upload-action-btn camera-btn" onclick="openCamera('driving_license')">📸 ถ่ายรูป</button>
+                    <button class="upload-action-btn gallery-btn" onclick="openGallery('driving_license')">🖼️ เลือกจากเครื่อง</button>
+                    <input type="file" accept="image/*" capture="environment" id="cam-driving_license" class="hidden-file-input">
+                    <input type="file" accept="image/*" id="gal-driving_license" class="hidden-file-input">
+                </div>
+                <div id="preview-driving_license" style="display:none">
+                    <div class="preview-wrap">
+                        <img class="preview-img" id="img-driving_license">
+                        <button class="preview-remove" id="rm-driving_license">✕</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. สมุดทะเบียนรถ -->
+        <div class="upload-section">
+            <div class="upload-card" id="card-car_registration">
+                <div class="upload-inner">
+                    <div class="upload-icon" id="uicon-car_registration">🚙</div>
+                    <div class="upload-info">
+                        <div class="upload-title">สมุดทะเบียนรถ</div>
+                        <div class="upload-subtitle" id="usub-car_registration">ถ่ายรูป หรือ เลือกจากเครื่อง</div>
+                        <div class="upload-status pending" id="ustat-car_registration">ยังไม่ได้เลือก</div>
+                    </div>
+                </div>
+                <div class="upload-actions">
+                    <button class="upload-action-btn camera-btn" onclick="openCamera('car_registration')">📸 ถ่ายรูป</button>
+                    <button class="upload-action-btn gallery-btn" onclick="openGallery('car_registration')">🖼️ เลือกจากเครื่อง</button>
+                    <input type="file" accept="image/*" capture="environment" id="cam-car_registration" class="hidden-file-input">
+                    <input type="file" accept="image/*" id="gal-car_registration" class="hidden-file-input">
+                </div>
+                <div id="preview-car_registration" style="display:none">
+                    <div class="preview-wrap">
+                        <img class="preview-img" id="img-car_registration">
+                        <button class="preview-remove" id="rm-car_registration">✕</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. บัตรประชาชน (optional) -->
+        <div class="upload-section">
+            <div class="upload-card" id="card-national_id">
+                <div class="upload-inner">
+                    <div class="upload-icon" id="uicon-national_id">🪪</div>
+                    <div class="upload-info">
+                        <div class="upload-title">บัตรประชาชน <span class="upload-badge">ไม่จำเป็น</span></div>
+                        <div class="upload-subtitle" id="usub-national_id">ถ่ายรูป หรือ เลือกจากเครื่อง</div>
+                        <div class="upload-status pending" id="ustat-national_id">ยังไม่ได้เลือก</div>
+                    </div>
+                </div>
+                <div class="upload-actions">
+                    <button class="upload-action-btn camera-btn" onclick="openCamera('national_id')">📸 ถ่ายรูป</button>
+                    <button class="upload-action-btn gallery-btn" onclick="openGallery('national_id')">🖼️ เลือกจากเครื่อง</button>
+                    <input type="file" accept="image/*" capture="environment" id="cam-national_id" class="hidden-file-input">
+                    <input type="file" accept="image/*" id="gal-national_id" class="hidden-file-input">
+                </div>
+                <div id="preview-national_id" style="display:none">
+                    <div class="preview-wrap">
+                        <img class="preview-img" id="img-national_id">
+                        <button class="preview-remove" id="rm-national_id">✕</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <button class="btn btn-primary btn-lg btn-block" id="btnProcess" disabled onclick="processDocuments()">
+            🔍 อ่านข้อมูลจากรูป
+        </button>
+    </div>
+</div>
+
+<!-- ============ PAGE 2: REVIEW DATA ============ -->
+<div class="page" id="page2">
+    <div class="main">
+            <div class="hint-box">
+                <span class="icon">✏️</span>
+                <span>กรุณาตรวจสอบข้อมูลที่ AI อ่านได้ แก้ไขได้ทุกช่อง แล้วกด "บันทึก"</span>
+            </div>
+            <div id="ocrToggleWrap" style="display:none; margin-bottom:12px">
+                <button class="btn btn-outline btn-block" onclick="toggleOcrRaw()" id="ocrToggleBtn">📄 ดูข้อความ OCR ที่อ่านได้</button>
+                <div id="ocrRawContent" style="display:none; background:var(--card-bg); border-radius:var(--radius); padding:14px; margin-top:8px; font-size:13px; white-space:pre-wrap; max-height:300px; overflow-y:auto; border:1px solid var(--border); color:var(--text-secondary)"></div>
+            </div>
+        <div id="dataCards"></div>
+    </div>
+    <div class="action-bar">
+        <button class="btn btn-outline" onclick="goBack(2)">← กลับ</button>
+        <button class="btn btn-success btn-lg" onclick="goToPage(3)" style="flex:2">✅ ถูกต้อง บันทึก</button>
+    </div>
+</div>
+
+<!-- ============ PAGE 3: DONE ============ -->
+<div class="page" id="page3">
+    <div class="main">
+        <div class="data-card">
+            <div class="data-card-header" style="justify-content:center; background:#e6f4ea; border-bottom:none; padding:24px">
+                <div style="text-align:center">
+                    <div style="font-size:52px; margin-bottom:8px">✅</div>
+                    <div style="font-size:18px; font-weight:700; color:#1e8e3e">บันทึกข้อมูลเรียบร้อย!</div>
+                    <div style="font-size:13px; color:var(--text-secondary); margin-top:4px" id="savedTime"></div>
+                </div>
+            </div>
+            <div class="data-card-body" id="summaryBody"></div>
+        </div>
+        <div style="text-align:center; margin-top:16px; display:flex; gap:10px; justify-content:center">
+            <button class="btn btn-outline" onclick="exportJSON()">📥 ส่งออก JSON</button>
+            <button class="btn btn-primary" onclick="resetAll()">🔄 สแกนใหม่</button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-box">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">กำลังอ่านข้อมูล...</div>
+        <div class="loading-subtext">AI กำลังวิเคราะห์รูปภาพของคุณ</div>
+        <div class="loading-steps">
+            <div class="loading-step" id="ls1">⏳ อัปโหลดรูปภาพ</div>
+            <div class="loading-step" id="ls2">⏳ AI วิเคราะห์เอกสาร</div>
+            <div class="loading-step" id="ls3">⏳ เรียบเรียงข้อมูล</div>
+        </div>
+        <div class="loading-elapsed" id="loadingElapsed" style="margin-top:10px;font-size:13px;color:var(--text-secondary);text-align:center;">เวลาที่ผ่าน: <span id="elapsedTime">0</span> วินาที</div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ STATE ============
+const uploadedFiles = {};
+let sessionId = null;
+let extractedResult = null;
+
+const DOC_TYPES = [
+    { key: 'policy_type1', label: 'กรมธรรม์ประกันภัย ประเภท 1', icon: '📄' },
+    { key: 'por_ror_bor', label: 'พ.ร.บ.', icon: '📋' },
+    { key: 'driving_license', label: 'ใบขับขี่', icon: '🪪' },
+    { key: 'car_registration', label: 'สมุดทะเบียนรถ', icon: '🚙' },
+    { key: 'national_id', label: 'บัตรประชาชน', icon: '🪪' },
+];
+
+// ============ INIT ============
+DOC_TYPES.forEach(dt => {
+    const camInput = document.getElementById('cam-' + dt.key);
+    const galInput = document.getElementById('gal-' + dt.key);
+    const removeBtn = document.getElementById('rm-' + dt.key);
+
+    camInput.addEventListener('change', function() { handleFileSelect(this, dt.key); });
+    galInput.addEventListener('change', function() { handleFileSelect(this, dt.key); });
+    removeBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        removeImage(dt.key);
+    });
+});
+
+function openCamera(docType) {
+    document.getElementById('cam-' + docType).click();
+}
+
+function openGallery(docType) {
+    document.getElementById('gal-' + docType).click();
+}
+
+// ============ FILE HANDLING ============
+function handleFileSelect(input, docType) {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+        input.value = '';
+        return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+        showToast('ไฟล์ใหญ่เกินไป (สูงสุด 15MB)');
+        input.value = '';
+        return;
+    }
+
+    uploadedFiles[docType] = file;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('img-' + docType).src = e.target.result;
+        document.getElementById('preview-' + docType).style.display = 'block';
+        document.getElementById('uicon-' + docType).style.background = '#e6f4ea';
+        document.getElementById('usub-' + docType).textContent = file.name;
+        document.getElementById('ustat-' + docType).textContent = '✅ ถ่ายแล้ว';
+        document.getElementById('ustat-' + docType).className = 'upload-status ready';
+        document.getElementById('card-' + docType).classList.add('has-image');
+        updateProcessButton();
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeImage(docType) {
+    delete uploadedFiles[docType];
+    document.getElementById('cam-' + docType).value = '';
+    document.getElementById('gal-' + docType).value = '';
+    document.getElementById('preview-' + docType).style.display = 'none';
+    document.getElementById('uicon-' + docType).style.background = '#f1f3f4';
+    document.getElementById('usub-' + docType).textContent = 'ถ่ายรูป หรือ เลือกจากเครื่อง';
+    document.getElementById('ustat-' + docType).textContent = 'ยังไม่ได้เลือก';
+    document.getElementById('ustat-' + docType).className = 'upload-status pending';
+    document.getElementById('card-' + docType).classList.remove('has-image');
+    updateProcessButton();
+}
+
+function updateProcessButton() {
+    const count = Object.keys(uploadedFiles).length;
+    const btn = document.getElementById('btnProcess');
+    btn.disabled = count === 0;
+    btn.textContent = count > 0 ? '🔍 อ่านข้อมูลจากรูป (' + count + ' รูป)' : '🔍 อ่านข้อมูลจากรูป';
+}
+
+// ============ PROCESS DOCUMENTS ============
+let elapsedTimer = null;
+
+async function processDocuments() {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.classList.add('active');
+
+    // Start elapsed time counter
+    const startTime = Date.now();
+    const elapsedSpan = document.getElementById('elapsedTime');
+    document.getElementById('loadingElapsed').style.display = 'block';
+    elapsedTimer = setInterval(() => {
+        const secs = Math.floor((Date.now() - startTime) / 1000);
+        elapsedSpan.textContent = secs;
+        // Update subtext to show we're still working
+        const subtext = document.querySelector('.loading-subtext');
+        if (subtext && secs > 30) {
+            subtext.textContent = 'AI กำลังวิเคราะห์รูปภาพ... (อาจใช้เวลา 1-3 นาที)';
+        }
+    }, 1000);
+
+    // Step 1: uploading
+    setLoadStep(1, 'active');
+    setLoadStep(2, '');
+    setLoadStep(3, '');
+
+    const formData = new FormData();
+    for (const [docType, file] of Object.entries(uploadedFiles)) {
+        formData.append('files', file);
+        formData.append('doc_types', docType);
+    }
+
+    try {
+        setLoadStep(1, 'done');
+
+        // Step 2: AI processing (5 min timeout with retry)
+        setLoadStep(2, 'active');
+
+        let response;
+        let lastError;
+        const MAX_RETRIES = 2;
+        
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min timeout
+
+            try {
+                if (attempt > 1) {
+                    const subtext = document.querySelector('.loading-subtext');
+                    if (subtext) subtext.textContent = 'กำลังลองใหม่อีกครั้ง... (ครั้งที่ ' + attempt + '/' + MAX_RETRIES + ')';
+                }
+                response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
+                if (response.ok || response.status === 500) break; // got a response, proceed
+            } catch (fetchErr) {
+                clearTimeout(timeoutId);
+                lastError = fetchErr;
+                if (fetchErr.name === 'AbortError') {
+                    if (attempt < MAX_RETRIES) continue;
+                    throw new Error('⏰ หมดเวลา (5 นาที) กรุณาลองใหม่ หรือใช้รูปที่เล็กกว่า');
+                }
+                if (attempt < MAX_RETRIES) {
+                    await new Promise(r => setTimeout(r, 3000)); // wait 3s before retry
+                    continue;
+                }
+                throw new Error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+            }
+        }
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'เกิดข้อผิดพลาดในการอ่านข้อมูล');
+        }
+
+        if (result.error && !result.customer) {
+            throw new Error(result.error);
+        }
+
+        setLoadStep(2, 'done');
+        setLoadStep(3, 'active');
+
+        // Small delay for UX
+        await new Promise(r => setTimeout(r, 300));
+        setLoadStep(3, 'done');
+
+        sessionId = result.session_id;
+        extractedResult = result;
+        renderDataCards(result);
+        
+        // Show OCR raw toggle if data exists
+        if (result.ocr_raw) {
+            const ocrWrap = document.getElementById('ocrToggleWrap');
+            ocrWrap.style.display = 'block';
+            let ocrHtml = '';
+            const docLabels = {
+                policy_type1: 'กรมธรรม์ประกันภัย ประเภท 1',
+                por_ror_bor: 'พ.ร.บ.',
+                driving_license: 'ใบขับขี่',
+                car_registration: 'สมุดทะเบียนรถ',
+                national_id: 'บัตรประชาชน'
+            };
+            for (const [key, text] of Object.entries(result.ocr_raw)) {
+                ocrHtml += '━━━ ' + (docLabels[key] || key) + ' ━━━\n';
+                ocrHtml += (text || '(ไม่พบข้อความ)') + '\n\n';
+            }
+            document.getElementById('ocrRawContent').textContent = ocrHtml;
+        }
+
+        // Check if all fields are empty (AI couldn't read the document)
+        const allSections = ['customer', 'vehicle', 'insurance', 'tax', 'driving_license'];
+        let hasAnyData = false;
+        for (const sec of allSections) {
+            if (result[sec]) {
+                for (const val of Object.values(result[sec])) {
+                    if (val && val.trim && val.trim()) { hasAnyData = true; break; }
+                }
+            }
+            if (hasAnyData) break;
+        }
+        
+        goToPage(2);
+        if (hasAnyData) {
+            showToast('✅ อ่านข้อมูลสำเร็จ! กรุณาตรวจสอบ');
+        } else {
+            showToast('⚠️ ไม่พบข้อมูลในรูปภาพ กรุณาถ่ายรูปเอกสารจริงให้ชัด');
+        }
+    } catch (err) {
+        showToast('❌ ' + err.message);
+        console.error(err);
+    } finally {
+        if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+        document.getElementById('loadingElapsed').style.display = 'none';
+        overlay.classList.remove('active');
+    }
+}
+
+function setLoadStep(num, state) {
+    const el = document.getElementById('ls' + num);
+    if (state === 'done') {
+        el.className = 'loading-step done';
+        el.textContent = el.textContent.replace('⏳', '✅').replace('🔄', '✅');
+    } else if (state === 'active') {
+        el.className = 'loading-step active';
+        el.textContent = el.textContent.replace('⏳', '🔄').replace('✅', '🔄');
+    } else {
+        el.className = 'loading-step';
+        el.textContent = el.textContent.replace('🔄', '⏳').replace('✅', '⏳');
+    }
+}
+
+// ============ RENDER DATA CARDS ============
+function renderDataCards(data) {
+    const container = document.getElementById('dataCards');
+    container.innerHTML = '';
+
+    const sections = [
+        { key: 'customer', icon: '👤', title: 'ข้อมูลลูกค้า', fields: {
+            name_th: 'ชื่อ-นามสกุล (ไทย)', name_en: 'ชื่อ-นามสกุล (Eng)',
+            id_card: 'เลขบัตรประชาชน', address: 'ที่อยู่',
+            phone: 'เบอร์โทร', email: 'อีเมล'
+        }},
+        { key: 'vehicle', icon: '🚗', title: 'ข้อมูลรถยนต์', fields: {
+            brand: 'ยี่ห้อ', model: 'รุ่น', year: 'ปีรถ',
+            color: 'สี', license_plate: 'ทะเบียน', province: 'จังหวัด',
+            chassis_no: 'เลขตัวถัง', engine_no: 'เลขเครื่องยนต์',
+            cc: 'ซีซี', vehicle_type: 'ประเภทรถ',
+            registration_date: 'วันจดทะเบียน', owner_name: 'เจ้าของรถ'
+        }},
+        { key: 'insurance', icon: '📋', title: 'ข้อมูลประกันภัย', fields: {
+            company: 'บริษัทประกัน', policy_number: 'เลขกรมธรรม์',
+            policy_type: 'ประเภทประกัน', effective_date: 'วันเริ่มคุ้มครอง',
+            expiry_date: 'วันสิ้นสุดคุ้มครอง', premium: 'เบี้ยประกันภัย',
+            por_ror_bor_premium: 'เบี้ย พ.ร.บ.', total_premium: 'เบี้ยรวม',
+            deductible: 'ค่าเสียหายส่วนแรก', sum_insured: 'ทุนประกัน',
+            coverage_details: 'รายละเอียดความคุ้มครอง'
+        }},
+        { key: 'tax', icon: '💰', title: 'ข้อมูลภาษี', fields: {
+            tax_amount: 'ค่าภาษี', tax_year: 'ปีภาษี',
+            tax_paid_date: 'วันที่จ่ายภาษี', tax_receipt_no: 'เลขใบเสร็จภาษี'
+        }},
+        { key: 'driving_license', icon: '🪪', title: 'ข้อมูลใบขับขี่', fields: {
+            license_number: 'เลขใบขับขี่', license_type: 'ประเภท',
+            license_holder: 'ชื่อผู้ถือ', license_expiry: 'วันหมดอายุ',
+            license_issued_date: 'วันออกบัตร'
+        }}
+    ];
+
+    sections.forEach(function(section) {
+        const sectionData = data[section.key] || {};
+        const hasData = Object.values(sectionData).some(function(v) { return v && String(v).trim(); });
+        if (!hasData) return;
+
+        const card = document.createElement('div');
+        card.className = 'data-card';
+
+        let fieldsHtml = '';
+        const fieldEntries = Object.entries(section.fields);
+        for (let i = 0; i < fieldEntries.length; i++) {
+            const fieldKey = fieldEntries[i][0];
+            const label = fieldEntries[i][1];
+            const val = sectionData[fieldKey] || '';
+            const isTextarea = fieldKey === 'address' || fieldKey === 'coverage_details';
+
+            let inputHtml;
+            if (isTextarea) {
+                inputHtml = '<textarea data-section="' + section.key + '" data-field="' + fieldKey + '">' + escapeHtml(val) + '</textarea>';
+            } else {
+                inputHtml = '<input type="text" value="' + escapeHtml(val) + '" data-section="' + section.key + '" data-field="' + fieldKey + '">';
+            }
+
+            fieldsHtml += '<div class="field-row"><div class="field-label">' + label + '</div><div class="field-value">' + inputHtml + '</div></div>';
+        }
+
+        card.innerHTML = '<div class="data-card-header" onclick="toggleCard(this)"><span class="icon">' + section.icon + '</span><span>' + section.title + '</span><span class="toggle">▼</span></div><div class="data-card-body">' + fieldsHtml + '</div>';
+        container.appendChild(card);
+    });
+}
+
+function toggleCard(header) {
+    const body = header.nextElementSibling;
+    header.classList.toggle('collapsed');
+    body.classList.toggle('collapsed');
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
+// ============ SAVE & EXPORT ============
+async function saveData() {
+    const data = { session_id: sessionId };
+    document.querySelectorAll('[data-section]').forEach(function(el) {
+        const section = el.dataset.section;
+        const field = el.dataset.field;
+        if (!data[section]) data[section] = {};
+        data[section][field] = el.value;
+    });
+
+    try {
+        const resp = await fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        return await resp.json();
+    } catch (err) {
+        console.error('Save error:', err);
+        return null;
+    }
+}
+
+function renderSummary() {
+    const body = document.getElementById('summaryBody');
+    const allInputs = document.querySelectorAll('[data-section]');
+
+    const sectionLabels = {
+        customer: '👤 ลูกค้า', vehicle: '🚗 รถยนต์',
+        insurance: '📋 ประกันภัย', tax: '💰 ภาษี',
+        driving_license: '🪪 ใบขับขี่'
+    };
+
+    const sectionFieldLabels = {
+        customer: { name_th:'ชื่อ-นามสกุล', name_en:'Name', id_card:'บัตรประชาชน', address:'ที่อยู่', phone:'เบอร์โทร', email:'อีเมล' },
+        vehicle: { brand:'ยี่ห้อ', model:'รุ่น', year:'ปี', color:'สี', license_plate:'ทะเบียน', province:'จังหวัด', chassis_no:'เลขตัวถัง', engine_no:'เลขเครื่องยนต์', cc:'ซีซี', vehicle_type:'ประเภท', registration_date:'วันจดทะเบียน', owner_name:'เจ้าของ' },
+        insurance: { company:'บริษัท', policy_number:'เลขกรมธรรม์', policy_type:'ประเภท', effective_date:'เริ่มคุ้มครอง', expiry_date:'สิ้นสุดคุ้มครอง', premium:'เบี้ยประกัน', por_ror_bor_premium:'เบี้ย พ.ร.บ.', total_premium:'เบี้ยรวม', deductible:'ค่าเสียหายส่วนแรก', sum_insured:'ทุนประกัน', coverage_details:'ความคุ้มครอง' },
+        tax: { tax_amount:'ค่าภาษี', tax_year:'ปีภาษี', tax_paid_date:'วันจ่าย', tax_receipt_no:'เลขใบเสร็จ' },
+        driving_license: { license_number:'เลขใบขับขี่', license_type:'ประเภท', license_holder:'ชื่อผู้ถือ', license_expiry:'หมดอายุ', license_issued_date:'วันออกบัตร' }
+    };
+
+    let html = '';
+    let currentSection = '';
+
+    allInputs.forEach(function(el) {
+        const section = el.dataset.section;
+        const field = el.dataset.field;
+        const value = el.value.trim();
+
+        if (section !== currentSection) {
+            currentSection = section;
+            html += '<div class="summary-section-title">' + (sectionLabels[section] || section) + '</div>';
+        }
+
+        if (value) {
+            const label = (sectionFieldLabels[section] && sectionFieldLabels[section][field]) || field;
+            html += '<div class="summary-item"><span class="summary-label">' + label + '</span><span class="summary-value">' + escapeHtml(value) + '</span></div>';
+        }
+    });
+
+    body.innerHTML = html || '<div style="text-align:center;color:var(--text-secondary);padding:20px">ไม่มีข้อมูล</div>';
+
+    const now = new Date();
+    document.getElementById('savedTime').textContent = 'บันทึกเมื่อ ' + now.toLocaleString('th-TH');
+}
+
+function exportJSON() {
+    if (!extractedResult) return;
+    const blob = new Blob([JSON.stringify(extractedResult, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'car-insurance-' + (sessionId || 'data') + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('📥 ส่งออก JSON สำเร็จ');
+}
+
+// ============ NAVIGATION ============
+function goToPage(pageNum) {
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+    document.getElementById('page' + pageNum).classList.add('active');
+
+    document.querySelectorAll('.step').forEach(function(s, i) {
+        s.classList.remove('active', 'done');
+        if (i + 1 < pageNum) s.classList.add('done');
+        if (i + 1 === pageNum) s.classList.add('active');
+    });
+
+    if (pageNum === 3) {
+        saveData();
+        renderSummary();
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goBack(fromPage) {
+    goToPage(fromPage - 1);
+}
+
+function toggleOcrRaw() {
+    const content = document.getElementById('ocrRawContent');
+    const btn = document.getElementById('ocrToggleBtn');
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        btn.textContent = '📄 ซ่อนข้อความ OCR';
+    } else {
+        content.style.display = 'none';
+        btn.textContent = '📄 ดูข้อความ OCR ที่อ่านได้';
+    }
+}
+
+function resetAll() {
+    Object.keys(uploadedFiles).forEach(function(key) { removeImage(key); });
+    sessionId = null;
+    extractedResult = null;
+    document.getElementById('dataCards').innerHTML = '';
+    goToPage(1);
+}
+
+// ============ TOAST ============
+function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(function() { toast.classList.remove('show'); }, 3000);
+}
+</script>
+
+</body>
+</html>

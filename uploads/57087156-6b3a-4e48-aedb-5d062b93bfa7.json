@@ -1,0 +1,54 @@
+{
+  "customer": {
+    "name_th": "",
+    "name_en": "",
+    "id_card": "",
+    "address": "",
+    "phone": "",
+    "email": ""
+  },
+  "vehicle": {
+    "brand": "Toyota",
+    "model": "Camry",
+    "year": "2023",
+    "color": "",
+    "license_plate": "BB 1234 baa",
+    "province": "",
+    "chassis_no": "",
+    "engine_no": "",
+    "cc": "",
+    "vehicle_type": "",
+    "registration_date": "",
+    "owner_name": ""
+  },
+  "insurance": {
+    "company": "Bangkok Insurance",
+    "policy_number": "POL-2026-12345",
+    "policy_type": "1",
+    "effective_date": "",
+    "expiry_date": "",
+    "premium": "15,000",
+    "por_ror_bor_premium": "",
+    "total_premium": "15,000",
+    "deductible": "",
+    "sum_insured": "",
+    "coverage_details": ""
+  },
+  "tax": {
+    "tax_amount": "",
+    "tax_year": "",
+    "tax_paid_date": "",
+    "tax_receipt_no": ""
+  },
+  "driving_license": {
+    "license_number": "",
+    "license_type": "",
+    "license_holder": "",
+    "license_expiry": "",
+    "license_issued_date": ""
+  },
+  "ocr_raw": {
+    "policy_type1": "Policy No: POL-2026-12345\n\nCompany. Bangkok Insurance.\n\nBrand: Toyota\n\nModel Camry\n\nYear. 2023\n\nLicense Plate: BB 1234 baa\n\nPremium: 15,000 THB"
+  },
+  "session_id": "57087156-6b3a-4e48-aedb-5d062b93bfa7"
+}

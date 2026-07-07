@@ -1,0 +1,56 @@
+{
+  "customer": {
+    "name_th": "น.ส. ณัชชา พานิชรัตน์",
+    "name_en": "Miss Natcha Panichrat",
+    "id_card": "3220600003879",
+    "address": "5/5 หมู่ที่ 10 ต.แสลง อ.เมืองจันทบุรี จ.จันทบุรี",
+    "phone": "",
+    "email": ""
+  },
+  "vehicle": {
+    "brand": "ISUZU",
+    "model": "D-MAX",
+    "year": "2019",
+    "color": "ขาว",
+    "license_plate": "ขษ 667",
+    "province": "จันทบุรี",
+    "chassis_no": "MP1TFR87JKG031433",
+    "engine_no": "RZ4ETR5170",
+    "cc": "1898",
+    "vehicle_type": "รถยนต์บรรทุกส่วนบุคคล",
+    "registration_date": "27 พฤษภาคม 2562",
+    "owner_name": "นายธระภาวี วิริยจินดา"
+  },
+  "insurance": {
+    "company": "",
+    "policy_number": "",
+    "policy_type": "",
+    "effective_date": "",
+    "expiry_date": "",
+    "premium": "",
+    "por_ror_bor_premium": "",
+    "total_premium": "",
+    "deductible": "",
+    "sum_insured": "",
+    "coverage_details": ""
+  },
+  "tax": {
+    "tax_amount": "",
+    "tax_year": "",
+    "tax_paid_date": "",
+    "tax_receipt_no": ""
+  },
+  "driving_license": {
+    "license_number": "",
+    "license_type": "",
+    "license_holder": "",
+    "license_expiry": "",
+    "license_issued_date": ""
+  },
+  "ocr_raw": {
+    "policy_type1": "นน\nห 4 ล้า                                  6\nรายการจดทะเบียน\nBy จจดทะเบียน om สาษาาคม 2662 ) OEY ny S670,      pr aug\n- sd รถยนุต์ทรรทุกส่วนขุตกล     :       1 Negus ว  ไตห a\n\"หอลกตวลูหรย          2 6 Max               ee 1 1\n5 ๕ดงร        คารด หธรทะแส7งนน031433         ท กสางขวา ,\nยี่ห้อเครื่องยนต์         15บรบ,                    เดอเครื่องยนต์7” 75วอ5190 ” -” -           ์\n)       3           เขือเพลิง            |    เลขถังแก๊ส             (\nOEM ชาษ์เครื่อง              1 “ดเซล                 I\n=    เก 1 5  |\n- 0 นบัาหนั          ร      t                 ein “Sa --    “กศี\n- 9 ไหนกรถ ด ก   นําหนักบรรทุก/นําหนักล .    Cee   1\nyard (niin),                   กก์.        ทีนัง              (au             เธต|                    )!\nสง                 ญิ = ล200            :                  D 5 4                          3                 INES\nie      ๕๕     |         = 3 -=- (G    |\n2    =     =>      =     Sy oN   I AN oe 2    =    Gal LRN EIN OTN eee 2     =\n-      ) (Se) (    (   เซง) (    {   \\ ie      ( (ฉี9*) (   ) ๕) (   ) oe     \\{   )\nPEELS                   )                       |   )            |\noi:          :        -      เจ้าของรถ      eS        7” 9\n7 7                     Cae)         as ad           ไง        :             )    )\nie  =) Sp EZ) COMES     วันทีครอบครองรถ์ 0 วีปเคม 9566 1    วร\n2,  ขู่กอกรรมสีทถี ทายยระสุาร “กรี9วิน GR)            ต๐66 >\noF &      6         วันเกิด              y,      ชาติ      IX      DNS      ว\nex vl 0  3920600949351            4 สิงหาคม 2516   ae  ee eee ee\n4   Vay,       Wie   i                  |   )                      ) (             จ\nล     นว  49/12 บ 7       3                                     }\nัซี     =             n     ad     =     oe    ae     Sy      ce     =     as    =       ๓         = โทร:        =      =       =\n2 0                   ¥                     |\n์ # อยุ้ครอบครอง                                     )\nYs    ala                 “oa              จ.  a       sant\nPi, เลขทีบัตร                             วันเกิด            |          \\ / สัญชาติ             |        =\npe   7 1                                     \\    )            )        )\n—   ทอยู่        ว      =                =                S   =        =       =\nen                |            )         ๒            0       โทร.     |\nส    ก ก                        อน       :          6ฐาโซ ซัษัร\n2 สัญญาเช่าซือเลขที                 ลงวันที             pe aye»  220\n=                                                           rs\n=                       ง อ ด 0 0 5-\n:     4          }            ย\nง 0 1 0 2              ett at) (ee) A) (6\nร        (2  น่วางธัระภา วีวิธีจับดา         )                :     (      นางจระภาีวิ้วิธจินลา       )\nf             เจ้าหมกร eed ©                 | เ                      เจาพนกงานขนสงฆ่ายาตงาน\nเจ้าหน้าที              Hey 2                    นายทะเบียน           7\n:        ges\n(                             (\n'                                          )\n๕ “4   SEE ESS Re ee 2    ห รรยอรูว1ชี   เชักรชีว   SH Mee   i    aS)    i\nAe       Sj      SEES 24 ae ซี ต  7 ย่    บ     2;       ย    ,     |     ay     Ff        f",
+    "driving_license": "เว   บัตรประจําตัวประชาชน Thai National ID Card\nร | เละประจําคัวประชาชน 3 2206 00003 87 9          |\nฆ       Ca -=.\nsxe รื่อตัวและรื่อสกล น.ดี. ณัชชา พานิชรัตน์               |\n== GG) ™™ Miss Natcha                 |\n= | เกิดวันที่ 11 ธิ.ค. 2524               |\n= 0     Date of Birth 11 Dec. 1981 1 #    =\n=     4ต   we          i       “  = = 9  |\n= i  5/5 หมู่ที่ 10 ต.แสลง อ.เมืองจันทบุรี       ม \"3     |",
+    "car_registration": "นน\nห 4 ล้า                                  6\nรายการจดทะเบียน\nBy จจดทะเบียน om สาษาาคม 2662 ) OEY ny S670,      pr aug\n- sd รถยนุต์ทรรทุกส่วนขุตกล     :       1 Negus ว  ไตห a\n\"หอลกตวลูหรย          2 6 Max               ee 1 1\n5 ๕ดงร        คารด หธรทะแส7งนน031433         ท กสางขวา ,\nยี่ห้อเครื่องยนต์         15บรบ,                    เดอเครื่องยนต์7” 75วอ5190 ” -” -           ์\n)       3           เขือเพลิง            |    เลขถังแก๊ส             (\nOEM ชาษ์เครื่อง              1 “ดเซล                 I\n=    เก 1 5  |\n- 0 นบัาหนั          ร      t                 ein “Sa --    “กศี\n- 9 ไหนกรถ ด ก   นําหนักบรรทุก/นําหนักล .    Cee   1\nyard (niin),                   กก์.        ทีนัง              (au             เธต|                    )!\nสง                 ญิ = ล200            :                  D 5 4                          3                 INES\nie      ๕๕     |         = 3 -=- (G    |\n2    =     =>      =     Sy oN   I AN oe 2    =    Gal LRN EIN OTN eee 2     =\n-      ) (Se) (    (   เซง) (    {   \\ ie      ( (ฉี9*) (   ) ๕) (   ) oe     \\{   )\nPEELS                   )                       |   )            |\noi:          :        -      เจ้าของรถ      eS        7” 9\n7 7                     Cae)         as ad           ไง        :             )    )\nie  =) Sp EZ) COMES     วันทีครอบครองรถ์ 0 วีปเคม 9566 1    วร\n2,  ขู่กอกรรมสีทถี ทายยระสุาร “กรี9วิน GR)            ต๐66 >\noF &      6         วันเกิด              y,      ชาติ      IX      DNS      ว\nex vl 0  3920600949351            4 สิงหาคม 2516   ae  ee eee ee\n4   Vay,       Wie   i                  |   )                      ) (             จ\nล     นว  49/12 บ 7       3                                     }\nัซี     =             n     ad     =     oe    ae     Sy      ce     =     as    =       ๓         = โทร:        =      =       =\n2 0                   ¥                     |\n์ # อยุ้ครอบครอง                                     )\nYs    ala                 “oa              จ.  a       sant\nPi, เลขทีบัตร                             วันเกิด            |          \\ / สัญชาติ             |        =\npe   7 1                                     \\    )            )        )\n—   ทอยู่        ว      =                =                S   =        =       =\nen                |            )         ๒            0       โทร.     |\nส    ก ก                        อน       :          6ฐาโซ ซัษัร\n2 สัญญาเช่าซือเลขที                 ลงวันที             pe aye»  220\n=                                                           rs\n=                       ง อ ด 0 0 5-\n:     4          }            ย\nง 0 1 0 2              ett at) (ee) A) (6\nร        (2  น่วางธัระภา วีวิธีจับดา         )                :     (      นางจระภาีวิ้วิธจินลา       )\nf             เจ้าหมกร eed ©                 | เ                      เจาพนกงานขนสงฆ่ายาตงาน\nเจ้าหน้าที              Hey 2                    นายทะเบียน           7\n:        ges\n(                             (\n'                                          )\n๕ “4   SEE ESS Re ee 2    ห รรยอรูว1ชี   เชักรชีว   SH Mee   i    aS)    i\nAe       Sj      SEES 24 ae ซี ต  7 ย่    บ     2;       ย    ,     |     ay     Ff        f"
+  },
+  "session_id": "1ec5ae59-4f81-455a-960e-b4fe94eaaefb"
+}

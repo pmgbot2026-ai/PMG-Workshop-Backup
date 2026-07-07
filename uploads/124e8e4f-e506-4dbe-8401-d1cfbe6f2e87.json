@@ -1,0 +1,54 @@
+{
+  "customer": {
+    "name_th": "",
+    "name_en": "",
+    "id_card": "",
+    "address": "",
+    "phone": "",
+    "email": ""
+  },
+  "vehicle": {
+    "brand": "",
+    "model": "",
+    "year": "",
+    "color": "",
+    "license_plate": "",
+    "province": "",
+    "chassis_no": "",
+    "engine_no": "",
+    "cc": "",
+    "vehicle_type": "",
+    "registration_date": "",
+    "owner_name": ""
+  },
+  "insurance": {
+    "company": "",
+    "policy_number": "",
+    "policy_type": "",
+    "effective_date": "",
+    "expiry_date": "",
+    "premium": "",
+    "por_ror_bor_premium": "",
+    "total_premium": "",
+    "deductible": "",
+    "sum_insured": "",
+    "coverage_details": ""
+  },
+  "tax": {
+    "tax_amount": "",
+    "tax_year": "",
+    "tax_paid_date": "",
+    "tax_receipt_no": ""
+  },
+  "driving_license": {
+    "license_number": "",
+    "license_type": "",
+    "license_holder": "",
+    "license_expiry": "",
+    "license_issued_date": ""
+  },
+  "ocr_raw": {
+    "policy_type1": "10:06 «                                               NES? 0 ED\n-   .                                                      ๑\n(ๆ 26 'ข6|อนส่ฟ์ลแอ.๐๐๓ +        :\n๑             6\n. ๑๑ สีแกนเอกสารประกันรถยนต์\n ป00: ๐0080 00\nคกมตดทบเบขน ว6\nจ\nails 1000032230.]0ชู\n[3 ถ่ายแล้ว\nhows   '                         = a           a\nแซ ถ่ายรูป                       ๒๕ เลือกจากเครื่อง\nดรคัคคไซ Se                   eo\nCiao ee ee\nteat Retreat\n9490     ว   Shao   เลนตร8๕64ร9 <6\n2 0\nPEERY CEL OS Ce ESS eS) tesa I a ED Qos ey oe\nตว ฐุจยแตเดสลัตย ๒๒2 0. es   &\nอบรหศศทัศซ์ห่าทํากรไร\n= 6ออลแบยบะ\n: 08 ee\n%,     ฒ          to ๕\nบตรประชาชน ไม่จําเป็น\n=]      '        ฆ   a          a\na2         ถ่ายรูป หรอเลอกจากเครอง\nยังไม่ได้เลือก\n= ot                       -           4\nies ถายรูป                   ๒๑เลอกจากเครอง\nย      Y\n@ อ่านข้อมูลจากรูป (4 รูป)"
+  },
+  "session_id": "124e8e4f-e506-4dbe-8401-d1cfbe6f2e87"
+}
