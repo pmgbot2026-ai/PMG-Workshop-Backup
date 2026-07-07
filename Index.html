@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ENVR Oil Stock Monitor</title>
+  <style>
+    :root {
+      --primary: #2E7D32;
+      --primary-dark: #1B5E20;
+      --primary-light: #4CAF50;
+      --secondary: #1565C0;
+      --secondary-light: #42A5F5;
+      --accent: #FF6F00;
+      --accent-light: #FFA726;
+      --bg: #F5F5F5;
+      --card-bg: #FFFFFF;
+      --text: #212121;
+      --text-light: #757575;
+      --border: #E0E0E0;
+      --shadow: 0 2px 4px rgba(0,0,0,0.1);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.15);
+      --radius: 8px;
+      --import-color: #4CAF50;
+      --export-color: #F44336;
+      --transfer-color: #FFC107;
+      --adjust-color: #2196F3;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-lg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-logo {
+      width: 40px; height: 40px;
+      background: white; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: bold; color: var(--primary);
+    }
+    .header-title { font-size: 20px; font-weight: 700; }
+    .header-subtitle { font-size: 12px; opacity: 0.85; }
+    .header-right { font-size: 12px; text-align: right; opacity: 0.85; }
+    .btn-refresh {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.4);
+      color: white; padding: 6px 14px;
+      border-radius: 4px; cursor: pointer; font-size: 13px;
+      margin-top: 6px;
+    }
+    .btn-refresh:hover { background: rgba(255,255,255,0.35); }
+    .btn-print {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.4);
+      color: white; padding: 6px 14px;
+      border-radius: 4px; cursor: pointer; font-size: 13px;
+      margin-top: 6px; margin-left: 6px;
+    }
+    .btn-print:hover { background: rgba(255,255,255,0.35); }
+
+    /* Tabs */
+    .tab-container {
+      background: white;
+      border-bottom: 2px solid var(--border);
+      position: sticky; top: 76px; z-index: 99;
+      overflow-x: auto;
+    }
+    .tabs {
+      display: flex;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 16px;
+      border: none; background: none;
+      cursor: pointer; font-size: 14px;
+      font-weight: 600; color: var(--text-light);
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+      white-space: nowrap;
+      min-width: fit-content;
+    }
+    .tab-btn:hover { color: var(--primary); background: rgba(46,125,50,0.05); }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* Main content */
+    .main { max-width: 960px; margin: 0 auto; padding: 16px; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 18px;
+      font-weight: 700; font-size: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-header .icon { font-size: 20px; }
+    .card-body { padding: 16px 18px; }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .kpi-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+    }
+    .kpi-card.green::before { background: var(--import-color); }
+    .kpi-card.blue::before { background: var(--secondary); }
+    .kpi-card.orange::before { background: var(--accent); }
+    .kpi-card.red::before { background: var(--export-color); }
+    .kpi-value {
+      font-size: 28px; font-weight: 800;
+      margin: 4px 0;
+    }
+    .kpi-label { font-size: 12px; color: var(--text-light); font-weight: 500; }
+    .kpi-unit { font-size: 14px; color: var(--text-light); }
+
+    /* Section titles */
+    .section-title {
+      font-size: 16px; font-weight: 700;
+      color: var(--primary-dark);
+      padding: 12px 0 8px 0;
+      border-bottom: 2px solid var(--primary-light);
+      margin-bottom: 12px;
+    }
+
+    /* Stock items */
+    .stock-group { margin-bottom: 16px; }
+    .stock-group-title {
+      font-weight: 700; font-size: 14px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .stock-group-title.used-oil { background: #FFF3E0; color: #E65100; }
+    .stock-group-title.multi-oil { background: #E8F5E9; color: #2E7D32; }
+    .stock-group-title.bad-oil { background: #FFEBEE; color: #C62828; }
+
+    .stock-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #F5F5F5;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .stock-item:last-child { border-bottom: none; }
+    .stock-name { flex: 2; font-size: 13px; font-weight: 600; min-width: 150px; }
+    .stock-place {
+      font-size: 11px; color: white;
+      padding: 2px 8px; border-radius: 12px;
+      background: var(--secondary);
+      white-space: nowrap;
+    }
+    .stock-stats {
+      display: flex; gap: 12px; flex: 3;
+      font-size: 12px; flex-wrap: wrap;
+    }
+    .stock-stat-item { text-align: center; min-width: 60px; }
+    .stock-stat-label { font-size: 10px; color: var(--text-light); }
+    .stock-stat-value { font-weight: 700; font-size: 13px; }
+
+    /* Progress bars */
+    .progress-bar-container {
+      flex: 2; min-width: 120px;
+    }
+    .progress-bar {
+      background: #E0E0E0; border-radius: 4px;
+      height: 10px; overflow: hidden;
+      position: relative;
+    }
+    .progress-bar-fill {
+      height: 100%; border-radius: 4px;
+      transition: width 0.8s ease;
+      background: linear-gradient(90deg, var(--primary-light), var(--primary));
+    }
+    .progress-bar-fill.warning { background: linear-gradient(90deg, var(--accent), var(--accent-light)); }
+    .progress-bar-fill.critical { background: linear-gradient(90deg, #F44336, #EF5350); }
+    .progress-text {
+      font-size: 10px; color: var(--text-light);
+      margin-top: 2px; text-align: right;
+    }
+
+    /* Transaction table */
+    .filter-bar {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 16px; align-items: center;
+    }
+    .filter-btn {
+      padding: 6px 16px;
+      border: 2px solid var(--primary);
+      background: white;
+      color: var(--primary);
+      border-radius: 20px;
+      cursor: pointer; font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      background: var(--primary); color: white;
+    }
+    .filter-select, .filter-input {
+      padding: 6px 12px;
+      border: 2px solid var(--border);
+      border-radius: 4px; font-size: 13px;
+    }
+    .filter-select:focus, .filter-input:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+
+    .table-wrapper { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      background: var(--primary);
+      color: white;
+      padding: 10px 8px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    td {
+      padding: 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    tr:hover { background: #F1F8E9; }
+
+    .type-badge {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 12px; color: white;
+      font-size: 11px; font-weight: 600;
+      white-space: nowrap;
+    }
+    .type-import { background: var(--import-color); }
+    .type-export { background: var(--export-color); }
+    .type-transfer { background: var(--transfer-color); color: #333; }
+    .type-adjust { background: var(--adjust-color); }
+
+    .summary-row {
+      background: #F1F8E9;
+      font-weight: 700;
+    }
+
+    /* Sales charts */
+    .chart-container {
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      margin: 8px 0;
+    }
+    .chart-canvas {
+      width: 100%; height: 300px;
+    }
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 200px;
+      padding: 0 8px;
+      border-bottom: 2px solid var(--border);
+      position: relative;
+    }
+    .bar-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 30px;
+    }
+    .bar {
+      width: 100%;
+      max-width: 40px;
+      border-radius: 4px 4px 0 0;
+      transition: height 0.5s;
+      position: relative;
+      cursor: pointer;
+    }
+    .bar:hover { opacity: 0.85; }
+    .bar-label {
+      font-size: 10px;
+      color: var(--text-light);
+      margin-top: 4px;
+      text-align: center;
+      word-break: break-word;
+    }
+    .bar-value {
+      font-size: 10px;
+      font-weight: 700;
+      margin-top: 2px;
+      text-align: center;
+    }
+    .bar-green { background: linear-gradient(to top, #2E7D32, #4CAF50); }
+    .bar-blue { background: linear-gradient(to top, #1565C0, #42A5F5); }
+    .bar-orange { background: linear-gradient(to top, #FF6F00, #FFA726); }
+
+    /* Production stats */
+    .prod-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    .prod-stat {
+      background: #F5F5F5;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+    }
+    .prod-stat-value { font-size: 22px; font-weight: 800; }
+    .prod-stat-label { font-size: 11px; color: var(--text-light); }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    .loading-text {
+      color: white; font-size: 16px;
+      margin-top: 16px; font-weight: 600;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 40px;
+      color: var(--text-light);
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+    /* Print styles */
+    @media print {
+      .header { position: static; }
+      .tab-container { display: none; }
+      .tab-content { display: block !important; }
+      .no-print { display: none !important; }
+      body { background: white; }
+      .card { box-shadow: none; border: 1px solid #ddd; }
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .header { padding: 12px 16px; }
+      .header-title { font-size: 16px; }
+      .main { padding: 8px; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .kpi-card { padding: 12px; }
+      .kpi-value { font-size: 20px; }
+      .tab-btn { padding: 10px 10px; font-size: 12px; }
+      .stock-item { flex-direction: column; align-items: flex-start; }
+      .stock-stats { flex-direction: column; gap: 4px; }
+      .filter-bar { flex-direction: column; }
+      table { font-size: 11px; }
+      th, td { padding: 6px 4px; }
+    }
+
+    /* Scrollable table fix */
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .num { font-variant-numeric: tabular-nums; }
+
+    .location-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .loc-factory { background: #E3F2FD; color: #1565C0; }
+    .loc-garden { background: #E8F5E9; color: #2E7D32; }
+    .loc-other { background: #FFF3E0; color: #E65100; }
+
+    .error-banner {
+      background: #FFEBEE;
+      border: 1px solid #EF5350;
+      color: #C62828;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+    .info-banner {
+      background: #E3F2FD;
+      border: 1px solid #42A5F5;
+      color: #1565C0;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay">
+  <div style="text-align:center;">
+    <div class="spinner"></div>
+    <div class="loading-text">กำลังโหลดข้อมูล...</div>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">E</div>
+    <div>
+      <div class="header-title">ENVR Oil Stock Monitor</div>
+      <div class="header-subtitle">ระบบติดตามสต็อกน้ำมัน</div>
+    </div>
+  </div>
+  <div class="header-right no-print">
+    <div id="last-updated">อัปเดตล่าสุด: --</div>
+    <button class="btn-refresh" onclick="refreshData()">🔄 รีเฟรช</button>
+    <button class="btn-print" onclick="printPage()">🖨️ พิมพ์</button>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tab-container no-print">
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tab-stock" onclick="switchTab('tab-stock', this)">🛢️ สรุปสต็อกน้ำมัน</button>
+    <button class="tab-btn" data-tab="tab-transactions" onclick="switchTab('tab-transactions', this)">📋 ธุรกรรม</button>
+    <button class="tab-btn" data-tab="tab-sales" onclick="switchTab('tab-sales', this)">💰 รายงานขาย</button>
+    <button class="tab-btn" data-tab="tab-production" onclick="switchTab('tab-production', this)">🏭 การผลิต</button>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- Tab 1: Stock Summary -->
+  <div id="tab-stock" class="tab-content active">
+    <div id="stock-kpi" class="kpi-grid"></div>
+    <div id="stock-details"></div>
+  </div>
+
+  <!-- Tab 2: Transactions -->
+  <div id="tab-transactions" class="tab-content">
+    <div class="filter-bar no-print" id="txn-filters"></div>
+    <div id="txn-summary" class="kpi-grid"></div>
+    <div class="card">
+      <div class="table-scroll" id="txn-table-wrapper"></div>
+    </div>
+  </div>
+
+  <!-- Tab 3: Sales -->
+  <div id="tab-sales" class="tab-content">
+    <div id="sales-kpi" class="kpi-grid"></div>
+    <div id="sales-chart" class="card"></div>
+    <div id="sales-details" class="card"></div>
+    <div id="sales-by-buyer" class="card"></div>
+  </div>
+
+  <!-- Tab 4: Production -->
+  <div id="tab-production" class="tab-content">
+    <div id="prod-kpi" class="kpi-grid"></div>
+    <div id="prod-chart" class="card"></div>
+    <div id="prod-table" class="card"></div>
+  </div>
+
+</div>
+
+<script>
+// ===== Global State =====
+var appData = null;
+var txnFilter = 'today';
+var customDateFrom = '';
+var customDateTo = '';
+var txnTypeFilter = 'all';
+
+// ===== Tab Switching =====
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(el) { el.classList.remove('active'); });
+  document.getElementById(tabId).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ===== Number Formatting =====
+function fmtNum(n, dec) {
+  if (n === null || n === undefined || isNaN(n)) return '-';
+  dec = dec !== undefined ? dec : 2;
+  return Number(n).toLocaleString('th-TH', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+function fmtNumInt(n) {
+  if (n === null || n === undefined || isNaN(n)) return '-';
+  return Number(n).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+// ===== Date Formatting =====
+function fmtDate(isoStr) {
+  if (!isoStr) return '-';
+  try {
+    var d = new Date(isoStr);
+    return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch(e) { return isoStr; }
+}
+
+function fmtDateTime(isoStr) {
+  if (!isoStr) return '-';
+  try {
+    var d = new Date(isoStr);
+    return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch(e) { return isoStr; }
+}
+
+function fmtDateShort(d) {
+  return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' });
+}
+
+function fmtMonthYear(d) {
+  return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'long' });
+}
+
+// ===== Thai Month =====
+var thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+var thaiMonthsShort = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+// ===== Data Loading =====
+function loadData() {
+  showLoading(true);
+  google.script.run.withSuccessHandler(function(data) {
+    appData = data;
+    showLoading(false);
+    renderAll();
+  }).withFailureHandler(function(err) {
+    showLoading(false);
+    document.getElementById('tab-stock').innerHTML = '<div class="error-banner">❌ เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + '</div>';
+  }).fetchData();
+}
+
+function refreshData() {
+  loadData();
+}
+
+function showLoading(show) {
+  document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+}
+
+// ===== Render All =====
+function renderAll() {
+  if (!appData) return;
+  // Last updated
+  if (appData.lastUpdated) {
+    document.getElementById('last-updated').textContent = 'อัปเดตล่าสุด: ' + fmtDateTime(appData.lastUpdated);
+  }
+  renderStock();
+  renderTransactionFilters();
+  renderTransactions();
+  renderSales();
+  renderProduction();
+}
+
+// ===== Tab 1: Stock Summary =====
+function renderStock() {
+  var stock = appData.stockData || [];
+  var configs = appData.storageConfigs || [];
+
+  // Build location map from configs
+  var locationMap = {};
+  configs.forEach(function(c) {
+    locationMap[c.storage] = c.place || 'ไม่ระบุ';
+    locationMap[c.storage.trim()] = c.place || 'ไม่ระบุ';
+  });
+
+  // Group by oil type
+  var groups = {};
+  var totalBalance = 0;
+  var totalImport = 0;
+  var totalExport = 0;
+
+  stock.forEach(function(item) {
+    var type = item.oilType || 'ไม่ระบุ';
+    if (!groups[type]) groups[type] = [];
+    groups[type].push(item);
+    totalBalance += item.balance || 0;
+    totalImport += item.importTotal || 0;
+    totalExport += item.exportTotal || 0;
+  });
+
+  // Estimate value - rough pricing
+  var estimatedValue = 0;
+  stock.forEach(function(item) {
+    var pricePerLiter = 5; // default
+    if (item.oilType && item.oilType.indexOf('เอนกประสงค์') >= 0 && item.oilType.indexOf('ใช้ไม่ได้') < 0) {
+      pricePerLiter = 18;
+    } else if (item.oilType && item.oilType.indexOf('เครื่องเก่า') >= 0) {
+      pricePerLiter = 5;
+    }
+    estimatedValue += (item.balance || 0) * pricePerLiter;
+  });
+
+  // KPI Cards
+  var kpiHtml = '';
+  kpiHtml += '<div class="kpi-card green"><div class="kpi-label">📦 สต็อกรวมทุกประเภท</div><div class="kpi-value num">' + fmtNumInt(totalBalance) + '</div><div class="kpi-unit">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card blue"><div class="kpi-label">📥 รับเข้ารวม</div><div class="kpi-value num">' + fmtNumInt(totalImport) + '</div><div class="kpi-unit">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card red"><div class="kpi-label">📤 เบิกออกรวม</div><div class="kpi-value num">' + fmtNumInt(totalExport) + '</div><div class="kpi-unit">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card orange"><div class="kpi-label">💰 มูลค่าประมาณ</div><div class="kpi-value num">' + fmtNumInt(estimatedValue / 1000) + 'K</div><div class="kpi-unit">บาท</div></div>';
+  document.getElementById('stock-kpi').innerHTML = kpiHtml;
+
+  // Stock details by type
+  var typeOrder = ['น้ำมันเครื่องเก่า', 'น้ำมันเอนกประสงค์', 'น้ำมันเอนกประสงค์(ใช้ไม่ได้)'];
+  var typeIcons = {
+    'น้ำมันเครื่องเก่า': '🛢️',
+    'น้ำมันเอนกประสงค์': '⛽',
+    'น้ำมันเอนกประสงค์(ใช้ไม่ได้)': '⚠️'
+  };
+  var typeClasses = {
+    'น้ำมันเครื่องเก่า': 'used-oil',
+    'น้ำมันเอนกประสงค์': 'multi-oil',
+    'น้ำมันเอนกประสงค์(ใช้ไม่ได้)': 'bad-oil'
+  };
+
+  var detailsHtml = '';
+
+  typeOrder.forEach(function(type) {
+    var items = groups[type] || [];
+    if (items.length === 0) return;
+
+    var typeTotal = 0, typeImport = 0, typeExport = 0;
+    items.forEach(function(it) {
+      typeTotal += it.balance || 0;
+      typeImport += it.importTotal || 0;
+      typeExport += it.exportTotal || 0;
+    });
+
+    detailsHtml += '<div class="card">';
+    detailsHtml += '<div class="card-header"><span class="icon">' + (typeIcons[type] || '🛢️') + '</span> ' + type + ' <span style="margin-left:auto; font-size:14px; color:var(--primary);">คงเหลือ ' + fmtNumInt(typeTotal) + ' ลิตร</span></div>';
+    detailsHtml += '<div class="card-body">';
+
+    // Group by location
+    var byLocation = {};
+    items.forEach(function(item) {
+      var loc = item.place || locationMap[item.storage] || 'ไม่ระบุสถานที่';
+      loc = loc.trim();
+      if (!byLocation[loc]) byLocation[loc] = [];
+      byLocation[loc].push(item);
+    });
+
+    Object.keys(byLocation).forEach(function(loc) {
+      detailsHtml += '<div class="stock-group">';
+      var locClass = 'loc-other';
+      if (loc.indexOf('โรงงาน') >= 0) locClass = 'loc-factory';
+      else if (loc.indexOf('สวน') >= 0) locClass = 'loc-garden';
+      detailsHtml += '<div class="stock-group-title ' + (typeClasses[type] || '') + '">' +
+        '<span class="location-tag ' + locClass + '">' + loc + '</span></div>';
+
+      byLocation[loc].forEach(function(item) {
+        var capacity = 0;
+        configs.forEach(function(cfg) {
+          if (cfg.storage && item.storage && cfg.storage.trim() === item.storage.trim()) {
+            capacity = cfg.capacity || 0;
+          }
+        });
+
+        var pctFull = capacity > 0 ? Math.min((item.balance / capacity) * 100, 100) : 0;
+        var barClass = 'progress-bar-fill';
+        if (pctFull > 90) barClass += ' critical';
+        else if (pctFull > 70) barClass += ' warning';
+
+        detailsHtml += '<div class="stock-item">';
+        detailsHtml += '<div class="stock-name">' + (item.storage || 'ไม่ระบุ') + '</div>';
+        detailsHtml += '<div class="stock-stats">';
+        detailsHtml += '<div class="stock-stat-item"><div class="stock-stat-label">📥 รับเข้า</div><div class="stock-stat-value num" style="color:var(--import-color);">' + fmtNumInt(item.importTotal) + '</div></div>';
+        detailsHtml += '<div class="stock-stat-item"><div class="stock-stat-label">📤 เบิกออก</div><div class="stock-stat-value num" style="color:var(--export-color);">' + fmtNumInt(item.exportTotal) + '</div></div>';
+        detailsHtml += '<div class="stock-stat-item"><div class="stock-stat-label">📊 คงเหลือ</div><div class="stock-stat-value num" style="color:var(--primary);font-size:15px;">' + fmtNumInt(item.balance) + '</div></div>';
+        detailsHtml += '</div>';
+
+        if (capacity > 0) {
+          detailsHtml += '<div class="progress-bar-container">';
+          detailsHtml += '<div class="progress-bar"><div class="' + barClass + '" style="width:' + pctFull + '%;"></div></div>';
+          detailsHtml += '<div class="progress-text">' + fmtNumInt(item.balance) + ' / ' + fmtNumInt(capacity) + ' ลิตร (' + pctFull.toFixed(0) + '%)</div>';
+          detailsHtml += '</div>';
+        }
+
+        detailsHtml += '</div>';
+      });
+      detailsHtml += '</div>';
+    });
+
+    detailsHtml += '</div></div>';
+  });
+
+  // Add any oil types not in typeOrder
+  Object.keys(groups).forEach(function(type) {
+    if (typeOrder.indexOf(type) >= 0) return;
+    var items = groups[type];
+    var typeTotal = 0;
+    items.forEach(function(it) { typeTotal += it.balance || 0; });
+
+    detailsHtml += '<div class="card">';
+    detailsHtml += '<div class="card-header"><span class="icon">🛢️</span> ' + type + ' <span style="margin-left:auto; font-size:14px; color:var(--primary);">คงเหลือ ' + fmtNumInt(typeTotal) + ' ลิตร</span></div>';
+    detailsHtml += '<div class="card-body">';
+    items.forEach(function(item) {
+      detailsHtml += '<div class="stock-item">';
+      detailsHtml += '<div class="stock-name">' + (item.storage || 'ไม่ระบุ') + '</div>';
+      detailsHtml += '<div class="stock-stats">';
+      detailsHtml += '<div class="stock-stat-item"><div class="stock-stat-label">📥 รับเข้า</div><div class="stock-stat-value num">' + fmtNumInt(item.importTotal) + '</div></div>';
+      detailsHtml += '<div class="stock-stat-item"><div class="stock-stat-label">📤 เบิกออก</div><div class="stock-stat-value num">' + fmtNumInt(item.exportTotal) + '</div></div>';
+      detailsHtml += '<div class="stock-stat-item"><div class="stock-stat-label">📊 คงเหลือ</div><div class="stock-stat-value num" style="color:var(--primary);">' + fmtNumInt(item.balance) + '</div></div>';
+      detailsHtml += '</div></div>';
+    });
+    detailsHtml += '</div></div>';
+  });
+
+  document.getElementById('stock-details').innerHTML = detailsHtml;
+}
+
+// ===== Tab 2: Transactions =====
+function renderTransactionFilters() {
+  var html = '';
+  html += '<button class="filter-btn active" data-filter="today" onclick="setTxnFilter(\'today\',this)">วันนี้</button>';
+  html += '<button class="filter-btn" data-filter="week" onclick="setTxnFilter(\'week\',this)">สัปดาห์</button>';
+  html += '<button class="filter-btn" data-filter="month" onclick="setTxnFilter(\'month\',this)">เดือนนี้</button>';
+  html += '<button class="filter-btn" data-filter="lastmonth" onclick="setTxnFilter(\'lastmonth\',this)">เดือนที่แล้ว</button>';
+  html += '<button class="filter-btn" data-filter="all" onclick="setTxnFilter(\'all\',this)">ทั้งหมด</button>';
+  html += '<select class="filter-select" onchange="setTxnTypeFilter(this.value)">';
+  html += '<option value="all">ทุกประเภท</option>';
+  html += '<option value="import">📥 นำเข้า</option>';
+  html += '<option value="export">📤 เบิกออก/ขาย</option>';
+  html += '<option value="transfer">🔄 ย้าย</option>';
+  html += '<option value="adjust">⚙️ ปรับสต็อค</option>';
+  html += '</select>';
+  document.getElementById('txn-filters').innerHTML = html;
+}
+
+function setTxnFilter(filter, btn) {
+  txnFilter = filter;
+  document.querySelectorAll('#txn-filters .filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderTransactions();
+}
+
+function setTxnTypeFilter(type) {
+  txnTypeFilter = type;
+  renderTransactions();
+}
+
+function renderTransactions() {
+  var txns = (appData.transactions || []).slice();
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Date filter
+  var filtered = txns.filter(function(t) {
+    var d = t.dateUse ? new Date(t.dateUse) : (t.timestamp ? new Date(t.timestamp) : null);
+    if (!d) return false;
+
+    if (txnFilter === 'today') {
+      return d >= today;
+    } else if (txnFilter === 'week') {
+      var weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return d >= weekAgo;
+    } else if (txnFilter === 'month') {
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    } else if (txnFilter === 'lastmonth') {
+      var lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return d.getMonth() === lm.getMonth() && d.getFullYear() === lm.getFullYear();
+    }
+    return true; // 'all'
+  });
+
+  // Type filter
+  if (txnTypeFilter !== 'all') {
+    filtered = filtered.filter(function(t) {
+      return t.type === txnTypeFilter;
+    });
+  }
+
+  // Sort by date desc
+  filtered.sort(function(a, b) {
+    var da = a.dateUse ? new Date(a.dateUse) : new Date(a.timestamp);
+    var db = b.dateUse ? new Date(b.dateUse) : new Date(b.timestamp);
+    return db - da;
+  });
+
+  // Summary KPIs
+  var totalIn = 0, totalOut = 0, totalTransfer = 0, totalAdjust = 0;
+  filtered.forEach(function(t) {
+    var l = t.liter || 0;
+    if (t.type === 'import') totalIn += l;
+    else if (t.type === 'export') totalOut += l;
+    else if (t.type === 'transfer') totalTransfer += l;
+    else if (t.type === 'adjust') totalAdjust += l;
+  });
+
+  var kpiHtml = '';
+  kpiHtml += '<div class="kpi-card green"><div class="kpi-label">📥 รับเข้า</div><div class="kpi-value num">' + fmtNumInt(totalIn) + '</div><div class="kpi-unit">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card red"><div class="kpi-label">📤 เบิกออก</div><div class="kpi-value num">' + fmtNumInt(totalOut) + '</div><div class="kpi-unit">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card"><div class="kpi-label" style="color:#F9A825;">🔄 ย้าย</div><div class="kpi-value num" style="color:#F9A825;">' + fmtNumInt(totalTransfer) + '</div><div class="kpi-unit">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card"><div class="kpi-label" style="color:#1565C0;">⚙️ ปรับสต็อค</div><div class="kpi-value num" style="color:#1565C0;">' + fmtNumInt(totalAdjust) + '</div><div class="kpi-unit">ลิตร</div></div>';
+  document.getElementById('txn-summary').innerHTML = kpiHtml;
+
+  // Table
+  var thtml = '<table><thead><tr>';
+  thtml += '<th>วันที่</th><th>ประเภท</th><th>น้ำมัน</th><th>แหล่งที่เก็บ</th><th>จำนวน(ลิตร)</th><th>หน่วยงาน</th><th>ผู้ดำเนินการ</th><th>หมายเหตุ</th>';
+  if (txnFilter === 'all' || txnTypeFilter === 'export') {
+    thtml += '<th>ราคา/ลิตร</th><th>ยอดรวม</th><th>ผู้ซื้อ</th>';
+  }
+  thtml += '</tr></thead><tbody>';
+
+  if (filtered.length === 0) {
+    thtml += '<tr><td colspan="10" style="text-align:center; padding:40px; color:var(--text-light);">ไม่พบข้อมูลธุรกรรม</td></tr>';
+  } else {
+    var maxRows = 200;
+    var showRows = filtered.slice(0, maxRows);
+    showRows.forEach(function(t) {
+      var typeLabel = '';
+      var typeClass = '';
+      if (t.type === 'import') { typeLabel = '📥 นำเข้า'; typeClass = 'type-import'; }
+      else if (t.type === 'export') { typeLabel = '📤 เบิกออก/ขาย'; typeClass = 'type-export'; }
+      else if (t.type === 'transfer') { typeLabel = '🔄 ย้าย'; typeClass = 'type-transfer'; }
+      else if (t.type === 'adjust') { typeLabel = '⚙️ ปรับสต็อค'; typeClass = 'type-adjust'; }
+      else { typeLabel = t.type || '-'; typeClass = 'type-adjust'; }
+
+      var dateStr = t.dateUse ? fmtDate(t.dateUse) : fmtDate(t.timestamp);
+
+      thtml += '<tr>';
+      thtml += '<td>' + dateStr + '</td>';
+      thtml += '<td><span class="type-badge ' + typeClass + '">' + typeLabel + '</span></td>';
+      thtml += '<td>' + (t.oilType || '-') + '</td>';
+      thtml += '<td>' + (t.storage || '-') + (t.storageTransfer ? ' → ' + t.storageTransfer : '') + '</td>';
+      thtml += '<td class="num">' + fmtNum(t.liter) + '</td>';
+      thtml += '<td>' + (t.agency || '-') + '</td>';
+      thtml += '<td>' + (t.outPerson || '-') + '</td>';
+      thtml += '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (t.notice || '') + '">' + (t.notice || '-') + '</td>';
+
+      if (txnFilter === 'all' || txnTypeFilter === 'export') {
+        var price = t.sellPrice || 0;
+        var total = price * (t.liter || 0);
+        thtml += '<td class="num">' + (price > 0 ? fmtNum(price) : '-') + '</td>';
+        thtml += '<td class="num">' + (total > 0 ? fmtNum(total) : '-') + '</td>';
+        thtml += '<td>' + (t.sellCustomer || '-') + '</td>';
+      }
+
+      thtml += '</tr>';
+    });
+
+    if (filtered.length > maxRows) {
+      thtml += '<tr><td colspan="10" style="text-align:center; color:var(--accent);">แสดง ' + maxRows + ' รายการจากทั้งหมด ' + filtered.length + ' รายการ</td></tr>';
+    }
+  }
+
+  thtml += '</tbody></table>';
+  document.getElementById('txn-table-wrapper').innerHTML = thtml;
+}
+
+// ===== Tab 3: Sales =====
+function renderSales() {
+  var txns = (appData.transactions || []).filter(function(t) {
+    return t.type === 'export' && t.sellPrice > 0;
+  });
+
+  var salesReport = appData.salesReport || [];
+
+  // Group by month
+  var byMonth = {};
+  var byBuyer = {};
+  var bySaleType = {};
+  var byOilType = {};
+  var totalRevenue = 0;
+  var totalLiters = 0;
+
+  txns.forEach(function(t) {
+    var d = t.dateUse ? new Date(t.dateUse) : (t.timestamp ? new Date(t.timestamp) : null);
+    if (!d) return;
+
+    var monthKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    var monthLabel = thaiMonthsShort[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+
+    var revenue = (t.sellPrice || 0) * (t.liter || 0);
+    var liters = t.liter || 0;
+
+    totalRevenue += revenue;
+    totalLiters += liters;
+
+    if (!byMonth[monthKey]) byMonth[monthKey] = { label: monthLabel, revenue: 0, liters: 0 };
+    byMonth[monthKey].revenue += revenue;
+    byMonth[monthKey].liters += liters;
+
+    var buyer = t.sellCustomer || 'ไม่ระบุ';
+    if (!byBuyer[buyer]) byBuyer[buyer] = { revenue: 0, liters: 0 };
+    byBuyer[buyer].revenue += revenue;
+    byBuyer[buyer].liters += liters;
+
+    var st = t.sellType || 'ไม่ระบุ';
+    if (!bySaleType[st]) bySaleType[st] = { revenue: 0, liters: 0 };
+    bySaleType[st].revenue += revenue;
+    bySaleType[st].liters += liters;
+
+    var ot = t.oilType || 'ไม่ระบุ';
+    if (!byOilType[ot]) byOilType[ot] = { revenue: 0, liters: 0 };
+    byOilType[ot].revenue += revenue;
+    byOilType[ot].liters += liters;
+  });
+
+  // KPIs
+  var kpiHtml = '';
+  kpiHtml += '<div class="kpi-card green"><div class="kpi-label">💰 รายได้รวม</div><div class="kpi-value num">' + fmtNumInt(totalRevenue) + '</div><div class="kpi-unit">บาท</div></div>';
+  kpiHtml += '<div class="kpi-card blue"><div class="kpi-label">🛢️ ปริมาณขาย</div><div class="kpi-value num">' + fmtNumInt(totalLiters) + '</div><div class="kpi-unit">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card orange"><div class="kpi-label">📊 รายการขาย</div><div class="kpi-value num">' + txns.length + '</div><div class="kpi-unit">รายการ</div></div>';
+
+  var avgPrice = totalLiters > 0 ? totalRevenue / totalLiters : 0;
+  kpiHtml += '<div class="kpi-card"><div class="kpi-label">💵 ราคาเฉลี่ย/ลิตร</div><div class="kpi-value num">' + fmtNum(avgPrice) + '</div><div class="kpi-unit">บาท</div></div>';
+  document.getElementById('sales-kpi').innerHTML = kpiHtml;
+
+  // Monthly bar chart
+  var months = Object.keys(byMonth).sort();
+  var maxRevenue = 0;
+  months.forEach(function(m) {
+    if (byMonth[m].revenue > maxRevenue) maxRevenue = byMonth[m].revenue;
+  });
+
+  var chartHtml = '<div class="card"><div class="card-header">📈 แนวโน้มรายได้รายเดือน</div><div class="card-body">';
+  if (months.length > 0) {
+    chartHtml += '<div class="bar-chart">';
+    months.forEach(function(m) {
+      var pct = maxRevenue > 0 ? (byMonth[m].revenue / maxRevenue * 100) : 0;
+      chartHtml += '<div class="bar-group">';
+      chartHtml += '<div class="bar-value num">' + fmtNumInt(byMonth[m].revenue) + '</div>';
+      chartHtml += '<div class="bar bar-green" style="height:' + Math.max(pct, 3) + '%;" title="' + byMonth[m].label + ': ' + fmtNumInt(byMonth[m].revenue) + ' บาท"></div>';
+      chartHtml += '<div class="bar-label">' + byMonth[m].label + '</div>';
+      chartHtml += '</div>';
+    });
+    chartHtml += '</div>';
+  } else {
+    chartHtml += '<div class="empty-state"><div class="icon">📊</div>ไม่มีข้อมูลการขาย</div>';
+  }
+  chartHtml += '</div></div>';
+  document.getElementById('sales-chart').innerHTML = chartHtml;
+
+  // Sales by oil type
+  var detailsHtml = '<div class="card"><div class="card-header">🛢️ ยอดขายตามประเภทน้ำมัน</div><div class="card-body"><div class="table-scroll"><table><thead><tr>';
+  detailsHtml += '<th>ประเภทน้ำมัน</th><th>ปริมาณ (ลิตร)</th><th>รายได้ (บาท)</th><th>สัดส่วน</th>';
+  detailsHtml += '</tr></thead><tbody>';
+
+  Object.keys(byOilType).forEach(function(ot) {
+    var share = totalRevenue > 0 ? (byOilType[ot].revenue / totalRevenue * 100) : 0;
+    detailsHtml += '<tr><td>' + ot + '</td><td class="num">' + fmtNumInt(byOilType[ot].liters) + '</td>';
+    detailsHtml += '<td class="num">' + fmtNumInt(byOilType[ot].revenue) + '</td>';
+    detailsHtml += '<td>' + share.toFixed(1) + '%</td></tr>';
+  });
+  detailsHtml += '<tr class="summary-row"><td>รวม</td><td class="num">' + fmtNumInt(totalLiters) + '</td><td class="num">' + fmtNumInt(totalRevenue) + '</td><td>100%</td></tr>';
+  detailsHtml += '</tbody></table></div></div></div>';
+  document.getElementById('sales-details').innerHTML = detailsHtml;
+
+  // Sales by buyer
+  var buyerHtml = '<div class="card"><div class="card-header">👥 ยอดขายตามผู้ซื้อ</div><div class="card-body"><div class="table-scroll"><table><thead><tr>';
+  buyerHtml += '<th>ผู้ซื้อ</th><th>ปริมาณ (ลิตร)</th><th>รายได้ (บาท)</th>';
+  buyerHtml += '</tr></thead><tbody>';
+
+  // Sort buyers by revenue desc
+  var buyers = Object.keys(byBuyer).sort(function(a, b) { return byBuyer[b].revenue - byBuyer[a].revenue; });
+  buyers.forEach(function(buyer) {
+    buyerHtml += '<tr><td>' + buyer + '</td><td class="num">' + fmtNumInt(byBuyer[buyer].liters) + '</td>';
+    buyerHtml += '<td class="num">' + fmtNumInt(byBuyer[buyer].revenue) + '</td></tr>';
+  });
+  buyerHtml += '</tbody></table></div></div></div>';
+
+  // Sale types
+  buyerHtml += '<div class="card" style="margin-top:16px;"><div class="card-header">🏷️ ยอดขายตามประเภทการขาย</div><div class="card-body"><div class="table-scroll"><table><thead><tr>';
+  buyerHtml += '<th>ประเภทการขาย</th><th>ปริมาณ (ลิตร)</th><th>รายได้ (บาท)</th>';
+  buyerHtml += '</tr></thead><tbody>';
+
+  var saleTypes = Object.keys(bySaleType).sort(function(a, b) { return bySaleType[b].revenue - bySaleType[a].revenue; });
+  saleTypes.forEach(function(st) {
+    buyerHtml += '<tr><td>' + st + '</td><td class="num">' + fmtNumInt(bySaleType[st].liters) + '</td>';
+    buyerHtml += '<td class="num">' + fmtNumInt(bySaleType[st].revenue) + '</td></tr>';
+  });
+  buyerHtml += '</tbody></table></div></div></div>';
+
+  document.getElementById('sales-by-buyer').innerHTML = buyerHtml;
+}
+
+// ===== Tab 4: Production =====
+function renderProduction() {
+  var prod = (appData.production || []).filter(function(p) {
+    return p.dieselProduced > 0 || p.usedOilLiters > 0;
+  });
+
+  // Sort by start date desc
+  prod.sort(function(a, b) {
+    var da = a.startDate ? new Date(a.startDate) : new Date(0);
+    var db = b.startDate ? new Date(b.startDate) : new Date(0);
+    return db - da;
+  });
+
+  // Calculate totals
+  var totalDiesel = 0, totalUsedOil = 0, totalWaste = 0, totalElec = 0;
+  prod.forEach(function(p) {
+    totalDiesel += p.dieselProduced || 0;
+    totalUsedOil += p.usedOilLiters || 0;
+    totalWaste += p.wasteLiters || 0;
+    totalElec += p.electricityUsed || 0;
+  });
+
+  var efficiency = totalUsedOil > 0 ? (totalDiesel / totalUsedOil * 100) : 0;
+
+  // KPIs
+  var kpiHtml = '';
+  kpiHtml += '<div class="kpi-card green"><div class="kpi-label">⛽ ดีเซลที่ผลิตได้รวม</div><div class="kpi-value num">' + fmtNumInt(totalDiesel) + '</div><div class="kpi-unit">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card blue"><div class="kpi-label">🛢️ ใช้น้ำมันเครื่องเก่ารวม</div><div class="kpi-value num">' + fmtNumInt(totalUsedOil) + '</div><div class="kpi-unit">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card orange"><div class="kpi-label">📊 อัตราส่วนได้ดีเซล</div><div class="kpi-value num">' + efficiency.toFixed(1) + '%</div><div class="kpi-unit">ประสิทธิภาพ</div></div>';
+  kpiHtml += '<div class="kpi-card"><div class="kpi-label">⚠️ ของเสียรวม</div><div class="kpi-value num">' + fmtNumInt(totalWaste) + '</div><div class="kpi-unit">ลิตร</div></div>';
+  document.getElementById('prod-kpi').innerHTML = kpiHtml;
+
+  // Monthly production chart
+  var byMonth = {};
+  prod.forEach(function(p) {
+    var d = p.startDate ? new Date(p.startDate) : null;
+    if (!d || isNaN(d.getTime())) return;
+    var monthKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    var monthLabel = thaiMonthsShort[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+    if (!byMonth[monthKey]) byMonth[monthKey] = { label: monthLabel, diesel: 0, usedOil: 0 };
+    byMonth[monthKey].diesel += p.dieselProduced || 0;
+    byMonth[monthKey].usedOil += p.usedOilLiters || 0;
+  });
+
+  var months = Object.keys(byMonth).sort();
+  var maxProd = 0;
+  months.forEach(function(m) {
+    if (byMonth[m].diesel > maxProd) maxProd = byMonth[m].diesel;
+  });
+
+  var chartHtml = '<div class="card"><div class="card-header">📈 แนวโน้มการผลิตรายเดือน</div><div class="card-body">';
+  if (months.length > 0) {
+    chartHtml += '<div style="display:flex;gap:12px;margin-bottom:12px;font-size:12px;"><span style="color:var(--primary);">■ ดีเซลที่ผลิต</span><span style="color:var(--secondary);">■ น้ำมันเครื่องเก่าที่ใช้</span></div>';
+    chartHtml += '<div class="bar-chart">';
+    months.forEach(function(m) {
+      var pctD = maxProd > 0 ? (byMonth[m].diesel / maxProd * 100) : 0;
+      chartHtml += '<div class="bar-group">';
+      chartHtml += '<div class="bar-value num">' + fmtNumInt(byMonth[m].diesel) + '</div>';
+      chartHtml += '<div class="bar bar-green" style="height:' + Math.max(pctD, 3) + '%;" title="' + byMonth[m].label + ': ' + fmtNumInt(byMonth[m].diesel) + ' ลิตร"></div>';
+      chartHtml += '<div class="bar-label">' + byMonth[m].label + '</div>';
+      chartHtml += '</div>';
+    });
+    chartHtml += '</div>';
+  } else {
+    chartHtml += '<div class="empty-state"><div class="icon">🏭</div>ไม่มีข้อมูลการผลิต</div>';
+  }
+  chartHtml += '</div></div>';
+  document.getElementById('prod-chart').innerHTML = chartHtml;
+
+  // Production table
+  var tableHtml = '<div class="card"><div class="card-header">📋 รายละเอียดการผลิต</div><div class="card-body"><div class="table-scroll"><table><thead><tr>';
+  tableHtml += '<th>วันที่ผลิต</th><th>ดีเซลที่ผลิตได้ (ลิตร)</th><th>ใช้น้ำมันเครื่องเก่า (ลิตร)</th><th>ของเสีย (ลิตร)</th><th>ค่าซีเทน</th><th>สถานที่เก็บ</th><th>ปริมาณที่เก็บ (ลิตร)</th>';
+  tableHtml += '</tr></thead><tbody>';
+
+  if (prod.length === 0) {
+    tableHtml += '<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-light);">ไม่พบข้อมูลการผลิต</td></tr>';
+  } else {
+    prod.forEach(function(p) {
+      var dateStr = p.startDate ? fmtDate(p.startDate) : '-';
+      var endDateStr = p.endDate ? fmtDate(p.endDate) : '';
+      if (endDateStr && endDateStr !== '-') dateStr += ' - ' + endDateStr;
+
+      tableHtml += '<tr>';
+      tableHtml += '<td>' + dateStr + '</td>';
+      tableHtml += '<td class="num" style="color:var(--primary);font-weight:700;">' + fmtNum(p.dieselProduced) + '</td>';
+      tableHtml += '<td class="num">' + fmtNum(p.usedOilLiters) + '</td>';
+      tableHtml += '<td class="num" style="color:var(--accent);">' + fmtNum(p.wasteLiters) + '</td>';
+      tableHtml += '<td>' + (p.cetaneValue || '-') + '</td>';
+      tableHtml += '<td>' + (p.storageLocation || '-') + '</td>';
+      tableHtml += '<td class="num">' + fmtNum(p.amountStored) + '</td>';
+      tableHtml += '</tr>';
+    });
+  }
+
+  tableHtml += '</tbody></table></div></div></div>';
+  document.getElementById('prod-table').innerHTML = tableHtml;
+}
+
+// ===== Print =====
+function printPage() {
+  window.print();
+}
+
+// ===== Init =====
+loadData();
+
+// Auto-refresh every 5 minutes
+setInterval(function() {
+  loadData();
+}, 300000);
+</script>
+
+</body>
+</html>
