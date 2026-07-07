@@ -1,0 +1,293 @@
+# DOC-01 — Software Requirements Specification (SRS)
+## BCT-196 — Multi-Form Web Application Platform
+
+**Standard:** IEEE 830, ISO 29110
+**Version:** 1.0
+**Date:** 2026-05-18
+**Prepared by:** Claude Code (Initial Documentation)
+
+---
+
+# ข้อกำหนดความต้องการซอฟต์แวร์ (SRS)
+## BCT-196 — แพลตฟอร์มแบบฟอร์มเว็บหลายรูปแบบ
+
+---
+
+## Document Control
+
+| Field | Value |
+|-------|-------|
+| Project | BCT-196 |
+| Script ID | 1yuktjbL2hpowqsgkI-ujNWJZs7ZFhsSGM4GEutyBap2fRBpkbN5acfGm |
+| Type | Google Apps Script Web App |
+| Version | 1.0 |
+| Status | Approved |
+| Date | 2026-05-18 |
+
+### Revision History
+| Version | Date | Author | Description |
+|---------|------|--------|-------------|
+| 1.0 | 2026-05-18 | Claude Code | Initial documentation from source code |
+
+---
+
+## 1. Introduction / บทนำ
+
+### 1.1 Purpose / วัตถุประสงค์
+
+This document specifies the software requirements for BCT-196, a Google Apps Script web application that serves as a multi-form platform. The system renders dynamic HTML forms driven by spreadsheet configuration data, integrates with the BCT library for data operations, uploads files to Google Drive, and supports multiple business-unit form contexts (AAM, RPLC, RAFCO, PKG, IT, FAM).
+
+เอกสารนี้ระบุความต้องการซอฟต์แวร์สำหรับ BCT-196 ซึ่งเป็นเว็บแอปพลิเคชัน Google Apps Script ที่ทำหน้าที่เป็นแพลตฟอร์มแบบฟอร์มหลายรูปแบบ ระบบแสดงฟอร์ม HTML แบบไดนามิกที่ขับเคลื่อนด้วยข้อมูลการกำหนดค่าจาก Spreadsheet และรองรับหลาย Business Unit
+
+### 1.2 Scope / ขอบเขต
+
+BCT-196 is a deployed Google Apps Script web app that:
+- Accepts HTTP GET requests with `spreadsheet_id`, `form_name`, and `keyit` parameters
+- Loads form definitions from the sheet `A2_Forms` of the target spreadsheet
+- Renders the appropriate HTML template (html-Index-vbs5, PMG-Error, PKG-Error)
+- Inserts form responses to multiple target spreadsheets and databases via the BCT library
+- Uploads files to Google Drive folders with timestamp-based naming
+- Searches contracts in Elasticsearch (RAFCO), SQL databases (BCT, MIRAI, RDS)
+- Integrates with external systems: LikeWallet (APILP), Auto-Deploy (pkgDeploy), BLOCK library, BCT542 library
+- Manages Telegram group creation for RAFCO contracts
+
+### 1.3 Definitions and Acronyms / นิยามและคำย่อ
+
+| Term | Definition |
+|------|------------|
+| BCT | Business Component Technology — shared GAS library |
+| AAM | สาขา/หน่วยธุรกิจ AAM |
+| RPLC | สาขา/หน่วยธุรกิจ RPLC |
+| RAFCO | สาขา/หน่วยธุรกิจ RAFCO |
+| PKG | สาขา/หน่วยธุรกิจ PKG |
+| DLT | ระบบกรมการขนส่งทางบก |
+| APILP | ไลบรารีสำหรับ LikeWallet |
+| pkgDeploy | ไลบรารีสำหรับ Auto Deploy GAS |
+| BLOCK | ไลบรารีสำหรับการจัดการ Block/Permission |
+| BCT542 | ไลบรารีเสริม BCT version 542 |
+
+### 1.4 References / เอกสารอ้างอิง
+
+- IEEE 830 Software Requirements Specification Standard
+- ISO 29110 Software Life Cycle Profiles and Guidelines
+- BCT Library API Documentation
+- Google Apps Script Documentation
+
+---
+
+## 2. Overall Description / ภาพรวมของระบบ
+
+### 2.1 Product Perspective / มุมมองผลิตภัณฑ์
+
+BCT-196 is a centralized form-submission platform used across multiple business units. It acts as a middleware layer between end-users (via web browser) and various Google Spreadsheets and external databases. The system is designed to be configurable per spreadsheet, enabling re-use across different departments without code changes.
+
+BCT-196 เป็นแพลตฟอร์มส่งแบบฟอร์มแบบรวมศูนย์ที่ใช้งานในหลาย Business Unit โดยทำหน้าที่เป็น Middleware ระหว่างผู้ใช้ (ผ่านเว็บเบราว์เซอร์) และ Google Spreadsheets รวมถึงฐานข้อมูลภายนอก
+
+### 2.2 Product Functions / ฟังก์ชันหลัก
+
+1. **Form Rendering** — ดึงคำถามจาก sheet `A2_Forms` และแสดง HTML form ผ่าน `doGet`
+2. **Form Submission** — รับและบันทึกข้อมูลลง Spreadsheet และฐานข้อมูลผ่าน `insertBCT`
+3. **File Upload** — อัพโหลดไฟล์ Base64 ไปยัง Google Drive ผ่าน `uploadFileToDrive`
+4. **Contract Search** — ค้นหาสัญญาผ่าน Elasticsearch (RAFCO) และ SQL
+5. **Member Lookup** — ค้นหาสมาชิก LikeWallet และข้อมูลสาขา
+6. **Auto Deploy** — Deploy ไปยัง Production/Dev environment ผ่าน `pkgDeploy`
+7. **Exam Score Retrieval** — ดึงคะแนนสอบจากชีต B2_ตรวจคำตอบ
+8. **External Integration** — เรียก Telegram API, PMS/PCC parts search, GPS image retrieval
+
+### 2.3 User Classes / กลุ่มผู้ใช้
+
+| User Class | Description / คำอธิบาย |
+|------------|------------------------|
+| Field Staff / พนักงานสนาม | กรอกแบบฟอร์มผ่านเว็บ URL |
+| Branch Officers / เจ้าหน้าที่สาขา | ใช้งานฟอร์มต่างๆ ตามหน่วยงาน |
+| IT Administrators | ดูแล deploy และ configuration |
+| System (BCT Library) | เรียกฟังก์ชัน feedback, timestamp, etc. |
+
+### 2.4 Operating Environment / สภาพแวดล้อม
+
+- Google Apps Script Runtime: V8
+- Timezone: Asia/Bangkok (GMT+7)
+- Exception Logging: Stackdriver
+- Access: ANYONE (public web app)
+- Execution: USER_DEPLOYING
+
+### 2.5 Assumptions and Dependencies / สมมติฐานและการพึ่งพา
+
+- ต้องมีการกำหนด spreadsheet_id ที่ถูกต้องใน URL parameter
+- BCT Library (v0 dev mode) ต้องพร้อมใช้งาน
+- APILP, pkgDeploy, BLOCK, BCT542 libraries ต้องพร้อมใช้งาน
+- ผู้ใช้ต้องมีสิทธิ์เข้าถึง target spreadsheet
+
+---
+
+## 3. Specific Requirements / ความต้องการเฉพาะ
+
+### 3.1 Functional Requirements / ความต้องการเชิงฟังก์ชัน
+
+#### REQ-F-001: HTTP GET Entry Point
+**Priority:** High
+The system shall expose a `doGet(e)` function as the web app entry point. It shall:
+- Accept `spreadsheet_id`, `form_name`, `keyit`, and `AGSCheckStatusService` parameters
+- Return JSON `{"status":"ok"}` when `AGSCheckStatusService` parameter is present
+- Redirect to PMG-Error template when spreadsheet_id equals `1uH3LeYt7LS0l8Lg3wHqv2mSBg-9HT85ClK4-J49roCA`
+- Redirect to PKG-Error template when spreadsheet_id equals `1-puCL6LQUoVPnlvVI73yCeKLQwLD0zXS8VagBKJMKmE`
+- Render html-Index-vbs5 template in all other cases
+
+ระบบต้องแสดงฟังก์ชัน `doGet(e)` เป็น entry point ของเว็บแอป รับ parameter ที่ระบุ และส่ง template HTML ที่เหมาะสม
+
+#### REQ-F-002: Form Definition Loading
+**Priority:** High
+The system shall load form questions via `getForms()` from sheet `A2_Forms` of the active spreadsheet, filtering by `form_name` parameter and collecting `form_importance` flags for mandatory fields.
+
+ระบบต้องโหลดคำถามแบบฟอร์มจากชีต A2_Forms โดยกรองตาม form_name และเก็บค่า form_importance
+
+#### REQ-F-003: File Upload to Google Drive
+**Priority:** High
+The system shall upload Base64-encoded files to Google Drive via `uploadFileToDrive`. Files shall be:
+- Timestamped with format `yyyyMMddhhmmsss`
+- Placed in the specified Drive folder
+- Ownership transferred to `gdoc@prachakij.com`
+- Return fileUrl, base64Data, fileName, and folders in the response
+
+ระบบต้องรองรับการอัพโหลดไฟล์แบบ Base64 ไปยัง Google Drive พร้อมตั้งชื่อไฟล์ด้วย Timestamp
+
+#### REQ-F-004: New Folder Creation
+**Priority:** Medium
+The system shall create a new sub-folder in the target Drive folder via `newFileToNewFolder` if a folder with the specified name does not already exist.
+
+ระบบต้องสร้าง sub-folder ใน Google Drive หากยังไม่มี folder ที่ชื่อที่ระบุ
+
+#### REQ-F-005: Form Response Insertion
+**Priority:** High
+The system shall insert form responses to the appropriate target spreadsheets via `insertBCT`, supporting:
+- `reportR` — BCT_AAM report spreadsheet (branch-based routing)
+- `reportR_RPLC` — BCT_RPLC report spreadsheet (branch-based routing with upsert logic)
+- `reportO_RAFCO_saveUploadAudit` — RAFCO audit sheet update
+- Direct spreadsheet ID insertion
+
+ระบบต้องบันทึก form response ไปยัง spreadsheet เป้าหมายที่เหมาะสมตาม config
+
+#### REQ-F-006: Contract Search (RAFCO / Elasticsearch)
+**Priority:** Medium
+The system shall search contracts by keyword (contract code, customer name, ID card, phone) via `searchContract_Rafco` using Elasticsearch.
+
+ระบบต้องค้นหาสัญญา RAFCO ผ่าน Elasticsearch ด้วย keyword หลายประเภท
+
+#### REQ-F-007: Member Code and Wallet Lookup
+**Priority:** Medium
+The system shall look up LikeWallet member addresses via `get_Address_Wallet` using the APILP library, and return member codes via `get_member_code`.
+
+ระบบต้องค้นหา LikeWallet address ผ่านไลบรารี APILP
+
+#### REQ-F-008: Division (BU) Search
+**Priority:** Medium
+The system shall search division names from the PPP7 database via `getBUinp` by keyword.
+
+ระบบต้องค้นหาชื่อ division จากฐานข้อมูล PPP7
+
+#### REQ-F-009: IT Work Order Lookup
+**Priority:** Low
+The system shall retrieve IT work order data by `keyit` parameter via `getdatait`.
+
+ระบบต้องดึงข้อมูล IT work order จาก BCT_IT database
+
+#### REQ-F-010: Exam Score Retrieval
+**Priority:** Low
+The system shall retrieve exam quiz answers from sheet `B2_ตรวจคำตอบ` via `get_replyquestion`, supporting both Group 1 (5 quizzes) and Group 2 (up to 42 quizzes) formats.
+
+ระบบต้องดึงคะแนนสอบจากชีต B2_ตรวจคำตอบ รองรับทั้งกลุ่ม 1 และกลุ่ม 2
+
+#### REQ-F-011: Timestamp Generation
+**Priority:** High
+The system shall generate timestamps via `getTimestamp`, returning formatted date `yyyy-MM-dd HH:mm:ss`, user email, and optional function metadata.
+
+ระบบต้องสร้าง timestamp พร้อม email ผู้ใช้ ในรูปแบบที่กำหนด
+
+#### REQ-F-012: Branch Lookup by SC Name
+**Priority:** Low
+The system shall look up branch information by SC name from spreadsheet `1avgnzH7a4TJHkd2KRzOh7S79Hx3Gm2FcgfoUZV60Dhs` sheet `A1_config`.
+
+#### REQ-F-013: Auto Deploy
+**Priority:** Low
+The system shall support automated deployment via `call_gasDeploy_prod` and `call_gasDeploy_Dev` using the `pkgDeploy` library.
+
+#### REQ-F-014: Telegram Group Creation (RAFCO)
+**Priority:** Low
+The system shall create Telegram groups for RAFCO customers via `tgracfo_creategroup` and `tgracfo_creategroup_not` by calling the external Telegram API at `https://telegram.agilesoftgroup.com`.
+
+#### REQ-F-015: Parts Search (PMS/PCC)
+**Priority:** Low
+The system shall search parts inventory from the MIRAI database via `getpart_norMultiKey`, `getpart_norMultiKey_s`, and `parts_inventory`.
+
+### 3.2 Non-Functional Requirements / ความต้องการที่ไม่ใช่เชิงฟังก์ชัน
+
+#### REQ-NF-001: Availability
+The system shall be available as a public web app with access level ANYONE.
+
+#### REQ-NF-002: Security
+The system shall use a `secret` key for internal authentication. File ownership shall be transferred to `gdoc@prachakij.com` after upload. Spreadsheet IDs with known error states shall redirect to error pages.
+
+#### REQ-NF-003: Performance
+File uploads shall include a timestamp suffix to prevent name collisions. Database queries shall use parameterized query strings via BCT library.
+
+#### REQ-NF-004: Compatibility
+The system shall run in IFRAME sandbox mode with ALLOWALL XFrame options for embedding in external systems.
+
+---
+
+## 4. Data Requirements / ความต้องการข้อมูล
+
+### 4.1 External Spreadsheets Referenced
+
+| Spreadsheet ID | Purpose |
+|----------------|---------|
+| Parameter: spreadsheet_id | Target form spreadsheet (dynamic) |
+| 1avgnzH7a4TJHkd2KRzOh7S79Hx3Gm2FcgfoUZV60Dhs | Branch/SC configuration |
+| 1vHgII04pPtYFO_6PzoqVmm1FXM9kLNlNAWv_fkrRNhk | FAM contract data (B2_Contract) |
+| 1v7sh2JqwZEGVV6ZXNVTTBQq7dGVW7W_jLgmBpt0Om1c | IIU/FIM Step 1 data |
+| 1UfWsppqm9uABeftqj48-JN_bGrDV7wMdnAnlbY9Jahg | SC customer/accessory data |
+| 1zEHzFHIIKYxsVMdzrbDJUNhfw2IYU9mG7rvawrZ1Lrk | RAFCO report O configuration |
+
+### 4.2 External Databases Referenced
+
+| DB Name | Server | Purpose |
+|---------|--------|---------|
+| BCT_AAM | BCT.getDBServer() | Report R, Stock Car Registration |
+| BCT_RPLC | BCT.getDBServer() | Report R RPLC |
+| BCT_AMS2_RAFCO | BCT.getDBServer() | RAFCO audit data |
+| BCT_PKG | BCT.getDBServer() | WI Registered data |
+| BCT_IT | BCT.getDBServer() | IT work orders |
+| PPP7 | BCT.getDBServer() | Division data |
+| MIRAI | BCT.getDBServer() | Parts inventory |
+| BCT_AGS | RDS | Line tokens |
+| tbcontract_data | Elasticsearch | RAFCO contracts |
+
+---
+
+*End of DOC-01-SRS*
+
+---
+
+# (ภาษาไทย) ข้อกำหนดความต้องการซอฟต์แวร์
+
+## สรุปความต้องการหลัก
+
+BCT-196 เป็นเว็บแอปพลิเคชันบน Google Apps Script ที่ทำหน้าที่เป็นแพลตฟอร์มแบบฟอร์มรวมศูนย์ รองรับหลาย Business Unit ได้แก่ AAM, RPLC, RAFCO, PKG, IT และ FAM
+
+### ความต้องการเชิงฟังก์ชันหลัก
+
+1. **REQ-F-001** รับ HTTP GET request และแสดง HTML form ที่เหมาะสมตาม spreadsheet_id
+2. **REQ-F-002** โหลดนิยามแบบฟอร์มจากชีต A2_Forms ตาม form_name
+3. **REQ-F-003** อัพโหลดไฟล์ Base64 ไปยัง Google Drive พร้อม timestamp
+4. **REQ-F-004** สร้าง sub-folder ใน Drive อัตโนมัติ
+5. **REQ-F-005** บันทึก form response ไปยัง spreadsheet เป้าหมายตาม routing logic
+6. **REQ-F-006** ค้นหาสัญญา RAFCO ผ่าน Elasticsearch
+7. **REQ-F-007** ค้นหาข้อมูล LikeWallet member ผ่าน APILP
+8. **REQ-F-011** สร้าง timestamp พร้อมข้อมูลผู้ใช้
+
+### ความต้องการที่ไม่ใช่เชิงฟังก์ชัน
+
+- เข้าถึงได้สาธารณะ (ANYONE)
+- รัน IFRAME sandbox mode
+- ใช้ V8 runtime บน Asia/Bangkok timezone
+- บันทึก error ผ่าน Stackdriver

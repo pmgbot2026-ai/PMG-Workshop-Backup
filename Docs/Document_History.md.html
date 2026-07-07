@@ -1,0 +1,38 @@
+# Document History — BCT-196
+
+| Rev | Date | Mode | Updated By | Docs Affected | Change Summary |
+|-----|------|------|------------|---------------|----------------|
+| 1.0 | 2026-05-18 | INITIAL CREATE | Claude Code | ALL | First documentation from source code analysis |
+
+---
+
+## Rev 1.0 — 2026-05-18 — INITIAL CREATE
+
+- **Trigger:** First-time documentation via Claude Code Pipeline
+- **Script files read:**
+  - A-script.js
+  - A-config.js
+  - A-uploadFile.js
+  - A-insertBCT.js
+  - A-autoDeploy.js
+  - FAM.js
+  - Rafco_Script.js
+  - f-script.js
+  - html-Index-vbs5.html
+  - PKG-Error.html
+  - PMG-Error.html
+  - Rafco_JavaScript.html
+  - Stylesheet.html
+  - appsscript.json
+- **Documents created:** DOC-01-SRS, DOC-02-FSD, DOC-17-ADR, DOC-03-SDD, DOC-19-DDD, DOC-20-WDD, README, Document_History
+- **Key findings:**
+  - **Purpose:** Multi-form web app platform serving multiple business units (AAM, RPLC, RAFCO, PKG, IT, FAM)
+  - **Entry point:** `doGet(e)` — HTTP GET web app deployed with ANYONE access
+  - **Functions documented:** 30+ across 8 source files
+  - **Services detected:** SpreadsheetApp, DriveApp, ContentService, HtmlService, UrlFetchApp, Utilities, Session, ScriptApp
+  - **Libraries detected:** BCT (core), APILP (LikeWallet), pkgDeploy (auto-deploy), BLOCK (permissions), BCT542 (extended)
+  - **Triggers detected:** None (web app uses doGet HTTP trigger only)
+  - **Databases accessed:** BCT_AAM, BCT_RPLC, BCT_AMS2, BCT_PKG, BCT_IT, PPP7, MIRAI, BCT_AMS2_RAFCO, BCT_AGS/RDS, Elasticsearch (tbcontract_data)
+  - **External APIs:** Telegram (telegram.agilesoftgroup.com), APILP (LikeWallet)
+  - **Deployment:** Production URL and Dev URL managed via pkgDeploy library
+  - **Data sensitivity:** HIGH — handles contract codes (ctt_code), customer names, ID card numbers, phone numbers, financial data

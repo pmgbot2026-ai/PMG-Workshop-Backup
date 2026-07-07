@@ -1,0 +1,360 @@
+# DOC-19 — Database Design Document (DDD)
+## BCT-196 — Multi-Form Web Application Platform
+
+**Standard:** ISO/IEC 11179, IDEF1X
+**Version:** 1.0
+**Date:** 2026-05-18
+**Prepared by:** Claude Code (Initial Documentation)
+
+---
+
+# เอกสารการออกแบบฐานข้อมูล (DDD)
+## BCT-196 — แพลตฟอร์มแบบฟอร์มเว็บหลายรูปแบบ
+
+---
+
+## Document Control
+
+| Field | Value |
+|-------|-------|
+| Project | BCT-196 |
+| Version | 1.0 |
+| Date | 2026-05-18 |
+
+### Revision History
+| Version | Date | Author | Description |
+|---------|------|--------|-------------|
+| 1.0 | 2026-05-18 | Claude Code | Initial documentation |
+
+---
+
+## 1. Overview / ภาพรวม
+
+BCT-196 does not own or manage a dedicated database. Instead, it reads from and writes to:
+1. **Google Spreadsheets** (used as structured data stores / configuration sheets)
+2. **External SQL Databases** (accessed via BCT library BCT.loadJSONDatas / BCT.loadXMLDatas)
+3. **Elasticsearch** (RAFCO contract search via BCT.loadJSONQuery_Elasticsearch)
+4. **Google Drive** (file storage)
+
+BCT-196 ไม่มีฐานข้อมูลเฉพาะ แต่อ่าน/เขียนข้อมูลจาก Google Spreadsheets, SQL databases ภายนอก, Elasticsearch และ Google Drive
+
+---
+
+## 2. Google Spreadsheet Data Stores / Spreadsheet ที่ใช้เป็นฐานข้อมูล
+
+### 2.1 A2_Forms Sheet (Form Definition Store)
+
+**Location:** Sheet `A2_Forms` in each target spreadsheet (parameter: spreadsheet_id)
+**Purpose:** Stores all form question definitions and configuration
+**Access:** Read-only by BCT-196
+
+| Column (Field Name) | Type | Description |
+|--------------------|------|-------------|
+| form_name | String | Form identifier, used to filter questions |
+| form_question_fieldname | String | Field name/key for the form input |
+| form_importance | String | "บังคับกรอก" = mandatory field |
+| (other BCT standard fields) | Various | Additional metadata per BCT form standard |
+
+**Key row:** `process` marker row used by BCT library to locate header rows
+
+---
+
+### 2.2 A1_config Sheet (Branch Configuration)
+
+**Location:** Spreadsheet `1avgnzH7a4TJHkd2KRzOh7S79Hx3Gm2FcgfoUZV60Dhs`, sheet `A1_config`
+**Purpose:** Branch-to-SC name mapping
+**Access:** Read-only
+
+| Column | Range | Description |
+|--------|-------|-------------|
+| SC Name | G | Sales Center name |
+| Branch | H | Branch code/name |
+
+---
+
+### 2.3 B2_Contract Sheet (FAM Rent Contracts)
+
+**Location:** Spreadsheet `1vHgII04pPtYFO_6PzoqVmm1FXM9kLNlNAWv_fkrRNhk`, sheet `B2_Contract`
+**Purpose:** FAM rental contract data
+**Access:** Read-only
+
+| Field Name | Type | Description |
+|-----------|------|-------------|
+| id_rent | String | Unique rental ID (Primary Key) |
+| name_rent | String | Renter name |
+| status_contract | String | Contract status ("ยกเลิก" = cancelled) |
+| tenancy | String | Tenancy period |
+| rentalrate | Numeric | Rental rate |
+| rent | Numeric | Rent amount |
+| tokenRentLine | String | Line notification token |
+
+---
+
+### 2.4 IIU_FIM_Step_1 Sheet
+
+**Location:** Spreadsheet `1v7sh2JqwZEGVV6ZXNVTTBQq7dGVW7W_jLgmBpt0Om1c`, sheet `IIU_FIM_Step_1`
+**Purpose:** IIU/FIM (Internal Information Unit / Fund Information Management) Step 1 data
+**Access:** Read-only
+
+| Field Name | Type | Description |
+|-----------|------|-------------|
+| gen_key | String | Generation key (lookup key) |
+| s1_subject | String | Subject matter |
+| s1_usermonye | String | User/money reference |
+| s1_exchange | String | Exchange details |
+| s1_money | Numeric | Money amount |
+| s1_note | String | Notes |
+
+---
+
+### 2.5 B2_ตรวจคำตอบ Sheet (Exam Answer Sheet)
+
+**Location:** Dynamic (parameter: spreadsheet_id), sheet `B2_ตรวจคำตอบ`
+**Purpose:** Exam quiz answers and scores
+**Access:** Read-only
+
+**Group 2 (Standard):**
+
+| Field Name | Type | Description |
+|-----------|------|-------------|
+| member_id | String | Member ID (lookup key) |
+| exam_score | String | Pipe-delimited score array ("|") |
+| Quiz_1 to Quiz_42 | String | Individual quiz answers (up to 42) |
+
+**Group 1 (5-question variant):**
+
+| Field Name | Type | Description |
+|-----------|------|-------------|
+| member_id | String | Member ID |
+| exam_score | String | Pipe-delimited (5 scores) |
+| Quiz_1 to Quiz_5 | String | Quiz answers |
+
+---
+
+### 2.6 B4_Audit_นิติกรรม Sheet (RAFCO Audit Sheet)
+
+**Location:** Branch-specific report spreadsheet (resolved from center config), sheet `B4_Audit_นิติกรรม`
+**Also:** Static spreadsheet `1ar0svSfjHxMsTkcmEGZKJbJLWbUj1WPx5Gi-dmI5QO4`, sheet `B4_Audit_นิติกรรม_RAFCO`
+**Purpose:** RAFCO legal/audit document tracking
+**Access:** Read + Update
+
+| Field Name | Type | Description |
+|-----------|------|-------------|
+| ctt_code | String | Contract code (lookup key) |
+| receive_audit_send_proof_photo | String | Uploaded proof photo URL |
+| receive_audit_send_proof_detail | String | Proof detail text |
+| receive_audit_send_proof_date | Date | Date proof received |
+| receive_audit_send_proof_user | String | User email who confirmed |
+
+---
+
+### 2.7 ข้อมูลประดับยนต์เทียบกับประกัน Sheet (SC Customer Data)
+
+**Location:** Spreadsheet `1UfWsppqm9uABeftqj48-JN_bGrDV7wMdnAnlbY9Jahg`
+**Sheet:** `ข้อมูลประดับยนต์เทียบกับประกัน` and `B1_Forms_ตอบรับ`
+**Purpose:** SC accessory/insurance customer data
+**Access:** Read-only
+
+| Column | Range | Description |
+|--------|-------|-------------|
+| Product code | A12:A | Product/accessory code |
+| (data cols) | A12:J | Various customer/product data |
+| Sales name | J | Sales person name (filter key) |
+| Config exclusions | E15:E (B1_Forms_ตอบรับ) | IDs to exclude from results |
+
+---
+
+## 3. External SQL Database Tables / ตารางฐานข้อมูล SQL ภายนอก
+
+### 3.1 BCT_Stock_Car_Registration_Book (BCT_AAM)
+
+**DB:** BCT_AAM
+**Purpose:** Car registration book / financing stock
+
+| Key Column | Description |
+|-----------|-------------|
+| ctt_code | Contract code |
+| (all columns via SELECT *) | Full financing record |
+| cust_name (as name_borrower) | Borrower name |
+| car_regis (as registration_number) | Registration number |
+
+---
+
+### 3.2 BCT_Financing + BCT_GrantCAR / BCT_GrantMTC / BCT_GrantLAND (BCT_AMS2)
+
+**DB:** BCT_AMS2
+**Purpose:** Complex financing view with legal checks
+
+Key joined fields from the complex query in config `1lQMUZAyqMB2sCIMP5SgOQjYG-EpwJtnZeZEl3teVBSY`:
+
+| Field | Source | Description |
+|-------|--------|-------------|
+| grant_id | BCT_Financing | Primary financing key |
+| ctt_date, branch, product | BCT_Financing | Contract metadata |
+| name_borrower, contract_number | BCT_Financing | Borrower info |
+| legal_reality_check1-4 | BCT_GrandCar/MCT/LAND | Legal check statuses |
+| code_debtor_status | BCT_Financing | Debtor status code |
+| legal_reality_check_mail | BCT_Financing | Legal mail address |
+
+---
+
+### 3.3 BCT_WI_Registered (BCT_PKG)
+
+**DB:** BCT_PKG
+**Purpose:** Work instruction registered items
+
+| Field | Description |
+|-------|-------------|
+| id_wi | Work instruction ID (lookup key) |
+| status | Process status (filter: 'จบกระบวนการ') |
+
+---
+
+### 3.4 BCT_IT_Order_Work (BCT_IT)
+
+**DB:** BCT_IT
+**Purpose:** IT work order tracking
+
+| Field | Description |
+|-------|-------------|
+| keyid | UUID work order key (lookup key) |
+| (all columns) | Work order data |
+
+---
+
+### 3.5 division (PPP7)
+
+**DB:** PPP7
+**Purpose:** Business unit/division directory
+
+| Field | Description |
+|-------|-------------|
+| division_name | Division name (returned) |
+| status | Active/inactive ('Y' = active) |
+| use_inp_company_ctt | Input company name |
+| company_ctt | Company name |
+
+---
+
+### 3.6 NonMovementPartsReport_th + NonMovement_st (MIRAI)
+
+**DB:** MIRAI
+**Purpose:** Non-moving parts inventory for PCC/PMS
+
+| Field | Description |
+|-------|-------------|
+| Column3 | Part code |
+| Column4 | Part description |
+| pic (as pic_c) | Part image |
+| branch, Wait_for_sale_n/p, etc. | Stock data (NonMovement_st join) |
+
+---
+
+### 3.7 RAFCO_act (BCT_AMS2_RAFCO)
+
+**DB:** BCT_AMS2_RAFCO
+**Purpose:** RAFCO action history (updated by insertBCT audit flow)
+
+| Field | Description |
+|-------|-------------|
+| contract_number | Contract number (update key) |
+| receive_audit_send_proof_photo | Photo URL |
+| receive_audit_send_proof_detail | Detail text |
+| receive_audit_send_proof_date | Proof date |
+| receive_audit_send_proof_user | User email |
+
+---
+
+### 3.8 tbmemo (BCT_AMS2_RAFCO)
+
+**DB:** BCT_AMS2_RAFCO
+**Purpose:** RAFCO memo / note records
+
+| Field | Description |
+|-------|-------------|
+| memo_ctt_code | Contract code |
+| update_time | Last update timestamp |
+| (other fields) | Memo content |
+
+---
+
+### 3.9 BCT_Line_Token_customers (BCT_AGS / RDS)
+
+**DB:** BCT_AGS via RDS
+**Purpose:** Customer Line notification tokens
+
+| Field | Description |
+|-------|-------------|
+| centerPhone | Customer phone number (search key) |
+| token | Line push token |
+| fname_customer, lname_customer | Customer name |
+
+---
+
+## 4. Elasticsearch Index / Elasticsearch Index
+
+### 4.1 tbcontract_data
+
+**Server:** tbcontract_data (Elasticsearch)
+**Index:** tbcontract_data
+**Purpose:** RAFCO contract full-text search
+
+Searchable fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| ctt_code | keyword | Contract code |
+| cust_name | text | Customer name |
+| id_card | keyword | ID card number |
+| addr_tel | keyword | Phone number |
+
+---
+
+## 5. Google Drive Storage
+
+**Access:** Via DriveApp
+**Folder resolution:** Dynamic (form_upload_folder parameter in each question config)
+
+| Item | Description |
+|------|-------------|
+| Upload target | Folder ID from form question config |
+| File naming | `{original_name}_{yyyyMMddhhmmsss}` |
+| Ownership | Transferred to gdoc@prachakij.com |
+| Return | Google Drive file URL |
+
+---
+
+*End of DOC-19-DDD*
+
+---
+
+# (ภาษาไทย) สรุปการออกแบบฐานข้อมูล
+
+## Spreadsheet ที่ใช้เป็นฐานข้อมูล
+
+| Spreadsheet | Sheet | หน้าที่ |
+|------------|-------|--------|
+| Dynamic (param) | A2_Forms | นิยาม form questions |
+| 1avgnzH7... | A1_config | Branch/SC config |
+| 1vHgII04... | B2_Contract | FAM rental contracts |
+| 1v7sh2Jq... | IIU_FIM_Step_1 | IIU/FIM data |
+| Dynamic | B2_ตรวจคำตอบ | Exam scores |
+
+## ฐานข้อมูล SQL ที่เข้าถึง
+
+| DB Name | ใช้สำหรับ |
+|---------|---------|
+| BCT_AAM | Car registration book |
+| BCT_AMS2 | Complex financing data |
+| BCT_PKG | WI registered |
+| BCT_IT | IT work orders |
+| PPP7 | Division/BU lookup |
+| MIRAI | Parts inventory |
+| BCT_AMS2_RAFCO | RAFCO actions/memos |
+| BCT_AGS (RDS) | Line tokens |
+
+## Elasticsearch
+
+| Index | ใช้สำหรับ |
+|-------|---------|
+| tbcontract_data | RAFCO contract full-text search |

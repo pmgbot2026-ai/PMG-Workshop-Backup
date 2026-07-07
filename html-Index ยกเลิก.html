@@ -1,0 +1,2481 @@
+<? var forms = getForms();
+  
+  var theme = "";
+  if(questions.length>0){
+    theme = questions[0]["form_theme"];
+  }
+
+?>
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <title>Forms</title>
+</head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.603.0.min.js"></script>
+<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400&family=Prompt:wght@300&display=swap" rel="stylesheet">
+
+<style>
+    .dropbtn {
+        background-color: #4CAF50;
+        color: white;
+        padding: 16px;
+        font-size: 16px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .dropbtn:hover,
+    .dropbtn:focus {
+        background-color: #3e8e41;
+    }
+
+    #myB {
+        border-box: box-sizing;
+        background-position: 14px 12px;
+        background-repeat: no-repeat;
+        font-size: 16px;
+        padding: 14px 20px 12px 45px;
+        border: none;
+        border-bottom: 1px solid #ddd;
+    }
+
+    #myB:focus {
+        outline: 3px solid #ddd;
+    }
+
+    .dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: #f0f0f0;
+        min-width: 500px;
+        overflow: auto;
+        border: 1px solid #ddd;
+        z-index: 1;
+    }
+
+    .dropdown-content a {
+        color: black;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+    }
+
+    .dropdown a:hover {
+        background-color: #ddd;
+    }
+
+    .show {
+        display: block;
+    }
+    
+    
+    <?
+    if(theme=="Rainbow"){ ?>
+    
+      body{
+       
+       background: #ee0979;  /* fallback for old browsers */
+       background: -webkit-linear-gradient(to left, #ff6a00, #ee0979);  /* Chrome 10-25, Safari 5.1-6 */
+       background: linear-gradient(to left, #ff6a00, #ee0979); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+
+      
+      }
+      
+      
+      *{
+        
+        font-family: 'Prompt', sans-serif;
+      
+      }
+    
+    
+    <? }else if(theme=="Dark"){ ?>
+    
+      body{
+       
+       background: #232526;  /* fallback for old browsers */
+       background: -webkit-linear-gradient(to right, #414345, #232526);  /* Chrome 10-25, Safari 5.1-6 */
+       background: linear-gradient(to right, #414345, #232526); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+
+      
+      }
+  
+      *{
+
+        font-family: 'Kanit', sans-serif;
+      
+      }
+    
+    
+    <? }else{ ?>
+    
+    
+    
+    body {
+        background: #FFEFBA;
+        /* fallback for old browsers */
+        background: -webkit-linear-gradient(to right, #FFFFFF, #FFEFBA);
+        /* Chrome 10-25, Safari 5.1-6 */
+        background: linear-gradient(to right, #FFFFFF, #FFEFBA);
+        /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+
+    }
+    
+    <?
+    }
+    ?>
+    
+    
+</style>
+<script>
+    $(document).ready(function () {
+        google.script.run.withSuccessHandler(setfeedbackScript).feedbackScript();
+    });
+
+
+    function spiner(m, id) {
+
+        var old = Number($("#" + id).val());
+        if (m == "up") {
+            $("#" + id).val(old + 1);
+        } else {
+            if (old == 0) {
+                old = 1;
+            }
+            $("#" + id).val(old - 1);
+        }
+    }
+
+    function setfeedbackScript(json) {
+        var str = json.str;
+        var temp = "https://script.google.com/a/prachakij.com/macros/s/AKfycbxgdG7tsJi9L0pSmjWG7mhJZFJORxbtN_iQoPa91sSJOQnZXuk/exec";//ลิ้ง exec
+        var newUrl = temp + "?spreadsheet_id=<?=spreadsheet_id?>*AND*form_name=<?=form_name?>";
+        str = str.replace(temp, newUrl);
+        //          json.str = str;
+        $("body").append(str);
+    }
+
+    function getIndex(spreadsheet_id, form_name) {
+        google.script.run.withSuccessHandler(setIndex).getIndex(spreadsheet_id, form_name);
+    }
+
+    function setIndex(newHtml) {
+        document.open();
+        document.write(newHtml);
+        document.close();
+    }
+
+    function checkQuestionSortNumber(size, question_input_name, question_input_number) {
+        var input_number = Number($("#" + question_input_name + "_" + question_input_number).val());
+        if (input_number > size) {
+            $("#" + question_input_name + "_" + question_input_number).val('');
+        } else {
+            for (var s = 1; s <= size; s++) {
+                if (s != question_input_number) {
+                    var number = $("#" + question_input_name + "_" + s).val();
+                    if (number != '') {
+                        if (input_number == Number(number)) {
+                            $("#" + question_input_name + "_" + question_input_number).val('');
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function saveForm(questions, questionImportance, spreadsheet_id, form_name) {
+        questions = JSON.parse(questions);
+        questionImportance = JSON.parse(questionImportance);
+        var formIndex = {
+            spreadsheet_id: spreadsheet_id,
+            form_name: form_name
+        };
+        var formResponse = {};
+        var formData = {};
+        for (var q = 0; q < questions.length; q++) {
+            var question = questions[q];
+            var form_spreadsheet_id = questions[q].form_spreadsheet_id
+            var form_spreadsheet_sheet = questions[q].form_spreadsheet_sheet;
+            var form_alert_type = questions[q].form_alert_type;
+            var form_alert_token = questions[q].form_alert_token;
+            var form_alert_message = questions[q].form_alert_message;
+            var form_alert_stickpacket = questions[q].form_alert_stickpacket;
+            var form_alert_stickid = questions[q].form_alert_stickid;
+            var form_alert_image_url = questions[q].form_alert_image_url;
+            /* 16/10/2021 จ้อนเพิ่มเงื่อนไขการเก็บเข้า DLT */
+            var form_dlt_type = questions[q].form_dlt_type;
+            var form_dlt_topic_id = questions[q].form_dlt_topic_id;
+            var form_dlt_data = questions[q].form_dlt_data;
+            /* *** */
+            if (form_spreadsheet_id != "") {
+                var form_spreadsheet_id_split = form_spreadsheet_id.split(",");
+                var form_spreadsheet_id_size = form_spreadsheet_id_split.length;
+                for (var s = 0; s < form_spreadsheet_id_size; s++) {
+                    if (formResponse[form_spreadsheet_id_split[s]] == undefined) {
+                        var formResponseData = {};
+                        formResponseData['form_spreadsheet_sheet'] = form_spreadsheet_sheet;
+
+                        if (form_alert_type != undefined) {
+                            formResponseData['form_alert_type'] = form_alert_type;
+                        }
+
+                        if (form_alert_token != undefined) {
+                            formResponseData['form_alert_token'] = form_alert_token;
+                        }
+
+                        if (form_alert_message != undefined) {
+                            formResponseData['form_alert_message'] = form_alert_message;
+                        }
+
+                        if (form_alert_stickpacket != undefined) {
+                            formResponseData['form_alert_stickpacket'] = form_alert_stickpacket;
+                        }
+
+                        if (form_alert_stickid != undefined) {
+                            formResponseData['form_alert_stickid'] = form_alert_stickid;
+                        }
+
+                        if (form_alert_image_url != undefined) {
+                            formResponseData['form_alert_image_url'] = form_alert_image_url;
+                        }
+
+                        /* 16/10/2021 จ้อนเพิ่มเงื่อนไขการเก็บเข้า DLT */
+                        if (form_dlt_type != undefined) {
+                            formResponseData['form_dlt_type'] = form_dlt_type;
+                        }
+
+                        if (form_dlt_topic_id != undefined) {
+                            formResponseData['form_dlt_topic_id'] = form_dlt_topic_id;
+                        }
+
+                        if (form_dlt_data != undefined) {
+                            formResponseData['form_dlt_data'] = form_dlt_data;
+                        }
+                        /* *** */
+
+                        formResponse[form_spreadsheet_id_split[s]] = formResponseData;
+                    }
+                }
+            }
+
+            var form_question_fieldname = questions[q].form_question_fieldname;
+            var form_question = questions[q].form_question;
+            var form_choice = questions[q].form_choice;
+            var form_choice_type = questions[q].form_choice_type;
+            var form_importance_alert = questions[q].form_importance_alert;
+            //            alert(form_question_fieldname+"::"+form_choice_type);
+            if (form_question_fieldname != '') {
+                if (form_choice_type == 'เรียงความสำคัญ') {
+                    var form_choices = form_choice.split("|");
+                    var form_choices_size = form_choices.length;
+                    for (var f = 0; f < form_choices_size; f++) {
+                        var form_question_fieldname_new = form_question_fieldname + "_" + (f + 1);
+                        if (questionImportance[form_question_fieldname]) {
+                            if ($("#" + form_question_fieldname_new).val() == "") {
+                                var messageAlert = form_importance_alert;
+                                if (form_importance_alert != undefined && form_importance_alert != '') {
+                                    messageAlert = "";
+                                    var form_detail = form_importance_alert.split("|");
+                                    var form_detail_size = form_detail.length;
+                                    for (var f = 0; f < form_detail_size; f++) {
+                                        if (messageAlert == "") {
+                                            messageAlert += form_detail[f];
+                                        } else {
+                                            messageAlert += "\n" + form_detail[f];
+                                        }
+
+
+                                    }
+                                }
+                                alert("แจ้งเตือน : " + messageAlert);
+                                $("#" + form_question_fieldname_new).focus();
+                                return;
+                            }
+                            formData[form_question_fieldname_new] = $("#" + form_question_fieldname_new).val();
+                        } else {
+                            formData[form_question_fieldname_new] = $("#" + form_question_fieldname_new).val();
+                        }
+                    }
+                } else {
+                    if (questionImportance[form_question_fieldname]) {
+                        if ($("#" + form_question_fieldname).val() == "") {
+                            var messageAlert = form_importance_alert;
+                            if (form_importance_alert != undefined && form_importance_alert != '') {
+                                messageAlert = "";
+                                var form_detail = form_importance_alert.split("|");
+                                var form_detail_size = form_detail.length;
+                                for (var f = 0; f < form_detail_size; f++) {
+                                    if (messageAlert == "") {
+                                        messageAlert += form_detail[f];
+                                    } else {
+                                        messageAlert += "\n" + form_detail[f];
+                                    }
+
+
+                                }
+                            }
+                            alert("แจ้งเตือน : " + messageAlert);
+                            //                            alert("แจ้งเตือน : " + form_importance_alert);
+                            $("#" + form_question_fieldname).focus();
+                            return;
+                        }
+
+                        if (form_choice_type == "เรดิโอ" || form_choice_type == "ให้คะแนนแนวนอน") {//รัง เพิ่ม 18/7/2020 เพราะว่า radio ใช้ id get value เฉยๆ ไม่ได้
+
+                            var radios = document.getElementsByName(form_question_fieldname);
+                            for (var i = 0, length = radios.length; i < length; i++) {
+                                if (radios[i].checked) {
+                                    formData[form_question_fieldname] = radios[i].value;
+                                    break;
+                                }
+                            }
+
+
+                        } else if (form_choice_type == "เช็คบ๊อก") {//รัง เพิ่ม 18/7/2020 เพราะว่า checkbox ใช้ id get value เฉยๆ ไม่ได้
+                            //                            alert("เข้า");
+                            //                            return;
+                            var messageAlert = form_importance_alert;
+                            if (form_importance_alert != undefined && form_importance_alert != '') {
+                                var checkbox = document.getElementsByName(form_question_fieldname);
+                                var arr_checkbox = [];
+                                var ischeck = 0;
+                                for (var i = 0, length = checkbox.length; i < length; i++) {
+                                    if (checkbox[i].checked) {
+                                        arr_checkbox.push(checkbox[i].value);
+                                        ischeck++;
+                                    }
+                                }
+                                var val_checkbox = "";
+                                if (arr_checkbox.length > 0) {
+                                    val_checkbox = arr_checkbox.join();
+                                }
+                                formData[form_question_fieldname] = val_checkbox;
+
+                                if (ischeck <= 0) {
+                                    alert("แจ้งเตือน : " + messageAlert);
+                                    //                            alert("แจ้งเตือน : " + form_importance_alert);
+                                    $("#" + form_question_fieldname).focus();
+                                    return;
+                                }
+                            }
+                        } else {
+
+                            if ($("#" + form_question_fieldname).val() != undefined && $("#" + form_question_fieldname).val() != null) {
+                                formData[form_question_fieldname] = $("#" + form_question_fieldname).val();
+                            }
+
+                        }
+                        //                        formData[form_question_fieldname] = $("#" + form_question_fieldname).val();
+                    } else {
+                        //                    console.log($("#" + form_question_fieldname).val())
+
+                        if (form_choice_type == "เรดิโอ" || form_choice_type == "ให้คะแนนแนวนอน") {//รัง เพิ่ม 18/7/2020 เพราะว่า radio ใช้ id get value เฉยๆ ไม่ได้
+
+                            var radios = document.getElementsByName(form_question_fieldname);
+                            for (var i = 0, length = radios.length; i < length; i++) {
+                                if (radios[i].checked) {
+                                    formData[form_question_fieldname] = radios[i].value;
+                                    break;
+                                }
+                            }
+
+
+                        } else if (form_choice_type == "เช็คบ๊อก") {//รัง เพิ่ม 18/7/2020 เพราะว่า checkbox ใช้ id get value เฉยๆ ไม่ได้
+                            //                            alert("เข้า");
+                            //                            return;
+                            var checkbox = document.getElementsByName(form_question_fieldname);
+                            var arr_checkbox = [];
+                            for (var i = 0, length = checkbox.length; i < length; i++) {
+                                if (checkbox[i].checked) {
+                                    arr_checkbox.push(checkbox[i].value);
+                                }
+                            }
+                            var val_checkbox = "";
+                            if (arr_checkbox.length > 0) {
+                                val_checkbox = arr_checkbox.join();
+                            }
+                            formData[form_question_fieldname] = val_checkbox;
+
+
+                        } else {
+                            if ($("#" + form_question_fieldname).val() != undefined && $("#" + form_question_fieldname).val() != null) {
+                                formData[form_question_fieldname] = $("#" + form_question_fieldname).val();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $("#outputStatus").html("กำลังบันทึกข้อมูล กรุณารอสักครู่ ...");
+        $("#btnsubmit").prop('disabled', true);
+        //        swal({
+        //                title:"", 
+        //                text:"กำลังบันทึกข้อมูล กรุณารอสักครู่",
+        //                //icon: "https://www.boasnotas.com/img/loading2.gif",
+        //                buttons: false,      
+        //                closeOnClickOutside: false,
+        //                //timer: 3000,
+        //                //icon: "success"
+        //            });
+
+        Swal.fire({
+            title: 'กำลังบันทึกข้อมูล กรุณารอสักครู่',
+            html: '<b>0</b> วินาที',
+            timer: 2000000,
+            timerProgressBar: true,
+            didOpen: () => {
+                Swal.showLoading()
+                const b = Swal.getHtmlContainer().querySelector('b')
+                timerInterval = setInterval(() => {
+                    b.textContent = Number(b.textContent) + 1;
+                }, 1000)
+            },
+        }).then((result) => {
+            /* Read more about handling dismissals below */
+            if (result.dismiss === Swal.DismissReason.timer) {
+                console.log('I was closed by the timer')
+            }
+        })
+
+
+        google.script.run.withSuccessHandler(onInsertBCTSuccess).withFailureHandler(onInsertBCTFailure).insertBCT(formResponse, formData, formIndex);
+    }
+
+    function onInsertBCTFailure(error) {
+        //        alert(" >> " + error);
+        $("#btnsubmit").prop('disabled', false);
+        //        swal("Error!", "Error : "+error, "error");
+        Swal.fire("Error!", "Error : " + error, "error");
+
+
+
+    }
+
+    function onInsertBCTSuccess(result) {
+    if(result['formIndex_status']!=undefined){
+    console.log(result);
+    if(result['formIndex_status']==99){
+    console.log(result);
+    
+    Swal.fire("Success!",  result['formIndex_message'], "success").then((value) => {
+            getIndex(result.spreadsheet_id, result.form_name);
+        });
+    }else{
+      Swal.fire("Success!",  "บันทึกข้อมูลเรียบร้อย", "success").then((value) => {
+            getIndex(result.spreadsheet_id, result.form_name);
+        });
+    }
+    }else{
+        //        alert("บันทึกข้อมูลเรียบร้อย");
+        Swal.fire("Success!", "บันทึกข้อมูลเรียบร้อย", "success").then((value) => {
+            getIndex(result.spreadsheet_id, result.form_name);
+        });
+        //        getIndex(result.spreadsheet_id, result.form_name);
+        }
+    }
+
+    function getGPSByGoogle(nameUseID) {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                var urlMap = "http://maps.google.com/?q=" + position.coords.latitude + "," + position.coords.longitude;
+                $("#" + nameUseID + "_check").attr("href", urlMap);
+                $("#" + nameUseID).val(urlMap);
+                ///////เพิ่มวางรูป map
+                google.script.run.withSuccessHandler(setImgGPS).getImgGPS(urlMap, nameUseID);
+            }, function () {
+                handleLocationError(true, infoWindow, map.getCenter());
+            });
+        }
+    }
+
+
+    function setImgGPS(json) {
+        var str = '<a href="' + json['gps_img'] + '" target="_blank"><img width="50%" src="' + json['gps_img'] + '"></a>';
+        $("#" + json['nameUseID'] + "_show_gps_img").empty();
+        $("#" + json['nameUseID'] + "_show_gps_img").append(str);
+    }
+
+    function onChange(nameFunction, nameUseID, functionMore) {
+        var nameFunctions = nameFunction.split("|");
+        var nameFunction_size = nameFunctions.length;
+        for (var f = 0; f < nameFunction_size; f++) {
+            nameFunction = nameFunctions[f];
+            if (nameFunction == 'getMember') {
+                getMember(nameUseID);
+            } else if (nameFunction == 'getMembers') {
+                getMembers(nameUseID);
+            } else if (nameFunction == 'getMembersMultiKey') {
+                getMembersMultiKey(nameUseID);
+            } else if (nameFunction == 'getMemberMultiKey') {
+                getMemberMultiKey(nameUseID);
+            } else if (nameFunction == 'mathCalculations') {
+                //mathCalculations(nameUseID,functionMore);
+            } else if (nameFunction == 'getLineTokenMultiKey_feelweel') {
+                getLineTokenMultiKey_feelweel(nameUseID, functionMore);
+            } else if (nameFunction == 'getAMS2ContractDataByCttCode') {
+                getAMS2ContractDataByCttCode(nameUseID);
+            } else if (nameFunction == 'getReportR_AAM') {
+                getReportR_AAMByCttCode(nameUseID);
+            } else if (nameFunction == 'getReportR_RPLC') {
+                getReportR_RPLCByCttCode(nameUseID);
+            } else if (nameFunction == 'timestamp') {
+                google.script.run.withSuccessHandler(setTimestamp).getTimestamp(nameUseID, functionMore);
+            } else if (nameFunction == 'aam_act_chcek') {
+                getAAM_Act_ChcekByGrantID(nameUseID);
+            } else if (nameFunction == 'disableFields') {
+                disableFields(nameUseID, functionMore);
+            } else if (nameFunction == 'mathCalculationsPlus') {
+                mathCalculationsPlus(nameUseID, functionMore);
+            } else if (nameFunction == 'mathCalculationsMinus') {
+                mathCalculationsMinus(nameUseID, functionMore);
+            } else if (nameFunction == 'mathCalculationsMultiply') {
+                mathCalculationsMultiply(nameUseID, functionMore);
+            } else if (nameFunction == 'mathCalculationsDivide') {
+                mathCalculationsDivide(nameUseID, functionMore);
+            } else if (nameFunction == 'getShortURL') {
+                getShortURL(nameUseID);
+            } else if (nameFunction == 'getMembersMultiKeyLDX') {
+                getMembersMultiKeyLDX(nameUseID);
+            } else if (nameFunction == 'KBANK_generateQR') {
+                getKBANK_generateQR(nameUseID);
+            } else if (nameFunction == 'getDataHoldCarRafco') {
+                getDataHoldCarRafco(nameUseID);
+            } else if (nameFunction == 'getDataHoldCarRafco2') {
+                getDataHoldCarRafco2(nameUseID);    
+            } else if (nameFunction == 'getDataHoldCarRafco3') {
+                getDataHoldCarRafco3(nameUseID);    
+            } else if (nameFunction == 'getRafco_trace_customer') {
+                getRafco_trace_customer(nameUseID);
+            } else if (nameFunction == 'getjob_id_PMGByID') {
+                getjob_id_PMGByID(nameUseID);
+            } else if (nameFunction == 'getUser_rafco_sell') {
+                getUser_rafco_sell(nameUseID);
+            } else if (nameFunction == 'getData_rafco_sell') {
+                getData_rafco_sell(nameUseID);
+            }else if (nameFunction == 'getData_rafcosellcar') {
+                getData_rafcosellcar(nameUseID);
+            }else if (nameFunction == 'getReportR_RPLC_Multi') {
+                getReportR_RPLC_Multi(nameUseID, functionMore);
+            } else if (nameFunction == 'getReportR_RAFCO_Multi') {
+                getReportR_RAFCO_Multi(nameUseID, functionMore);
+            } else if (nameFunction == 'getReportO_RPLC_Multi') {
+                getReportO_RPLC_Multi(nameUseID, functionMore);
+            } else if (nameFunction == 'getReportO_RAFCO_Multi') {
+                getReportO_RAFCO_Multi(nameUseID, functionMore);
+            } else if (nameFunction == 'getDataLaw') {
+                getDataLaw(nameUseID, functionMore);
+            } else if (nameFunction == 'getTelRPLC') {
+                getTelRPLC(nameUseID, functionMore);
+            } else if (nameFunction == 'getAMS2InElastixSearch') {
+                getAMS2InElastixSearch(nameUseID, functionMore);
+            } else if (nameFunction == 'checkInputLength') {
+                console.log("checkInputLength");
+                checkInputLength(nameUseID, functionMore);
+            } 
+
+            //    else if (nameFunction == 'getBufuINP') {
+            ////    alert("getBufuINP");
+            //      getBufuINP(nameUseID);
+            //    }
+        }
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+     function getAMS2InElastixSearch(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(updateForm).getAMS2InElastixSearch(Keyword);
+    }
+
+    function getTelRPLC(Keyword) {
+        var branch = $("#branch").val();
+        var cost_type = $("#cost_type").val();
+        if (cost_type == "ค่าโทรศัพท์") {
+            $("#cost_tel").show();
+            google.script.run.withSuccessHandler(setTelRPLC).getTelRPLC(branch);
+        } else {
+            $("#cost_tel").hide();
+        }
+    }
+
+    function setTelRPLC(data) {
+        $("#cost_tel").empty();
+        console.log(data);
+        $("#cost_tel").append('<option value="">เลือก</option>')
+        for (var i = 0; i < data.length; i++) {
+            $("#cost_tel").append('<option value="' + data[i] + '">' + data[i] + '</option>');
+        }
+
+    }
+
+    function getDataLaw(Keyword) {
+        var ctt_code = $("#ctt_code").val();
+        google.script.run.withSuccessHandler(setDataLaw).getDataLaw(ctt_code);
+    }
+
+    function setDataLaw(jsonData) {
+        console.log(jsonData);
+        jsonData = JSON.parse(jsonData);
+        for (var fieldName in jsonData) {
+            if ($("#" + fieldName).val() != undefined) {
+                if (fieldName != "member_name") {
+                    $("#" + fieldName).val(jsonData[fieldName]);
+                }
+            }
+        }
+    }
+    // ****** ค้นหาข้อมูล รายงาน R RAFCO แบบ หลาย Keyword ******* 26/08/2021 จ้อน //
+    function getReportO_RAFCO_ByID(Keyword) {
+        google.script.run.withSuccessHandler(setReportO_RAFCO).getReportO_RAFCO_ByID(Keyword);
+    }
+
+    function setReportO_RAFCO(jsonData) {
+        for (var fieldName in jsonData) {
+            if ($("#" + fieldName).val() != undefined) {
+                $("#" + fieldName).val(jsonData[fieldName]);
+            }
+        }
+    }
+
+    function getReportO_RAFCO_Multi(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        document.getElementById(nameUseID + "_myDropdown").classList.remove("show");
+        if (Keyword != '') {
+            google.script.run.withSuccessHandler(setReportO_RAFCO_Multi).getReportO_RAFCO_Multi(Keyword, nameUseID);
+        }
+    }
+
+    function setReportO_RAFCO_Multi(jsonData) {
+        $("#" + jsonData['nameUse-ID']).empty();
+        $("#" + jsonData['nameUse-ID'] + "_myDropdown").empty();
+        var datas = jsonData["datas"];
+        for (var i = 0; i < datas.length; i++) {
+            if (datas[i] != undefined) {
+                var valueShow = datas[i]['ctt_code'] + ' ' + datas[i]['cust_name'];
+                console.log(valueShow)
+                $("#" + jsonData['nameUse-ID'] + "_myDropdown").append('<a href="javascript:void(0)" onclick="getReportO_RAFCO_ByID(\'' + datas[i]["running"] + '\');removeDropdown(\'' + (jsonData['nameUse-ID'] + "_myDropdown") + '\');">' + valueShow + '</a>');
+            }
+        }
+        document.getElementById(jsonData['nameUse-ID'] + "_myDropdown").classList.toggle("show");
+    }
+    // ****** ************ ******* //  
+
+    // ****** ค้นหาข้อมูล รายงาน O RPLC แบบ หลาย Keyword ******* 26/08/2021 จ้อน //
+    function getReportO_RPLC_ByID(Keyword) {
+        google.script.run.withSuccessHandler(setReportO_RPLC).getReportO_RPLC_ByID(Keyword);
+    }
+
+    function setReportO_RPLC(jsonData) {
+        for (var fieldName in jsonData) {
+            if ($("#" + fieldName).val() != undefined) {
+                $("#" + fieldName).val(jsonData[fieldName]);
+            }
+        }
+    }
+
+    function getReportO_RPLC_Multi(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        document.getElementById(nameUseID + "_myDropdown").classList.remove("show");
+        if (Keyword != '') {
+            google.script.run.withSuccessHandler(setReportO_RPLC_Multi).getReportO_RPLC_Multi(Keyword, nameUseID);
+        }
+    }
+
+    function setReportO_RPLC_Multi(jsonData) {
+        $("#" + jsonData['nameUse-ID']).empty();
+        $("#" + jsonData['nameUse-ID'] + "_myDropdown").empty();
+        var datas = jsonData["datas"];
+        for (var i = 0; i < datas.length; i++) {
+            if (datas[i] != undefined) {
+                var valueShow = datas[i]['ctt_code'] + ' ' + datas[i]['cust_name'];
+                console.log(valueShow)
+                $("#" + jsonData['nameUse-ID'] + "_myDropdown").append('<a href="javascript:void(0)" onclick="getReportO_RPLC_ByID(\'' + datas[i]["running"] + '\');removeDropdown(\'' + (jsonData['nameUse-ID'] + "_myDropdown") + '\');">' + valueShow + '</a>');
+            }
+        }
+        document.getElementById(jsonData['nameUse-ID'] + "_myDropdown").classList.toggle("show");
+    }
+    // ****** ************ ******* // 
+
+    // ****** ค้นหาข้อมูล รายงาน R RAFCO แบบ หลาย Keyword ******* //
+    function getReportR_RAFCO_ByID(Keyword) {
+        google.script.run.withSuccessHandler(setReportR_RAFCO).getReportR_RAFCO_ByID(Keyword);
+    }
+
+    function setReportR_RAFCO(jsonData) {
+        for (var fieldName in jsonData) {
+            if ($("#" + fieldName).val() != undefined) {
+                $("#" + fieldName).val(jsonData[fieldName]);
+            }
+        }
+    }
+
+    function getReportR_RAFCO_Multi(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        document.getElementById(nameUseID + "_myDropdown").classList.remove("show");
+        if (Keyword != '') {
+            google.script.run.withSuccessHandler(setReportR_RAFCO_Multi).getReportR_RAFCO_Multi(Keyword, nameUseID);
+        }
+    }
+
+    function setReportR_RAFCO_Multi(jsonData) {
+        $("#" + jsonData['nameUse-ID']).empty();
+        $("#" + jsonData['nameUse-ID'] + "_myDropdown").empty();
+        var datas = jsonData["datas"];
+        for (var i = 0; i < datas.length; i++) {
+            if (datas[i] != undefined) {
+                var valueShow = datas[i]['ctt_code'] + ' ' + datas[i]['cust_name'];
+                console.log(valueShow)
+                $("#" + jsonData['nameUse-ID'] + "_myDropdown").append('<a href="javascript:void(0)" onclick="getReportR_RAFCO_ByID(\'' + datas[i]["running"] + '\');removeDropdown(\'' + (jsonData['nameUse-ID'] + "_myDropdown") + '\');">' + valueShow + '</a>');
+            }
+        }
+        document.getElementById(jsonData['nameUse-ID'] + "_myDropdown").classList.toggle("show");
+    }
+    // ****** ************ ******* //  
+
+    // ****** ค้นหาข้อมูล รายงาน R RPLC แบบ หลาย Keyword ******* //
+    function getReportR_RPLC_ByID(Keyword) {
+        google.script.run.withSuccessHandler(setReportR_RPLC).getReportR_RPLC_ByID(Keyword);
+    }
+
+    function setReportR_RPLC(jsonData) {
+        for (var fieldName in jsonData) {
+            if ($("#" + fieldName).val() != undefined) {
+                $("#" + fieldName).val(jsonData[fieldName]);
+            }
+        }
+    }
+
+
+
+
+    function getReportR_RPLC_Multi(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        document.getElementById(nameUseID + "_myDropdown").classList.remove("show");
+        if (Keyword != '') {
+            google.script.run.withSuccessHandler(setReportR_RPLC_Multi).getReportR_RPLC_Multi(Keyword, nameUseID);
+        }
+    }
+
+    function setReportR_RPLC_Multi(jsonData) {
+        $("#" + jsonData['nameUse-ID']).empty();
+        $("#" + jsonData['nameUse-ID'] + "_myDropdown").empty();
+        var datas = jsonData["datas"];
+        for (var i = 0; i < datas.length; i++) {
+            if (datas[i] != undefined) {
+                var valueShow = datas[i]['ctt_code'] + ' ' + datas[i]['cust_name'];
+                console.log(valueShow)
+                $("#" + jsonData['nameUse-ID'] + "_myDropdown").append('<a href="javascript:void(0)" onclick="getReportR_RPLC_ByID(\'' + datas[i]["running"] + '\');removeDropdown(\'' + (jsonData['nameUse-ID'] + "_myDropdown") + '\');">' + valueShow + '</a>');
+            }
+        }
+        document.getElementById(jsonData['nameUse-ID'] + "_myDropdown").classList.toggle("show");
+    }
+    // ****** ************ ******* //  
+
+
+    function getData_rafco_sell(nameUseID) {
+        var id = $("#" + nameUseID).val();
+        if (id == "") { return; }
+        google.script.run.withSuccessHandler(setData_rafco_sell).getData_rafco_sell(id);
+    }
+
+    function setData_rafco_sell(jsonData) {
+        if (jsonData != "N") {
+            console.log(jsonData);
+            for (var key in jsonData) {
+                $("#" + key).val(jsonData[key]);
+            }
+        } else {
+            Swal.fire("ไม่พบข้อมูลหลักประกัน", "", "error");
+        }
+    }
+    
+    
+   /// เนมเพิ่มการค้นหาข้อมูล
+
+     function getData_rafcosellcar(nameUseID) {
+        var id = $("#" + nameUseID).val();
+        if (id == "") { return; }
+        google.script.run.withSuccessHandler(setData_rafcosellcar).getData_rafcosellcar(id);
+    }
+
+    function setData_rafcosellcar(jsonData) {
+        if (jsonData != "N") {
+            console.log(jsonData);
+            for (var key in jsonData) {
+                $("#" + key).val(jsonData[key]);
+            }
+        } else {
+            Swal.fire("ไม่พบข้อมูลหลักประกัน", "", "error");
+        }
+    }
+    
+    
+  
+
+
+    function getUser_rafco_sell(nameUseID) {
+        var id = $("#" + nameUseID).val();
+        if (id == "") { return; }
+        google.script.run.withSuccessHandler(setUser_rafco_sell).getUser_rafco_sell(id);
+    }
+
+    function setUser_rafco_sell(jsonData) {
+        if (jsonData != "N") {
+            for (var key in jsonData) {
+                $("#" + key).val(jsonData[key]);
+            }
+        } else {
+            Swal.fire("ไม่พบสมาชิก", "", "error");
+        }
+    }
+
+
+    function getjob_id_PMGByID(nameUseID) {
+        var job_id = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(setjob_id_PMGByID).getjob_id_PMGByID(job_id);
+    }
+
+    function setjob_id_PMGByID(jsonData) {
+        var data = jsonData["datas"];
+        if (data != undefined) {
+            if (data.length > 0) {
+                var data_s = data[0];
+
+                $("#car_reg").val(data_s["car_reg"]);
+                $("#car_engine").val(data_s["car_engine"]);
+                $("#firstname").val(data_s["firstname"]);
+                $("#lastname").val(data_s["lastname"]);
+                $("#mobile").val(data_s["mobile"]);
+                $("#token").val(data_s["token"]);
+                $("#app").val(data_s["app"]);
+            }
+        }
+    }
+
+    function getRafco_trace_customer(nameUseID) {
+        var ctt_code = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(setRafco_trace_customer).getRafco_trace_customer(ctt_code);
+    }
+
+    function setRafco_trace_customer(main) {
+        var data = main["cust"];
+        var datactt = main["ctt_str"];
+        var datactt_gps = main["ctt_str_gps"];
+        var data_grant = main["ctt_str_grant"];
+        var datactt_str = "";
+        var datactt_str_gps = "";
+        for (var i = 0; i < datactt.length; i++) {
+            datactt_str += (i + 1) + "." + datactt[i] + "<br><br>";
+        }
+
+        for (var i = 0; i < datactt_gps.length; i++) {
+            datactt_str_gps += "<a href='" + datactt_gps[i] + "'>" + datactt_gps[i] + "</a>" + "<br><br>";
+        }
+
+
+
+
+        $("#cust_name").val("");
+        $("#surety_name").val("");
+        $("#reg_code").val("");
+        $("#history_detail").html("");
+        $("#address").html("");
+
+        if (data.length > 0) {
+            $("#cust_name").val(data[0]["cust_name"]);
+            $("#surety_name").val(data[0]["cust_name2"]);
+            $("#reg_code").val(data[0]["car_reg"]);
+            $("#history_detail").html(datactt_str);
+            $("#history_gps").html(datactt_str_gps);
+            $("#address").html("เลขที่ " + data[0]["addr_num"] + " ม." + data[0]["addr_moo"] + " " + data[0]["addr_soi"] + " ถ." + data[0]["addr_road"] + " ต." + data[0]["tum_tname"] + " อ." + data[0]["amp_tname"] + " จ." + data[0]["pv_tname"] + " " + data[0]["zip_code"]);
+        }
+
+
+        if (data_grant.length > 0) {
+            data_grant = data_grant[0];
+            //      พิกัด	หลักประกัน	ใบคำขอ	ผู้กู้	ผู้ค้ำ 1	ผู้ค้ำ 2
+            //coordinates_home_borrowers	collater_photos	upload_application_form	picture_borrower	picture_guarantor_1	picture_guarantor_2
+            var str = "<br>พิกัด: <a href='" + data_grant["coordinates_home_borrowers"] + "' target='_blank'>" + data_grant["coordinates_home_borrowers"] + "</a><br>";
+            str += "หลักประกัน: <a href='" + data_grant["collater_photos"] + "' target='_blank'>" + data_grant["collater_photos"] + "</a><br>";
+            str += "ใบคำขอ: <a href='" + data_grant["upload_application_form"] + "' target='_blank'>" + data_grant["upload_application_form"] + "</a><br>";
+            str += "ผู้กู้: <a href='" + data_grant["picture_borrower"] + "' target='_blank'>" + data_grant["picture_borrower"] + "</a><br>";
+            str += "ผู้ค้ำ 1: <a href='" + data_grant["picture_guarantor_1"] + "' target='_blank'>" + data_grant["picture_guarantor_1"] + "</a><br>";
+            str += "ผู้ค้ำ 2: <a href='" + data_grant["picture_guarantor_2"] + "' target='_blank'>" + data_grant["picture_guarantor_2"] + "</a><br>";
+            $("#grant_detail").html(str);
+
+        }
+
+
+
+
+    }
+
+
+    function getKBANK_generateQR(nameUseID) {
+        var txnAmount = $("#txnAmount").val();
+        var reference1 = $("#reference1").val();
+        var reference2 = $("#reference2").val();
+        var reference3 = $("#reference3").val();
+        var phone_number = $("#phone_number").val();
+        var comment = $("#comment").val();
+        var email = $("#email").val();
+        var bu = $("#bu").val();
+        var type_mode = $("#type_mode").val();
+
+        $("#qrcode").val('');
+        $("#qrcode_qrcode").removeAttr("src");
+
+        if (txnAmount != '' && reference1 != '' && reference2 != '' && reference3 != '' && phone_number != '' && email != '' && bu != '' && type_mode != '') {
+            var data = {};
+            data['txnAmount'] = txnAmount;
+            data['reference1'] = reference1;
+            data['reference2'] = reference2;
+            data['reference3'] = reference3;
+            data['phone_number'] = phone_number;
+            data['comment'] = comment;
+            data['email'] = email;
+            data['bu'] = bu;
+            data['type_mode'] = type_mode;
+            google.script.run.withSuccessHandler(setKBANK_generateQR).withFailureHandler(setKBANK_generateQRFailure).getKBANK_generateQR(data);
+        }
+    }
+
+    function setKBANK_generateQR(data) {
+        var kdata = data['kdata'];
+        var qrCode = kdata["qrCode"];
+        $("#qrcode").val(JSON.stringify(kdata));
+        $("#partnerTxnUid").val(kdata["partnerTxnUid"]);
+        console.log("asdasda");
+        console.log(data);
+        var url = "https://chart.googleapis.com/chart?chld=H&chs=312x312&cht=qr&chl=" + qrCode + "&choe=UTF-8";
+        console.log(url);
+        
+        $("#qrcode_qrcode").attr("src", url);
+    }
+
+    function setKBANK_generateQRFailure(data) {
+
+    }
+
+    function getShortURL(nameUseID) {
+        var longURL = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(setShortURL).withFailureHandler(setShortURLFailure).getShortURL(nameUseID, longURL);
+    }
+
+
+
+
+    function setShortURLFailure(error) {
+        alert(" >> " + error);
+    }
+
+    function setShortURL(result) {
+        var nameUseID = result['nameUseID'];
+        var url = result['shortURL'];
+        if (url != '') {
+            $("#shortURL_" + nameUseID.split("_")[1] + "_url").append('&nbsp;<b><a id="shortURL_' + nameUseID.split("_")[1] + '_Link" href="' + url + '" target="_blank"> ' + url + '</a></b>&nbsp;&nbsp;&nbsp;<input type="button" onclick="copyURL(\'' + nameUseID + '\')" value="copy">');
+            $("#shortURL_" + nameUseID.split("_")[1]).val(url);
+        } else {
+            $("#shortURL_" + nameUseID.split("_")[1] + "_url").empty();
+            $("#shortURL_" + nameUseID.split("_")[1]).val('');
+        }
+    }
+
+    function copyURL(nameUseID) {
+        var link = $("#shortURL_" + nameUseID.split("_")[1]).val();
+        if (link != "") {
+            var copyText = document.getElementById(nameUseID + "_url");
+            element = $('<textarea>').appendTo('body').val(link).select();
+            document.execCommand('copy');
+            element.remove();
+            alert("copy แล้ว");
+        }
+    }
+
+    function copyUploadURL(nameUseID) {
+        var link = $("#" + nameUseID).val();
+        if (link != "") {
+            //          var copyText = document.getElementById(nameUseID+"_url");
+            element = $('<textarea>').appendTo('body').val(link).select();
+            document.execCommand('copy');
+            element.remove();
+            alert("copy แล้ว");
+        }
+    }
+
+    function mathCalculationsPlus(nameUseID, functionMore) {
+        var functionMores = functionMore.split("=");
+        var form_choices = functionMores[0].split("|");
+        var form_choices_size = form_choices.length;
+        var result = 0;
+        for (var f = 0; f < form_choices_size; f++) {
+            if (f == 0) {
+                if ($("#" + form_choices[f]).val() != '') {
+                    result = parseFloat($("#" + form_choices[f]).val());
+                } else {
+                    result = 0;
+                }
+            } else {
+                if ($("#" + form_choices[f]).val() != '') {
+                    result = result + parseFloat($("#" + form_choices[f]).val());
+                } else {
+                    result = result + 0;
+                }
+            }
+        }
+        $("#" + functionMores[1]).val(result);
+    }
+
+    function mathCalculationsMinus(nameUseID, functionMore) {
+        var functionMores = functionMore.split("=");
+        var form_choices = functionMores[0].split("|");
+        var form_choices_size = form_choices.length;
+        var result = 0;
+        for (var f = 0; f < form_choices_size; f++) {
+            if (f == 0) {
+                if ($("#" + form_choices[f]).val() != '') {
+                    result = parseFloat($("#" + form_choices[f]).val());
+                } else {
+                    result = 0;
+                }
+            } else {
+                if ($("#" + form_choices[f]).val() != '') {
+                    result = result - parseFloat($("#" + form_choices[f]).val());
+                } else {
+                    result = result - 0;
+                }
+            }
+        }
+        $("#" + functionMores[1]).val(result);
+    }
+
+    function mathCalculationsMultiply(nameUseID, functionMore) {
+        var functionMores = functionMore.split("=");
+        var form_choices = functionMores[0].split("|");
+        var form_choices_size = form_choices.length;
+        var result = 0;
+        for (var f = 0; f < form_choices_size; f++) {
+            if (f == 0) {
+                if ($("#" + form_choices[f]).val() != '') {
+                    result = parseFloat($("#" + form_choices[f]).val());
+                } else {
+                    result = 0;
+                }
+            } else {
+                if ($("#" + form_choices[f]).val() != '') {
+                    result = result * parseFloat($("#" + form_choices[f]).val());
+                } else {
+                    result = result * 0;
+                }
+            }
+        }
+        $("#" + functionMores[1]).val(result);
+    }
+
+    function mathCalculationsDivide(nameUseID, functionMore) {
+        var functionMores = functionMore.split("=");
+        var form_choices = functionMores[0].split("|");
+        var form_choices_size = form_choices.length;
+        var result = 0;
+        for (var f = 0; f < form_choices_size; f++) {
+            if (f == 0) {
+                if ($("#" + form_choices[f]).val() != '') {
+                    result = parseFloat($("#" + form_choices[f]).val());
+                } else {
+                    result = 0;
+                }
+            } else {
+                if ($("#" + form_choices[f]).val() != '') {
+                    result = result / parseFloat($("#" + form_choices[f]).val());
+                } else {
+                    try {
+                        result = result / 0;
+                    } catch (e) {
+                        result = 0;
+                    }
+                }
+            }
+        }
+        $("#" + functionMores[1]).val(result);
+    }
+
+    function disableFields(nameUseID, functionMore) {
+        var val = $("#" + nameUseID).val();
+        if (val.substring(0, 4) == 'เบิก'||val.substring(0, 12) == 'รับค่าตอบแทน'||val.substring(0, 26) == 'การขอราคาประเมินที่ดิน MFI') {
+            var form_choices = functionMore.split("|");
+            var form_choices_size = form_choices.length;
+            for (var f = 0; f < form_choices_size; f++) {
+                $("#" + form_choices[f]).attr("disabled", true);
+            }
+        } else {
+            var form_choices = functionMore.split("|");
+            var form_choices_size = form_choices.length;
+            for (var f = 0; f < form_choices_size; f++) {
+                $("#" + form_choices[f]).attr("disabled", false);
+            }
+        }
+    }
+
+    function setTimestamp(jsonDataTimestamp) {
+        var nameUseID = jsonDataTimestamp['nameUseID'];
+        var functionMore = jsonDataTimestamp['functionMore'];
+        var val = $("#" + nameUseID).val();
+        var nameIDs = functionMore.split("|");
+        if (val == '') {
+            if ($("#" + nameIDs[0]).val() != undefined) {
+                $("#" + nameIDs[0]).val('');
+                if ($("#" + nameIDs[0] + "_html").html() != undefined) {
+                    $("#" + nameIDs[0] + "_html").html('');
+                }
+                console.log("Timestamp : " + $("#" + nameIDs[0]).val())
+            }
+            if ($("#" + nameIDs[1]).val() != undefined) {
+                $("#" + nameIDs[1]).val('');
+                if ($("#" + nameIDs[1] + "_html").html() != undefined) {
+                    $("#" + nameIDs[1] + "_html").html('');
+                }
+                console.log("Email : " + $("#" + nameIDs[1]).val())
+            }
+        } else {
+            if ($("#" + nameIDs[0]).val() != undefined) {
+                $("#" + nameIDs[0]).val(jsonDataTimestamp['timestamp']);
+                if ($("#" + nameIDs[0] + "_html").html() != undefined) {
+                    $("#" + nameIDs[0] + "_html").html(jsonDataTimestamp['timestamp']);
+                }
+                console.log("Timestamp : " + $("#" + nameIDs[0]).val())
+            }
+            if ($("#" + nameIDs[1]).val() != undefined) {
+                $("#" + nameIDs[1]).val(jsonDataTimestamp['email']);
+                if ($("#" + nameIDs[1] + "_html").html() != undefined) {
+                    $("#" + nameIDs[1] + "_html").html(jsonDataTimestamp['email']);
+                }
+                console.log("Email : " + $("#" + nameIDs[1]).val())
+            }
+        }
+    }
+
+    /* อัพเดทข้อมูลที่ดึงมาลงตามช่องต่างในหน้า Onepage สามารถใช้ร่วมกันได้ */
+    function updateForm(jsonData) {
+        for (var fieldName in jsonData) {
+        if (fieldName.substring(0, 1) != '@') {
+            if ($("#" + fieldName).val() != undefined) {
+                $("#" + fieldName).val(jsonData[fieldName]);
+                if ($("#" + fieldName + "_html").html() != undefined) {
+                    $("#" + fieldName + "_html").html(jsonData[fieldName]);
+                }
+            }
+            }
+        }
+    }
+
+    /*  ดึงข้อมูล ฐานรายงาน R AAM */
+    function getReportR_AAMByCttCode(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(updateForm).getDatasByKeyword('reportR', Keyword, 'ctt_code');
+    }
+
+    /* ดึงข้อมูล ฐานรายงาน R RPLC */
+    function getReportR_RPLCByCttCode(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(updateForm).getDatasByKeyword('reportR_RPLC', Keyword, 'ctt_code');
+    }
+
+    /* ดึงข้อมูล ฐานจัดสินเชื่อ AAM เพื่อ บันทึกผลตรวจนิติกรรมฉบับจริง */
+    function getAAM_Act_ChcekByGrantID(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(updateForm).getDatasByKeyword('1lQMUZAyqMB2sCIMP5SgOQjYG-EpwJtnZeZEl3teVBSY', Keyword, 'contract_number');
+    }
+
+    /* Start ... ดึงข้อมูล เช่า์ซ้อ 2 จาก Elatixsearch รายงาน R AAM */
+    function getAMS2ContractDataByCttCode(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(setAMS2ContractDataByCttCode).getAMS2ContractDataByCttCode(Keyword);
+    }
+
+    function setAMS2ContractDataByCttCode(jsonData) {
+        for (var fieldName in jsonData) {
+            if (fieldName.substring(0, 1) != '@') {
+                if ($("#ams2_" + fieldName).val() != undefined) {
+                    $("#ams2_" + fieldName).val(jsonData[fieldName]);
+                } else if ($("#" + fieldName).val() != undefined) {
+                    $("#" + fieldName).val(jsonData[fieldName]);
+                }
+            }
+        }
+    }
+
+
+    //////รัง รถยึด Rafco
+    function getDataHoldCarRafco(nameUseID) {
+        var data = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(setDataHoldCarRafco).getDataHoldCarRafco(nameUseID, data);
+    }
+
+    function getDataHoldCarRafco2(nameUseID) {
+        var data = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(setDataHoldCarRafco).getDataHoldCarRafco2(nameUseID, data);
+    }
+    function getDataHoldCarRafco3(nameUseID) {
+        var data = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(setDataHoldCarRafco).getDataHoldCarRafco3(nameUseID, data);
+    }
+    function setDataHoldCarRafco(main) {
+        console.log(main);
+        var jsonData = main["data"];
+        if (jsonData != 0) {
+            for (var fieldName in jsonData) {
+                if ($("#" + fieldName).val() != undefined) {
+                    $("#" + fieldName).val(jsonData[fieldName]);
+                }
+            }
+        }
+    }
+
+
+
+    // ****** ค้นหาข้อมูลสมาชิก ******* //
+    function getMember(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(setMember).getMember(Keyword);
+    }
+
+    function getMemberByID(Keyword) {
+        google.script.run.withSuccessHandler(setMember).getMember(Keyword);
+    }
+
+    function setMember(jsonData) {
+        console.log(jsonData);
+        for (var fieldName in jsonData) {
+            if ($("#member_" + fieldName).val() != undefined) {
+                $("#member_" + fieldName).val(jsonData[fieldName]);
+            } else {
+                if ($("#id_" + fieldName).val() != undefined) {
+                    $("#id_" + fieldName).val(jsonData[fieldName]);
+                }
+            }
+        }
+    }
+
+    // ****** ค้นหาข้อมูลสมาชิก Multi ******* //
+    function getMembers(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        google.script.run.withSuccessHandler(setMembers).getMembers(Keyword, nameUseID);
+    }
+
+    function getMembersByID(Keyword, nameUseID) {
+        google.script.run.withSuccessHandler(setMembers).getMembers(Keyword, nameUseID);
+    }
+
+    function setMembers(jsonData) {
+        var nameUseID = jsonData['nameUseID'];
+        var data = jsonData['data'];
+        for (var fieldName in data) {
+            if ($("#" + nameUseID + "_" + fieldName).val() != undefined) {
+                $("#" + nameUseID + "_" + fieldName).val(data[fieldName]);
+            }
+            if (nameUseID.split("_").length > 1) {
+                if (nameUseID.split("_")[1] == fieldName) {
+                    $("#" + nameUseID).val(data[fieldName]);
+                }
+            }
+        }
+
+        if (nameUseID.split("_").length <= 1) {
+            $("#" + nameUseID).val(data["id"]);
+        }
+    }
+
+    // ******  ค้นหาข้อมูลสมาชิก แบบ หลาย Keyword ******* //
+    function getMembersMultiKey(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        document.getElementById(nameUseID + "_myDropdown").classList.remove("show");
+        if (Keyword != '') {
+            google.script.run.withSuccessHandler(setMembersMultiKey).getMemberMultiKey(Keyword, nameUseID);
+        }
+    }
+
+    function setMembersMultiKey(jsonData) {
+        $("#" + jsonData['nameUse-ID']).empty();
+        $("#" + jsonData['nameUse-ID'] + "_myDropdown").empty();
+        var datas = jsonData["datas"];
+        for (var i = 0; i < datas.length; i++) {
+            if (datas[i] != undefined) {
+                var valueShow = datas[i]["id"] + ' ' + datas[i]["thprefix"] + '' + datas[i]["name_th"] + ' ' + datas[i]["surname_th"] + ' ' + datas[i]["nickname"];
+                console.log(valueShow)
+                $("#" + jsonData['nameUse-ID'] + "_myDropdown").append('<a href="javascript:void(0)" onclick="getMembersByID(\'' + datas[i]["id"] + '\',\'' + jsonData['nameUse-ID'] + '\');removeDropdown(\'' + (jsonData['nameUse-ID'] + "_myDropdown") + '\');">' + valueShow + '</a>');
+            }
+        }
+        document.getElementById(jsonData['nameUse-ID'] + "_myDropdown").classList.toggle("show");
+    }
+
+
+    //    // FU BU 
+    //    
+    //      function getBufuINP(nameUseID) {
+    //        var Keyword = $("#" + nameUseID).val();
+    ////        document.getElementById(nameUseID + "_myDropdown").classList.remove("show");
+    //        if (Keyword != '') {
+    //            google.script.run.withSuccessHandler(setdropdownBufu).getbusetfu(Keyword, nameUseID);
+    //        }
+    //    }
+    //    
+    //    function setdropdownBufu(jsonData){
+    //
+    //    
+    //     $("#" + jsonData['nameUse-ID']).empty();
+    //        $("#" + jsonData['nameUse-ID'] + "_myDropdown").empty();
+    //  
+    //           $("#" + jsonData['nameUse-ID'] + "_myDropdown").append("<option value=''>เลือกประเภท</option>");
+    //            
+    //            var data = jsonData["data"];
+    //            for(var i=0;i<data.length;i++){
+    //              
+    //               $("#" + jsonData['nameUse-ID'] + "_myDropdown").append("<option value='"+data[i]['division_name']+"'>"+data[i]['division_name']+"</option>")
+    //                
+    //              
+    //            }
+    //    
+    //    
+    //    }
+    //    
+    //    
+    //    //
+
+
+
+
+    // ****** เริ่ม ค้นหาข้อมูลสมาชิก แบบ หลาย Keyword LDX ******* //
+
+    function getMembersByIDLDX(Keyword, nameUseID) {
+        google.script.run.withSuccessHandler(setMembersLDX).getMembersLDX(Keyword, nameUseID);
+    }
+
+    function setMembersLDX(jsonData) {
+        var nameUseID = jsonData['nameUseID'];
+        var data = jsonData['data'];
+        for (var fieldName in data) {
+            if ($("#" + nameUseID + "_" + fieldName).val() != undefined) {
+                $("#" + nameUseID + "_" + fieldName).val(data[fieldName]);
+            }
+        }
+        $("#" + nameUseID).val(data["ID_LDX"]);
+    }
+
+
+    function getMembersMultiKeyLDX(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        document.getElementById(nameUseID + "_myDropdown").classList.remove("show");
+        if (Keyword != '') {
+            google.script.run.withSuccessHandler(setMembersMultiKeyLDX).getMemberMultiKeyLDX(Keyword, nameUseID);
+        }
+    }
+
+    function setMembersMultiKeyLDX(jsonData) {
+        $("#" + jsonData['nameUse-ID']).empty();
+        $("#" + jsonData['nameUse-ID'] + "_myDropdown").empty();
+        var datas = jsonData["datas"];
+        if (datas == "") {
+            alert('ไม่มีข้อมูล \nกรุณาสมัครสมาชิกก่อน\n');
+            getIndex("1T_DDIp3pgkP4QW1D9-NI5A9YxwHZjTcLTmoe7LNFNOM", "สมาชิกนำAds.ไปสื่อสาร")
+            window.open('https://ldxecosystem.net/');
+
+        }
+
+        for (var i = 0; i < datas.length; i++) {
+
+            if (datas[i] != undefined) {
+
+
+                //                               ID_LDX,' ',phone,' ชื่อแฝง : ',name,'| ชื่อเต็ม : ',full_name,' | ชื่อ-นามสกุล : ',f_name,' ',l_name
+                var valueShow = datas[i]["ID_LDX"] + ' ' + datas[i]["phone"] + ' ชื่อแฝง : ' + datas[i]["name"] + ' | ชื่อเต็ม : ' + datas[i]["full_name"] + ' | ชื่อ-นามสกุล : ' + datas[i]["f_name"] + ' ' + datas[i]["l_name"];
+
+
+
+                console.log(valueShow)
+                $("#" + jsonData['nameUse-ID'] + "_myDropdown").append('<a href="javascript:void(0)" onclick="getMembersByIDLDX(\'' + datas[i]["ID_LDX"] + '\',\'' + jsonData['nameUse-ID'] + '\');removeDropdown(\'' + (jsonData['nameUse-ID'] + "_myDropdown") + '\');">' + valueShow + '</a>');
+            }
+            //              alert('ไม่มีข้อมูล \nกรุณาสมัครสมาชิกก่อน\n');
+            //            }else{
+
+        }
+        document.getElementById(jsonData['nameUse-ID'] + "_myDropdown").classList.toggle("show");
+    }
+
+
+    // ****** จบ ค้นหาข้อมูลสมาชิก แบบ หลาย Keyword LDX ******* //    
+
+
+
+
+
+    // ****** ค้นหาข้อมูลสมาชิก แบบ หลาย Keyword ******* //
+    function getMemberMultiKey(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        document.getElementById(nameUseID + "_myDropdown").classList.remove("show");
+        if (Keyword != '') {
+            google.script.run.withSuccessHandler(setMemberMultiKey).getMemberMultiKey(Keyword, nameUseID);
+        }
+    }
+
+    function setMemberMultiKey(jsonData) {
+        $("#" + jsonData['nameUse-ID']).empty();
+        $("#" + jsonData['nameUse-ID'] + "_myDropdown").empty();
+        var datas = jsonData["datas"];
+        for (var i = 0; i < datas.length; i++) {
+            if (datas[i] != undefined) {
+                var valueShow = datas[i]["id"] + ' ' + datas[i]["thprefix"] + '' + datas[i]["name_th"] + ' ' + datas[i]["surname_th"] + ' ' + datas[i]["nickname"];
+                console.log(valueShow)
+                $("#" + jsonData['nameUse-ID'] + "_myDropdown").append('<a href="javascript:void(0)" onclick="getMemberByID(\'' + datas[i]["id"] + '\');removeDropdown(\'' + (jsonData['nameUse-ID'] + "_myDropdown") + '\');">' + valueShow + '</a>');
+            }
+        }
+        document.getElementById(jsonData['nameUse-ID'] + "_myDropdown").classList.toggle("show");
+    }
+
+    // ****** ค้นหาข้อมูล LineToken แบบ หลาย Keyword ******* //
+    function getLineTokenByID(Keyword) {
+        google.script.run.withSuccessHandler(setLineToken).getLineToken(Keyword);
+    }
+
+    function setLineToken(jsonData) {
+        for (var fieldName in jsonData) {
+            if ($("#lineToken_" + fieldName).val() != undefined) {
+                $("#lineToken_" + fieldName).val(jsonData[fieldName]);
+            }
+        }
+    }
+
+    function getLineTokenMultiKey_feelweel(nameUseID) {
+        var Keyword = $("#" + nameUseID).val();
+        document.getElementById(nameUseID + "_myDropdown").classList.remove("show");
+        if (Keyword != '') {
+            google.script.run.withSuccessHandler(setLineTokenMultiKey).getLineTokenMultiKey_feelweel(Keyword, nameUseID);
+        }
+    }
+
+    function setLineTokenMultiKey(jsonData) {
+        $("#" + jsonData['nameUse-ID']).empty();
+        $("#" + jsonData['nameUse-ID'] + "_myDropdown").empty();
+        var datas = jsonData["datas"];
+        for (var i = 0; i < datas.length; i++) {
+            if (datas[i] != undefined) {
+                var valueShow = datas[i]["name"];
+                console.log(valueShow)
+                $("#" + jsonData['nameUse-ID'] + "_myDropdown").append('<a href="javascript:void(0)" onclick="getLineTokenByID(\'' + datas[i]["running"] + '\');removeDropdown(\'' + (jsonData['nameUse-ID'] + "_myDropdown") + '\');">' + valueShow + '</a>');
+            }
+        }
+        document.getElementById(jsonData['nameUse-ID'] + "_myDropdown").classList.toggle("show");
+    }
+
+    function removeDropdown(nameUseID) {
+        document.getElementById(nameUseID).classList.remove("show");
+    }
+
+    /* ระบบอัพโหลดไฟล์ */
+    function uploadFile(form_question_fieldname, form_upload_folder, form_upload_filename, form_upload_place, form_name) {
+
+
+
+        var allFiles = document.getElementById(form_question_fieldname + '_files').files;
+
+
+        //////////หัก form_upload_place เพิ่ม
+        console.log("form_upload_place==" + form_upload_place);
+        //    return;
+        ///////////////////////////////////
+        if (form_upload_place == "cloud Storage (S3)") {
+            var nameFile = '';
+            var form_upload_filenames = form_upload_filename.split("|");
+            var form_upload_filename_size = form_upload_filenames.length;
+            for (var f = 0; f < form_upload_filename_size; f++) {
+                if ($("#" + form_upload_filenames[f]).val() != undefined) {
+                    if ($("#" + form_upload_filenames[f]).val() == "") {
+                        alert("แจ้งเตือน : กรอกข้อมูลสำหรับตั้งชื่อไฟล์ก่อน");
+                        $("#" + form_upload_filenames[f]).focus();
+                        return;
+                    }
+
+                    if (nameFile == '') {
+                        nameFile = $("#" + form_upload_filenames[f]).val();
+                    } else {
+                        nameFile += "_" + $("#" + form_upload_filenames[f]).val();
+                    }
+                } else {
+                    if (nameFile == '') {
+                        nameFile = form_upload_filenames[f];
+                    } else {
+                        nameFile += "_" + form_upload_filenames[f];
+                    }
+                }
+            }
+            for (var i = 0; i < allFiles.length; i++) {
+                var nameFile = '';
+                var form_upload_filenames = form_upload_filename.split("|");
+                var form_upload_filename_size = form_upload_filenames.length;
+                for (var f = 0; f < form_upload_filename_size; f++) {
+                    if ($("#" + form_upload_filenames[f]).val() != undefined) {
+                        if ($("#" + form_upload_filenames[f]).val() == "") {
+                            alert("แจ้งเตือน : กรอกข้อมูลสำหรับตั้งชื่อไฟล์ก่อน");
+                            $("#" + form_upload_filenames[f]).focus();
+                            return;
+                        }
+
+                        if (nameFile == '') {
+                            nameFile = $("#" + form_upload_filenames[f]).val();
+                        } else {
+                            nameFile += "_" + $("#" + form_upload_filenames[f]).val();
+                        }
+                    } else {
+                        if (nameFile == '') {
+                            nameFile = form_upload_filenames[f];
+                        } else {
+                            nameFile += "_" + form_upload_filenames[f];
+                        }
+                    }
+                }
+                nameFile += "_" + (i + 1);
+                $("#" + form_question_fieldname + "_output").html("กำลังอัพโหลด กรุณารอสักครู่ ...");
+                if (form_name == 'rafco_report_r_upload_B4_Audit' || form_name == 'rplc_report_r_upload_B4_Audit' || form_name == 'rplc_report_O_upload_B4_Audit' || form_name == 'rafco_report_O_upload_B4_Audit') {
+                    $("#" + form_question_fieldname).val('');
+                    $("#" + form_question_fieldname + "_groupUrl").html("");
+                }
+                sendFileToS3(allFiles[i], form_upload_folder, nameFile, form_question_fieldname);
+            }
+
+        } else {
+            if (allFiles.length != 0) {
+                if (allFiles.length > 1) {
+                    var nameFile = '';
+                    var form_upload_filenames = form_upload_filename.split("|");
+                    var form_upload_filename_size = form_upload_filenames.length;
+                    for (var f = 0; f < form_upload_filename_size; f++) {
+                        if ($("#" + form_upload_filenames[f]).val() != undefined) {
+                            if ($("#" + form_upload_filenames[f]).val() == "") {
+                                alert("แจ้งเตือน : กรอกข้อมูลสำหรับตั้งชื่อไฟล์ก่อน");
+                                $("#" + form_upload_filenames[f]).focus();
+                                return;
+                            }
+
+                            if (nameFile == '') {
+                                nameFile = $("#" + form_upload_filenames[f]).val();
+                            } else {
+                                nameFile += "_" + $("#" + form_upload_filenames[f]).val();
+                            }
+                        } else {
+                            if (nameFile == '') {
+                                nameFile = form_upload_filenames[f];
+                            } else {
+                                nameFile += "_" + form_upload_filenames[f];
+                            }
+                        }
+                    }
+                    $("#" + form_question_fieldname + "_output").html("กำลังอัพโหลด กรุณารอสักครู่ ...");
+                    if (form_name == 'rafco_report_r_upload_B4_Audit' || form_name == 'rplc_report_r_upload_B4_Audit' || form_name == 'rplc_report_O_upload_B4_Audit' || form_name == 'rafco_report_O_upload_B4_Audit') {
+                        $("#" + form_question_fieldname).val('');
+                        $("#" + form_question_fieldname + "_groupUrl").html("");
+                    }
+                    google.script.run.withSuccessHandler(uploadFileToNewFolder).newFileToNewFolder(form_question_fieldname, form_upload_folder, form_upload_filename, nameFile);
+                } else {
+                    for (var i = 0; i < allFiles.length; i++) {
+                        var nameFile = '';
+                        var form_upload_filenames = form_upload_filename.split("|");
+                        var form_upload_filename_size = form_upload_filenames.length;
+                        for (var f = 0; f < form_upload_filename_size; f++) {
+                            if ($("#" + form_upload_filenames[f]).val() != undefined) {
+                                if ($("#" + form_upload_filenames[f]).val() == "") {
+                                    alert("แจ้งเตือน : กรอกข้อมูลสำหรับตั้งชื่อไฟล์ก่อน");
+                                    $("#" + form_upload_filenames[f]).focus();
+                                    return;
+                                }
+
+                                if (nameFile == '') {
+                                    nameFile = $("#" + form_upload_filenames[f]).val();
+                                } else {
+                                    nameFile += "_" + $("#" + form_upload_filenames[f]).val();
+                                }
+                            } else {
+                                if (nameFile == '') {
+                                    nameFile = form_upload_filenames[f];
+                                } else {
+                                    nameFile += "_" + form_upload_filenames[f];
+                                }
+                            }
+                        }
+                        nameFile += "_" + (i + 1);
+                        $("#" + form_question_fieldname + "_output").html("กำลังอัพโหลด กรุณารอสักครู่ ...");
+                        if (form_name == 'rafco_report_r_upload_B4_Audit' || form_name == 'rplc_report_r_upload_B4_Audit' || form_name == 'rplc_report_O_upload_B4_Audit' || form_name == 'rafco_report_O_upload_B4_Audit') {
+                            $("#" + form_question_fieldname).val('');
+                            $("#" + form_question_fieldname + "_groupUrl").html("");
+                        }
+                        if (jsonDataFolder['form_upload_folder'] != undefined) {
+                            form_upload_folder = jsonDataFolder['form_upload_folder'];
+                        }
+                        sendFileToDrive(allFiles[i], form_upload_folder, nameFile, form_question_fieldname)
+
+                    }
+                }
+            }
+        }
+    }
+
+    /* ระบบสร้างโฟล์เดอร์ กรณีอัพโหลด มากกว่า 1 ไฟล์  */
+    var jsonDataFolder = {};
+    function uploadFileToNewFolder(jsonFolder) {
+        jsonDataFolder['form_question_fieldname'] = jsonFolder['form_question_fieldname'];
+        jsonDataFolder['form_upload_filename'] = jsonFolder['form_upload_filename'];
+        jsonDataFolder['form_upload_folder'] = jsonFolder['form_upload_folder'];
+
+        var form_question_fieldname = jsonFolder['form_question_fieldname'];
+        var form_upload_filename = jsonFolder['form_upload_filename'];
+        var form_upload_folder = jsonFolder['form_upload_folder'];
+
+        var allFiles = document.getElementById(form_question_fieldname + '_files').files;
+        if (allFiles.length != 0) {
+            for (var i = 0; i < allFiles.length; i++) {
+                var nameFile = '';
+                var form_upload_filenames = form_upload_filename.split("|");
+                var form_upload_filename_size = form_upload_filenames.length;
+                for (var f = 0; f < form_upload_filename_size; f++) {
+                    if ($("#" + form_upload_filenames[f]).val() != undefined) {
+                        if ($("#" + form_upload_filenames[f]).val() == "") {
+                            alert("แจ้งเตือน : กรอกข้อมูลสำหรับตั้งชื่อไฟล์ก่อน");
+                            $("#" + form_upload_filenames[f]).focus();
+                            return;
+                        }
+
+                        if (nameFile == '') {
+                            nameFile = $("#" + form_upload_filenames[f]).val();
+                        } else {
+                            nameFile += "_" + $("#" + form_upload_filenames[f]).val();
+                        }
+                    } else {
+                        if (nameFile == '') {
+                            nameFile = form_upload_filenames[f];
+                        } else {
+                            nameFile += "_" + form_upload_filenames[f];
+                        }
+                    }
+                }
+                nameFile += "_" + (i + 1);
+                $("#" + form_question_fieldname + "_output").html("กำลังอัพโหลด กรุณารอสักครู่ ...");
+                sendFileToDrive(allFiles[i], form_upload_folder, nameFile, form_question_fieldname)
+            }
+        }
+    }
+
+    function sendFileToDrive(file, folder, nameFile, fieldname) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            var content = reader.result;
+            google.script.run.withSuccessHandler(onUploadSuccess).withFailureHandler(onUploadFailure).uploadFileToDrive(content, nameFile + "_" + Math.floor(Math.random() * 1000000), folder, fieldname);
+        }
+        reader.readAsDataURL(file);
+    }
+
+    function sendFileToS3(file, folder, nameFile, fieldname) {
+    
+    
+    
+    
+        var file = file;
+        var sFileName = file.name;
+        var sFileExtension = sFileName.split('.')[sFileName.split('.').length - 1].toLowerCase();
+        console.log("sFileExtension=="+sFileExtension);
+        var ts = Math.round((new Date()).getTime() / 1000);
+        
+        ts = nameFile + "_" + ts;
+        
+//        const formData = new FormData();
+//       
+//       formData.append('folder', 'autoform/'+folder);
+//       formData.append('file', file);
+//       formData.append("namefile", ts);
+//       formData.append("bucket", "linebotkeep-file");
+////       formData.append("expires", "1667893118000");
+//       
+//       fetch('https://agsdocker.duckdns.org/S3-Mid-Upload', {
+//       method: 'POST',
+//       body: formData
+//       })
+//       .then((response) => response.json())
+//       .then((result) => {
+//       console.log('Success:', result);
+//       var urli = result["s3link"];
+//       
+//
+//                var result = {};
+//                result['fieldname'] = fieldname;
+//                result['fileUrl'] = urli;
+//                //                    result['base64Data'] = base64Data;
+//                result['fileName'] = ts;
+//                //                    result['folders'] = folders;
+//
+//                onUploadSuccess(result);
+//
+//                console.log("จบ upload");
+//       
+//       
+//       
+//       })
+//       .catch((error) => {
+//       console.error('Error:', error);
+//       alert("ไม่สำเร็จ");
+//       });
+    
+    
+    
+        
+    
+    
+    
+        AWS.config.region = 'ap-southeast-1'; // Region
+        AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+            IdentityPoolId: 'ap-southeast-1:05da7733-24db-4a26-ad31-657da906e7c2',
+        });
+
+        AWS.config.credentials.get(function (err) {
+            if (err) alert(err);
+            console.log(AWS.config.credentials);
+        });
+        //        var file = fileChooser.files[0];
+        var sFileName = file.name;
+        var sFileExtension = sFileName.split('.')[sFileName.split('.').length - 1].toLowerCase();
+        console.log("sFileExtension==" + sFileExtension);
+        var ts = Math.round((new Date()).getTime() / 1000);
+        ts = nameFile + "_" + ts;
+        var bucketName = 'linebotkeep-file'; // Enter your bucket name
+        var bucket = new AWS.S3({
+            params: {
+                Bucket: bucketName
+            }
+        });
+        if (folder != "") {
+            folder = folder + "/";
+        }
+        var objKey = 'autoform/' + folder + "" + ts + "." + sFileExtension;
+        var tempKey = 'autoform/' + folder + "" + ts + "." + sFileExtension;
+        var params = {
+            Key: objKey,
+            ContentType: file.type,
+            Body: file,
+            ACL: 'public-read'
+        };
+
+        bucket.putObject(params, function (err, data) {
+            if (err) {
+                onUploadFailure();
+            } else {
+
+                //                        console.log(data);
+                //                        listObjs();
+                var urli = "https://linebotkeep-file.s3.ap-southeast-1.amazonaws.com/" + tempKey;
+
+
+                var result = {};
+                result['fieldname'] = fieldname;
+                result['fileUrl'] = urli;
+                //                    result['base64Data'] = base64Data;
+                result['fileName'] = ts;
+                //                    result['folders'] = folders;
+
+                onUploadSuccess(result);
+
+                console.log("จบ upload");
+            }
+        });
+        
+        
+        
+        
+        
+        
+        
+    }
+
+    function onUploadFailure(error) {
+        alert("อัพโหลด Error >> " + error);
+    }
+
+    function onUploadSuccess(result) {
+        var url = $("#" + result.fieldname).val();
+        if (url == '') {
+            url = result.fileUrl;
+        } else {
+            url += "," + result.fileUrl;
+        }
+        $("#" + result.fieldname + "_groupUrl").append('&nbsp;<b><a id=""href="' + result.fileUrl + '" target="_blank">ไฟล์ที่ ' + (url.split(",").length) + '</a></b>&nbsp;');
+
+        if (jsonDataFolder['form_upload_folder'] != undefined) {
+            $("#" + result.fieldname).val("https://drive.google.com/drive/folders/" + jsonDataFolder['form_upload_folder']);
+        } else {
+            $("#" + result.fieldname).val(url);
+        }
+
+        $("#" + result.fieldname + "_output").html('');
+    }
+
+</script>
+
+
+
+<body style="width:100%;">
+    <div id="formcontainer" class="container" width="90%"
+        style="border-radius:10px;margin-top:50px;border:1px solid;padding:20px;background-color:white;">
+        <h2 style="font-weight:bold;"> <span>
+                <?=forms['form_subject']?>
+            </span></h2>
+        <br>
+        <div style="font-size: 16px">
+            <?
+            if(forms['form_detail']!=undefined){
+                var form_detail = forms['form_detail'].split("|");
+                var form_detail_size = form_detail.length;
+                for(var f=0;f<form_detail_size;f++){
+            ?>
+            <br>
+            <? 
+                    var form_detail_texts = form_detail[f].split("~");
+                    var form_detail_texts_size = form_detail_texts.length;
+                    for(var ft=0;ft<form_detail_texts_size;ft++){
+                       if(form_detail_texts[ft].substring(0,4)=='http'){
+                    ?>
+            <a href='<?=form_detail_texts[ft]?>' target='_blank'>
+                <?=form_detail_texts[ft]?>
+            </a>
+            <?
+                       }else{
+                    ?>
+            <?!=form_detail_texts[ft]?>
+            <?  
+                       }
+                    }
+                }
+            }
+            ?>
+        </div>
+
+        <? if(forms['form_subject_image']!=''){ ?>
+        <div width="100%" align="center">
+            <img src="<?=forms['form_subject_image']?>" width="<?=forms['form_subject_image_width']?>%">
+        </div>
+        <? } ?>
+
+        <hr>
+        <form>
+            <div class="row row-no-gutters">
+                <? 
+            var defaultButton = true;
+            for(var q=0;q<questions.length;q++){ 
+                var form_question_fieldname = questions[q].form_question_fieldname;
+                var form_question = questions[q].form_question;
+                var form_choice = questions[q].form_choice;
+                var form_choice_type = questions[q].form_choice_type;
+                var form_onchange = questions[q].form_onchange;
+                var form_onchange_more = questions[q].form_onchange_more;
+                var form_upload_folder = questions[q].form_upload_folder;
+                var form_upload_place = questions[q].form_upload_place;
+                var form_upload_filename = questions[q].form_upload_filename;
+                var form_subject_image_width = questions[q].form_subject_image_width;
+                var from_question_group = questions[q].from_question_group;
+                var form_disabled = "";
+                
+                if(form_choice_type=="ตัวเลข"){   
+                    form_choice_type = "number";
+                }else if(form_choice_type=="ข้อความ" || form_choice_type==""){   
+                    form_choice_type = "text";
+                }else if(form_choice_type=="วันที่"){   
+                    form_choice_type = "date";
+                }else if(form_choice_type=="ซ่อนข้อมูล"){   
+                    form_choice_type = "hidden";
+                }
+                
+                Logger.log(form_choice_type);
+                
+                if(from_question_group==undefined || from_question_group=="undefined" || from_question_group=="" || Number(from_question_group)==0 || Number(from_question_group)==null || Number(from_question_group)==NaN || Number(from_question_group) > 12){
+                  from_question_group = 12;
+                }
+                
+                
+                if(form_choice_type=='เส้นคั่นชุดข้อมูล'){
+                ?>
+                <div class="col-md-12">
+                    <hr style="border-bottom:2px solid;">
+                </div>
+                <?
+                }else if(form_choice_type=='ปุ่มบันทึก (ค่าเริ่มต้น)'){
+                defaultButton = false;
+                ?>
+<div class="row">
+                    <div class="col-md-12 col-lg-12 col-sm-12 form-group">
+                        <b> <span id="outputStatus"></span> </b>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 col-lg-4 col-sm-4 form-group">
+                        <? if(form_name!='uploadPKG' && form_name!='createShortURL'){ ?>
+                        <input id="btnsubmit" type="button" class="btn btn-danger" value="<?=form_question?>"
+                            onclick="saveForm(<?=JSON.stringify(questions)?>,<?=JSON.stringify(questionImportance)?>,<?=spreadsheet_id?>,<?=form_name?>)">
+                        <? }else{ ?>
+                        &nbsp;&nbsp;&nbsp;
+                        <? } ?>
+                        <input type="button" class="btn btn-success" value="refresh"
+                            onclick="getIndex(<?=spreadsheet_id?>,<?=form_name?>)">
+                    </div>
+                </div>
+            <?
+                }else if(form_question_fieldname!='' && form_choice_type!="hidden"){
+            ?>
+
+
+                <div
+                    class="col-md-<?=from_question_group;?> col-lg-<?=from_question_group;?> col-sm-<?=from_question_group;?> form-group">
+                    <? if(form_choice_type=='แสดงข้อความหัวข้อ'){ ?>
+                    <h4>
+                        <?!=form_question?>
+                    </h4>
+                    <? }else if(form_choice_type=='ตำแหน่งที่อยู่ By Google'){ ?>
+                    <label for="<?=form_question_fieldname?>">
+                        <?!=form_question?> : <span><a href="/" id="<?=form_question_fieldname+'_check'?>"
+                                target="_blank">ตรวจสอบตำแหน่งที่อยู่</a></span>
+                    </label>
+                    <? }else{ ?>
+                    <!--<label for="<?=form_question_fieldname?>"> <?=form_question?> </label>-->
+                    <?
+                          var form_question_h = form_question.split("|");
+                          var form_question_h_size = form_question_h.length;
+                          for(var fh=0;fh<form_question_h_size;fh++){
+                          ?>
+                    <br>
+                    <? 
+                             var form_question_h_texts = form_question_h[fh].split("~");
+                             var form_question_h_texts_size = form_question_h_texts.length;
+                             for(var fth=0;fth<form_question_h_texts_size;fth++){
+                                if(form_question_h_texts[fth].substring(0,4)=='http'){
+                          ?>
+                    <a href='<?=form_question_h_texts[fth]?>' target='_blank'>
+                        <?=form_question_h_texts[fth]?>
+                    </a>
+                    <?
+                                }else{
+                          ?>
+                    <!--<label for="<?=form_question_fieldname?>"> <?=form_question_h_texts[fth]?> </label>-->
+                    <? 
+                          var form_question_h_texts_im = form_question_h_texts[fth].split("`");
+                          var form_question_h_texts_im_size = form_question_h_texts_im.length;
+                          for(var fthi=0;fthi<form_question_h_texts_im_size;fthi++){
+                          if(form_question_h_texts_im[fthi].substring(0,4)=='http'){
+                          ?>
+                    <br>
+                    <img src="<?=form_question_h_texts_im[fthi]?>" width="<?=form_subject_image_width?>%">
+                    <br>
+                    <?
+                          }else{
+                          ?>
+                    <label for="<?=form_question_fieldname?>">
+                        <?!=form_question_h_texts_im[fthi]?>
+                    </label>
+                    <?  
+                          }
+                          }
+                          ?>
+
+                    <?  
+                                }
+                             }
+                           ?>
+
+                    <?                             
+                          }                          
+                      } 
+                      ?>
+                    <?
+                    if(form_choice_type=='ดรอปดาวน์'){ 
+                    ?>
+                    <br>
+                    <select type="text" class="form-control" id="<?=form_question_fieldname?>"
+                        onchange="onChange(<?=form_onchange?>,<?=form_question_fieldname?>,<?=form_onchange_more?>)"
+                        required>
+                        <option value="">เลือก</option>
+                        <?
+                        var form_choices = form_choice.split("|");
+                        var form_choices_size = form_choices.length;
+                        for(var f=0;f<form_choices_size;f++){
+                        ?>
+
+                        <option value="<?=form_choices[f]?>">
+                            <?=form_choices[f]?>
+                        </option>
+
+                        <? 
+                        }
+                        ?>
+                    </select>
+
+                    <?
+                    }else if(form_choice_type=='ดรอปดาวน์แบบค้นหาได้'){ 
+                    ?>
+                    <br>
+                    <input class="form-control" placeholder="เลือก" list="<?=form_question_fieldname?>s"
+                        name="<?=form_question_fieldname?>" id="<?=form_question_fieldname?>"
+                        onchange="onChange(<?=form_onchange?>,<?=form_question_fieldname?>,<?=form_onchange_more?>)"
+                        required>
+                    <datalist id="<?=form_question_fieldname?>s">
+                        <?
+                        var form_choices = form_choice.split("|");
+                        var form_choices_size = form_choices.length;
+                        for(var f=0;f<form_choices_size;f++){
+                        ?>
+
+                        <option value="<?=form_choices[f]?>">
+
+                            <? 
+                        }
+                        ?>
+                    </datalist>
+
+                    <?
+                    }else if(form_choice_type=='เรียงความสำคัญ'){ 
+                    ?>
+                    <br>
+                    <table>
+                        <?
+                        var form_choices = form_choice.split("|");
+                        var form_choices_size = form_choices.length;
+                        for(var f=0;f<form_choices_size;f++){
+                        ?>
+                        <tr>
+                            <td width="15%" style="border:0px solid;padding:1px;background-color:white;">
+                                <input type="number" class="form-control" id="<?=form_question_fieldname+'_'+(f+1)?>"
+                                    onchange="checkQuestionSortNumber(<?=form_choices_size?>,<?=form_question_fieldname?>,<?=(f+1)?>)">
+                            </td>
+                            <td width="85%" style="border:0px solid;padding:1px;background-color:white;">
+                                <span> &nbsp;&nbsp;
+                                    <?=form_choices[f]?>
+                                </span>
+                            </td>
+                            <td></td>
+                        </tr>
+
+                        <? 
+                        }
+                        ?>
+
+                    </table>
+                    <?
+                    }else if(form_choice_type=='เรียงความสำคัญ'){ 
+                    ?>
+                    <br>
+                    <table>
+                        <?
+                        var form_choices = form_choice.split("|");
+                        var form_choices_size = form_choices.length;
+                        for(var f=0;f<form_choices_size;f++){
+                        ?>
+                        <tr>
+                            <td width="15%" style="border:0px solid;padding:1px;background-color:white;">
+                                <input type="number" class="form-control" id="<?=form_question_fieldname+'_'+(f+1)?>"
+                                    onchange="checkQuestionSortNumber(<?=form_choices_size?>,<?=form_question_fieldname?>,<?=(f+1)?>)">
+                            </td>
+                            <td width="85%" style="border:0px solid;padding:1px;background-color:white;">
+                                <span> &nbsp;&nbsp;
+                                    <?=form_choices[f]?>
+                                </span>
+                            </td>
+                            <td></td>
+                        </tr>
+
+                        <? 
+                        }
+                        ?>
+
+                    </table>
+                    <?
+                    }else if(form_choice_type=='อัพโหลด'){ 
+                    ?>
+                    <br>
+                    <table>
+                        <tr>
+                            <td width="85%" style="border:0px solid;padding:1px;background-color:white;" colspan="2">
+                                <input class="form-control" type="text" id="<?=form_question_fieldname?>" readonly>
+                            </td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td width="85%" style="border:0px solid;padding:1px;background-color:white;" colspan="2">
+                                <b> <span id="<?=form_question_fieldname+'_output'?>"></span> </b>
+                            </td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td width="85%" style="border:0px solid;padding:1px;background-color:white;" colspan="2">
+                                <span id="<?=form_question_fieldname+'_groupUrl'?>"></span>
+                            </td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td width="85%" style="border:0px solid;padding:1px;background-color:white;">
+                                <input class="form-control" type="file" id="<?=form_question_fieldname+'_files'?>"
+                                    accept="image/*" multiple>
+                            </td>
+                            <td width="15%" style="border:0px solid;padding:1px;background-color:white;">
+                                <input type="button" class="btn btn-success" id="<?=form_question_fieldname+'_button'?>"
+                                    value="อัพโหลด"
+                                    onclick="uploadFile(<?=form_question_fieldname?>,<?=form_upload_folder?>,<?=form_upload_filename?>,<?=form_upload_place?>,<?=form_name?>)">
+                            </td>
+                            <td></td>
+                        </tr>
+                    </table>
+                    <?
+                    }else if(form_choice_type=='อัพโหลดทั้งหมด'){ 
+                    ?>
+                    <br>
+                    <table>
+                        <tr>
+
+                            <? if(form_name=='uploadPKG' || form_name=='uploadPMS'){ ?>
+                            <td width="85%" style="border:0px solid;padding:1px;background-color:white;">
+                                <input class="form-control" type="text" id="<?=form_question_fieldname?>" readonly>
+
+                            </td>
+                            <td width="15%" style="border:0px solid;padding:1px;background-color:white;">
+                                <input type="button" class="btn btn-success" id="<?=form_question_fieldname+'_button'?>"
+                                    value="Copy" onclick="copyUploadURL(<?=form_question_fieldname?>)"
+                                    style="width:100%">
+                            </td>
+                            <? }else{ ?>
+                            <td width="85%" style="border:0px solid;padding:1px;background-color:white;" colspan="2">
+                                <input class="form-control" type="text" id="<?=form_question_fieldname?>" readonly>
+
+                            </td>
+                            <td></td>
+                            <? } ?>
+
+                        </tr>
+                        <tr>
+                            <td width="85%" style="border:0px solid;padding:1px;background-color:white;" colspan="2">
+                                <b> <span id="<?=form_question_fieldname+'_output'?>"></span> </b>
+                            </td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td width="85%" style="border:0px solid;padding:1px;background-color:white;" colspan="2">
+                                <span id="<?=form_question_fieldname+'_groupUrl'?>"></span>
+                            </td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td width="85%" style="border:0px solid;padding:1px;background-color:white;">
+                                <input class="form-control" type="file" id="<?=form_question_fieldname+'_files'?>"
+                                    accept="image/*,audio/*,video/*,.pdf" multiple>
+                            </td>
+                            <td width="15%" style="border:0px solid;padding:1px;background-color:white;">
+                                <input type="button" class="btn btn-success" id="<?=form_question_fieldname+'_button'?>"
+                                    value="อัพโหลด"
+                                    onclick="uploadFile(<?=form_question_fieldname?>,<?=form_upload_folder?>,<?=form_upload_filename?>,<?=form_upload_place?>,<?=form_name?>)">
+                            </td>
+                            <td></td>
+                        </tr>
+                    </table>
+                    <?
+                    }else if(form_choice_type=='ดรอปดาวน์แบบกรอกข้อมูล'){ 
+                    ?>
+                    <span id="<?=form_question_fieldname+'_etc'?>">
+                        <input type="text" class="form-control" id="<?=form_question_fieldname?>"
+                            onchange="onChange(<?=form_onchange?>,<?=form_question_fieldname?>,<?=form_onchange_more?>)">
+                        <div class="dropdown">
+                            <div id="<?=form_question_fieldname+'_myDropdown'?>" class="dropdown-content">
+
+                            </div>
+                        </div>
+                    </span>
+                    <?
+                    }else if(form_choice_type=='แสดงข้อความหัวข้อ'){ 
+                    ?>
+
+                    <?
+                    }else if(form_choice_type=='แสดงข้อความ (ไม่เก็บลงฐานข้อมูล)'){ 
+                    ?>
+                    &nbsp;:&nbsp;<span id="<?=form_question_fieldname?>"></span>
+                    <?
+                    }else if(form_choice_type=='แสดงข้อความ'){ 
+                    ?>
+                    &nbsp;:&nbsp;<span id="<?=form_question_fieldname+"_html"?>"></span>
+                    <input type="hidden" class="form-control" id="<?=form_question_fieldname?>" value="<?=form_choice?>"
+                        disabled>
+                    <?
+                    }else if(form_choice_type=='แสดง URL'){ 
+                    ?>
+                    &nbsp;:&nbsp;<span id="<?=form_question_fieldname+"_url"?>"></span>
+                    <input type="hidden" class="form-control" id="<?=form_question_fieldname?>" value="<?=form_choice?>"
+                        disabled>
+                    <?
+                    }else if(form_choice_type=='แสดง QR Code'){ 
+                    ?>
+                    <br>
+                    <center>
+                        <img id="<?=form_question_fieldname+"_qrcode"?>" src="" >
+                        <input type="hidden" class="form-control" id="<?=form_question_fieldname?>"
+                            value="<?=form_choice?>" disabled>
+                        <!-- 
+                        <img src="https://chart.googleapis.com/chart?chld=H&chs=312x312&cht=qr&chl=00020101021230810016A00000067701011201150107536000315080214KB0000005123300320API1592192920147467731690016A00000067701011301030040214KB0000005123300420API159219292014746775303764540115802TH6304113A&choe=UTF-8" >
+                        &nbsp;:&nbsp;<span id="<?=form_question_fieldname+"_img"?>"></span>
+                        -->
+                    </center>
+                    <?
+                    }else if(form_choice_type=='ตำแหน่งที่อยู่ By Google'){ 
+                    ?>
+
+                    <table>
+                        <tr>
+                            <td width="100%" style="border:0px solid;padding:1px;background-color:white;" colspan="2">
+                                <input type="text" class="form-control" id="<?=form_question_fieldname?>">
+                            </td>
+                            <td>
+                                <input type="button" class="btn btn-success" id="<?=form_question_fieldname+'_button'?>"
+                                    value="ดึงตำแหน่งที่อยู่" onclick="getGPSByGoogle(<?=form_question_fieldname?>)">
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="3" align="center">
+                                <div id="<?=form_question_fieldname+'_show_gps_img'?>"></div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <?
+                    }else{
+                        if(form_choice_type=='อัตโนมัติ'){
+                    ?>
+                    <input type="<?=form_choice_type?>" class="form-control" id="<?=form_question_fieldname?>"
+                        value="<?=form_choice?>"
+                        onchange="onChange(<?=form_onchange?>,<?=form_question_fieldname?>,<?=form_onchange_more?>)"
+                        readonly>
+                    <?
+                        }else if(form_choice_type=='ตัวเลขแบบคลิก'){
+                    ?>
+                    <div class="input-group number-spinner">
+                        <span class="input-group-btn">
+                            <button type="button" class="btn btn-default" data-dir="dwn"
+                                onclick="spiner('dwn',<?=form_question_fieldname?>)"><span
+                                    class="glyphicon glyphicon-minus"></span></button>
+                        </span>
+                        <input type="number" class="form-control text-center" id="<?=form_question_fieldname?>"
+                            value="<?=form_choice?>"
+                            onchange="onChange(<?=form_onchange?>,<?=form_question_fieldname?>,<?=form_onchange_more?>)">
+                        <span class="input-group-btn">
+                            <button type="button" class="btn btn-default" data-dir="up"
+                                onclick="spiner('up',<?=form_question_fieldname?>)"><span
+                                    class="glyphicon glyphicon-plus"></span></button>
+                        </span>
+                    </div>
+
+
+                    <? 
+                       }else if(form_choice_type=='เรดิโอ'){
+                    ?>
+
+
+                    <br>
+
+
+                    <?
+                        var form_choices = form_choice.split("|");
+                        var form_choices_size = form_choices.length;
+                        for(var f=0;f<form_choices_size;f++){
+                        ?>
+                    <div class="radio">
+                        <label><input type="radio" value="<?=form_choices[f]?>" name="<?=form_question_fieldname?>"
+                                id="<?=form_question_fieldname?>"
+                                onchange="onChange(<?=form_onchange?>,<?=form_question_fieldname?>,<?=form_onchange_more?>)"
+                                required>
+                            <?=form_choices[f]?>
+                        </label>
+                    </div>
+
+
+                    <? 
+                        }
+                        ?>
+
+
+                    <? 
+                       }else if(form_choice_type=='เช็คบ๊อก'){
+                    ?>
+
+
+                    <br>
+
+
+                    <?
+                        var form_choices = form_choice.split("|");
+                        var form_choices_size = form_choices.length;
+                        for(var f=0;f<form_choices_size;f++){
+                        ?>
+                    <div class="checkbox">
+                        <label><input type="checkbox" value="<?=form_choices[f]?>" name="<?=form_question_fieldname?>"
+                                id="<?=form_question_fieldname?>"
+                                onchange="onChange(<?=form_onchange?>,<?=form_question_fieldname?>,<?=form_onchange_more?>)"
+                                required>
+                            <?=form_choices[f]?>
+                        </label>
+                    </div>
+
+                    <? 
+                        }
+                        ?>
+
+
+                    <? 
+                       }else if(form_choice_type=="autocomplete"){ ?>
+
+
+                    <script>
+                        $(document).ready(function () {
+                            var form_choice = "<?=form_choice?>";
+                            var form_choices = form_choice.split("|");
+                            $("#<?=form_question_fieldname?>").autocomplete({
+                                source: form_choices
+                            });
+
+                        });
+                    </script>
+
+                    <input type="<?=form_choice_type?>" class="form-control" id="<?=form_question_fieldname?>" value=""
+                        onchange="onChange(<?=form_onchange?>,<?=form_question_fieldname?>,<?=form_onchange_more?>)">
+
+                    <?
+                       }else if(form_choice_type=="ข้อความยาว"){ ?>
+
+                    <textarea rows="<?=form_choice?>" class="form-control" id="<?=form_question_fieldname?>"
+                        onchange="onChange(<?=form_onchange?>,<?=form_question_fieldname?>,<?=form_onchange_more?>)"></textarea>
+
+                    <?
+                       }else if(form_choice_type=="ให้คะแนนแนวนอน"){
+                       ?>
+                    <table class="" width="100%">
+                        <?
+                        var form_choice = form_choice.split("|");
+                        var word_start = form_choice[0];
+                        var word_end = form_choice[2];
+                        var form_choices_size = Number(form_choice[1]);
+                        
+                        ?>
+                        <tr align="center">
+                            <td></td>
+                            <?
+                        for(var f=0;f<form_choices_size;f++){
+                        var valkey = f+1;
+                       ?>
+                            <td>
+                                <?=valkey?>
+                            </td>
+                            <? } ?>
+                            <td></td>
+                        </tr>
+                        <tr align="center">
+                            <td width="8%">
+                                <?=word_start;?>
+                            </td>
+                            <?
+                        for(var f=0;f<form_choices_size;f++){
+                        var valkey = f+1;
+                       ?>
+
+                            <td>
+                                <input type="radio" style="transform:scale(1.5);" name="<?=form_question_fieldname?>"
+                                    id="<?=form_question_fieldname?>" value="<?=valkey?>"
+                                    onchange="onChange(<?=form_onchange?>,<?=form_question_fieldname?>,<?=form_onchange_more?>)">
+                            </td>
+
+
+
+
+                            <?
+                       }
+                       
+                       ?>
+                            <td width="8%">
+                                <?=word_end;?>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <?
+                       
+                       }else{
+                    ?>
+                    <input type="<?=form_choice_type?>" class="form-control" id="<?=form_question_fieldname?>"
+                        value="<?=form_choice?>"
+                        onchange="onChange(<?=form_onchange?>,<?=form_question_fieldname?>,<?=form_onchange_more?>)">
+                    <? 
+                        }
+                    } ?>
+
+                </div>
+                <? 
+                }else{
+                ?>
+                <input type="<?=form_choice_type?>" class="form-control" id="<?=form_question_fieldname?>"
+                    value="<?=form_choice?>">
+                <?
+                }
+            }             
+            ?>
+            
+            <? if(defaultButton){ ?>
+                <div class="row">
+                    <div class="col-md-12 col-lg-12 col-sm-12 form-group">
+                        <b> <span id="outputStatus"></span> </b>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 col-lg-4 col-sm-4 form-group">
+                        <? if(form_name!='uploadPKG' && form_name!='createShortURL'){ ?>
+                        <input id="btnsubmit" type="button" class="btn btn-danger" value="บันทึก"
+                            onclick="saveForm(<?=JSON.stringify(questions)?>,<?=JSON.stringify(questionImportance)?>,<?=spreadsheet_id?>,<?=form_name?>)">
+                        <? }else{ ?>
+                        &nbsp;&nbsp;&nbsp;
+                        <? } ?>
+                        <input type="button" class="btn btn-success" value="refresh"
+                            onclick="getIndex(<?=spreadsheet_id?>,<?=form_name?>)">
+                    </div>
+                </div>
+            <? } ?>
+            </div>
+        </form>
+    </div><br><br><br>
+</body>
+
+</html>

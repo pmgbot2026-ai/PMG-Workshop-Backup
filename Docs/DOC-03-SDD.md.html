@@ -1,0 +1,392 @@
+# DOC-03 — Software Design Document (SDD)
+## BCT-196 — Multi-Form Web Application Platform
+
+**Standard:** ISO 29110
+**Version:** 1.0
+**Date:** 2026-05-18
+**Prepared by:** Claude Code (Initial Documentation)
+
+---
+
+# เอกสารการออกแบบซอฟต์แวร์ (SDD)
+## BCT-196 — แพลตฟอร์มแบบฟอร์มเว็บหลายรูปแบบ
+
+---
+
+## Document Control
+
+| Field | Value |
+|-------|-------|
+| Project | BCT-196 |
+| Version | 1.0 |
+| Date | 2026-05-18 |
+
+### Revision History
+| Version | Date | Author | Description |
+|---------|------|--------|-------------|
+| 1.0 | 2026-05-18 | Claude Code | Initial documentation |
+
+---
+
+## 1. System Architecture Overview / ภาพรวมสถาปัตยกรรม
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      BCT-196 Web App                        │
+│                                                             │
+│  ┌──────────────┐   ┌──────────────┐   ┌────────────────┐ │
+│  │  A-script.js │   │ A-insertBCT  │   │ A-uploadFile   │ │
+│  │  (Entry/Core)│   │  .js (CRUD)  │   │  .js (Drive)   │ │
+│  └──────┬───────┘   └──────┬───────┘   └───────┬────────┘ │
+│         │                  │                    │           │
+│  ┌──────▼───────────────────▼────────────────────▼───────┐ │
+│  │              A-config.js (Configuration)              │ │
+│  └──────────────────────────────────────────────────────┘ │
+│                                                             │
+│  ┌──────────────┐   ┌──────────────┐   ┌────────────────┐ │
+│  │   FAM.js     │   │Rafco_Script  │   │   f-script.js  │ │
+│  │ (FAM Module) │   │  .js (RAFCO) │   │  (Parts/Query) │ │
+│  └──────────────┘   └──────────────┘   └────────────────┘ │
+│                                                             │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │             A-autoDeploy.js (CI/CD)                  │  │
+│  └──────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+         │                    │                    │
+    ┌────▼────┐         ┌─────▼──────┐      ┌─────▼──────┐
+    │   BCT   │         │  Google    │      │  External  │
+    │Library  │         │  Drive /   │      │  APIs:     │
+    │(SQL,    │         │  Sheets    │      │  Telegram  │
+    │ ES, etc)│         │            │      │  APILP     │
+    └─────────┘         └────────────┘      └────────────┘
+```
+
+---
+
+## 2. Module Design / การออกแบบโมดูล
+
+### 2.1 Global Variables (A-script.js)
+
+```javascript
+var spreadsheet_id = "";    // Active spreadsheet target
+var form_name = "";         // Active form name
+var questions = [];         // Loaded form questions array
+var questionImportance = {}; // Required field flags map
+var secret = "59c6ccf4..."; // Internal auth key (256-bit hex)
+var keyit = "";             // IT work order key
+```
+
+**Design Note:** These are script-level globals re-initialized on every invocation. They are populated by `doGet` parameter parsing and used by `getForms()` which is called from within HTML templates.
+
+---
+
+### 2.2 Function Signatures and Descriptions
+
+#### A-script.js
+
+```javascript
+function doGet(e)
+// Entry point for HTTP GET requests
+// Parameters: e.parameter (spreadsheet_id, form_name, keyit, AGSCheckStatusService)
+// Returns: HtmlOutput (template-based), or ContentService (JSON)
+
+function getBUinp(Keyword, nameUseID)
+// Search division names from PPP7 database
+// Parameters: Keyword (string), nameUseID (string)
+// Returns: { nameUseID, datas } | { error, message }
+
+function getId_doc(Keyword, nameUseID)
+// Get WI document by ID from BCT_PKG database
+// Parameters: Keyword (string WI ID), nameUseID (string)
+// Returns: { nameUseID, datas } | { error }
+
+function include(filename)
+// Include HTML file content in template
+// Parameters: filename (string without .html)
+// Returns: string (HTML content)
+
+function getIndex(id, name)
+// Get form index HTML for given spreadsheet and form name
+// Parameters: id (spreadsheet_id), name (form_name)
+// Returns: string (HTML content of html-Index-vbs5)
+
+function feedbackScript()
+// Proxy to BCT.feedbackScript()
+// Returns: BCT feedback script result
+
+function getImgGPS(url, nameUseID)
+// Retrieve GPS map image for given URL
+// Parameters: url (string), nameUseID (string)
+// Returns: { nameUseID, gps_img }
+
+function getForms()
+// Load form definitions from A2_Forms sheet
+// Side effects: populates questions[] and questionImportance{}
+// Returns: forms (JSON of first matching form row)
+
+function getBranchBySC(sc_name)
+// Lookup branch by SC name from config sheet
+// Parameters: sc_name (string)
+// Returns: branch name string | ""
+
+function getdatait(keyit)
+// Get IT work order data by key
+// Parameters: keyit (string UUID)
+// Returns: { datas } | error object
+
+function addParameter(val)
+// Normalize undefined parameters to empty string
+// Parameters: val (any)
+// Returns: val | ""
+
+function getTimestamp(nameUseID, functionMore)
+// Generate timestamp with user context
+// Parameters: nameUseID (string), functionMore (string)
+// Returns: { timestamp, email, nameUseID, functionMore }
+
+function get_member_code(strcode)
+// Return member code (passthrough)
+// Parameters: strcode (string)
+// Returns: strcode
+
+function get_Address_Wallet(Keyword)
+// Look up LikeWallet address via APILP library
+// Parameters: Keyword (string wallet address)
+// Returns: APILP.loadNewLikeWalletPKGmember_likeaddress result
+
+function get_replyquestion(Keyword, nameUseID, spreadsheet_id)
+// Get exam quiz answers from B2_ตรวจคำตอบ sheet
+// Parameters: Keyword (member_id), nameUseID, spreadsheet_id
+// Returns: array of [quiz_answer, score] pairs
+```
+
+#### A-uploadFile.js
+
+```javascript
+function newFileToNewFolder(form_question_fieldname, form_upload_folder, form_upload_filename, nameFile)
+// Create or find sub-folder in Drive, return folder config
+// Parameters: fieldname, parentFolderId, filename, folderName
+// Returns: { form_question_fieldname, form_upload_folder (id), form_upload_filename }
+
+function uploadFileToDrive(base64Data, fileName, folders, fieldname)
+// Upload Base64-encoded file to Drive folder
+// Parameters: base64Data (data URI string), fileName, folderId, fieldname
+// Returns: { fieldname, fileUrl, base64Data, fileName, folders }
+//          | 'Error: ...' string on failure
+```
+
+#### A-config.js
+
+```javascript
+var config = {
+  "reportR": { DBName, query },           // BCT_AAM query
+  "reportR_RPLC": { DBName, query },      // BCT_RPLC query
+  "[spreadsheet_id_AMS2]": { DBName, query }  // BCT_AMS2 complex join query
+}
+```
+
+#### A-insertBCT.js
+
+```javascript
+function insertBCT(formResponse, formData, formIndex)
+// Route and insert form responses to target spreadsheets/DBs
+// Parameters:
+//   formResponse (object keyed by spreadsheet_id, containing form config)
+//   formData (object with all form field values)
+//   formIndex (number, index of current form)
+// Side effects: writes to multiple Spreadsheets and databases
+// Returns: void
+```
+
+#### A-autoDeploy.js
+
+```javascript
+function call_gasDeploy_prod()
+// Deploy to production deployment ID
+// Calls: pkgDeploy.gasDeploy(scriptId, deploymentId, "BCT-196")
+
+function call_gasDeploy_Dev()
+// Deploy to development deployment ID
+// Calls: pkgDeploy.gasDeploy(scriptId, devDeploymentId, "BCT-196")
+
+function chk_test()
+// Test function to verify script permissions
+// Logs: "เช็คสิทธิ์"
+```
+
+#### FAM.js
+
+```javascript
+function loadDropdownIdRent(name)
+// Load active rent contract IDs for a given renter name
+// Parameters: name (string renter name)
+// Returns: array of { id_rent } objects
+
+function loadRent(id_rent)
+// Load rent contract details by ID
+// Parameters: id_rent (string)
+// Returns: { tenancy, rentalrate, rent, tokenRentLine } | {}
+
+function loadIIU(gen_key)
+// Load IIU/FIM Step 1 data by generation key
+// Parameters: gen_key (string)
+// Returns: { s1_subject, s1_usermonye, s1_exchange, s1_money, s1_note } | {}
+```
+
+#### Rafco_Script.js
+
+```javascript
+function searchContract_Rafco(Keyword, nameUseID)
+// Full-text search RAFCO contracts via Elasticsearch
+// Parameters: Keyword (string), nameUseID (string)
+// Returns: { "nameUse-ID": nameUseID, datas }
+
+function getmemo_rafco(Keyword)
+// Get latest memo for contract code
+// Parameters: Keyword (string contract code pattern)
+// Returns: datas[0] (most recent row) | error
+```
+
+#### f-script.js
+
+```javascript
+function getpart_norMultiKey(Keyword, nameUseID)
+// Search parts by keyword (PCC) — MIRAI DB
+// Returns: { "nameUse-ID": nameUseID, datas }
+
+function getpart_norMultiKey_s(Keyword, nameUseID)
+// Search parts with stock data (PMS) — MIRAI DB
+// Returns: { "nameUse-ID": nameUseID, datas }
+
+function parts_inventory(Keyword, nameUseID)
+// Search parts inventory — MIRAI DB
+// Returns: { "nameUse-ID": nameUseID, datas }
+
+function searchPMSLineToken(tel)
+// Find Line token for customer phone number — BCT_AGS/RDS
+// Returns: { token, fname_customer, lname_customer }
+
+function tgracfo_creategroup(json)
+// Create Telegram group for RAFCO customer
+// Parameters: json { cust_name, cust_lname, branch, username, tel }
+// Returns: API response JSON
+
+function tgracfo_creategroup_not(json)
+// Create Telegram group check without customer (custChk=1)
+// Returns: API response JSON
+
+function sc_select_customer(name)
+// Get SC accessory data for customer name
+// Returns: array of formatted strings
+```
+
+---
+
+## 3. Data Flow Diagram / แผนภาพการไหลของข้อมูล
+
+### 3.1 Form Request Flow
+
+```
+Browser
+  |── GET ?spreadsheet_id=X&form_name=Y
+  |
+  ▼
+doGet(e)
+  |── addParameter() × 3 → set globals
+  |── spreadsheet_id check → route to error/main template
+  |
+  ▼
+html-Index-vbs5 Template (rendered)
+  |── getForms() → loads questions[] from A2_Forms
+  |── include('Stylesheet') → CSS
+  |── include('Rafco_JavaScript') → client JS
+  |
+  ▼
+Browser renders form to user
+```
+
+### 3.2 Form Submission Flow
+
+```
+User submits form
+  |
+  ▼
+Client JS (google.script.run)
+  |── uploadFileToDrive() for each file field
+  |── getTimestamp() → timestampData
+  |── insertBCT(formResponse, formData) → save to sheets/DB
+  |
+  ▼
+insertBCT routing:
+  reportR → BCT.loadUrlCenter → target sheet (AAM)
+  reportR_RPLC → resolve branch → upsert sheet (RPLC)
+  reportO_RAFCO_* → update B4_Audit sheet + SQL UPDATE
+  default → BCT.autoInsert / autoInsertToSpreadsheetByFirebase
+```
+
+---
+
+## 4. Error Handling Design / การออกแบบการจัดการข้อผิดพลาด
+
+| Function | Error Strategy |
+|----------|---------------|
+| `uploadFileToDrive` | try/catch → return 'Error: ' + e.toString() |
+| `getBUinp` | try/catch → return { error: true, message } |
+| `getId_doc` | try/catch → return { error: e.toString() } |
+| `getdatait` | try/catch → return e (error object) |
+| `searchContract_Rafco` | try/catch → return e |
+| `getmemo_rafco` | try/catch → return e |
+| `getForms` | No explicit error handling — relies on BCT library |
+| `insertBCT` | No explicit error handling — BCT library handles |
+
+---
+
+## 5. Security Design / การออกแบบความปลอดภัย
+
+| Concern | Implementation |
+|---------|---------------|
+| Secret key | `var secret = "59c6ccf4..."` — used for internal auth checks |
+| File ownership | Always set to `gdoc@prachakij.com` post-upload |
+| Spreadsheet routing errors | Redirect to error page before loading any data |
+| Session email | `Session.getEffectiveUser().getEmail()` for audit fields |
+
+---
+
+## 6. HTML Templates / เทมเพลต HTML
+
+| Template | Purpose |
+|----------|---------|
+| html-Index-vbs5.html | Main form rendering template (version 5) |
+| PMG-Error.html | Error page for PMG decommissioned spreadsheet |
+| PKG-Error.html | Error page for PKG decommissioned spreadsheet |
+| Rafco_JavaScript.html | Client-side JavaScript for RAFCO features |
+| Stylesheet.html | CSS styles included via include() |
+
+---
+
+*End of DOC-03-SDD*
+
+---
+
+# (ภาษาไทย) สรุปการออกแบบซอฟต์แวร์
+
+## โครงสร้างโมดูล
+
+| ไฟล์ | จำนวนฟังก์ชันหลัก | หน้าที่ |
+|------|------------------|--------|
+| A-script.js | 15+ | Entry point, form loading, core queries |
+| A-insertBCT.js | 1 (large) | Form response routing & insertion |
+| A-uploadFile.js | 2 | Google Drive file upload |
+| A-config.js | 0 (config only) | SQL query configurations |
+| A-autoDeploy.js | 3 | Auto deployment |
+| FAM.js | 3 | FAM rent/IIU data |
+| Rafco_Script.js | 2 | RAFCO Elasticsearch/SQL |
+| f-script.js | 7+ | Parts search, Telegram, SC |
+
+## Global State Management
+
+ตัวแปร global (`spreadsheet_id`, `form_name`, `questions[]`, `questionImportance{}`) ถูก set ใน `doGet()` และใช้โดย `getForms()` ซึ่งถูกเรียกจาก HTML template ตัวแปรเหล่านี้ถูก reinitialize ทุก request
+
+## การจัดการ Error
+
+ฟังก์ชัน utility ใช้ try/catch และ return error object แทน throw เพื่อให้ client-side handle ได้

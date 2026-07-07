@@ -1,0 +1,345 @@
+# DOC-02 — Functional Specification Document (FSD)
+## BCT-196 — Multi-Form Web Application Platform
+
+**Standard:** IEEE, BABOK
+**Version:** 1.0
+**Date:** 2026-05-18
+**Prepared by:** Claude Code (Initial Documentation)
+
+---
+
+# เอกสารข้อกำหนดเชิงฟังก์ชัน (FSD)
+## BCT-196 — แพลตฟอร์มแบบฟอร์มเว็บหลายรูปแบบ
+
+---
+
+## Document Control
+
+| Field | Value |
+|-------|-------|
+| Project | BCT-196 |
+| Version | 1.0 |
+| Date | 2026-05-18 |
+
+### Revision History
+| Version | Date | Author | Description |
+|---------|------|--------|-------------|
+| 1.0 | 2026-05-18 | Claude Code | Initial documentation |
+
+---
+
+## 1. Module Overview / ภาพรวมโมดูล
+
+BCT-196 is organized into the following functional modules:
+
+| Module | File | Description |
+|--------|------|-------------|
+| CORE | A-script.js | Web app entry point, form loading, core queries |
+| CONFIG | A-config.js | Database query configurations per report type |
+| UPLOAD | A-uploadFile.js | Google Drive file upload utilities |
+| INSERT | A-insertBCT.js | Form response insertion to spreadsheets/databases |
+| DEPLOY | A-autoDeploy.js | Auto-deploy functions via pkgDeploy |
+| FAM | FAM.js | FAM module: rent/IIU data lookups |
+| RAFCO | Rafco_Script.js | RAFCO: contract search, memo retrieval |
+| QUERY | f-script.js | Parts search, Telegram, SC customer lookup |
+
+---
+
+## 2. Functional Flows / ขั้นตอนการทำงาน
+
+### 2.1 FSD-FR-CORE-001: Web App Request Processing
+
+**Trigger:** HTTP GET request to web app URL
+**Actor:** End user via web browser
+
+**Flow:**
+```
+User → GET /?spreadsheet_id=X&form_name=Y&keyit=Z
+  doGet(e)
+    ├── Check AGSCheckStatusService param
+    │     YES → return JSON {"status":"ok"}
+    ├── addParameter(spreadsheet_id) → set global var
+    ├── addParameter(form_name) → set global var
+    ├── addParameter(keyit) → set global var
+    ├── Check spreadsheet_id == PMG error ID?
+    │     YES → createTemplateFromFile('PMG-Error') → return
+    ├── Check spreadsheet_id == PKG error ID?
+    │     YES → createTemplateFromFile('PKG-Error') → return
+    └── createTemplateFromFile('html-Index-vbs5')
+          .evaluate() → IFRAME sandbox, ALLOWALL XFrame → return
+```
+
+**Business Rule BR-CORE-001:** spreadsheet_id `1uH3LeYt7LS0l8Lg3wHqv2mSBg-9HT85ClK4-J49roCA` maps to PMG-Error page.
+**Business Rule BR-CORE-002:** spreadsheet_id `1-puCL6LQUoVPnlvVI73yCeKLQwLD0zXS8VagBKJMKmE` maps to PKG-Error page.
+
+---
+
+### 2.2 FSD-FR-CORE-002: Form Definition Loading
+
+**Trigger:** Client-side HTML template initialization calls `getForms()`
+**Actor:** HTML template (server-side)
+
+**Flow:**
+```
+getForms()
+  ├── Check spreadsheet_id != "" (global var must be set)
+  ├── SpreadsheetApp.openById(spreadsheet_id)
+  ├── getSheetByName('A2_Forms')
+  ├── BCT.form_getRowByKey(sheet, 'process') → rowByKey
+  ├── BCT.getFields(sheet, rowByKey+1, 1, 0) → fields array
+  ├── BCT.getValuesAll(sheet, rowByKey+5, 1) → all form rows
+  ├── For each row:
+  │     If valueByFliedName(fields, values, 'form_name') == form_name (global)
+  │       → push to questions[] global array
+  │       → if form_importance == 'บังคับกรอก' → add to questionImportance{}
+  │       → if forms == {} → set forms = this row JSON
+  └── return forms (first matching row as JSON)
+```
+
+**Output:** `forms` object (first question metadata), `questions[]` array (all questions), `questionImportance{}` (required field flags)
+
+---
+
+### 2.3 FSD-FR-UPLOAD-001: File Upload to Google Drive
+
+**Trigger:** Form submission containing Base64-encoded file data
+**Actor:** Form submission handler (client → server)
+
+**Pre-condition:** Base64 data, target folder ID, file name, and field name must be provided.
+
+**Flow:**
+```
+uploadFileToDrive(base64Data, fileName, folders, fieldname)
+  ├── fileName += "_" + formatDate(now, 'GMT+7', 'yyyyMMddhhmmsss')
+  ├── Parse MIME type from base64Data header
+  ├── Utilities.base64Decode(base64 content)
+  ├── Utilities.newBlob(bytes, mimeType).setName(fileName)
+  ├── DriveApp.getFolderById(folders)
+  ├── folder.createFile(blob)
+  ├── file.setOwner("gdoc@prachakij.com")
+  └── return { fieldname, fileUrl, base64Data, fileName, folders }
+
+  On error → return 'Error: ' + e.toString()
+```
+
+**Folder Creation Sub-flow:**
+```
+newFileToNewFolder(fieldname, parentFolderId, filename, folderName)
+  ├── DriveApp.getFolderById(parentFolderId)
+  ├── Search for existing sub-folder by name
+  │     EXISTS → use existing folder ID
+  │     NOT EXISTS → createFolder(folderName).getId()
+  └── return { form_question_fieldname, form_upload_folder: folderId, form_upload_filename }
+```
+
+---
+
+### 2.4 FSD-FR-INSERT-001: Form Response Routing and Insertion
+
+**Trigger:** Form submission with complete form data
+**Actor:** Form submission handler
+
+**Flow:**
+```
+insertBCT(formResponse, formData, formIndex)
+  For each spreadsheet_id in formResponse:
+    ├── Extract DLT fields (form_dlt_type, form_dlt_topic_id, form_dlt_data)
+    │     If type == "HCS" → generate DLT token
+    │
+    ├── ROUTING LOGIC:
+    │   Case "reportR":
+    │     BCT.getReportT_NameBrand(ctt_code) → branch
+    │     BCT.loadUrlCenter('BCT_Report_R', 'cpy_code', branch, 'url_key') → spreadsheet_id
+    │     → standard insert
+    │
+    │   Case "reportR_RPLC":
+    │     Resolve spreadsheet_id from branch
+    │     Query BCT_RPLC for Primary Key
+    │     → UPDATE if row exists, else INSERT via autoInsertToSpreadsheetByFirebase
+    │
+    │   Case "reportO_RAFCO_saveUploadAudit":
+    │     Look up report folder from center config sheet
+    │     Update B4_Audit_นิติกรรม sheet in branch spreadsheet
+    │     Also update BCT Audit sheet (1ar0svSfjHxMsTkcmEGZKJbJLWbUj1WPx5Gi-dmI5QO4)
+    │     Execute SQL UPDATE on RAFCO_act table
+    │
+    │   Default (direct spreadsheet_id):
+    │     → standard BCT insert/update
+```
+
+---
+
+### 2.5 FSD-FR-RAFCO-001: Contract Search via Elasticsearch
+
+**Trigger:** Client calls `searchContract_Rafco(Keyword, nameUseID)`
+**Actor:** Client-side form (via google.script.run)
+
+**Flow:**
+```
+searchContract_Rafco(Keyword, nameUseID)
+  ├── Build Elasticsearch bool/should query:
+  │     Fields: ctt_code, cust_name, id_card, addr_tel
+  │     Wildcard: "*" + Keyword + "*"
+  ├── BCT.loadJSONQuery_Elasticsearch('tbcontract_data', 'tbcontract_data', payload)
+  ├── BCT.loadJSONDatas('', '', '', cached, '') → datas
+  └── return { "nameUse-ID": nameUseID, datas: datas }
+```
+
+---
+
+### 2.6 FSD-FR-RAFCO-002: RAFCO Memo Retrieval
+
+**Flow:**
+```
+getmemo_rafco(Keyword)
+  ├── SQL: "select * from tbmemo where memo_ctt_code like 'Keyword' order by update_time desc limit 1"
+  ├── BCT.loadJSONDatas(BCT.getDBServer(), 'BCT_AMS2_RAFCO', query)
+  └── return datas[0] (most recent memo)
+```
+
+---
+
+### 2.7 FSD-FR-FAM-001: FAM Rent Contract Lookup
+
+**Flow:**
+```
+loadDropdownIdRent(name)
+  ├── Open spreadsheet 1vHgII04pPtYFO_6PzoqVmm1FXM9kLNlNAWv_fkrRNhk
+  ├── Sheet: B2_Contract
+  ├── Filter: name_rent == name AND status_contract != "ยกเลิก"
+  └── return array of { id_rent } objects
+
+loadRent(id_rent)
+  ├── Same spreadsheet/sheet
+  ├── Find row where id_rent matches
+  └── return { tenancy, rentalrate, rent, tokenRentLine }
+
+loadIIU(gen_key)
+  ├── Open spreadsheet 1v7sh2JqwZEGVV6ZXNVTTBQq7dGVW7W_jLgmBpt0Om1c
+  ├── Sheet: IIU_FIM_Step_1
+  ├── Find row where gen_key matches
+  └── return { s1_subject, s1_usermonye, s1_exchange, s1_money, s1_note }
+```
+
+---
+
+### 2.8 FSD-FR-CORE-003: Timestamp Generation
+
+**Flow:**
+```
+getTimestamp(nameUseID, functionMore)
+  └── return {
+        timestamp: formatDate(now, 'GMT+7', 'yyyy-MM-dd HH:mm:ss'),
+        email: Session.getEffectiveUser().getEmail(),
+        nameUseID: nameUseID,
+        functionMore: functionMore
+      }
+```
+
+---
+
+### 2.9 FSD-FR-QUERY-001: Parts Search (MIRAI Database)
+
+**Flow:**
+```
+getpart_norMultiKey(Keyword, nameUseID)
+  ├── DB: MIRAI
+  ├── Table: NonMovementPartsReport_th (join pic as pic_c)
+  ├── WHERE Column3 LIKE '%Keyword%' OR Column4 LIKE '%Keyword%'
+  ├── GROUP BY Column3, Column4 ORDER BY Column3 LIMIT 5
+  └── return { "nameUse-ID": nameUseID, datas: datas }
+
+parts_inventory(Keyword, nameUseID)
+  ├── DB: MIRAI
+  ├── Table: PartsInventoryReport
+  ├── WHERE Column6 LIKE '%Keyword%' OR Column7 LIKE '%Keyword%' LIMIT 5
+  └── return { "nameUse-ID": nameUseID, datas: datas }
+```
+
+---
+
+### 2.10 FSD-FR-DEPLOY-001: Auto Deploy
+
+**Flow:**
+```
+call_gasDeploy_prod()
+  └── pkgDeploy.gasDeploy(
+        ScriptApp.getScriptId(),
+        "AKfycbxgdG7tsJi9L0pSmjWG7mhJZFJORxbtN_iQoPa91sSJOQnZXuk",
+        "BCT-196"
+      )
+
+call_gasDeploy_Dev()
+  └── pkgDeploy.gasDeploy(
+        ScriptApp.getScriptId(),
+        "AKfycbw3n5njTKCblXTUf27BP8Ohxdrq7fJGUu5KmXJBs_Lw97y8SGLe5Hu-T0e9ConCuxUU",
+        "BCT-196"
+      )
+```
+
+---
+
+## 3. Business Rules / กฎทางธุรกิจ
+
+| Rule ID | Rule | Applied In |
+|---------|------|-----------|
+| BR-CORE-001 | PMG spreadsheet ID routes to PMG-Error page | doGet |
+| BR-CORE-002 | PKG spreadsheet ID routes to PKG-Error page | doGet |
+| BR-INSERT-001 | DLT token generated when form_dlt_type = "HCS" | insertBCT |
+| BR-INSERT-002 | RPLC insertion uses upsert: update if key exists, insert if not | insertBCT |
+| BR-UPLOAD-001 | File ownership must be set to gdoc@prachakij.com after upload | uploadFileToDrive |
+| BR-UPLOAD-002 | File name must include timestamp suffix for uniqueness | uploadFileToDrive |
+| BR-FAM-001 | Cancelled contracts (status="ยกเลิก") excluded from dropdown | loadDropdownIdRent |
+| BR-RAFCO-001 | Memo retrieval returns only the most recent record (LIMIT 1) | getmemo_rafco |
+
+---
+
+## 4. Interface Specifications / ข้อกำหนดอินเทอร์เฟซ
+
+### 4.1 Client-Server Communication
+
+All client-server calls use `google.script.run` async pattern from the HTML template.
+
+| Function | Direction | Data Format |
+|----------|-----------|-------------|
+| getForms() | Server → Client | JSON object |
+| getTimestamp() | Server → Client | JSON object |
+| uploadFileToDrive() | Client → Server → Client | Base64 in, URL out |
+| insertBCT() | Client → Server | Form data JSON |
+| searchContract_Rafco() | Client → Server → Client | Keyword in, datas array out |
+
+### 4.2 External API Interface
+
+| System | Endpoint | Method |
+|--------|----------|--------|
+| Telegram | https://telegram.agilesoftgroup.com/createGroupAuto_RAFCO | POST |
+| GPS Image | BCT.getImg_byLinkGPS(url, "800x400") | Internal |
+| LikeWallet | APILP.loadNewLikeWalletPKGmember_likeaddress(Keyword) | Internal |
+
+---
+
+*End of DOC-02-FSD*
+
+---
+
+# (ภาษาไทย) สรุปข้อกำหนดเชิงฟังก์ชัน
+
+## โมดูลหลัก
+
+| โมดูล | ไฟล์ | หน้าที่ |
+|-------|------|--------|
+| CORE | A-script.js | Entry point, โหลด form, query ต่างๆ |
+| CONFIG | A-config.js | กำหนดค่า query ต่อ report type |
+| UPLOAD | A-uploadFile.js | อัพโหลดไฟล์ไปยัง Google Drive |
+| INSERT | A-insertBCT.js | บันทึก response ไปยัง spreadsheet/ฐานข้อมูล |
+| DEPLOY | A-autoDeploy.js | Auto-deploy ผ่าน pkgDeploy |
+| FAM | FAM.js | ดึงข้อมูลสัญญาเช่า/IIU |
+| RAFCO | Rafco_Script.js | ค้นหาสัญญา RAFCO |
+| QUERY | f-script.js | ค้นหาอะไหล่, Telegram, SC customer |
+
+## กฎทางธุรกิจสำคัญ
+
+- **BR-CORE-001/002:** spreadsheet ID บางค่าถูก redirect ไปหน้า Error โดยตรง
+- **BR-INSERT-001:** DLT type "HCS" ต้องสร้าง token ก่อนบันทึก
+- **BR-UPLOAD-001:** ไฟล์ที่อัพโหลดต้องโอนสิทธิ์เป็น gdoc@prachakij.com
+- **BR-FAM-001:** สัญญาที่ถูกยกเลิกไม่แสดงใน dropdown

@@ -1,0 +1,52 @@
+<script>
+  window.addEventListener('load', function() {
+    // console.log('Page is loaded');
+  });
+  
+   function searchContract_Rafco(nameUseID, functionMore) {
+        var Keyword = $("#" + nameUseID).val();
+        document.getElementById(nameUseID + "_myDropdown").classList.remove("show");
+        if (Keyword != '') {
+         console.log(Keyword);
+            google.script.run.withSuccessHandler(setContract_Rafco).searchContract_Rafco(Keyword, nameUseID);
+        }
+    }
+    
+    function setContract_Rafco(jsonData) {
+        $("#" + jsonData['nameUse-ID']).empty();
+        $("#" + jsonData['nameUse-ID'] + "_myDropdown").empty();
+        var datas = jsonData["datas"];
+        for (var i = 0; i < datas.length; i++) {
+            if (datas[i] != undefined) {
+                var valueShow = datas[i]["_source"]["ctt_code"] + ' ' + datas[i]["_source"]["cust_name"] + ' ' + datas[i]["_source"]["addr_tel"];
+                console.log(valueShow)
+                $("#" + jsonData['nameUse-ID'] + "_myDropdown").append('<a href="javascript:void(0)" onclick="setCttCodes_Rafco(\'' + jsonData['nameUse-ID'] + '\',\'' + datas[i]["_source"]["ctt_code"] + '\');removeDropdown(\'' + (jsonData['nameUse-ID'] + "_myDropdown") + '\');">' + valueShow + '</a>');
+            }
+        }
+        document.getElementById(jsonData['nameUse-ID'] + "_myDropdown").classList.toggle("show");
+    }
+
+    function setCttCodes_Rafco(nameUseID,ctt_code){
+         $("#" + nameUseID).val(ctt_code);
+    }
+
+
+ function getmemo_rafco(nameUseID) {
+     var Keyword = $("#" + nameUseID).val();
+       google.script.run.withSuccessHandler(setmemo_rafco).getmemo_rafco(Keyword);
+    }
+    
+    function setmemo_rafco(jsonData) {        
+     for (var fieldName in jsonData) {
+            if ($("#" + fieldName).val() != undefined) {
+                $("#" + fieldName).val(jsonData[fieldName]);
+            }
+        }
+    }
+
+
+
+
+
+
+</script>

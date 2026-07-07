@@ -1,0 +1,257 @@
+# DOC-17 — Architecture Decision Record (ADR)
+## BCT-196 — Multi-Form Web Application Platform
+
+**Standard:** IEEE 1471, ISO/IEC 42010
+**Version:** 1.0
+**Date:** 2026-05-18
+**Prepared by:** Claude Code (Initial Documentation)
+
+---
+
+# บันทึกการตัดสินใจสถาปัตยกรรม (ADR)
+## BCT-196 — แพลตฟอร์มแบบฟอร์มเว็บหลายรูปแบบ
+
+---
+
+## Document Control
+
+| Field | Value |
+|-------|-------|
+| Project | BCT-196 |
+| Version | 1.0 |
+| Date | 2026-05-18 |
+
+### Revision History
+| Version | Date | Author | Description |
+|---------|------|--------|-------------|
+| 1.0 | 2026-05-18 | Claude Code | Initial documentation |
+
+---
+
+## ADR-001: Google Apps Script V8 as Runtime Platform
+
+**Status:** Accepted
+**Date:** (inferred from source)
+**Deciders:** BCT Development Team
+
+### Context / บริบท
+
+The organization needed a form platform that could integrate directly with Google Workspace (Sheets, Drive), required no external hosting or server infrastructure, and could be rapidly developed and deployed.
+
+องค์กรต้องการแพลตฟอร์มแบบฟอร์มที่รวมกับ Google Workspace ได้โดยตรง โดยไม่ต้องการโครงสร้างพื้นฐานเซิร์ฟเวอร์ภายนอก
+
+### Decision / การตัดสินใจ
+
+Use **Google Apps Script with V8 runtime** as the execution environment, deployed as a **Web App** (doGet entry point) with access level ANYONE.
+
+ใช้ Google Apps Script V8 เป็น runtime และ deploy เป็น Web App
+
+### Rationale / เหตุผล
+
+- Zero infrastructure cost — hosted by Google
+- Native access to Sheets, Drive, Gmail APIs
+- Consistent with existing BCT framework used across the organization
+- V8 runtime provides modern JavaScript support (template literals, arrow functions, etc.)
+- Easy deployment and versioning via GAS deployment mechanism
+
+### Consequences / ผลที่ตามมา
+
+**Positive:**
+- No server management needed
+- Built-in Google auth and Drive integration
+- Free tier sufficient for organizational usage
+
+**Negative:**
+- 6-minute execution time limit per invocation
+- No persistent server state between requests (global variables reinitialize per call)
+- Concurrency limited compared to dedicated servers
+
+---
+
+## ADR-002: Spreadsheet-Driven Form Configuration
+
+**Status:** Accepted
+**Date:** (inferred from source)
+**Deciders:** BCT Development Team
+
+### Context / บริบท
+
+BCT-196 needs to serve forms for multiple business units and use cases (AAM, RPLC, RAFCO, PKG, IT). Hardcoding each form's questions and fields would require code changes for every new form type.
+
+BCT-196 ต้องรองรับฟอร์มหลายประเภทสำหรับหลาย Business Unit การ hardcode คำถามในโค้ดจะทำให้ต้องแก้โค้ดทุกครั้งที่มีฟอร์มใหม่
+
+### Decision / การตัดสินใจ
+
+Store all form definitions in the sheet **`A2_Forms`** of each target spreadsheet. The form engine reads fields, question text, importance flags, and metadata at runtime based on `form_name` parameter.
+
+เก็บนิยามแบบฟอร์มทั้งหมดในชีต A2_Forms ของ spreadsheet เป้าหมาย
+
+### Rationale / เหตุผล
+
+- Form definitions can be modified by non-developers (Spreadsheet editors)
+- A single codebase serves unlimited form configurations
+- `form_name` parameter enables multi-tenancy within a single spreadsheet
+- BCT library provides `getFields`, `getValuesAll`, and `valueByFliedName` to standardize sheet reading
+
+### Consequences / ผลที่ตามมา
+
+**Positive:**
+- Business users can modify forms without developer involvement
+- Reusable code across all business units
+
+**Negative:**
+- Runtime errors if sheet structure (row key 'process') is misconfigured
+- Performance depends on sheet size (loading all rows for filtering)
+
+---
+
+## ADR-003: BCT Library as Centralized Data Access Layer
+
+**Status:** Accepted
+**Date:** (inferred from source)
+**Deciders:** BCT Development Team
+
+### Context / บริบท
+
+BCT-196 needs to communicate with multiple databases (MySQL via BCT server, Elasticsearch, RDS) and perform spreadsheet CRUD operations. Implementing separate database drivers in each script would lead to code duplication.
+
+BCT-196 ต้องสื่อสารกับหลายฐานข้อมูล การ implement driver แยกในแต่ละ script จะทำให้โค้ดซ้ำซ้อน
+
+### Decision / การตัดสินใจ
+
+Use the **BCT shared library** (libraryId: `1DiASTdPgT9yyuvd5y76xE0l4SGMtAQUVp_b1Itw7QranUpI65uLiwKW0`) as the centralized data access layer for all database operations, spreadsheet operations, and form utilities.
+
+ใช้ BCT shared library เป็น data access layer กลาง
+
+### Rationale / เหตุผล
+
+- `BCT.loadJSONDatas` and `BCT.loadXMLDatas` abstract SQL query execution
+- `BCT.loadJSONQuery_Elasticsearch` provides Elasticsearch integration
+- `BCT.autoInsert`, `BCT.autoInsertToSpreadsheetByFirebase` standardize sheet insertion
+- Centralized updates to BCT propagate to all dependent scripts
+- `BCT.getDBServer()` provides server URL abstraction
+
+### Consequences / ผลที่ตามมา
+
+**Positive:**
+- Consistent data access patterns across all BCT scripts
+- Bug fixes in BCT propagate automatically
+- Development mode (version "0") allows live updates
+
+**Negative:**
+- Tight coupling to BCT library — changes in BCT can break BCT-196
+- No local fallback if BCT library is unavailable
+
+---
+
+## ADR-004: Base64 File Upload via Google Drive API
+
+**Status:** Accepted
+**Date:** (inferred from source)
+**Deciders:** BCT Development Team
+
+### Context / บริบท
+
+Forms need to allow users to attach files (photos, documents). Standard HTML file inputs cannot be used directly in GAS web apps due to sandbox restrictions. A mechanism to transfer file data from client to server is needed.
+
+ฟอร์มต้องรองรับการแนบไฟล์ แต่ standard HTML file input ไม่สามารถใช้งานโดยตรงใน GAS web app ได้
+
+### Decision / การตัดสินใจ
+
+Encode files as **Base64** on the client side and transmit as string data to `uploadFileToDrive`. The server decodes Base64, creates a Blob, and stores it in Google Drive. File ownership is transferred to `gdoc@prachakij.com`.
+
+ใช้ Base64 encoding บน client และ decode + upload ที่ server ด้วย `uploadFileToDrive`
+
+### Rationale / เหตุผล
+
+- Works within GAS IFRAME sandbox constraints
+- Uses native `Utilities.base64Decode` and `Utilities.newBlob` APIs
+- Drive stores files permanently with shareable URLs
+- Timestamp suffix prevents filename collisions
+
+### Consequences / ผลที่ตามมา
+
+**Positive:**
+- Works within GAS sandbox limitations
+- Files permanently stored with Drive URL
+
+**Negative:**
+- Large files increase `google.script.run` payload size
+- Base64 encoding increases data size by ~33%
+
+---
+
+## ADR-005: Multi-Library Architecture for Extended Features
+
+**Status:** Accepted
+**Date:** (inferred from source)
+**Deciders:** BCT Development Team
+
+### Context / บริบท
+
+BCT-196 requires specialized capabilities beyond the core BCT library: LikeWallet integration (APILP), auto-deployment (pkgDeploy), access control (BLOCK), and additional BCT utilities (BCT542).
+
+BCT-196 ต้องการความสามารถพิเศษนอกเหนือจาก BCT library หลัก
+
+### Decision / การตัดสินใจ
+
+Adopt a **multi-library architecture** with 5 GAS libraries loaded via `appsscript.json`: BCT, APILP, pkgDeploy, BLOCK, BCT542.
+
+ใช้สถาปัตยกรรม multi-library โดยโหลดไลบรารี 5 ตัวผ่าน appsscript.json
+
+### Rationale / เหตุผล
+
+- Separates concerns: each library handles a specific domain
+- Libraries maintained independently, reducing merge conflicts
+- Development mode (`"developmentMode": true`) enables live iteration
+
+### Consequences / ผลที่ตามมา
+
+**Positive:**
+- Clean separation of responsibilities
+- Each library can be versioned independently
+
+**Negative:**
+- Multiple library dependencies increase startup time
+- All 5 libraries in development mode — risk of unexpected changes
+
+---
+
+## ADR-006: Error-Based Spreadsheet Routing for Decommissioned Forms
+
+**Status:** Accepted
+
+### Context / บริบท
+
+Some spreadsheets (PMG, PKG) have been decommissioned or redirected. Users with old bookmarked URLs should see a meaningful error page instead of a broken form.
+
+### Decision / การตัดสินใจ
+
+Hardcode specific spreadsheet IDs in `doGet` to redirect to dedicated error HTML templates (PMG-Error, PKG-Error).
+
+### Rationale / เหตุผล
+
+- Immediate user feedback without server-side 404
+- No database lookup needed for error routing
+
+### Consequences / ผลที่ตามมา
+
+**Positive:** Clean user experience for deprecated form URLs.
+**Negative:** Hardcoded IDs require code change if new decommissioned spreadsheets are added.
+
+---
+
+*End of DOC-17-ADR*
+
+---
+
+# (ภาษาไทย) สรุปการตัดสินใจสถาปัตยกรรม
+
+| ADR | การตัดสินใจ | เหตุผลสำคัญ |
+|-----|------------|-------------|
+| ADR-001 | ใช้ GAS V8 เป็น runtime platform | ไม่มีค่า infrastructure, รวมกับ Google Workspace |
+| ADR-002 | เก็บ form config ใน Spreadsheet (A2_Forms) | ผู้ใช้ธุรกิจแก้ไขได้โดยไม่ต้องพัฒนา |
+| ADR-003 | ใช้ BCT library เป็น data access layer | มาตรฐานเดียวกันทั่วทั้งองค์กร |
+| ADR-004 | อัพโหลดไฟล์ด้วย Base64 → Google Drive | รองรับ GAS sandbox constraints |
+| ADR-005 | Multi-library architecture (5 libraries) | แยก concern ต่อ domain |
+| ADR-006 | Hardcode error routing สำหรับ spreadsheet เก่า | UX ที่ดีสำหรับ URL ที่ถูก decommission |

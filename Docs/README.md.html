@@ -1,0 +1,70 @@
+# README — BCT-196 Documentation
+
+**Script Name:** BCT-196
+**Script ID:** 1yuktjbL2hpowqsgkI-ujNWJZs7ZFhsSGM4GEutyBap2fRBpkbN5acfGm
+**Date First Documented:** 2026-05-18
+**Documentation Mode:** INITIAL CREATE
+
+---
+
+> **WARNING: DO NOT EDIT original source files (.js, .html, .json)**
+> This Docs/ folder contains documentation only. All source files cloned from Google Apps Script must remain unmodified.
+
+---
+
+## About This Script
+
+BCT-196 is a Google Apps Script web application serving as a **multi-form platform** for multiple business units (AAM, RPLC, RAFCO, PKG, IT, FAM). It renders dynamic HTML forms driven by spreadsheet configuration, integrates with the BCT library for database operations, supports file uploads to Google Drive, and performs contract/parts/member searches across multiple databases.
+
+---
+
+## Document Index
+
+| File | Description | Last Updated |
+|------|-------------|--------------|
+| DOC-01-SRS.md.html | Software Requirements Specification — all functional and non-functional requirements | 2026-05-18 |
+| DOC-02-FSD.md.html | Functional Specification Document — detailed functional flows per module | 2026-05-18 |
+| DOC-17-ADR.md.html | Architecture Decision Records — 6 ADRs covering runtime, config, data access, upload, libraries, error routing | 2026-05-18 |
+| DOC-03-SDD.md.html | Software Design Document — module structure, function signatures, data flow | 2026-05-18 |
+| DOC-19-DDD.md.html | Database Design Document — all Spreadsheet, SQL, Elasticsearch data stores used | 2026-05-18 |
+| DOC-20-WDD.md.html | Workflow & Process Design — 10 PROC flows, integration diagrams, error flows | 2026-05-18 |
+| Document_History.md.html | Document change history and revision log | 2026-05-18 |
+| README.md.html | This file — index and overview | 2026-05-18 |
+
+---
+
+## Key Technical Facts
+
+| Item | Value |
+|------|-------|
+| Runtime | Google Apps Script V8 |
+| Timezone | Asia/Bangkok (GMT+7) |
+| Deployment | Web App — Access: ANYONE, Execute as: USER_DEPLOYING |
+| Libraries | BCT, APILP, pkgDeploy, BLOCK, BCT542 |
+| Source Files | 15 files (8 .js, 5 .html, 1 .json, 1 legacy .html) |
+| Entry Point | doGet(e) |
+| External APIs | Telegram (agilesoftgroup.com), BCT DB Server, RDS, Elasticsearch |
+| File Storage | Google Drive (via DriveApp) |
+| Error Logging | Stackdriver |
+
+---
+
+## Source Files Documented
+
+| File | Type | Role |
+|------|------|------|
+| A-script.js | JS | Main entry point, form loading, core queries |
+| A-config.js | JS | DB query configurations |
+| A-uploadFile.js | JS | Google Drive file upload |
+| A-insertBCT.js | JS | Form response insertion routing |
+| A-autoDeploy.js | JS | Auto deployment |
+| FAM.js | JS | FAM rent/IIU lookups |
+| Rafco_Script.js | JS | RAFCO Elasticsearch/SQL search |
+| f-script.js | JS | Parts search, Telegram, SC customer |
+| html-Index-vbs5.html | HTML | Main form template |
+| PKG-Error.html | HTML | PKG error page |
+| PMG-Error.html | HTML | PMG error page |
+| Rafco_JavaScript.html | HTML | Client-side RAFCO JS |
+| Stylesheet.html | HTML | CSS styles |
+| appsscript.json | JSON | Manifest and library config |
+| html-Index ยกเลิก.html | HTML | Deprecated index template |

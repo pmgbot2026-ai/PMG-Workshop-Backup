@@ -1,0 +1,46 @@
+{
+  "timeZone": "Asia/Bangkok",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "dependencies": {
+    "libraries": [
+      {
+        "userSymbol": "APILP",
+        "libraryId": "1_O6emlOouD74qY786actDsMdjHwhgmnUH0RoQUMy_Ita-n9-fpC0pThL",
+        "version": "0",
+        "developmentMode": false
+      },
+      {
+        "userSymbol": "BCT",
+        "libraryId": "1DiASTdPgT9yyuvd5y76xE0l4SGMtAQUVp_b1Itw7QranUpI65uLiwKW0",
+        "version": "0",
+        "developmentMode": false
+      },
+      {
+        "userSymbol": "pkgDeploy",
+        "libraryId": "1r5zAL8YA47pUM_P7C-EaOgCr-zaPcjSiwhW58-x0BFvMjobXKMCJ3aWT",
+        "version": "0",
+        "developmentMode": false
+      },
+      {
+        "userSymbol": "BLOCK",
+        "libraryId": "1U6vlcvZkXE_o9QfXlbbXjrYI5jt3eNMSWiDEeKPTA2GLEEuLzjeaD-3q",
+        "version": "0",
+        "developmentMode": false
+      },
+      {
+        "userSymbol": "BCT542",
+        "libraryId": "1i1FcxT6SVbDhsYOHfO6-DzdR2YmA7BVa4Ftum3iJuYFAYk4GFqvzN8OS",
+        "version": "0",
+        "developmentMode": false
+      }
+    ]
+  },
+  "webapp": {
+    "executeAs": "USER_DEPLOYING",
+    "access": "ANYONE"
+  },
+  "executionApi": {
+    "access": "ANYONE"
+  }
+}

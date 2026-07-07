@@ -1,0 +1,448 @@
+# DOC-20 — System Workflow & Process Design Document (WDD)
+## BCT-196 — Multi-Form Web Application Platform
+
+**Standard:** BPMN 2.0, UML 2.5
+**Version:** 1.0
+**Date:** 2026-05-18
+**Prepared by:** Claude Code (Initial Documentation)
+
+---
+
+# เอกสารการออกแบบ Workflow และกระบวนการ (WDD)
+## BCT-196 — แพลตฟอร์มแบบฟอร์มเว็บหลายรูปแบบ
+
+---
+
+## Document Control
+
+| Field | Value |
+|-------|-------|
+| Project | BCT-196 |
+| Version | 1.0 |
+| Date | 2026-05-18 |
+
+### Revision History
+| Version | Date | Author | Description |
+|---------|------|--------|-------------|
+| 1.0 | 2026-05-18 | Claude Code | Initial documentation |
+
+---
+
+## 1. Process Inventory / รายการกระบวนการ
+
+| PROC-ID | Process Name | Entry Point | Trigger |
+|---------|-------------|-------------|---------|
+| PROC-001 | Form Rendering | doGet | HTTP GET request |
+| PROC-002 | Form Data Loading | getForms | Template evaluation |
+| PROC-003 | Form Submission with File Upload | uploadFileToDrive + insertBCT | User submit |
+| PROC-004 | Contract Search (RAFCO) | searchContract_Rafco | User keyword input |
+| PROC-005 | Rent Contract Lookup (FAM) | loadDropdownIdRent / loadRent | User selection |
+| PROC-006 | Exam Score Retrieval | get_replyquestion | User member ID input |
+| PROC-007 | Auto Deploy | call_gasDeploy_prod / _Dev | Developer manual run |
+| PROC-008 | Audit Upload (RAFCO) | insertBCT (reportO path) | Form submission |
+| PROC-009 | Status Check | doGet (AGSCheckStatusService) | Health check ping |
+| PROC-010 | Telegram Group Creation | tgracfo_creategroup | Contract creation |
+
+---
+
+## 2. Detailed Process Flows / รายละเอียดกระบวนการ
+
+### PROC-001: Form Rendering Workflow
+
+```
+[START: HTTP GET Request]
+     |
+     ▼
+[Parse URL Parameters]
+  spreadsheet_id, form_name, keyit
+     |
+     ▼
+[Check: AGSCheckStatusService present?]
+  YES ──► [Return JSON {"status":"ok"}] ──► [END-OK]
+     |
+     ▼ NO
+[Check: spreadsheet_id == PMG Error ID?]
+  YES ──► [Render PMG-Error.html] ──► [END-ERROR-PMG]
+     |
+     ▼ NO
+[Check: spreadsheet_id == PKG Error ID?]
+  YES ──► [Render PKG-Error.html] ──► [END-ERROR-PKG]
+     |
+     ▼ NO
+[Render html-Index-vbs5 Template]
+  - IFRAME sandbox mode
+  - ALLOWALL XFrame options
+  - viewport meta tag
+     |
+     ▼
+[Template evaluation calls getForms()]
+     |
+     ▼
+[PROC-002: Form Data Loading]
+     |
+     ▼
+[Return HtmlOutput to browser]
+     |
+[END: Form Displayed to User]
+```
+
+**EVT-001:** Status check ping — returns immediately
+**EVT-002:** Error page routing — terminates form load chain
+
+---
+
+### PROC-002: Form Data Loading Workflow
+
+```
+[START: Template evaluation calls getForms()]
+     |
+     ▼
+[Check: spreadsheet_id global != ""]
+  NO ──► [Return empty forms {}] ──► [END-EMPTY]
+     |
+     ▼ YES
+[SpreadsheetApp.openById(spreadsheet_id)]
+     |
+     ▼
+[getSheetByName('A2_Forms')]
+     |
+     ▼
+[BCT.form_getRowByKey(sheet, 'process')]
+  → Locate process marker row
+     |
+     ▼
+[BCT.getFields(sheet, rowByKey+1, 1, 0)]
+  → Build field names array
+     |
+     ▼
+[BCT.getValuesAll(sheet, rowByKey+5, 1)]
+  → Load all data rows
+     |
+     ▼
+[FOR EACH row in valuesAll]
+  |── form_name matches global form_name?
+  |     YES:
+  |       Push to questions[] array
+  |       If form_importance = 'บังคับกรอก' → add to questionImportance{}
+  |       If forms == {} → set forms = this row
+  |     NO: skip
+     |
+     ▼
+[Return forms object]
+[END: Form questions loaded, HTML renders inputs]
+```
+
+---
+
+### PROC-003: Form Submission with File Upload
+
+```
+[START: User fills form and clicks Submit]
+     |
+     ▼
+[Client-side validation]
+  Check questionImportance{} fields
+  If any mandatory field empty → show error → [END-VALIDATION-FAIL]
+     |
+     ▼ PASS
+[FOR EACH file attachment field]
+  |── Read file as Base64 data URI
+  |── google.script.run.uploadFileToDrive(base64, name, folderId, fieldname)
+  |     Server-side:
+  |       Append timestamp to filename
+  |       Decode Base64 → Blob
+  |       Create file in Drive folder
+  |       Set owner = gdoc@prachakij.com
+  |       Return fileUrl
+  └── Store fileUrl in formData
+     |
+     ▼
+[google.script.run.getTimestamp(nameUseID, funcMore)]
+  → Returns { timestamp, email, ... }
+  → Add to formData
+     |
+     ▼
+[google.script.run.insertBCT(formResponse, formData, formIndex)]
+     |
+     ▼
+[insertBCT routing logic:]
+  ┌─ Case reportR:
+  │   BCT.getReportT_NameBrand(ctt_code) → branch
+  │   BCT.loadUrlCenter → target spreadsheet_id
+  │   Standard BCT insert
+  │
+  ├─ Case reportR_RPLC:
+  │   Resolve spreadsheet by branch
+  │   Query BCT_RPLC for existing primary key
+  │   IF key exists → autoInsert (UPDATE row)
+  │   IF key not exists → autoInsertToSpreadsheetByFirebase (INSERT)
+  │
+  ├─ Case reportO_RAFCO_saveUploadAudit:
+  │   Resolve branch report folder from center config
+  │   Update B4_Audit_นิติกรรม sheet in branch spreadsheet
+  │   Update B4_Audit_นิติกรรม_RAFCO in BCT audit spreadsheet
+  │   Execute SQL UPDATE on RAFCO_act table
+  │
+  └─ Default (direct spreadsheet_id):
+      BCT standard insert/update
+     |
+     ▼
+[Callback: success/failure notification to user]
+[END: Form saved]
+```
+
+**INT-001:** Google Drive upload API integration
+**INT-002:** BCT library database write integration
+
+---
+
+### PROC-004: Contract Search (RAFCO Elasticsearch)
+
+```
+[START: User types keyword in search field]
+     |
+     ▼
+[Client-side debounce / search trigger]
+     |
+     ▼
+[google.script.run.searchContract_Rafco(Keyword, nameUseID)]
+     |
+     ▼
+[Build Elasticsearch bool/should query]
+  Fields: ctt_code, cust_name, id_card, addr_tel
+  Pattern: *Keyword*
+     |
+     ▼
+[BCT.loadJSONQuery_Elasticsearch('tbcontract_data', 'tbcontract_data', payload)]
+     |
+     ▼
+[BCT.loadJSONDatas('', '', '', cached, '')]
+     |
+     ▼
+[Return { "nameUse-ID": nameUseID, datas: [...] }]
+     |
+     ▼
+[Client renders search results]
+[END: Results displayed]
+```
+
+---
+
+### PROC-005: FAM Rent Contract Lookup
+
+```
+SEQ-005A: Load Dropdown IDs
+
+[START: User selects renter name]
+     |
+     ▼
+[google.script.run.loadDropdownIdRent(name)]
+     |
+     ▼
+[Open spreadsheet 1vHgII04... / B2_Contract]
+[Load all contract rows via BCT framework]
+     |
+     ▼
+[Filter: name_rent == name AND status_contract != "ยกเลิก"]
+     |
+     ▼
+[Return array of { id_rent }]
+     |
+     ▼
+[Client populates id_rent dropdown]
+
+SEQ-005B: Load Full Contract Details
+
+[START: User selects id_rent from dropdown]
+     |
+     ▼
+[google.script.run.loadRent(id_rent)]
+     |
+     ▼
+[Same spreadsheet/sheet, find row by id_rent]
+     |
+     ▼
+[Return { tenancy, rentalrate, rent, tokenRentLine }]
+[END: Contract details populated in form]
+```
+
+---
+
+### PROC-006: Exam Score Retrieval
+
+```
+[START: User enters member_id]
+     |
+     ▼
+[google.script.run.get_replyquestion(member_id, nameUseID, spreadsheet_id)]
+     |
+     ▼
+[Open spreadsheet / B2_ตรวจคำตอบ]
+     |
+     ▼
+[Check spreadsheet name contains "กลุ่ม1"?]
+  YES ──► [Group 1 flow: 5 quizzes]
+  NO  ──► [Group 2 flow: up to 42 quizzes]
+     |
+     ▼
+[Scan rows from end (most recent first)]
+  IF member_id match found:
+    Extract exam_score string → split by "|"
+    Extract Quiz_1 to Quiz_N values
+    Build array: [[answer, score], ...]
+    RETURN array
+  IF no match:
+    RETURN ""
+[END: Quiz results returned to client]
+```
+
+---
+
+### PROC-007: Auto Deploy
+
+```
+[START: Developer runs call_gasDeploy_prod() or call_gasDeploy_Dev()]
+     |
+     ▼
+[pkgDeploy.gasDeploy(scriptId, deploymentId, "BCT-196")]
+     |
+     ▼
+[pkgDeploy library handles:]
+  - Create new version from current HEAD
+  - Update deployment to new version
+  - Register in deployment registry
+     |
+[END: New version deployed to web app URL]
+```
+
+---
+
+### PROC-008: Audit Upload (RAFCO)
+
+```
+[START: Form submitted with reportO_RAFCO_saveUploadAudit target]
+     |
+     ▼
+[Extract: branch from formData]
+     |
+     ▼
+[Look up report folder from center config sheet (1zEHzFH...)]
+  Sheet: B1_สร้างไฟล์
+  Match: cpy_code == branch → get url_key (key_reportO)
+     |
+     ▼
+[Update branch audit spreadsheet]
+  Sheet: B4_Audit_นิติกรรม
+  Find row by ctt_code
+  Set fields: photo, detail, date, user
+     |
+     ▼
+[Update BCT master audit spreadsheet (1ar0svS...)]
+  Sheet: B4_Audit_นิติกรรม_RAFCO
+  Same update logic
+     |
+     ▼
+[Execute SQL UPDATE on RAFCO_act]
+  UPDATE RAFCO_act SET receive_audit_send_proof_* WHERE contract_number = ctt_code
+     |
+[END: Audit record updated in 2 spreadsheets + 1 database]
+```
+
+---
+
+### PROC-009: Health Check
+
+```
+[START: Monitoring system pings ?AGSCheckStatusService=1]
+     |
+     ▼
+[doGet detects AGSCheckStatusService parameter]
+     |
+     ▼
+[Return ContentService JSON: {"status":"ok"}]
+     |
+[END: Health check confirmed]
+```
+
+---
+
+## 3. Integration Flows / กระบวนการ Integration
+
+### INT-001: Google Drive File Upload
+```
+Client → base64Data → uploadFileToDrive → DriveApp.createFile → fileUrl → Client
+```
+
+### INT-002: BCT SQL Database
+```
+GAS → BCT.loadJSONDatas(server, dbName, query) → HTTP → DB Server → JSON → GAS
+```
+
+### INT-003: Elasticsearch
+```
+GAS → BCT.loadJSONQuery_Elasticsearch(server, index, payload) → ES → cached → BCT.loadJSONDatas → GAS
+```
+
+### INT-004: External Telegram API
+```
+GAS → UrlFetchApp.fetch("https://telegram.agilesoftgroup.com/...") → POST JSON → Response JSON
+```
+
+### INT-005: APILP LikeWallet
+```
+GAS → APILP.loadNewLikeWalletPKGmember_likeaddress(Keyword) → API call → wallet data
+```
+
+---
+
+## 4. Error Flow Diagrams / แผนภาพ Error Flow
+
+```
+uploadFileToDrive error:
+  Exception caught → return 'Error: ' + e.toString() → Client handles string check
+
+getBUinp / getId_doc error:
+  Exception caught → return { error: true, message } or { error: e.toString() }
+
+getdatait error:
+  Exception caught → return e (error object)
+
+searchContract_Rafco error:
+  Exception caught → return e
+
+General BCT errors:
+  BCT library handles internally, returns empty array or throws
+```
+
+---
+
+*End of DOC-20-WDD*
+
+---
+
+# (ภาษาไทย) สรุป Workflow และกระบวนการ
+
+## กระบวนการหลัก 10 กระบวนการ
+
+| PROC | ชื่อ | Entry Point |
+|------|-----|------------|
+| PROC-001 | Form Rendering | doGet |
+| PROC-002 | Form Data Loading | getForms |
+| PROC-003 | Form Submission + File Upload | uploadFileToDrive + insertBCT |
+| PROC-004 | RAFCO Contract Search | searchContract_Rafco |
+| PROC-005 | FAM Rent Lookup | loadDropdownIdRent / loadRent |
+| PROC-006 | Exam Score Retrieval | get_replyquestion |
+| PROC-007 | Auto Deploy | call_gasDeploy_prod/Dev |
+| PROC-008 | RAFCO Audit Upload | insertBCT (reportO path) |
+| PROC-009 | Health Check | doGet (AGSCheckStatusService) |
+| PROC-010 | Telegram Group Creation | tgracfo_creategroup |
+
+## Integration จากภายนอก
+
+| INT | ระบบ | วิธีเชื่อมต่อ |
+|-----|-----|-------------|
+| INT-001 | Google Drive | DriveApp API |
+| INT-002 | SQL Database | BCT.loadJSONDatas |
+| INT-003 | Elasticsearch | BCT.loadJSONQuery_Elasticsearch |
+| INT-004 | Telegram | UrlFetchApp.fetch |
+| INT-005 | APILP LikeWallet | APILP library |
