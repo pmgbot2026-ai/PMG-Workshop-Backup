@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Sarabun','Segoe UI',sans-serif; background:#0a0e27; color:#e0e6ed; }
+    .watermark { position:fixed; top:50%; left:50%; transform:rotate(-45deg); font-size:120px; color:rgba(255,0,0,0.05); font-weight:bold; pointer-events:none; z-index:9999; letter-spacing:30px; user-select:none; }
+    .badge { position:fixed; top:10px; right:10px; background:#c0392b; color:#fff; padding:6px 18px; border-radius:4px; font-size:13px; font-weight:bold; z-index:9999; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .container { max-width:1400px; margin:0 auto; padding:20px; }
+    h1 { text-align:center; font-size:28px; margin:20px 0; background:linear-gradient(135deg,#667eea,#764ba2); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .tab-bar { display:flex; gap:8px; margin-bottom:15px; justify-content:center; }
+    .tab-btn { padding:8px 18px; border:1px solid #2d3a5c; background:#111633; color:#8892b0; border-radius:8px; cursor:pointer; font-size:14px; }
+    .tab-btn.active { background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; border-color:#667eea; }
+    .controls { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; align-items:center; padding:15px; background:#111633; border-radius:10px; border:1px solid #1e2a4a; }
+    .controls label { font-size:14px; color:#8892b0; }
+    .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:20px; }
+    .kpi-card { background:linear-gradient(135deg,#1a1f3a,#111633); border:1px solid #2d3a5c; border-radius:10px; padding:12px; text-align:center; }
+    .kpi-card:hover { transform:translateY(-2px); box-shadow:0 5px 15px rgba(102,126,234,0.2); }
+    .kpi-label { font-size:11px; color:#8892b0; }
+    .kpi-value { font-size:20px; font-weight:bold; color:#667eea; }
+    .kpi-delta { font-size:11px; }
+    .pos { color:#2ecc71; } .neg { color:#e74c3c; }
+    .card { background:#111633; border:1px solid #1e2a4a; border-radius:12px; padding:20px; margin-bottom:20px; }
+    h2 { font-size:18px; margin:0 0 12px; color:#a8b2d1; border-bottom:1px solid #1e2a4a; padding-bottom:8px; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    th { background:#1a1f3a; color:#a8b2d1; padding:8px; text-align:right; border-bottom:2px solid #667eea; }
+    th:first-child, td:first-child { text-align:left; }
+    td { padding:6px 8px; border-bottom:1px solid #1e2a4a; }
+    tr:hover { background:rgba(102,126,234,0.1); }
+    .chart-row { display:flex; flex-wrap:wrap; gap:15px; margin-bottom:15px; }
+    .chart-box { background:#111633; border:1px solid #1e2a4a; border-radius:12px; padding:15px; flex:1; min-width:350px; }
+    .negative { color:#e74c3c; } .positive { color:#2ecc71; }
+    .copy-protect { user-select:none; -webkit-user-select:none; }
+    #loading { text-align:center; padding:40px; font-size:18px; color:#667eea; }
+  </style>
+</head>
+<body>
+  <div class="watermark">CONFIDENTIAL</div>
+  <div class="badge">CONFIDENTIAL — ห้ามเผยแพร่</div>
+  <div class="container">
+    <h1>📊 PMG Financial Dashboard<br><span style="font-size:16px;-webkit-text-fill-color:#8892b0">วิเคราะห์เปรียบเทียบงบกำไรขาดทุน 5 ปี</span></h1>
+    <div class="tab-bar copy-protect" id="tabBar"></div>
+    <div class="controls copy-protect" id="controls"></div>
+    <div id="loading">⏳ กำลังโหลดข้อมูล...</div>
+    <div id="content" style="display:none">
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="chart-row">
+        <div class="chart-box copy-protect"><h3>📈 รายได้ vs ค่าใช้จ่าย</h3><canvas id="revExpChart"></canvas></div>
+        <div class="chart-box copy-protect"><h3>📈 กำไรสุทธิ (Net Profit)</h3><canvas id="profitChart"></canvas></div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-box copy-protect"><h3>📊 สัดส่วนค่าใช้จ่าย</h3><canvas id="expenseChart"></canvas></div>
+        <div class="chart-box copy-protect"><h3>📊 Ratio Analysis</h3><canvas id="ratioChart"></canvas></div>
+      </div>
+      <div class="card copy-protect"><h2>📋 เปรียบเทียบรายบรรทัด</h2><div style="overflow-x:auto"><table id="compTable"></table></div></div>
+      <div class="card copy-protect"><h2>🔝 Top 20 รายการ (by YTD)</h2><table id="topTable"></table></div>
+    </div>
+  </div>
+  <script>
+  var DATA = {};
+  var currentTab = 'PMGgr';
+  var YEARS = ['2565','2566','2567','2569'];
+  var TABS = ['PMGgr','PMG','PMGI'];
+  var MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  var charts = {};
+
+  function init() {
+    renderTabs();
+    renderControls();
+    loadData();
+  }
+
+  function renderTabs() {
+    var html = '';
+    for (var i = 0; i < TABS.length; i++) {
+      var cls = TABS[i] === currentTab ? 'tab-btn active' : 'tab-btn';
+      html += '<div class="' + cls + '" onclick="currentTab=\'' + TABS[i] + '\'; renderTabs(); loadData();">' + TABS[i] + '</div>';
+    }
+    document.getElementById('tabBar').innerHTML = html;
+  }
+
+  function renderControls() {
+    var html = '<label><b>เลือกปี:</b></label>';
+    for (var i = 0; i < YEARS.length; i++) {
+      html += '<label><input type="checkbox" checked id="y' + YEARS[i] + '" onchange="loadData()"> พ.ศ.' + YEARS[i] + '</label>';
+    }
+    document.getElementById('controls').innerHTML = html;
+  }
+
+  function getCheckedYears() {
+    var y = [];
+    for (var i = 0; i < YEARS.length; i++) {
+      if (document.getElementById('y' + YEARS[i]).checked) y.push(YEARS[i]);
+    }
+    return y;
+  }
+
+  function loadData() {
+    var years = getCheckedYears();
+    if (years.length === 0) { alert('กรุณาเลือกอย่างน้อย 1 ปี'); return; }
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('content').style.display = 'none';
+
+    var loaded = 0;
+    DATA = {};
+    for (var i = 0; i < years.length; i++) {
+      (function(year) {
+        var tab = currentTab;
+        if (year === '2565' && tab === 'PMGgr') tab = 'PMSgr';
+        if (year === '2565' && tab === 'PMGI') { DATA[year] = {error:'N/A'}; loaded++; if(loaded===years.length) renderAll(years); return; }
+        google.script.run.withSuccessHandler(function(result) {
+          DATA[year] = result;
+          loaded++;
+          if (loaded === years.length) renderAll(years);
+        }).withFailureHandler(function(err) {
+          DATA[year] = {error: err.message};
+          loaded++;
+          if (loaded === years.length) renderAll(years);
+        }).serveData({year: year, tab: tab});
+      })(years[i]);
+    }
+  }
+
+  function f(n) { return n ? n.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}) : '-'; }
+  function fShort(n) {
+    if (!n) return '-';
+    if (Math.abs(n)>=1e6) return (n/1e6).toFixed(2)+'M';
+    if (Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+'K';
+    return n.toFixed(0);
+  }
+  function pct(c,p) { return (p && p!==0) ? ((c-p)/Math.abs(p)*100).toFixed(1)+'%' : '-'; }
+
+  function renderAll(years) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    renderKPI(years);
+    renderCharts(years);
+    renderComparison(years);
+    renderTop(years);
+  }
+
+  function renderKPI(years) {
+    var d = DATA[years[years.length-1]];
+    if (!d || d.error) { document.getElementById('kpiGrid').innerHTML = '<p>ไม่มีข้อมูล</p>'; return; }
+    var prev = years.length > 1 && DATA[years[0]] && !DATA[years[0]].error ? DATA[years[0]] : null;
+    var yLabel = 'พ.ศ.' + years[years.length-1];
+    var kpis = [
+      {l:'💰 รายได้รวม',k:'totalRevenue'},
+      {l:'📉 ค่าใช้จ่ายรวม',k:'totalExpenses'},
+      {l:'📈 กำไรสุทธิ',k:'netProfit'},
+      {l:'💵 กำไรเงินสด',k:'netProfitCash'},
+      {l:'📊 EBITDA',k:'ebitda'},
+      {l:'📐 Gross Margin',k:'grossMargin'},
+      {l:'🏭 ต้นทุน',k:'costOfSales'},
+      {l:'🏢 บริหาร',k:'adminExpenses'}
+    ];
+    var html = '';
+    for (var i = 0; i < kpis.length; i++) {
+      var v = d[kpis[i].k], pv = prev ? prev[kpis[i].k] : null;
+      var delta = (v && pv) ? pct(v,pv) : '';
+      var cls = delta ? (parseFloat(delta)>=0 ? 'pos' : 'neg') : '';
+      html += '<div class="kpi-card"><div class="kpi-label">' + kpis[i].l + ' (' + yLabel + ')</div>';
+      html += '<div class="kpi-value">' + f(v) + '</div>';
+      html += '<div class="kpi-delta ' + cls + '">' + delta + '</div></div>';
+    }
+    document.getElementById('kpiGrid').innerHTML = html;
+  }
+
+  function renderCharts(years) {
+    Object.keys(charts).forEach(function(k) { charts[k].destroy(); });
+    var revD=[], expD=[], npD=[], npcD=[], npbD=[], gmD=[], emD=[], erD=[];
+    for (var i = 0; i < years.length; i++) {
+      var d = DATA[years[i]]; if (!d || d.error) { revD.push(0); expD.push(0); npD.push(0); npcD.push(0); npbD.push(0); gmD.push(0); erD.push(0); continue; }
+      var rev = d.totalRevenue || 0;
+      revD.push(rev); expD.push(d.totalExpenses || 0); npD.push(d.netProfit || 0); npcD.push(d.netProfitCash || 0); npbD.push(d.netProfitBook || 0);
+      gmD.push(d.grossMargin ? d.grossMargin/rev*100 : null);
+      erD.push(d.totalExpenses ? d.totalExpenses/rev*100 : null);
+    }
+    var labels = years.map(function(y){return 'พ.ศ.'+y;});
+    charts.revExp = new Chart(document.getElementById('revExpChart'),{type:'bar',data:{labels:labels,datasets:[{label:'รายได้',data:revD,backgroundColor:'#667eea'},{label:'ค่าใช้จ่าย',data:expD,backgroundColor:'#e74c3c'}]},options:{responsive:true,plugins:{legend:{labels:{color:'#e0e6ed'}}},scales:{x:{ticks:{color:'#8892b0'}},y:{ticks:{color:'#8892b0',callback:function(v){return fShort(v)}}}}}});
+    charts.profit = new Chart(document.getElementById('profitChart'),{type:'line',data:{labels:labels,datasets:[{label:'NP สุทธิภาษี',data:npD,borderColor:'#2ecc71',fill:false},{label:'NP เงินสด',data:npcD,borderColor:'#667eea',fill:false},{label:'NP ทางบัญชี',data:npbD,borderColor:'#f39c12',fill:false}]},options:{responsive:true,plugins:{legend:{labels:{color:'#e0e6ed'}}},scales:{x:{ticks:{color:'#8892b0'}},y:{ticks:{color:'#8892b0',callback:function(v){return fShort(v)}}}}}});
+    var latest = DATA[years[years.length-1]];
+    charts.expense = new Chart(document.getElementById('expenseChart'),{type:'doughnut',data:{labels:['ต้นทุน','บริหาร','อื่นๆ'],datasets:[{data:[latest.costOfSales||0,latest.adminExpenses||0,Math.max(0,(latest.totalExpenses||0)-(latest.costOfSales||0)-(latest.adminExpenses||0))],backgroundColor:['#e74c3c','#f39c12','#3498db']}]},options:{responsive:true,plugins:{legend:{labels:{color:'#e0e6ed'}}}}});
+    charts.ratio = new Chart(document.getElementById('ratioChart'),{type:'bar',data:{labels:labels,datasets:[{label:'Net Margin %',data:years.map(function(y){var d=DATA[y];return d&&d.totalRevenue?(d.netProfit/d.totalRevenue*100):0}),backgroundColor:'#2ecc71'},{label:'Expense Ratio %',data:erD,backgroundColor:'#e74c3c'},{label:'Gross Margin %',data:gmD,backgroundColor:'#667eea'}]},options:{responsive:true,plugins:{legend:{labels:{color:'#e0e6ed'}}},scales:{x:{ticks:{color:'#8892b0'}},y:{ticks:{color:'#8892b0',callback:function(v){return v+'%'}}}}}});
+  }
+
+  function renderComparison(years) {
+    var d = DATA[years[years.length-1]];
+    if (!d || !d.summaryLines) { document.getElementById('compTable').innerHTML = '<tr><td>No data</td></tr>'; return; }
+    var html = '<thead><tr><th>รายการ</th>';
+    for (var i = 0; i < years.length; i++) html += '<th style="text-align:right">พ.ศ.' + years[i] + '</th>';
+    html += '<th>Δ%</th></tr></thead><tbody>';
+    for (var i = 0; i < d.accounts.length && i < 40; i++) {
+      var ac = d.accounts[i];
+      html += '<tr><td>' + ac.code + '</td><td>' + ac.desc + '</td>';
+      for (var y = 0; y < years.length; y++) {
+        var yr = DATA[years[y]];
+        var val = yr && yr.accounts ? yr.accounts.find(function(a){return a.code===ac.code}) : null;
+        var v = val ? val.ytd : null;
+        html += '<td style="text-align:right" class="' + (v<0?'negative':'positive') + '">' + f(v) + '</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody>';
+    document.getElementById('compTable').innerHTML = html;
+  }
+
+  function renderTop(years) {
+    var d = DATA[years[years.length-1]];
+    if (!d || !d.topAccounts) return;
+    var html = '<thead><tr><th>รหัส</th><th>รายการ</th><th>YTD</th><th>% of Revenue</th></tr></thead><tbody>';
+    var rev = d.totalRevenue || 1;
+    for (var i = 0; i < d.topAccounts.length; i++) {
+      var ac = d.topAccounts[i];
+      html += '<tr><td>' + ac.code + '</td><td>' + ac.desc + '</td>';
+      html += '<td style="text-align:right" class="' + (ac.ytd<0?'negative':'positive') + '">' + f(ac.ytd) + '</td>';
+      html += '<td style="text-align:right">' + (ac.ytd/rev*100).toFixed(1) + '%</td></tr>';
+    }
+    html += '</tbody>';
+    document.getElementById('topTable').innerHTML = html;
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

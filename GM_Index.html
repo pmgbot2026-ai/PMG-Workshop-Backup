@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GM Dashboard — กำไรขั้นต้น</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f0f4f8; --card: #fff; --accent: #2563eb; --accent2: #7c3aed;
+      --green: #059669; --red: #dc2626; --orange: #ea580c; --yellow: #d97706;
+      --purple: #7c3aed; --pink: #db2777; --cyan: #0891b2;
+      --text: #1e293b; --text2: #475569; --text3: #94a3b8;
+      --border: #e2e8f0; --radius: 14px;
+      --shadow: 0 2px 8px rgba(0,0,0,.06);
+      --sales: #2563eb; --aftersales: #059669;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+    
+    /* Header */
+    .header { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #2563eb 100%); padding: 14px 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+    .header h1 { font-size: 20px; color: #fff; display: flex; align-items: center; gap: 10px; }
+    .header .subtitle { font-size: 12px; color: rgba(255,255,255,.7); margin-top: 2px; }
+    .header .ver { font-size: 10px; color: rgba(255,255,255,.6); background: rgba(255,255,255,.15); padding: 2px 8px; border-radius: 4px; margin-left: 8px; }
+    
+    /* Filters */
+    .filters { background: #fff; border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; position: sticky; top: 52px; z-index: 90; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+    .filter-group { display: flex; gap: 3px; align-items: center; }
+    .filter-group label { font-size: 11px; color: var(--text3); margin-right: 4px; font-weight: 600; }
+    .fbtn { padding: 5px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; font-size: 12px; cursor: pointer; transition: .2s; color: var(--text2); }
+    .fbtn:hover:not(.active) { background: #eef2ff; }
+    .fbtn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+    
+    /* Content */
+    .content { padding: 16px 20px 40px; max-width: 1400px; margin: 0 auto; }
+    
+    /* KPI Cards */
+    .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .kpi-card { background: var(--card); border-radius: var(--radius); padding: 16px; text-align: center; box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; overflow: hidden; }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+    .kpi-card.sales::before { background: var(--sales); }
+    .kpi-card.aftersales::before { background: var(--aftersales); }
+    .kpi-card.total::before { background: linear-gradient(90deg, var(--sales), var(--aftersales)); }
+    .kpi-card .icon { font-size: 24px; margin-bottom: 4px; }
+    .kpi-card .label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
+    .kpi-card .value { font-size: 22px; font-weight: 700; margin: 4px 0; }
+    .kpi-card .sub { font-size: 11px; color: var(--text3); }
+    .kpi-card .trend { font-size: 11px; font-weight: 600; margin-top: 2px; }
+    .trend.up { color: var(--green); }
+    .trend.down { color: var(--red); }
+    .kpi-card.sales .value { color: var(--sales); }
+    .kpi-card.aftersales .value { color: var(--aftersales); }
+    .kpi-card.total .value { color: var(--accent2); }
+    
+    /* Ratio Bar */
+    .ratio-section { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .ratio-section h3 { font-size: 15px; font-weight: 600; color: var(--accent2); margin-bottom: 10px; }
+    .ratio-bar-container { position: relative; height: 40px; border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
+    .ratio-bar-sales { height: 100%; background: var(--sales); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 13px; float: left; transition: width .5s; }
+    .ratio-bar-aftersales { height: 100%; background: var(--aftersales); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 13px; float: left; transition: width .5s; }
+    .ratio-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); }
+    .ratio-labels .sales-label { color: var(--sales); }
+    .ratio-labels .aftersales-label { color: var(--aftersales); }
+    
+    /* Section */
+    .section { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .section h3 { font-size: 15px; font-weight: 600; color: var(--accent2); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    
+    /* Chart */
+    .chart-box { position: relative; max-width: 100%; }
+    .chart-box canvas { width: 100% !important; max-height: 320px; }
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width: 900px) { .chart-row { grid-template-columns: 1fr; } }
+    
+    /* Table */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { background: #f8fafc; padding: 8px 6px; text-align: right; font-weight: 600; color: var(--text2); border-bottom: 2px solid var(--border); white-space: nowrap; position: sticky; top: 0; }
+    th:first-child, th:nth-child(2) { text-align: left; }
+    td { padding: 6px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    td:first-child, td:nth-child(2) { text-align: left; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tr:hover { background: #f8fafc; }
+    tr.section-header { background: #eef2ff; }
+    tr.section-header td { font-weight: 700; color: var(--accent2); }
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+    .zero { color: var(--text3); }
+    
+    /* Product cards */
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+    .product-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 12px; position: relative; }
+    .product-card .pno { position: absolute; top: 8px; right: 10px; font-size: 10px; color: var(--text3); background: #e2e8f0; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+    .product-card .pname { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; padding-right: 24px; }
+    .product-card .pval { font-size: 18px; font-weight: 700; }
+    .product-card .psub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+    .product-card.sales-card { border-left: 3px solid var(--sales); }
+    .product-card.aftersales-card { border-left: 3px solid var(--aftersales); }
+    
+    /* Loading */
+    .loading { text-align: center; padding: 40px; color: var(--text3); }
+    .loading:after { content: ''; display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; margin-left: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Confidentiality */
+    .conf-bar { position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(90deg, #dc2626, #b91c1c); color: white; text-align: center; font-size: .7rem; padding: 4px 0; font-weight: 700; letter-spacing: 1px; z-index: 9999; }
+    .conf-badge { position: fixed; top: 8px; right: 16px; background: #dc2626; color: white; font-size: .65rem; padding: 3px 8px; border-radius: 10px; font-weight: 700; letter-spacing: .5px; z-index: 9999; box-shadow: 0 2px 8px rgba(220,38,38,.3); }
+    
+    /* Tooltip */
+    .tip { border-bottom: 1px dotted var(--text3); cursor: help; }
+    
+    @media(max-width: 600px) {
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+      .product-grid { grid-template-columns: 1fr 1fr; }
+      .content { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+<div class="conf-badge">🔒 PDPA ข้อมูลลับ</div>
+
+<div class="header">
+  <h1>📊 GM Dashboard <span class="ver">v1.0</span></h1>
+  <div class="subtitle">กำไรขั้นต้น — ธุรกิจขาย vs ธุรกิจหลังการขาย | PMG Group</div>
+</div>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>ปี:</label>
+    <span id="yearBtns"></span>
+  </div>
+  <div class="filter-group">
+    <label>มุมมอง:</label>
+    <button class="fbtn active" data-view="overview" onclick="setView('overview')">ภาพรวม</button>
+    <button class="fbtn" data-view="trend" onclick="setView('trend')">แนวโน้ม</button>
+    <button class="fbtn" data-view="monthly" onclick="setView('monthly')">รายเดือน</button>
+    <button class="fbtn" data-view="products" onclick="setView('products')">รายผลิตภัณฑ์</button>
+  </div>
+</div>
+
+<div class="content" id="mainContent">
+  <div class="loading">กำลังโหลดข้อมูล</div>
+</div>
+
+<div class="conf-bar">⛔ ข้อมูลลับ — ห้ามเผยแพร่ หรือ ส่งออกโดยไม่ได้รับอนุญาต (PDPA)</div>
+
+<script>
+var D = null;
+var currentView = 'overview';
+var currentYear = 2569;
+var charts = {};
+
+function fmt(n) {
+  if (n === null || n === undefined) return '-';
+  if (Math.abs(n) >= 1000000) return (n/1000000).toFixed(2) + 'M';
+  if (Math.abs(n) >= 1000) return (n/1000).toFixed(1) + 'K';
+  return n.toFixed(0);
+}
+function fmtFull(n) {
+  if (n === null || n === undefined) return '-';
+  return n.toLocaleString('th-TH', {maximumFractionDigits: 0});
+}
+function fmtPct(n) {
+  if (n === null || n === undefined) return '-';
+  return (n * 100).toFixed(1) + '%';
+}
+function fmtPct2(n) {
+  if (n === null || n === undefined) return '-';
+  return n.toFixed(1) + '%';
+}
+function cls(n) {
+  if (n === null || n === undefined) return 'zero';
+  return n >= 0 ? 'positive' : 'negative';
+}
+function yoyPct(cur, prev) {
+  if (!prev || prev === 0) return null;
+  return ((cur - prev) / Math.abs(prev) * 100).toFixed(1);
+}
+
+/* ── Initialize ── */
+function init() {
+  var dataEl = document.querySelector('script[data-data]') || {};
+  D = typeof DATA_PLACEHOLDER !== 'undefined' ? JSON.parse(DATA_PLACEHOLDER) : null;
+  if (!D) {
+    // Try loading from URL
+    fetch(window.location.href.split('?')[0] + '?view=data')
+      .then(function(r) { return r.json(); })
+      .then(function(d) { D = d; render(); })
+      .catch(function(e) {
+        document.getElementById('mainContent').innerHTML = '<div class="loading" style="color:#dc2626">❌ ไม่สามารถโหลดข้อมูลได้</div>';
+      });
+  } else {
+    render();
+  }
+}
+
+function render() {
+  if (!D || !D.summary || D.summary.length === 0) {
+    document.getElementById('mainContent').innerHTML = '<div class="loading" style="color:#dc2626">❌ ไม่มีข้อมูล</div>';
+    return;
+  }
+  renderYearButtons();
+  setView(currentView);
+}
+
+function renderYearButtons() {
+  var years = D.summary.map(function(s) { return s.year; }).reverse();
+  var h = '';
+  years.forEach(function(y) {
+    h += '<button class="fbtn' + (y === currentYear ? ' active' : '') + '" onclick="setYear(' + y + ')">' + (y - 543) + '/' + y + '</button>';
+  });
+  document.getElementById('yearBtns').innerHTML = h;
+}
+
+function setYear(y) {
+  currentYear = y;
+  renderYearButtons();
+  setView(currentView);
+}
+
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('[data-view]').forEach(function(b) { b.classList.toggle('active', b.dataset.view === v); });
+  // Destroy all charts
+  Object.keys(charts).forEach(function(k) { charts[k].destroy(); delete charts[k]; });
+  
+  switch(v) {
+    case 'overview': renderOverview(); break;
+    case 'trend': renderTrend(); break;
+    case 'monthly': renderMonthly(); break;
+    case 'products': renderProducts(); break;
+  }
+}
+
+/* ── Find data for current year ── */
+function findYear(y) {
+  return D.summary.find(function(s) { return s.year === y; }) || D.summary[D.summary.length - 1];
+}
+function prevYear(y) {
+  return D.summary.find(function(s) { return s.year === y - 1; });
+}
+
+/* ════════════════════════════════════
+   OVERVIEW — KPI + Ratio Bar + Summary Table
+   ════════════════════════════════════ */
+function renderOverview() {
+  var cur = findYear(currentYear);
+  var prev = prevYear(currentYear);
+  if (!cur) return;
+  
+  var gmSales = cur.gmSales || 0;
+  var gmAS = cur.gmAfterSales || 0;
+  var gmTotal = cur.gmTotal || (gmSales + gmAS);
+  var sRatio = cur.salesRatio || (gmTotal > 0 ? gmSales / gmTotal : 0);
+  var asRatio = cur.afterSalesRatio || (gmTotal > 0 ? gmAS / gmTotal : 0);
+  
+  var prevGmTotal = prev ? (prev.gmTotal || 0) : 0;
+  var prevGmSales = prev ? (prev.gmSales || 0) : 0;
+  var prevGmAS = prev ? (prev.gmAfterSales || 0) : 0;
+  
+  var h = '';
+  
+  // KPI Cards
+  h += '<div class="kpi-row">';
+  h += kpiCard('🚗 กำไรขั้นต้น - ขาย', fmt(gmSales), fmtFull(gmSales), 'sales', yoyPct(gmSales, prevGmSales));
+  h += kpiCard('🔧 กำไรขั้นต้น - หลังการขาย', fmt(gmAS), fmtFull(gmAS), 'aftersales', yoyPct(gmAS, prevGmAS));
+  h += kpiCard('📊 กำไรขั้นต้นรวม', fmt(gmTotal), fmtFull(gmTotal), 'total', yoyPct(gmTotal, prevGmTotal));
+  h += kpiCard('📈 สัดส่วนขาย', fmtPct2(sRatio * 100) + '%', '', 'sales', null);
+  h += kpiCard('🛠️ สัดส่วนหลังการขาย', fmtPct2(asRatio * 100) + '%', '', 'aftersales', null);
+  h += '</div>';
+  
+  // Ratio Bar
+  h += '<div class="ratio-section">';
+  h += '<h3>📊 สัดส่วนกำไรขั้นต้น — ขาย vs หลังการขาย (ปี ' + currentYear + ')</h3>';
+  h += '<div class="ratio-bar-container">';
+  var salesPct = (sRatio * 100).toFixed(1);
+  var asPct = (asRatio * 100).toFixed(1);
+  h += '<div class="ratio-bar-sales" style="width:' + salesPct + '%">🚗 ขาย ' + salesPct + '%</div>';
+  h += '<div class="ratio-bar-aftersales" style="width:' + asPct + '%">🔧 หลังการขาย ' + asPct + '%</div>';
+  h += '</div>';
+  h += '<div class="ratio-labels"><span class="sales-label">🚗 ธุรกิจขาย ' + fmtFull(gmSales) + ' บาท</span><span class="aftersales-label">🔧 ธุรกิจหลังการขาย ' + fmtFull(gmAS) + ' บาท</span></div>';
+  h += '</div>';
+  
+  // Charts row
+  h += '<div class="chart-row">';
+  h += '<div class="section"><h3>📈 กำไรขั้นต้น ขาย vs หลังการขาย</h3><div class="chart-box"><canvas id="chartGmSplit"></canvas></div></div>';
+  h += '<div class="section"><h3>🔄 สัดส่วนแนวโน้ม</h3><div class="chart-box"><canvas id="chartRatio"></canvas></div></div>';
+  h += '</div>';
+  
+  // Summary Table
+  h += '<div class="section"><h3>📋 ตารางสรุปกำไรขั้นต้น</h3><div class="table-wrap"><table>';
+  h += '<thead><tr><th>ปี</th><th>กำไรขั้นต้น<br>ขาย (บาท)</th><th>กำไรขั้นต้น<br>หลังการขาย (บาท)</th><th>กำไรขั้นต้น<br>รวม (บาท)</th><th>สัดส่วน<br>ขาย</th><th>สัดส่วน<br>หลังการขาย</th><th>YoY รวม</th></tr></thead>';
+  h += '<tbody>';
+  D.summary.slice().reverse().forEach(function(s) {
+    var py = prevYear(s.year);
+    var yoyVal = py ? yoyPct(s.gmTotal || 0, py.gmTotal || 0) : '-';
+    h += '<tr' + (s.year === currentYear ? ' style="background:#eff6ff;font-weight:600"' : '') + '>';
+    h += '<td>' + s.year + '</td>';
+    h += '<td class="num ' + cls(s.gmSales) + '">' + fmtFull(s.gmSales) + '</td>';
+    h += '<td class="num ' + cls(s.gmAfterSales) + '">' + fmtFull(s.gmAfterSales) + '</td>';
+    h += '<td class="num ' + cls(s.gmTotal) + '">' + fmtFull(s.gmTotal) + '</td>';
+    h += '<td class="num">' + fmtPct2((s.salesRatio || 0) * 100) + '%</td>';
+    h += '<td class="num">' + fmtPct2((s.afterSalesRatio || 0) * 100) + '%</td>';
+    h += '<td class="num ' + cls(parseFloat(yoyVal)) + '">' + yoyVal + '%</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div></div>';
+  
+  document.getElementById('mainContent').innerHTML = h;
+  
+  // Draw charts
+  drawGmSplitChart();
+  drawRatioChart();
+}
+
+function kpiCard(icon, title, sub, type, yoy) {
+  var trendHtml = '';
+  if (yoy !== null && yoy !== undefined) {
+    var yoyNum = parseFloat(yoy);
+    trendHtml = '<div class="trend ' + cls(yoyNum) + '">' + (yoyNum >= 0 ? '▲' : '▼') + ' ' + yoy + '% YoY</div>';
+  }
+  return '<div class="kpi-card ' + type + '">' +
+    '<div class="icon">' + icon + '</div>' +
+    '<div class="label">' + title + '</div>' +
+    '<div class="value">' + (sub || '-') + '</div>' +
+    '<div class="sub">' + (sub ? sub : '') + '</div>' +
+    trendHtml + '</div>';
+}
+
+function drawGmSplitChart() {
+  var ctx = document.getElementById('chartGmSplit');
+  if (!ctx) return;
+  var years = D.summary.map(function(s) { return s.year; });
+  var salesData = D.summary.map(function(s) { return s.gmSales || 0; });
+  var asData = D.summary.map(function(s) { return s.gmAfterSales || 0; });
+  charts.gmSplit = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: years,
+      datasets: [
+        { label: '🚗 ขาย', data: salesData, backgroundColor: '#2563eb', borderRadius: 4 },
+        { label: '🔧 หลังการขาย', data: asData, backgroundColor: '#059669', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, ticks: { callback: function(v) { return fmt(v); } } }
+      }
+    }
+  });
+}
+
+function drawRatioChart() {
+  var ctx = document.getElementById('chartRatio');
+  if (!ctx) return;
+  var years = D.summary.map(function(s) { return s.year; });
+  var salesR = D.summary.map(function(s) { return ((s.salesRatio || 0) * 100).toFixed(1); });
+  var asR = D.summary.map(function(s) { return ((s.afterSalesRatio || 0) * 100).toFixed(1); });
+  charts.ratio = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: years,
+      datasets: [
+        { label: '🚗 ขาย %', data: salesR, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.1)', fill: true, tension: .3 },
+        { label: '🔧 หลังการขาย %', data: asR, borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.1)', fill: true, tension: .3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { y: { ticks: { callback: function(v) { return v + '%'; } } } }
+    }
+  });
+}
+
+/* ════════════════════════════════════
+   TREND — Multi-year trend charts
+   ════════════════════════════════════ */
+function renderTrend() {
+  var h = '';
+  h += '<div class="chart-row">';
+  h += '<div class="section"><h3>📈 แนวโน้มกำไรขั้นต้น (ขาย vs หลังการขาย)</h3><div class="chart-box"><canvas id="chartTrendGM"></canvas></div></div>';
+  h += '<div class="section"><h3>🔄 สัดส่วนแนวโน้ม</h3><div class="chart-box"><canvas id="chartTrendRatio"></canvas></div></div>';
+  h += '</div>';
+  h += '<div class="section"><h3>📊 กำไรขั้นต้นรวม</h3><div class="chart-box"><canvas id="chartTrendTotal"></canvas></div></div>';
+  
+  document.getElementById('mainContent').innerHTML = h;
+  drawTrendCharts();
+}
+
+function drawTrendCharts() {
+  var years = D.summary.map(function(s) { return s.year; });
+  var salesData = D.summary.map(function(s) { return s.gmSales || 0; });
+  var asData = D.summary.map(function(s) { return s.gmAfterSales || 0; });
+  var totalData = D.summary.map(function(s) { return s.gmTotal || 0; });
+  
+  var ctx1 = document.getElementById('chartTrendGM');
+  if (ctx1) {
+    charts.trendGM = new Chart(ctx1, {
+      type: 'line',
+      data: {
+        labels: years,
+        datasets: [
+          { label: '🚗 ขาย', data: salesData, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.1)', fill: false, tension: .3, pointRadius: 4 },
+          { label: '🔧 หลังการขาย', data: asData, borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.1)', fill: false, tension: .3, pointRadius: 4 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: function(v) { return fmt(v); } } } } }
+    });
+  }
+  
+  var ctx2 = document.getElementById('chartTrendRatio');
+  if (ctx2) {
+    charts.trendRatio = new Chart(ctx2, {
+      type: 'line',
+      data: {
+        labels: years,
+        datasets: [
+          { label: 'ขาย %', data: D.summary.map(function(s) { return ((s.salesRatio || 0) * 100); }), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.05)', fill: true, tension: .3 },
+          { label: 'หลังการขาย %', data: D.summary.map(function(s) { return ((s.afterSalesRatio || 0) * 100); }), borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.05)', fill: true, tension: .3 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: function(v) { return v + '%'; } } } } }
+    });
+  }
+  
+  var ctx3 = document.getElementById('chartTrendTotal');
+  if (ctx3) {
+    charts.trendTotal = new Chart(ctx3, {
+      type: 'bar',
+      data: {
+        labels: years,
+        datasets: [{
+          label: 'กำไรขั้นต้นรวม',
+          data: totalData,
+          backgroundColor: years.map(function(y) { return y === currentYear ? '#7c3aed' : '#818cf8'; }),
+          borderRadius: 6
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: function(v) { return fmt(v); } } } } }
+    });
+  }
+}
+
+/* ════════════════════════════════════
+   MONTHLY — Monthly breakdown for selected year
+   ════════════════════════════════════ */
+function renderMonthly() {
+  var h = '<div class="section"><h3>📅 ข้อมูลรายเดือน — เลือกสาขาธุรกิจ</h3>';
+  h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
+  var sections = [
+    { key: 'parts', label: '🔩 อะไหล่-ประดับยนต์', type: 'aftersales' },
+    { key: 'service', label: '🔧 ค่าแรงบริการ', type: 'aftersales' },
+    { key: 'pmgServiceLabor', label: '🏋️ PMG Service (ค่าแรง)', type: 'aftersales' },
+    { key: 'pmgServiceParts', label: '🔩 PMG Service (อะไหล่)', type: 'aftersales' },
+    { key: 'antirust', label: '🛡️ พ่นกันสนิม+ล้างรถ', type: 'aftersales' },
+    { key: 'insurance', label: '📋 ประกันภัย(ต่ออายุ)', type: 'aftersales' },
+    { key: 'usedGoods', label: '♻️ ขายของเก่า', type: 'aftersales' },
+    { key: 'bodyRepair', label: '🚗 ศูนย์ซ่อมตัวถัง', type: 'aftersales' },
+    { key: 'carSales', label: '🚙 ขายรถยนต์', type: 'sales' },
+    { key: 'carReg', label: '📄 ทะเบียนรถใหม่', type: 'sales' },
+    { key: 'newCarIns', label: '🛡️ ประกันภัยรถใหม่', type: 'sales' },
+    { key: 'afterSalesTotal', label: '🔧 หลังการขาย (รวม)', type: 'aftersales' },
+    { key: 'gmSalesMonthly', label: '📊 GM ขาย', type: 'sales' },
+    { key: 'grossProfit', label: '💰 กำไรขั้นต้น', type: 'total' }
+  ];
+  sections.forEach(function(sec, i) {
+    h += '<button class="fbtn' + (i === 0 ? ' active' : '') + '" data-monthly-sec="' + sec.key + '" onclick="showMonthlySection(\'' + sec.key + '\', this)" style="font-size:11px">' + sec.label + '</button>';
+  });
+  h += '</div>';
+  h += '<div id="monthlyContent"><div class="loading">เลือกสาขาธุรกิจ</div></div>';
+  h += '</div>';
+  
+  document.getElementById('mainContent').innerHTML = h;
+  showMonthlySection('parts', document.querySelector('[data-monthly-sec="parts"]'));
+}
+
+function showMonthlySection(key, btn) {
+  document.querySelectorAll('[data-monthly-sec]').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  
+  var data = D.monthly[key];
+  if (!data || data.length === 0) {
+    document.getElementById('monthlyContent').innerHTML = '<div style="color:var(--text3);text-align:center;padding:20px">ไม่มีข้อมูล</div>';
+    return;
+  }
+  
+  var months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  
+  var h = '<div class="table-wrap"><table><thead><tr><th>ปี</th>';
+  months.forEach(function(m) { h += '<th>' + m + '</th>'; });
+  h += '<th>รวม</th></tr></thead><tbody>';
+  
+  data.slice().reverse().forEach(function(row) {
+    var yearDesc = row.desc || (row.year ? 'ปี ' + row.year : '-');
+    h += '<tr>';
+    h += '<td style="white-space:nowrap">' + yearDesc + '</td>';
+    var total = 0;
+    row.monthly.forEach(function(v) {
+      h += '<td class="num ' + cls(v) + '">' + fmtFull(v) + '</td>';
+      total += (v || 0);
+    });
+    h += '<td class="num" style="font-weight:700 ' + cls(total) + '">' + fmtFull(total) + '</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+  
+  document.getElementById('monthlyContent').innerHTML = h;
+}
+
+/* ════════════════════════════════════
+   PRODUCTS — Breakdown by product
+   ════════════════════════════════════ */
+function renderProducts() {
+  if (!D.products || D.products.length === 0) {
+    document.getElementById('mainContent').innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px">ไม่มีข้อมูลรายผลิตภัณฑ์</div>';
+    return;
+  }
+  
+  var h = '<div class="section"><h3>📋 สัดส่วน GMG รายผลิตภัณฑ์ (ปี 2566 vs เป้า 2569)</h3>';
+  h += '<div class="product-grid">';
+  
+  // Determine if product is sales (rows 23-25) or after-sales (rows 14-22)
+  var afterSalesProducts = D.products.filter(function(p) { return p.no >= 1 && p.no <= 9; });
+  var salesProducts = D.products.filter(function(p) { return p.no >= 10; });
+  
+  // After-sales header
+  h += '<div style="grid-column:1/-1;padding:8px 0;font-weight:700;color:var(--aftersales);font-size:14px;border-bottom:2px solid var(--aftersales)">🔧 ธุรกิจหลังการขาย</div>';
+  afterSalesProducts.forEach(function(p) {
+    h += productCard(p, 'aftersales');
+  });
+  
+  // Sales header
+  h += '<div style="grid-column:1/-1;padding:8px 0;font-weight:700;color:var(--sales);font-size:14px;border-bottom:2px solid var(--sales)">🚗 ธุรกิจขาย</div>';
+  salesProducts.forEach(function(p) {
+    h += productCard(p, 'sales');
+  });
+  
+  h += '</div></div>';
+  
+  // Product comparison table
+  h += '<div class="section"><h3>📊 เปรียบเทียบ GMG รายผลิตภัณฑ์</h3>';
+  h += '<div class="table-wrap"><table><thead><tr>';
+  h += '<th>No</th><th>ผลิตภัณฑ์</th><th>เฉลี่ย 2566</th><th>เป้า 2569</th><th>เฉลี่ย 2568</th><th>GMG %</th><th>เปรียบเทียบปี 68</th>';
+  h += '</tr></thead><tbody>';
+  D.products.forEach(function(p) {
+    var type = p.no <= 9 ? 'aftersales' : 'sales';
+    h += '<tr class="' + type + '-row">';
+    h += '<td>' + p.no + '</td>';
+    h += '<td style="white-space:nowrap;font-weight:600">' + p.desc + '</td>';
+    h += '<td class="num">' + fmtFull(p.avgY66) + '</td>';
+    h += '<td class="num">' + fmtFull(p.targetY69) + '</td>';
+    h += '<td class="num">' + fmtFull(p.y68Avg) + '</td>';
+    h += '<td class="num ' + cls(p.gmgPct) + '">' + fmtPct(p.gmgPct) + '</td>';
+    h += '<td class="num ' + cls(p.diffVsY68) + '">' + fmtFull(p.diffVsY68) + '</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div></div>';
+  
+  document.getElementById('mainContent').innerHTML = h;
+}
+
+function productCard(p, type) {
+  var gmgColor = (p.gmgPct !== null && p.gmgPct >= 0) ? 'var(--green)' : 'var(--red)';
+  return '<div class="product-card ' + type + '-card">' +
+    '<div class="pno">' + p.no + '</div>' +
+    '<div class="pname">' + p.desc + '</div>' +
+    '<div class="pval" style="color:' + gmgColor + '">' + (p.gmgPct !== null ? fmtPct(p.gmgPct) : '-') + '</div>' +
+    '<div class="psub">เป้า 69: ' + fmtFull(p.targetY69) + ' | เฉลี่ย 68: ' + fmtFull(p.y68Avg) + '</div>' +
+    '</div>';
+}
+
+/* ── Start ── */
+var DATA_PLACEHOLDER = <?= data ?>;
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
