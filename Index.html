@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PMG เช็คลิสต์ PM/WI</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Segoe UI",Tahoma,sans-serif;background:#f0f4f8;color:#333;min-height:100vh}
+.container{max-width:1100px;margin:0 auto;padding:14px}
+h1{text-align:center;font-size:1.4rem;color:#1a237e;margin:8px 0 4px}
+.subtitle{text-align:center;font-size:0.8rem;color:#666;margin-bottom:12px}
+.tabs{display:flex;gap:0;margin-bottom:16px;border-radius:8px;overflow:hidden;border:1px solid #c5cae9}
+.tab-btn{flex:1;padding:10px 8px;border:none;background:#e8eaf6;color:#1a237e;font-size:0.85rem;font-weight:bold;cursor:pointer;transition:all 0.2s;text-align:center}
+.tab-btn.active{background:#1a237e;color:#fff}
+.tab-btn:hover:not(.active){background:#c5cae9}
+.tab-content{display:none}.tab-content.active{display:block}
+.section{background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #e0e0e0;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.section-title{font-size:1rem;font-weight:bold;color:#1a237e;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #1a237e;display:flex;align-items:center;gap:8px}
+.section-title .icon{font-size:1.2rem}
+.flow-chart{display:flex;flex-direction:column;align-items:center;gap:0;margin:16px 0}
+.flow-step{background:#e8eaf6;border-radius:10px;padding:12px 20px;text-align:center;max-width:600px;width:100%;border:2px solid #1a237e;position:relative;transition:transform 0.2s}
+.flow-step:hover{transform:scale(1.02);box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.step-num{font-size:0.7rem;color:#fff;background:#1a237e;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;margin-right:6px;font-weight:bold}
+.step-detail{font-size:0.85rem;color:#333;margin-top:4px}
+.step-meta{font-size:0.7rem;color:#666;margin-top:4px}.step-meta span{margin-right:12px}
+.flow-arrow{width:2px;height:24px;background:#1a237e;position:relative}
+.flow-arrow::after{content:"▼";position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);color:#1a237e;font-size:12px}
+.flow-step.pm-pre{border-color:#1565c0;background:#e3f2fd}.flow-step.pm-pre .step-num{background:#1565c0}
+.flow-step.pm-check{border-color:#2e7d32;background:#e8f5e9}.flow-step.pm-check .step-num{background:#2e7d32}
+.flow-step.pm-post{border-color:#e65100;background:#fff3e0}.flow-step.pm-post .step-num{background:#e65100}
+.flow-step.wi-emer{border-color:#c62828;background:#ffebee}.flow-step.wi-emer .step-num{background:#c62828}
+.flow-step.wi-check{border-color:#6a1b9a;background:#f3e5f5}.flow-step.wi-check .step-num{background:#6a1b9a}
+.flow-step.wi-post{border-color:#00695c;background:#e0f2f1}.flow-step.wi-post .step-num{background:#00695c}
+table{width:100%;border-collapse:collapse;font-size:0.8rem}
+th{background:#e8eaf6;color:#1a237e;padding:8px 6px;text-align:left;border-bottom:2px solid #1a237e;font-size:0.75rem}
+td{padding:8px 6px;border-bottom:1px solid #eee}tr:hover{background:#f5f5ff}
+.cat-cell{font-weight:bold;color:#1a237e;background:#c5cae9;border-radius:4px;padding:2px 6px;font-size:0.7rem;white-space:nowrap}
+.doc-tag{display:inline-block;background:#e3f2fd;color:#1565c0;border-radius:4px;padding:2px 8px;margin:2px;font-size:0.7rem;border:1px solid #90caf9}
+.doc-card{background:#f5f5ff;border:1px solid #c5cae9;border-radius:8px;padding:12px;margin-bottom:8px}
+.doc-card h4{color:#1a237e;font-size:0.85rem;margin-bottom:4px}
+.doc-card p{font-size:0.75rem;color:#555;margin:2px 0}
+.badge-pm{background:#1565c0;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:bold}
+.badge-wi{background:#c62828;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:bold}
+.safety-item{font-size:0.8rem;padding:4px 8px;margin:2px 0;background:#fff3e0;border-left:3px solid #e65100;border-radius:2px}
+.safety-check{font-size:0.8rem;padding:4px 8px;margin:2px 0;background:#e8f5e9;border-left:3px solid #2e7d32;border-radius:2px;display:flex;align-items:center;gap:6px}
+.safety-check input{accent-color:#2e7d32}
+.chk{width:18px;height:18px;accent-color:#1a237e;flex-shrink:0}
+.phase-label{text-align:center;font-size:0.8rem;font-weight:bold;margin:4px 0;padding:4px 12px;border-radius:4px}
+.progress-bar{background:#e0e0e0;border-radius:8px;height:6px;margin:8px 0;overflow:hidden}
+.progress-fill{height:100%;border-radius:8px;transition:width 0.3s}
+@media(max-width:768px){.tab-btn{font-size:0.75rem;padding:8px 4px}.flow-step{padding:10px 12px;max-width:100%}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🔍 PMG เช็คลิสต์ PM/WI</h1>
+<div class="subtitle">เช็คลิสต์การเข้าตรวจ • รายละเอียดเอกสาร • Flow Chart &nbsp;|&nbsp; อัปเดต: <?= new Date().toLocaleDateString('th-TH') ?></div>
+
+<div class="tabs">
+<button class="tab-btn active" onclick="switchTab('pm')"><span class="badge-pm">PM</span>&nbsp;เข้าตรวจ (แจ้งล่วงหน้า)</button>
+<button class="tab-btn" onclick="switchTab('wi')"><span class="badge-wi">WI</span>&nbsp;เข้าตรวจไม่ได้แจ้ง</button>
+<button class="tab-btn" onclick="switchTab('docs')">📋 เอกสาร</button>
+</div>
+
+<!-- PM TAB -->
+<div id="tab-pm" class="tab-content active">
+
+<div class="section">
+<div class="section-title"><span class="icon">📊</span> Flow Chart — PM เข้าตรวจ (แจ้งล่วงหน้า)</div>
+<div class="flow-chart">
+
+<div class="phase-label" style="color:#1565c0;background:#e3f2fd">🔵 ขั้นตอนก่อนตรวจ</div>
+<? for (var i=0; i<pm.pre.length; i++) { var s=pm.pre[i]; ?>
+<div class="flow-step pm-pre"><span class="step-num"><?= s.step ?></span><div class="step-detail"><?= esc(s.detail) ?></div><div class="step-meta"><span>👤 <?= esc(s.resp) ?></span><span>⏰ <?= esc(s.time) ?></span></div><? if(s.doc){ ?><div style="margin-top:4px"><span class="doc-tag">📄 <?= esc(s.doc) ?></span></div><? } ?></div>
+<div class="flow-arrow"></div>
+<? } ?>
+
+<div class="phase-label" style="color:#2e7d32;background:#e8f5e9">🟢 รายการตรวจสอบ</div>
+<? var lastCat=''; var stepNum=1; for(var i=0;i<pm.check.length;i++){ var c=pm.check[i]; ?>
+<? if(c.cat && c.cat!==lastCat){ lastCat=c.cat; ?>
+<div class="flow-step pm-check"><span class="step-num"><?= stepNum++ ?></span><div class="step-detail"><strong><?= esc(c.cat) ?></strong></div><div class="step-meta" style="font-size:0.75rem;color:#555"><?= esc(c.item) ?></div><? if(c.doc){ ?><div style="margin-top:4px"><span class="doc-tag">📄 <?= esc(c.doc) ?></span></div><? } ?></div>
+<div class="flow-arrow"></div>
+<? }} ?>
+
+<div class="phase-label" style="color:#e65100;background:#fff3e0">🟠 ขั้นตอนหลังตรวจ</div>
+<? for (var i=0; i<pm.post.length; i++) { var s=pm.post[i]; ?>
+<div class="flow-step pm-post"><span class="step-num"><?= s.step ?></span><div class="step-detail"><?= esc(s.detail) ?></div><div class="step-meta"><span>👤 <?= esc(s.resp) ?></span><span>⏰ <?= esc(s.time) ?></span></div></div>
+<? if(i<pm.post.length-1){ ?><div class="flow-arrow"></div><? } ?>
+<? } ?>
+
+</div>
+</div>
+
+<div class="section">
+<div class="section-title"><span class="icon">✅</span> รายการตรวจสอบ — PM</div>
+<table>
+<tr><th style="width:15%">ด้าน</th><th>รายการตรวจสอบ</th><th style="width:8%">ผ่าน</th><th style="width:25%">เอกสาร/TNR</th></tr>
+<? for (var i=0; i<pm.check.length; i++) { var c=pm.check[i]; ?>
+<tr><td><?= c.cat ? '<span class="cat-cell">'+esc(c.cat)+'</span>' : '' ?></td><td class="checklist-text"><?= esc(c.item) ?></td><td style="text-align:center"><input type="checkbox" class="chk" onchange="updateProgress('pm')"></td><td><?= c.doc ? '<span class="doc-tag">📄 '+esc(c.doc)+'</span>' : '' ?></td></tr>
+<? } ?>
+</table>
+</div>
+
+</div>
+
+<!-- WI TAB -->
+<div id="tab-wi" class="tab-content">
+
+<div class="section">
+<div class="section-title"><span class="icon">📊</span> Flow Chart — WI เข้าตรวจไม่ได้แจ้ง</div>
+<div class="flow-chart">
+
+<div class="phase-label" style="color:#c62828;background:#ffebee">🔴 ก่อนเข้าตรวจ (ฉุกเฉิน)</div>
+<? for (var i=0; i<wi.pre.length; i++) { var s=wi.pre[i]; ?>
+<div class="flow-step wi-emer"><span class="step-num"><?= s.step ?></span><div class="step-detail"><?= esc(s.detail) ?></div><div class="step-meta"><span>👤 <?= esc(s.resp) ?></span><span>⏰ <?= esc(s.time) ?></span><? if(s.note){ ?><span>📝 <?= esc(s.note) ?></span><? } ?></div><? if(s.doc){ ?><div style="margin-top:4px"><span class="doc-tag">📄 <?= esc(s.doc) ?></span></div><? } ?></div>
+<div class="flow-arrow"></div>
+<? } ?>
+
+<div class="phase-label" style="color:#6a1b9a;background:#f3e5f5">🟣 รายการตรวจสอบ</div>
+<? var lastCat2=''; var stepNum2=1; for(var i=0;i<wi.check.length;i++){ var c=wi.check[i]; ?>
+<? if(c.cat && c.cat!==lastCat2){ lastCat2=c.cat; ?>
+<div class="flow-step wi-check"><span class="step-num"><?= stepNum2++ ?></span><div class="step-detail"><strong><?= esc(c.cat) ?></strong></div><div class="step-meta" style="font-size:0.75rem;color:#555"><?= esc(c.item) ?></div><? if(c.doc){ ?><div style="margin-top:4px"><span class="doc-tag">📄 <?= esc(c.doc) ?></span></div><? } ?></div>
+<div class="flow-arrow"></div>
+<? }} ?>
+
+<div class="phase-label" style="color:#00695c;background:#e0f2f1">🟤 ขั้นตอนหลังตรวจ</div>
+<? for (var i=0; i<wi.post.length; i++) { var s=wi.post[i]; ?>
+<div class="flow-step wi-post"><span class="step-num"><?= s.step ?></span><div class="step-detail"><?= esc(s.detail) ?></div><div class="step-meta"><span>👤 <?= esc(s.resp) ?></span><span>⏰ <?= esc(s.time) ?></span><? if(s.note){ ?><span>📝 <?= esc(s.note) ?></span><? } ?></div><? if(s.doc){ ?><div style="margin-top:4px"><span class="doc-tag">📄 <?= esc(s.doc) ?></span></div><? } ?></div>
+<? if(i<wi.post.length-1){ ?><div class="flow-arrow"></div><? } ?>
+<? } ?>
+
+</div>
+</div>
+
+<div class="section">
+<div class="section-title"><span class="icon">✅</span> รายการตรวจสอบ — WI</div>
+<table>
+<tr><th style="width:15%">ด้าน</th><th>รายการตรวจสอบ</th><th style="width:8%">ผ่าน</th><th style="width:25%">เอกสาร/TNR</th></tr>
+<? for (var i=0; i<wi.check.length; i++) { var c=wi.check[i]; ?>
+<tr><td><?= c.cat ? '<span class="cat-cell">'+esc(c.cat)+'</span>' : '' ?></td><td class="checklist-text"><?= esc(c.item) ?></td><td style="text-align:center"><input type="checkbox" class="chk" onchange="updateProgress('wi')"></td><td><?= c.doc ? '<span class="doc-tag">📄 '+esc(c.doc)+'</span>' : '' ?></td></tr>
+<? } ?>
+</table>
+</div>
+
+</div>
+
+<!-- DOCS TAB -->
+<div id="tab-docs" class="tab-content">
+
+<div class="section">
+<div class="section-title"><span class="icon">📋</span> เอกสารที่เกี่ยวข้อง / แบบฟอร์ม / ใบอนุญาต</div>
+<p style="font-size:0.85rem;color:#666;margin-bottom:12px">รายการเอกสารที่ต้องเตรียมสำหรับการเข้าตรวจทั้ง PM (แจ้งล่วงหน้า) และ WI (ไม่ได้แจ้ง)</p>
+<? var allDocs={}; pm.docs.forEach(function(d){if(d&&d.trim())allDocs[d]=allDocs[d]||[];allDocs[d].push('PM');}); wi.docs.forEach(function(d){if(d&&d.trim()){allDocs[d]=allDocs[d]||[];if(allDocs[d].indexOf('WI')<0)allDocs[d].push('WI');}}); ?>
+<? var docKeys=Object.keys(allDocs); docKeys.sort(); for(var i=0;i<docKeys.length;i++){ var doc=docKeys[i]; var tags=allDocs[doc]; ?>
+<div class="doc-card">
+<h4><?= esc(doc) ?></h4>
+<p><? for(var t=0;t<tags.length;t++){ if(tags[t]==='PM'){ ?><span class="badge-pm">PM</span><? }else{ ?><span class="badge-wi">WI</span><? }} ?> &nbsp;<input type="checkbox" class="chk" style="vertical-align:middle"> เตรียมแล้ว</p>
+</div>
+<? } ?>
+</div>
+
+</div>
+
+</div>
+
+<script>
+function switchTab(tab) {
+  var tabs = document.querySelectorAll('.tab-content');
+  tabs.forEach(function(t) { t.classList.remove('active'); });
+  var btns = document.querySelectorAll('.tab-btn');
+  btns.forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('tab-' + tab).classList.add('active');
+  var idx = tab === 'pm' ? 0 : tab === 'wi' ? 1 : 2;
+  btns[idx].classList.add('active');
+}
+function updateProgress(type) {
+  // Count checked / total for the tab
+  var container = document.getElementById('tab-' + type);
+  var boxes = container.querySelectorAll('.chk');
+  var checked = 0;
+  boxes.forEach(function(b) { if(b.checked) checked++; });
+  // Could show progress but keeping simple for now
+}
+</script>
+</body>
+</html>
