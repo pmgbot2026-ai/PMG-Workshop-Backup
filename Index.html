@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PMG Debt Monitor</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f5f7fa; color:#333; min-height:100vh; padding-bottom:28px; }
+    .container { max-width:1200px; margin:0 auto; padding:14px; }
+    h1 { text-align:center; font-size:1.3rem; color:#1a237e; margin:4px 0; }
+    .subtitle { text-align:center; font-size:0.8rem; color:#666; margin-bottom:14px; }
+    .top-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+    .card { background:#fff; border-radius:12px; padding:16px; border:1px solid #e0e0e0; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+    .card h3 { font-size:0.75rem; color:#888; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; }
+    .card .value { font-size:1.4rem; font-weight:bold; }
+    .card .sub { font-size:0.7rem; color:#999; margin-top:2px; }
+    .green { color:#2e7d32; }
+    .orange { color:#e65100; }
+    .red { color:#c62828; }
+    .blue { color:#1565c0; }
+    .section { margin-bottom:16px; }
+    .section-title { font-size:0.95rem; font-weight:bold; color:#1a237e; margin-bottom:8px; padding-bottom:4px; border-bottom:2px solid #1a237e; }
+    .risk-bar { height:8px; border-radius:4px; background:#e0e0e0; overflow:hidden; margin-top:4px; }
+    .risk-bar .fill { height:100%; border-radius:4px; transition:width 0.5s; }
+    table { width:100%; border-collapse:collapse; font-size:0.78rem; background:#fff; }
+    th { background:#e8eaf6; color:#1a237e; padding:7px 5px; text-align:left; border-bottom:2px solid #1a237e; position:sticky; top:0; z-index:2; font-size:0.7rem; }
+    td { padding:6px 5px; border-bottom:1px solid #eee; }
+    tr:hover { background:#f5f5ff; }
+    .number { text-align:right; font-family:'Courier New',monospace; }
+    .badge { display:inline-block; padding:2px 7px; border-radius:4px; font-size:0.65rem; font-weight:bold; }
+    .badge-ok { background:#e8f5e9; color:#2e7d32; }
+    .badge-warn { background:#fff3e0; color:#e65100; }
+    .badge-danger { background:#ffebee; color:#c62828; }
+    .table-wrap { background:#fff; border-radius:12px; padding:10px; border:1px solid #e0e0e0; overflow:auto; max-height:75vh; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+    .refresh { text-align:right; margin-bottom:6px; }
+    .refresh button { background:#1a237e; color:#fff; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.8rem; }
+    .refresh button:hover { background:#283593; }
+    .loading { text-align:center; padding:30px; color:#888; }
+    .overdue { background:#ffebee !important; }
+    .warn-row { background:#fff8e1 !important; }
+    .chart-container { position:relative; height:220px; margin:8px 0; background:#fff; border-radius:12px; padding:8px; border:1px solid #e0e0e0; }
+    .total-row { font-weight:bold; background:#e8eaf6; }
+    @media(max-width:600px) {
+      .top-cards { grid-template-columns:1fr; }
+      .card .value { font-size:1.1rem; }
+      h1 { font-size:1rem; }
+      table { font-size:0.7rem; }
+    }
+  </style>
+</head>
+<body>
+  <span style="position:fixed;top:8px;right:16px;background:#dc2626;color:white;font-size:.65rem;padding:3px 8px;border-radius:10px;font-weight:700;letter-spacing:.5px;z-index:9999;box-shadow:0 2px 8px rgba(220,38,38,.3)">🔒 PDPA ข้อมูลลับ</span>
+  <div class="container">
+    <h1>PMG กำกับลูกหนี้</h1>
+    <div class="subtitle">วงเงิน • ความเสี่ยง • เกินดิวส์</div>
+    <div class="top-cards" id="summaryCards"></div>
+    <div class="section">
+      <div class="section-title">ใบแจ้งหนี้ / วางบิลรอรับเงิน</div>
+      <div class="table-wrap" id="invoiceTable"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">ประกันภัย — แยกรายบริษัท</div>
+      <div class="chart-container"><canvas id="riskChart"></canvas></div>
+      <div class="table-wrap" id="insuranceTable"></div>
+    </div>
+    <div class="refresh"><button onclick="loadData()">รีเฟรช</button></div>
+  </div>
+  <script>
+    var D=null;
+    // PDPA client-side masking (defense-in-depth)
+    function maskName(name){
+      if(!name||typeof name!=='string') return name;
+      var t=name.trim();
+      if(t.length<=2) return t;
+      var isThai=/[\u0E00-\u0E7F]/.test(t);
+      var mask=isThai?'\u25CF\u25CF':'***';
+      return t.split(/\s+/).map(function(w){return w.length<=2?w:w.substring(0,2)+mask;}).join(' ');
+    }
+    function loadData(){
+      document.getElementById('summaryCards').innerHTML='<div class="loading">กำลังโหลดข้อมูล...</div>';
+      google.script.run.withSuccessHandler(renderAll).withFailureHandler(function(e){
+        document.getElementById('summaryCards').innerHTML='<div class="loading">โหลดไม่สำเร็จ: '+e.message+'</div>';
+      }).getDebtData();
+    }
+    function fmt(n){
+      if(n>=1e6) return (n/1e6).toFixed(2)+'ล้าน';
+      if(n>=1e5) return (n/1e5).toFixed(1)+'แสน';
+      if(n>=1e4) return (n/1e4).toFixed(1)+'หมื่น';
+      if(n>=1e3) return (n/1e3).toFixed(0)+','+String(Math.round(n%1e3));
+      return n.toFixed(0);
+    }
+    function fmtNum(n){return n!=null?Number(n).toLocaleString('th-TH'):'0';}
+    function riskBadge(limit,risk){
+      if(!limit) return '<span class="badge badge-ok">ปลอดภัย</span>';
+      var pct=risk/limit*-100;
+      if(pct<=70) return '<span class="badge badge-ok">ในวงเงิน</span>';
+      if(pct<=90) return '<span class="badge badge-warn">เสี่ยง</span>';
+      return '<span class="badge badge-danger">เกินวงเงิน</span>';
+    }
+    function riskColor(limit,risk){
+      if(!limit) return '#2e7d32';
+      var pct=risk/limit*-100;
+      if(pct<=70) return '#2e7d32';
+      if(pct<=90) return '#e65100';
+      return '#c62828';
+    }
+    function pctUsed(limit,risk){if(!limit) return 0; return Math.min(100,Math.round(risk/limit*-100));}
+    function renderAll(data){D=data; renderSummary(data); renderInvoice(data); renderInsurance(data); renderRiskChart(data);}
+    function renderSummary(d){
+      var s=d.summary;
+      var bs=d.bottomSummary;
+      var c=document.getElementById('summaryCards');
+      var h='';
+      h+='<div class="card"><h3>รวมลูกหนี้ทั้งหมด</h3><div class="value red">'+fmt(s.totalDebt)+' บาท</div><div class="sub">เกินดิว '+fmt(s.overdueAmount)+' บาท</div></div>';
+      h+='<div class="card"><h3>ลูกหนี้ยังไม่ครบกำหนด</h3><div class="value blue">'+fmt(s.notYetDueAmount)+' บาท</div><div class="sub">1-30 วัน</div></div>';
+      h+='<div class="card"><h3>วงเงินกำกับความเสี่ยง</h3><div class="value" style="color:'+riskColor(bs.totalLimit,bs.riskFromOver)+'">'+fmt(bs.totalLimit)+' บาท</div><div class="sub">ใช้ไป '+fmt(bs.usedLimit)+' | เกินวงเงิน '+fmt(Math.abs(bs.riskFromOver))+'</div><div class="risk-bar"><div class="fill" style="width:'+pctUsed(bs.totalLimit,bs.riskFromOver)+'%;background:'+riskColor(bs.totalLimit,bs.riskFromOver)+';"></div></div></div>';
+      c.innerHTML=h;
+    }
+    function renderInvoice(d){
+      var sec=d.invoiceSection;
+      var h='<table><tr><th>รายการ</th><th>วงเงิน</th><th>เกินวงเงิน</th><th>1-30วัน</th><th>31-60วัน</th><th>61-90วัน</th><th>>90วัน</th><th>สถานะ</th></tr>';
+      for(var i=0;i<sec.items.length;i++){
+        var it=sec.items[i];
+        var cls=Math.abs(it.riskFromOver)>0?'warn-row':'';
+        h+='<tr class="'+cls+'"><td>'+maskName(it.name)+'</td><td class="number">'+fmtNum(it.limit)+'</td><td class="number" style="color:'+(it.riskFromOver<0?'#c62828':'#2e7d32')+'">'+fmtNum(Math.abs(it.riskFromOver))+'</td><td class="number">'+fmtNum(it.aging['1-30'])+'</td><td class="number">'+fmtNum(it.aging['31-60'])+'</td><td class="number">'+fmtNum(it.aging['61-90'])+'</td><td class="number">'+fmtNum(it.aging['90+'])+'</td><td>'+riskBadge(it.limit,it.riskFromOver)+'</td></tr>';
+      }
+      var t=sec.total;
+      h+='<tr class="total-row"><td>รวม</td><td class="number">'+fmtNum(t.limit)+'</td><td class="number" style="color:'+(t.riskFromOver<0?'#c62828':'#2e7d32')+'">'+fmtNum(Math.abs(t.riskFromOver))+'</td><td class="number">'+fmtNum(t.aging['1-30'])+'</td><td class="number">'+fmtNum(t.aging['31-60'])+'</td><td class="number">'+fmtNum(t.aging['61-90'])+'</td><td class="number">'+fmtNum(t.aging['90+'])+'</td><td>'+riskBadge(t.limit,t.riskFromOver)+'</td></tr>';
+      h+='</table>';
+      document.getElementById('invoiceTable').innerHTML=h;
+    }
+    function renderInsurance(d){
+      var sec=d.insuranceSection;
+      var h='<table><tr><th>บริษัทประกัน</th><th>วงเงิน</th><th>เกินวงเงิน</th><th>1-30วัน</th><th>31-60วัน</th><th>61-90วัน</th><th>>90วัน</th><th>ดอกเบี้ย/วัน</th><th>วันเกิน</th><th>สถานะ</th></tr>';
+      for(var i=0;i<sec.items.length;i++){
+        var it=sec.items[i];
+        var cls=it.aging['90+']>0?'overdue':it.aging['31-60']>0||it.aging['61-90']>0?'warn-row':'';
+        h+='<tr class="'+cls+'"><td>'+maskName(it.name)+'</td><td class="number">'+fmtNum(it.limit)+'</td><td class="number" style="color:'+(it.riskFromOver<0?'#c62828':'#2e7d32')+'">'+fmtNum(Math.abs(it.riskFromOver))+'</td><td class="number">'+fmtNum(it.aging['1-30'])+'</td><td class="number">'+fmtNum(it.aging['31-60'])+'</td><td class="number">'+fmtNum(it.aging['61-90'])+'</td><td class="number" style="color:'+(it.aging['90+']>0?'#c62828':'inherit')+'">'+fmtNum(it.aging['90+'])+'</td><td class="number">'+(it.dailyInterest>0?fmtNum(it.dailyInterest):'-')+'</td><td>'+(it.overdueDays||'-')+'</td><td>'+riskBadge(it.limit,it.riskFromOver)+'</td></tr>';
+      }
+      var t=sec.total;
+      h+='<tr class="total-row"><td>รวม</td><td class="number">'+fmtNum(t.limit)+'</td><td class="number" style="color:'+(t.riskFromOver<0?'#c62828':'#2e7d32')+'">'+fmtNum(Math.abs(t.riskFromOver))+'</td><td class="number">'+fmtNum(t.aging['1-30'])+'</td><td class="number">'+fmtNum(t.aging['31-60'])+'</td><td class="number">'+fmtNum(t.aging['61-90'])+'</td><td class="number">'+fmtNum(t.aging['90+'])+'</td><td class="number">'+(t.dailyInterest>0?fmtNum(t.dailyInterest):'-')+'</td><td>'+(t.overdueDays||'-')+'</td><td>'+riskBadge(t.limit,t.riskFromOver)+'</td></tr>';
+      if(sec.overdueInterest>0){
+        h+='<tr><td colspan="10" style="text-align:right;color:#c62828;font-weight:bold">ยอดรับผิดชอบดอกเบี้ยเกินดิว: '+fmtNum(sec.overdueInterest)+' บาท</td></tr>';
+      }
+      h+='</table>';
+      document.getElementById('insuranceTable').innerHTML=h;
+    }
+    function renderRiskChart(d){
+      var sec=d.insuranceSection;
+      var names=[];var usage=[];var colors=[];var limits=[];
+      for(var i=0;i<sec.items.length;i++){
+        var it=sec.items[i];
+        names.push(maskName(it.name));
+        var used=it.limit+it.riskFromOver;
+        usage.push(it.limit>0?Math.round(used/it.limit*100):0);
+        limits.push(it.limit);
+        colors.push(riskColor(it.limit,it.riskFromOver));
+      }
+      var ctx=document.getElementById('riskChart').getContext('2d');
+      new Chart(ctx,{
+        type:'bar',
+        data:{
+          labels:names,
+          datasets:[{
+            label:'% ใช้วงเงิน',
+            data:usage,
+            backgroundColor:colors.map(function(c){return c+'55';}),
+            borderColor:colors,
+            borderWidth:1,
+            maxBarThickness:40
+          }]
+        },
+        options:{
+          indexAxis:'y',
+          responsive:true,
+          maintainAspectRatio:false,
+          plugins:{
+            legend:{display:false},
+            tooltip:{callbacks:{label:function(ctx){return ctx.raw+'% ใช้วงเงิน';}}}
+          },
+          scales:{
+            x:{max:100,grid:{color:'#e0e0e0'},ticks:{color:'#666',callback:function(v){return v+'%';}}},
+            y:{grid:{display:false},ticks:{color:'#333',font:{size:11}}}}
+        }
+      });
+    }
+    loadData();
+  </script>
+  <div style="position:fixed;bottom:0;left:0;right:0;background:linear-gradient(90deg,#dc2626,#b91c1c);color:white;text-align:center;font-size:.7rem;padding:4px 0;font-weight:700;letter-spacing:1px;z-index:9999">⛔ ข้อมูลลับ — ห้ามเผยแพร่ หรือ ส่งออกโดยไม่ได้รับอนุญาต (PDPA)</div>
+</body>
+</html>
