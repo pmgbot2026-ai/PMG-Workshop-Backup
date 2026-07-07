@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เช็คอะไหล่ในสต็อก PMG</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:"Sarabun",Tahoma,sans-serif;margin:0;background:#f0f2f5;color:#1e293b;padding-bottom:28px}
+.header{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px}
+.header h1{margin:0;font-size:1.3rem}.header .sub{opacity:.85;font-size:.85rem;margin-top:2px}
+.content{padding:20px;max-width:1400px;margin:0 auto}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h3{margin:0 0 12px;font-size:1.1rem}
+.input-group{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input[type=text]{padding:10px 14px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;flex:1;min-width:280px}
+button{padding:10px 24px;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;transition:.2s}
+.btn-primary{background:#2563eb;color:#fff}.btn-primary:hover{background:#1d4ed8}
+.btn-success{background:#16a34a;color:#fff}.btn-success:hover{background:#15803d}
+.btn-warn{background:#d97706;color:#fff}.btn-warn:hover{background:#b45309}
+.btn-sm{padding:6px 14px;font-size:.85rem}
+table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:12px}
+th{background:#f8fafc;padding:8px 10px;text-align:left;font-weight:700;border-bottom:2px solid #e5e7eb;white-space:nowrap}
+td{padding:6px 10px;border-bottom:1px solid #f1f5f9}
+tr:hover{background:#f0f7ff}
+.match-row{background:#f0fdf4 !important}.match-hl{color:#16a34a;font-weight:700}
+.nomatch-row{background:#fef2f2 !important}.nomatch-hl{color:#dc2626;font-weight:700}
+.multi-match{background:#fffbeb !important}
+.badge{display:inline-block;padding:2px 10px;border-radius:9999px;font-size:.8rem;font-weight:600;color:#fff}
+.badge-green{background:#16a34a}.badge-red{background:#dc2626}.badge-blue{background:#2563eb}.badge-amber{background:#d97706}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:12px 0}
+.stat-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.stat-card .num{font-size:1.8rem;font-weight:800}.stat-card .label{font-size:.8rem;color:#64748b;margin-top:4px}
+.loading{display:none;text-align:center;padding:40px}.loading.show{display:block}
+.spinner{font-size:2rem;margin-bottom:8px}
+.empty{text-align:center;padding:30px;color:#64748b}
+.tab-bar{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+.tab-btn{padding:10px 20px;cursor:pointer;font-weight:700;border:none;border-radius:8px 8px 0 0;background:#e2e8f0;color:#64748b;font-size:.95rem;transition:.2s}
+.tab-btn:hover{background:#cbd5e1}.tab-btn.active{background:#2563eb;color:#fff}
+.tab-content{display:none}.tab-content.active{display:block}
+.quot-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin:8px 0;padding:12px 16px;background:#f8fafc;border-radius:8px;font-size:.9rem}
+.quot-info .qi{display:flex;gap:8px}.quot-info .ql{color:#64748b;min-width:80px}.quot-info .qv{font-weight:700}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-weight:700;margin-bottom:4px;font-size:.9rem}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:8px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:.9rem}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.3)}
+.modal h3{margin:0 0 16px}
+@media(max-width:768px){.content{padding:12px}table{font-size:.75rem}th,td{padding:4px 6px}.input-group{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="header">
+<div>
+<h1>🔧 เช็คอะไหล่ในสต็อก PMG</h1>
+<div class="sub">ใส่ลิงก์ใบเสนอราคา → กระทบกับฐานข้อมูลอะไหล่ → แสดงตำแหน่งจัดเก็บ + ฟอร์มเบิกใช้</div>
+</div>
+</div>
+
+<div class="content">
+<div class="tab-bar">
+<button class="tab-btn active" onclick="switchTab('check')" id="btn-check">🔍 เช็คอะไหล่</button>
+<button class="tab-btn" onclick="switchTab('inventory')" id="btn-inventory">📋 ฐานข้อมูลอะไหล่</button>
+<button class="tab-btn" onclick="switchTab('history')" id="btn-history">📝 ประวัติการเบิก</button>
+</div>
+
+<!-- TAB: CHECK -->
+<div class="tab-content active" id="tab-check">
+<div class="card">
+<h3>🔗 ใส่ลิงก์ใบเสนอราคา</h3>
+<div class="input-group">
+<input type="text" id="quotUrl" placeholder="วางลิงก์ใบเสนอราคาที่นี่..." value="">
+<button class="btn-primary" onclick="checkParts()">⚡ เช็คอะไหล่</button>
+</div>
+<p style="font-size:.85rem;color:#64748b;margin-top:8px">ตัวอย่าง: http://devdev.prachakij.com:8080/BCT_PMG_NEW_NOTE/BCT_PMG_quotation_old.jsp?inputvc=QU-00-202605-0336</p>
+</div>
+
+<div class="loading" id="loading">
+<div class="spinner">⏳</div>
+<div style="font-weight:700">กำลังดึงข้อมูลและกระทบฐานข้อมูล...</div>
+</div>
+
+<div id="results"></div>
+</div>
+
+<!-- TAB: INVENTORY -->
+<div class="tab-content" id="tab-inventory">
+<div class="card">
+<h3>📋 ฐานข้อมูลอะไหล่ทั้งหมด</h3>
+<div class="input-group" style="margin-bottom:12px">
+<input type="text" id="searchInput" placeholder="ค้นหาด้วย part number หรือชื่ออะไหล่..." onkeyup="if(event.key==='Enter')searchParts()">
+<button class="btn-primary btn-sm" onclick="searchParts()">🔍 ค้นหา</button>
+<button class="btn-sm" style="background:#e2e8f0" onclick="loadInventory()">🔄 โหลดทั้งหมด</button>
+</div>
+<div id="inventoryDiv"></div>
+</div>
+</div>
+
+<!-- TAB: HISTORY -->
+<div class="tab-content" id="tab-history">
+<div class="card">
+<h3>📝 ประวัติการเบิกอะไหล่</h3>
+<button class="btn-primary btn-sm" onclick="loadHistory()">🔄 โหลดประวัติ</button>
+<div id="historyDiv"></div>
+</div>
+</div>
+
+</div>
+
+<!-- Modal for withdrawal form -->
+<div class="modal-overlay" id="withdrawModal">
+<div class="modal">
+<h3>📝 ฟอร์มเบิกใช้อะไหล่</h3>
+<div id="withdrawPartsList" style="margin-bottom:16px"></div>
+<div class="form-group">
+<label>วันที่เบิก</label>
+<input type="date" id="wdDate">
+</div>
+<div class="form-group">
+<label>เลขที่ใบเสนอราคา</label>
+<input type="text" id="wdQuotNo" readonly>
+</div>
+<div class="form-group">
+<label>ทะเบียนรถ</label>
+<input type="text" id="wdPlate" readonly>
+</div>
+<div class="form-group">
+<label>เลขที่ JOB</label>
+<input type="text" id="wdJobNo" readonly>
+</div>
+<div class="form-group">
+<label>ผู้เบิก</label>
+<input type="text" id="wdUser" placeholder="ชื่อผู้เบิก">
+</div>
+<div class="form-group">
+<label>หมายเหตุ</label>
+<textarea id="wdNote" rows="2" placeholder="หมายเหตุเพิ่มเติม"></textarea>
+</div>
+<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+<button style="background:#e2e8f0" onclick="closeModal()">ยกเลิก</button>
+<button class="btn-success" onclick="submitWithdrawal()">✅ ยืนยันเบิก</button>
+</div>
+</div>
+</div>
+
+<script>
+var SCRIPT_URL = ''; // Will be set dynamically
+var lastCheckResult = null;
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('btn-' + tab).classList.add('active');
+  if (tab === 'inventory') loadInventory();
+  if (tab === 'history') loadHistory();
+}
+
+function apiCall(params) {
+  var url = (SCRIPT_URL || window.location.href.split('?')[0]) + '?api=1';
+  for (var k in params) {
+    url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+  }
+  return fetch(url).then(function(r){ return r.json(); });
+}
+
+function checkParts() {
+  var url = document.getElementById('quotUrl').value.trim();
+  if (!url) { alert('กรุณาใส่ลิงก์ใบเสนอราคา'); return; }
+  
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('results').innerHTML = '';
+  
+  apiCall({ action: 'checkParts', url: url }).then(function(res) {
+    document.getElementById('loading').classList.remove('show');
+    lastCheckResult = res;
+    displayResults(res);
+  }).catch(function(err) {
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('results').innerHTML = '<div class="card"><p style="color:#dc2626">⚠️ เกิดข้อผิดพลาด: ' + err.message + '</p></div>';
+  });
+}
+
+function displayResults(res) {
+  if (!res.success) {
+    document.getElementById('results').innerHTML = '<div class="card"><p style="color:#dc2626">⚠️ ' + (res.error || 'เกิดข้อผิดพลาด') + '</p></div>';
+    return;
+  }
+  
+  var html = '';
+  
+  // Quotation info
+  var q = res.quotation || {};
+  html += '<div class="card"><h3>📄 ข้อมูลใบเสนอราคา</h3>';
+  html += '<div class="quot-info">';
+  html += '<div class="qi"><span class="ql">เลขที่:</span><span class="qv">' + esc(q.no) + '</span></div>';
+  html += '<div class="qi"><span class="ql">วันที่:</span><span class="qv">' + esc(q.date) + '</span></div>';
+  html += '<div class="qi"><span class="ql">ทะเบียน:</span><span class="qv">' + esc(q.plate) + '</span></div>';
+  html += '<div class="qi"><span class="ql">JOB:</span><span class="qv">' + esc(q.jobNo) + '</span></div>';
+  html += '<div class="qi"><span class="ql">รถ:</span><span class="qv">' + esc(q.vehicle) + '</span></div>';
+  html += '<div class="qi"><span class="ql">ลูกค้า:</span><span class="qv">' + esc(q.customer) + '</span></div>';
+  html += '</div></div>';
+  
+  // Summary
+  var s = res.summary || {};
+  html += '<div class="summary">';
+  html += '<div class="stat-card"><div class="num" style="color:#2563eb">' + (s.totalParts||0) + '</div><div class="label">อะไหล่ในใบเสนอราคา</div></div>';
+  html += '<div class="stat-card"><div class="num" style="color:#16a34a">' + (s.matched||0) + '</div><div class="label">✅ มีในสต็อก</div></div>';
+  html += '<div class="stat-card"><div class="num" style="color:#dc2626">' + (s.unmatched||0) + '</div><div class="label">❌ ไม่มีในสต็อก</div></div>';
+  html += '</div>';
+  
+  // Matched parts
+  if (res.matched && res.matched.length > 0) {
+    html += '<div class="card"><h3>✅ อะไหล่ที่มีในสต็อก (' + res.matched.length + ' รายการ)</h3>';
+    html += '<div style="overflow-x:auto"><table><thead><tr>';
+    html += '<th>รหัสในใบเสนอ</th><th>ชื่ออะไหล่</th><th>จำนวน</th>';
+    html += '<th>พาร์ทในสต็อก</th><th>ชื่อในสต็อก</th><th>แท็บ</th><th>กลุ่ม</th><th>แถว</th><th>ชั้นจัดเก็บ</th><th>ยี่ห้อ</th><th></th>';
+    html += '</tr></thead><tbody>';
+    
+    // Group by quotation part
+    var grouped = {};
+    for (var i = 0; i < res.matched.length; i++) {
+      var m = res.matched[i];
+      var key = m.quotCode + '_' + i;
+      var rowClass = m.matchType === 'multiple' ? 'multi-match' : 'match-row';
+      var inv = m.inventory;
+      html += '<tr class="' + rowClass + '">';
+      html += '<td style="font-weight:700">' + esc(m.quotCode) + '</td>';
+      html += '<td>' + esc(m.quotName) + '</td>';
+      html += '<td>' + m.quotQty + '</td>';
+      html += '<td style="font-weight:700;color:#16a34a">' + esc(inv.part) + '</td>';
+      html += '<td>' + esc(inv.name) + '</td>';
+      html += '<td>' + esc(inv.tab) + '</td>';
+      html += '<td>' + esc(inv.group) + '</td>';
+      html += '<td>' + inv.row + '</td>';
+      html += '<td><span class="badge badge-green">' + esc(inv.shelf) + '</span></td>';
+      html += '<td>' + esc(inv.brand) + '</td>';
+      html += '<td><button class="btn-success btn-sm" onclick="openWithdrawModal(\'' + esc(m.quotCode) + '\',\'' + esc(m.quotName) + '\',' + m.quotQty + ',\'' + esc(inv.part) + '\',\'' + esc(inv.name) + '\',\'' + esc(inv.tab) + '\',\'' + esc(inv.shelf) + '\',' + inv.row + ')">📝 เบิก</button></td>';
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+    
+    // Batch withdraw button
+    html += '<div style="margin-top:12px"><button class="btn-success" onclick="openBatchWithdraw()">📝 เบิกทั้งหมดที่มีในสต็อก</button></div>';
+    html += '</div>';
+  }
+  
+  // Unmatched parts
+  if (res.unmatched && res.unmatched.length > 0) {
+    html += '<div class="card"><h3>❌ อะไหล่ที่ไม่มีในสต็อก (' + res.unmatched.length + ' รายการ)</h3>';
+    html += '<div style="overflow-x:auto"><table><thead><tr>';
+    html += '<th>รหัส</th><th>ชื่ออะไหล่</th><th>จำนวน</th><th>ราคา</th>';
+    html += '</tr></thead><tbody>';
+    for (var u = 0; u < res.unmatched.length; u++) {
+      var um = res.unmatched[u];
+      html += '<tr class="nomatch-row">';
+      html += '<td style="font-weight:700;color:#dc2626">' + esc(um.quotCode) + '</td>';
+      html += '<td>' + esc(um.quotName) + '</td>';
+      html += '<td>' + um.quotQty + '</td>';
+      html += '<td>' + esc(um.quotPrice) + '</td>';
+      html += '</tr>';
+    }
+    html += '</tbody></table></div></div>';
+  }
+  
+  document.getElementById('results').innerHTML = html;
+}
+
+// Withdraw modal
+var withdrawParts = [];
+
+function openWithdrawModal(code, name, qty, invPart, invName, tab, shelf, row) {
+  withdrawParts = [{
+    quotCode: code, quotName: name, qty: qty,
+    part: invPart, name: invName, tab: tab, shelf: shelf, row: row
+  }];
+  showWithdrawModal();
+}
+
+function openBatchWithdraw() {
+  if (!lastCheckResult || !lastCheckResult.matched) return;
+  withdrawParts = [];
+  for (var i = 0; i < lastCheckResult.matched.length; i++) {
+    var m = lastCheckResult.matched[i];
+    var inv = m.inventory;
+    withdrawParts.push({
+      quotCode: m.quotCode, quotName: m.quotName, qty: m.quotQty,
+      part: inv.part, name: inv.name, tab: inv.tab, shelf: inv.shelf, row: inv.row
+    });
+  }
+  showWithdrawModal();
+}
+
+function showWithdrawModal() {
+  var listHtml = '<table style="font-size:.85rem"><thead><tr><th>รหัส</th><th>ชื่อ</th><th>จำนวน</th><th>ชั้นจัดเก็บ</th><th>แท็บ</th></tr></thead><tbody>';
+  for (var i = 0; i < withdrawParts.length; i++) {
+    var p = withdrawParts[i];
+    listHtml += '<tr><td>' + esc(p.part) + '</td><td>' + esc(p.name) + '</td><td>' + p.qty + '</td><td>' + esc(p.shelf) + '</td><td>' + esc(p.tab) + '</td></tr>';
+  }
+  listHtml += '</tbody></table>';
+  document.getElementById('withdrawPartsList').innerHTML = listHtml;
+  
+  if (lastCheckResult && lastCheckResult.quotation) {
+    document.getElementById('wdQuotNo').value = lastCheckResult.quotation.no || '';
+    document.getElementById('wdPlate').value = lastCheckResult.quotation.plate || '';
+    document.getElementById('wdJobNo').value = lastCheckResult.quotation.jobNo || '';
+  }
+  document.getElementById('wdDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('withdrawModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('withdrawModal').classList.remove('show');
+}
+
+function submitWithdrawal() {
+  var data = {
+    quotNo: document.getElementById('wdQuotNo').value,
+    plate: document.getElementById('wdPlate').value,
+    jobNo: document.getElementById('wdJobNo').value,
+    withdrawalDate: document.getElementById('wdDate').value,
+    withdrawnBy: document.getElementById('wdUser').value,
+    note: document.getElementById('wdNote').value,
+    parts: withdrawParts
+  };
+  
+  apiCall({ action: 'withdraw', data: JSON.stringify(data) }).then(function(res) {
+    if (res.success) {
+      alert('✅ บันทึกการเบิก ' + res.withdrawn + ' รายการสำเร็จ');
+      closeModal();
+    } else {
+      alert('⚠️ ' + (res.error || 'เกิดข้อผิดพลาด'));
+    }
+  }).catch(function(err) {
+    alert('⚠️ ' + err.message);
+  });
+}
+
+// Inventory tab
+function loadInventory() {
+  document.getElementById('inventoryDiv').innerHTML = '<div class="empty">⏳ กำลังโหลด...</div>';
+  apiCall({ action: 'getInventory' }).then(function(res) {
+    if (!res.success) { document.getElementById('inventoryDiv').innerHTML = '<p style="color:#dc2626">' + res.error + '</p>'; return; }
+    displayInventory(res.inventory || []);
+  });
+}
+
+function displayInventory(items) {
+  if (!items.length) { document.getElementById('inventoryDiv').innerHTML = '<div class="empty">ไม่มีข้อมูล</div>'; return; }
+  var html = '<p style="margin:8px 0">ทั้งหมด ' + items.length + ' รายการ</p>';
+  html += '<div style="overflow-x:auto"><table><thead><tr><th>Part</th><th>ชื่อ</th><th>ยี่ห้อ</th><th>รุ่น</th><th>ชั้น</th><th>แท็บ</th><th>กลุ่ม</th><th>แถว</th></tr></thead><tbody>';
+  for (var i = 0; i < Math.min(items.length, 500); i++) {
+    var it = items[i];
+    html += '<tr><td style="font-weight:700">' + esc(it.part) + '</td><td>' + esc(it.name) + '</td><td>' + esc(it.brand) + '</td><td>' + esc(it.model) + '</td><td><span class="badge badge-blue">' + esc(it.shelf) + '</span></td><td>' + esc(it.tab) + '</td><td>' + esc(it.group) + '</td><td>' + it.row + '</td></tr>';
+  }
+  html += '</tbody></table></div>';
+  if (items.length > 500) html += '<p style="text-align:center;color:#64748b;margin-top:8px">แสดง 500 แรกจาก ' + items.length + ' รายการ</p>';
+  document.getElementById('inventoryDiv').innerHTML = html;
+}
+
+function searchParts() {
+  var q = document.getElementById('searchInput').value.trim();
+  if (!q) { loadInventory(); return; }
+  document.getElementById('inventoryDiv').innerHTML = '<div class="empty">⏳ กำลังค้นหา...</div>';
+  apiCall({ action: 'search', q: q }).then(function(res) {
+    if (!res.success) { document.getElementById('inventoryDiv').innerHTML = '<p style="color:#dc2626">' + res.error + '</p>'; return; }
+    displayInventory(res.results || []);
+  });
+}
+
+// History tab
+function loadHistory() {
+  document.getElementById('historyDiv').innerHTML = '<div class="empty">⏳ กำลังโหลด...</div>';
+  apiCall({ action: 'getWithdrawals' }).then(function(res) {
+    if (!res.success) { document.getElementById('historyDiv').innerHTML = '<p style="color:#dc2626">' + res.error + '</p>'; return; }
+    var logs = res.logs || [];
+    if (!logs.length) { document.getElementById('historyDiv').innerHTML = '<div class="empty">ยังไม่มีประวัติการเบิก</div>'; return; }
+    var html = '<p style="margin:8px 0">ทั้งหมด ' + logs.length + ' รายการ</p>';
+    html += '<div style="overflow-x:auto"><table><thead><tr><th>วันที่</th><th>ใบเสนอฯ</th><th>ทะเบียน</th><th>JOB</th><th>Part</th><th>ชื่อ</th><th>จำนวน</th><th>ชั้น</th><th>ผู้เบิก</th><th>หมายเหตุ</th><th>สถานะ</th></tr></thead><tbody>';
+    for (var i = 0; i < logs.length; i++) {
+      var l = logs[i];
+      html += '<tr><td style="white-space:nowrap">' + esc(l.date) + '</td><td>' + esc(l.quotNo) + '</td><td>' + esc(l.plate) + '</td><td>' + esc(l.jobNo) + '</td><td style="font-weight:700">' + esc(l.part) + '</td><td>' + esc(l.name) + '</td><td>' + l.qty + '</td><td>' + esc(l.shelf) + '</td><td>' + esc(l.withdrawnBy) + '</td><td>' + esc(l.note) + '</td><td><span class="badge badge-amber">' + esc(l.status) + '</span></td></tr>';
+    }
+    html += '</tbody></table></div>';
+    document.getElementById('historyDiv').innerHTML = html;
+  });
+}
+
+function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+</script>
+</body>
+</html>
