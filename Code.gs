@@ -66,9 +66,74 @@ function doGet(e) {
   try { UrlFetchApp.fetch('https://www.google.com', {muteHttpExceptions: true}); } catch(err) {}
   
   if (p.debug === 'readsheet' && p.ssid) { var r = readForeignSheet_(p.ssid, p.sheet || '', parseInt(p.maxrows) || 0); return ContentService.createTextOutput(JSON.stringify(r)).setMimeType(ContentService.MimeType.JSON); }
+
+  // ═══ 360 Evaluation Processing (eval360) — must check before api=1 ═══
+  if (p.eval360 === '1') {
+    var evalFolderId = '1J9barfa-_DBwJEgZzDFuVS5uqT95WGXZ';
+
+    // Dashboard UI
+    if (!p.api && !p.fileid && !p.action) {
+      var evalHtml = HtmlService.createHtmlOutputFromFile('Eval360Dash');
+      return evalHtml
+        .setTitle('360° Evaluation Dashboard')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    }
+
+    // GET: serve data
     if (p.api === '1') {
-    // Handle write actions via GET (since GAS Web Apps can't handle POST from external fetch)
-    // Actions that don't need data params
+      var cached = CacheService.getScriptCache().get('EVAL360_DATA');
+      if (cached) {
+        return ContentService.createTextOutput(cached)
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var chunkCount = CacheService.getScriptCache().get('EVAL360_CHUNKS');
+      if (chunkCount) {
+        var combined = '';
+        for (var ci = 0; ci < parseInt(chunkCount); ci++) {
+          combined += CacheService.getScriptCache().get('EVAL360_CHUNK_' + ci) || '';
+        }
+        return ContentService.createTextOutput(combined)
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      return ContentService.createTextOutput(JSON.stringify({error: 'No data uploaded yet'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (p.fileid) {
+      try {
+        var file = DriveApp.getFileById(p.fileid);
+        var blob = file.getBlob();
+        var base64 = Utilities.base64Encode(blob.getBytes());
+        return ContentService.createTextOutput(JSON.stringify({
+          id: p.fileid, name: file.getName(), mimeType: file.getMimeType(),
+          size: file.getSize(), base64: base64
+        })).setMimeType(ContentService.MimeType.JSON);
+      } catch (e) {
+        return ContentService.createTextOutput(JSON.stringify({error: e.toString()}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    // List files in folder
+    try {
+      var folder = DriveApp.getFolderById(evalFolderId);
+      var files = folder.getFiles();
+      var fileList = [];
+      while (files.hasNext()) {
+        var f = files.next();
+        fileList.push({id: f.getId(), name: f.getName(), size: f.getSize(), mimeType: f.getMimeType()});
+      }
+      return ContentService.createTextOutput(JSON.stringify({files: fileList}))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (e) {
+      return ContentService.createTextOutput(JSON.stringify({error: e.toString()}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  // ═══ API endpoint (original) ═══
+  if (p.api === '1') {
     var noDataActions = ['getConfigSettings', 'getRawProps', 'getCalendar', 'getQueue', 'fetchRepairOrder', 'saveBillingSnapshot', 'setupEditLogTriggers', 'partsGetInventory', 'partsCheckParts', 'partsGetWithdrawals', 'partsSearch', 'pmgiGetData', 'getPersonKpiStatus', 'getRawSheet', 'listSheets', 'listDashboards'];
     if (p.action && (p.data || noDataActions.indexOf(p.action) >= 0)) {
       var actionData;
@@ -169,6 +234,22 @@ function doGet(e) {
         actionResult = saveDeleteKR_(actionData);
       } else if (p.action === 'addKR') {
         actionResult = saveAddKR_(actionData);
+      } else if (p.action === 'uploadEval360') {
+        var evalData = actionData;
+        var evalStr = JSON.stringify(evalData);
+        // CacheService max 100KB per key — split if needed
+        if (evalStr.length <= 90000) {
+          CacheService.getScriptCache().put('EVAL360_DATA', evalStr, 21600);
+        } else {
+          // Split into chunks
+          var chunks = Math.ceil(evalStr.length / 90000);
+          CacheService.getScriptCache().put('EVAL360_CHUNKS', String(chunks), 21600);
+          for (var ci = 0; ci < chunks; ci++) {
+            var chunk = evalStr.substring(ci * 90000, (ci + 1) * 90000);
+            CacheService.getScriptCache().put('EVAL360_CHUNK_' + ci, chunk, 21600);
+          }
+        }
+        actionResult = { status: 'ok', records: evalData.stats ? evalData.stats.total_people : 0, size: evalStr.length };
       } else {
         actionResult = { success: false, error: 'Unknown action: ' + p.action };
       }
@@ -938,6 +1019,12 @@ function doPost(e) {
       result = savePersonEdit_(p);
     } else if (action === 'createDashboard') {
       result = createDashboard(p);
+    } else if (action === 'uploadEval360') {
+      // Store eval360 data in cache (max 100KB per key, so we split)
+      var data = p.data;
+      var dataStr = JSON.stringify(data);
+      CacheService.getScriptCache().put('EVAL360_DATA', dataStr, 21600); // 6 hours TTL
+      result = { status: 'ok', records: data.stats ? data.stats.total_people : 0, size: dataStr.length };
     } else if (action === 'updateDashboard') {
       result = updateDashboard(p.id || p.dashId, p.command || p.msg || '');
     } else if (action === 'getDashboardData') {
@@ -12050,6 +12137,22 @@ function gsGetPersonKpiStatus(personName, deptName) {
  * @param {string} deptName   - Department name (e.g. "PMG/PMGI")
  * @return {{person: object, kpi: object, timestamp: string}}
  */
+function getEval360Data() {
+  var cached = CacheService.getScriptCache().get("EVAL360_DATA");
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) { return { error: e.toString() }; }
+  }
+  var chunkCount = CacheService.getScriptCache().get("EVAL360_CHUNKS");
+  if (chunkCount) {
+    var combined = "";
+    for (var ci = 0; ci < parseInt(chunkCount); ci++) {
+      combined += CacheService.getScriptCache().get("EVAL360_CHUNK_" + ci) || "";
+    }
+    try { return JSON.parse(combined); } catch(e) { return { error: e.toString() }; }
+  }
+  return { error: "No data uploaded yet" };
+}
+
 function gsGetCEOData(personName, deptName) {
   var timestamp = new Date().toISOString();
   var personData = null;
