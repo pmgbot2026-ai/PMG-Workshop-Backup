@@ -2565,8 +2565,11 @@ function formDashboard(){
             '<option value="อื่นๆ">อื่นๆ — กำหนดเอง</option>'+
           '</select>'+
           '<div id="gf-type-directive" style="display:none;margin-top:10px;padding:12px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px">'+
-            '<div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:6px">📐 คำสั่งออกแบบแสดงผล (ส่งไปใน Prompt อัตโนมัติ):</div>'+
-            '<div id="gf-type-directive-text" style="font-size:12px;color:#1e3a8a;line-height:1.6"></div>'+
+            '<div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:6px">📐 คำสั่งออกแบบแสดงผล (Design Directive — ส่งไปใน Prompt อัตโนมัติ):</div>'+
+            '<div id="gf-type-directive-text" style="font-size:12px;color:#1e3a8a;line-height:1.6;margin-bottom:10px"></div>'+
+            '<div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:4px">📝 คำสั่ง Prompt ตัวอย่าง (Sample Prompt — กดปุ่มด้านล่างเพื่อใส่ในช่องคำสั่ง AI):</div>'+
+            '<div id="gf-type-sample-cmd" style="font-size:12px;color:#166534;line-height:1.6;padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;margin-bottom:8px"></div>'+
+            '<button class="gf-btn gf-btn-secondary" style="padding:6px 14px;font-size:12px" onclick="gfLoadSampleCommand()">📋 ใส่คำสั่งนี้ในช่อง Prompt (Load This Command)</button>'+
           '</div>'+
         '</div>'+
 
@@ -2882,11 +2885,13 @@ function gfUpdateTypeDirective(){
   var type = (document.getElementById('gf-type')||{}).value || '';
   var dirBox = document.getElementById('gf-type-directive');
   var dirText = document.getElementById('gf-type-directive-text');
+  var sampleText = document.getElementById('gf-type-sample-cmd');
   if(!dirBox || !dirText) return;
   if(!type){ dirBox.style.display='none'; return; }
   var d = DASHBOARD_TYPE_DIRECTIVES[type];
   if(!d){ dirBox.style.display='none'; return; }
   dirText.textContent = d.design;
+  if(sampleText) sampleText.textContent = d.sampleAiCommand || '';
   dirBox.style.display = 'block';
 }
 
