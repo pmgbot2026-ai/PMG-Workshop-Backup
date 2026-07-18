@@ -109,6 +109,21 @@ body{font-family:'Sarabun','Segoe UI',system-ui,-apple-system,sans-serif;backgro
 .workshop li{font-size:14px;color:var(--text2);padding:4px 0 4px 22px;position:relative;line-height:1.6}
 .workshop li::before{content:'▸';position:absolute;left:4px;color:var(--business);font-weight:700}
 
+/* ── Solution / Answer box ── */
+.solution{background:linear-gradient(135deg,#f0fdf4 0%,#ecfdf5 100%);border:1px solid #6ee7b7;border-radius:14px;padding:18px 22px;margin-top:12px;margin-bottom:8px}
+.solution .s-head{display:flex;align-items:center;gap:8px;font-weight:700;color:#059669;font-size:15px;margin-bottom:10px}
+.solution .s-item{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #d1fae5}
+.solution .s-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.solution .s-q{font-size:14px;font-weight:700;color:#065f46;margin-bottom:4px;display:flex;align-items:flex-start;gap:6px}
+.solution .s-q .s-num{flex-shrink:0;width:22px;height:22px;border-radius:6px;background:#059669;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.solution .s-a{font-size:14px;color:#047857;line-height:1.7;padding-left:28px}
+.solution .s-result{margin-top:6px;padding:10px 14px;background:#fff;border:1px solid #d1fae5;border-left:4px solid #059669;border-radius:8px;font-size:13px;color:#065f46;line-height:1.7}
+.solution .s-result b{color:#047857}
+.solution .s-link{margin-top:8px;padding-left:28px}
+.solution .s-link a{font-size:13px;color:#2563eb;text-decoration:none;font-weight:500;display:inline-flex;align-items:center;gap:4px}
+.solution .s-link a:hover{text-decoration:underline}
+
+
 /* ── Source link ── */
 .source-bar{margin-top:10px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;display:flex;align-items:center;gap:8px;font-size:13px}
 .source-bar .sb-icon{font-size:16px;flex-shrink:0}
@@ -453,6 +468,15 @@ var MODULES = {
     dashboard:'ceo',
     prompt:{level:'beginner', code:'<span class="pf">Objective:</span> สร้าง Dashboard สรุปภาพรวมองค์กรสำหรับ CEO\\n<span class="pf">Audience:</span> สมศักดิ์ ธัมมะปาละ — ผู้บริหารระดับสูง ดูผ่านมือถือและคอมพิวเตอร์\\n<span class="pf">Data:</span> KPI ทั้งหมด 4 มิติ (Business 30%, Team 30%, Personal 20%, Personal Credit in PKG Community 20%)\\n<span class="pf">KPI:</span> Health Score 0-100, CBNP, GM, PMGI, ศูนย์สี, เชียร์เคลม, Productivity\\n<span class="pf">Chart:</span> Gauge คะแนนรวม + KPI cards แยกมิติ + Bar chart แต่ละหมวด\\n<span class="pf">Output:</span> Google Sheets Dashboard หน้าเดียวจบ — อัปเดตอัตโนมัติ\\n<span class="pc"># Comment: Health Score Gauge + Smart Insights + auto Telegram 09:15 — CEO เห็นภาพรวมใน 10 วินาที</span>'},
     workshop:['เลือกหนึ่งบทบาทในองค์กร (CEO, GM, หัวหน้ากลุ่มงาน) แล้วเขียน "10 วินาทีแรกต้องเห็นอะไร"','ระบุ 3 คำถามที่ Dashboard นี้ต้องตอบได้','วาด layout คร่าวๆ ด้วยมือก่อน แล้วค่อยให้ AI ช่วยสร้าง']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'เลือกบทบาท CEO แล้วเขียน "10 วินาทีแรกต้องเห็นอะไร"',a:'เห็น <b>Health Score Gauge</b> 78/100 (Grade B) ตรงกลางหน้า เห็นเป้าหมายรวม 10 ล้านบาท/เดือน เห็นสถานะ 4 มิติ (Business 30% · Team 30% · Personal 20% · Personal Credit 20%)',result:'ผลสำเร็จ: CEO KPI Dashboard ที่สมศักดิ์เปิดดูทุกเช้าและทราบทันทีว่าวันนี้ต้องเร่งอะไร — Health Score 78/100, GM 10.3M (103%), เคลือบแก้ว 58/เดือน (116%)',link:{label:'ดู CEO KPI Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?ceokpi=1'}},
+        {q:'ระบุ 3 คำถามที่ Dashboard นี้ต้องตอบได้',a:'1) วันนี้องค์กรแข็งแรงแค่ไหน? → Health Score Gauge 2) ตัวไหนตามเป้า/เสี่ยง/ล้าหลัง? → KPI cards with color status 3) ต้องเร่งอะไรวันนี้? → Smart Insights (critical/best/warning/quickwin)',result:'ผลสำเร็จ: Smart Insights 4 ประเภท — critical: ศูนย์สี 48%, best: เคลือบแก้ว 116%, warning: CBNP 61%, quickwin: GM 103%'},
+        {q:'วาด layout คร่าวๆ ด้วยมือก่อน',a:'วาดเป็น inverted pyramid: บนสุด = Health Score Gauge → กลาง = 4 มิติ KPI cards → ล่าง = Smart Insights + KR detail table',result:'ผลสำเร็จ: Layout ที่ทีมใช้จริงใน CEO_KPI.html — Gauge SVG + 4 category breakdowns + Smart Insights + KR status bars'}
+      ]
+    },
+
   },
   m2: {
     num:'M2', icon:'📂', title:'เตรียมข้อมูล (Data Preparation)', group:'Mindset (กรอบความคิด)', groupColor:'#2563eb',
@@ -472,6 +496,15 @@ var MODULES = {
     dashboard:'repair',
     prompt:{level:'beginner', code:'<span class="pf">Objective:</span> เตรียมข้อมูลรถในโรงซ่อมให้พร้อมสร้าง Dashboard\n<span class="pf">Audience:</span> ทีมซ่อมและหัวหน้างาน\n<span class="pf">Data:</span> ข้อมูลรถแต่ละคัน: ทะเบียน, สถานะ, สถานี, วันเข้า, วันกำหนดส่ง\n<span class="pf">KPI:</span> จำนวนรถต่อสถานี, Cycle Time, รถเกินกำหนด\n<span class="pf">Chart:</span> Real-time counter + Progress bar ต่อสถานี + ตารางรถปัจจุบัน\n<span class="pf">Output:</span> Google Sheets พร้อม Data Validation และสูตรอัตโนมัติ\\n<span class="pc"># Comment: ข้อมูลมาตรฐานก่อน (dropdown, ISO date, ชื่อคอลัมน์สั้นชัด) แล้วค่อยสร้าง Dashboard</span>'},
     workshop:['ดึงข้อมูลจริงมา 1 ชีต ตรวจหาข้อมูลที่ไม่มาตรฐาน','สร้าง Data Validation และ Dropdown สำหรับสถานะและสถานี','ตั้งชื่อคอลัมน์ให้สั้น ชัด เข้าใจง่าย — ใช้ภาษาเดียวกันทุกที่']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'ดึงข้อมูลจริงมา 1 ชีต ตรวจหาข้อมูลที่ไม่มาตรฐาน',a:'พบปัญหาใน OKR Sheet สมศักดิ์: ชื่อแท็บเป็นอังกฤษ (Somsak) แต่ข้อมูลเป็นไทย, KPI ownership table ปนกับ KR, "Personal Growth Plan" ถูกจับเป็น objective โดยไม่ตั้งใจ',result:'ผลสำเร็จ: ทีมใช้เวลา 3 ชั่วโมงทำข้อมูลให้มาตรฐาน — สถานะเป็น dropdown, วันที่เป็น ISO format — หลังจากนั้นสร้าง Dashboard ใช้เวลาแค่ 45 นาที',link:{label:'ดู Repair Flow Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?rf=1&view=index'}},
+        {q:'สร้าง Data Validation และ Dropdown สำหรับสถานะและสถานี',a:'สถานะรถ: Dropdown (รอเข้าซ่อม/กำลังซ่อม/ส่งมอบแล้ว) · สถานี: Dropdown (เคาะ/โป๊ว/พ่น/ประกอบ/ขัดสี/ล้าง/SUP QC/รอส่งมอบ) · สาขา: Dropdown (CNB/CSK)',result:'ผลสำเร็จ: ข้อมูลมาตรฐาน 100% — ปัจจุบันมี CNB 31 + CSK 72 = 103 คันในระบบ และส่งมอบแล้ว 1,447 คัน ผ่าน 8 สถานี'},
+        {q:'ตั้งชื่อคอลัมน์ให้สั้น ชัด เข้าใจง่าย',a:'เปลี่ยนจาก "วันที่รับรถเข้าระบบ" → "วันเข้า", "สถานะปัจจุบันของรถ" → "สถานะ", "สถานีซ่อมที่อยู่ปัจจุบัน" → "สถานี" — ใช้ภาษาไทยทุกที่',result:'ผลสำเร็จ: ทีมใหม่รับช่วงต่อได้ภายใน 1 วัน จากเดิม 1 สัปดาห์ — เพราะชื่อคอลัมน์สั้นชัดเข้าใจง่าย'}
+      ]
+    },
+
   },
   m3: {
     num:'M3', icon:'💬', title:'การเขียน Prompt (Prompt Engineering)', group:'Mindset (กรอบความคิด)', groupColor:'#2563eb',
@@ -488,6 +521,15 @@ var MODULES = {
     dashboard:'pmgworkshop',
     prompt:{level:'intermediate', code:'<span class="pf">Objective:</span> สร้าง Dashboard สรุปงานซ่อม PMG Workshop\n<span class="pf">Audience:</span> หัวหน้างานซ่อมและผู้บริหารสาขา\n<span class="pf">Data:</span> รถแต่ละคัน: ทะเบียน, รุ่น, สถานีปัจจุบัน, วันเข้า, วันกำหนดส่ง, สาขา\n<span class="pf">KPI:</span> รวมรถในโรงซ่อม, ส่งมอบแล้ว, อัตราตรงเวลา, รถเกินกำหนด\n<span class="pf">Chart:</span> KPI cards ด้านบน + ตาราง KPI ต่อสถานี + ตารางรายละเอียดรถ\n<span class="pf">Output:</span> Google Sheets Dashboard พร้อม filter สาขาและช่วงเวลา\n<span class="pc"># เพิ่ม: ให้แสดงสีตามสถานะ และมี conditional formatting</span>'},
     workshop:['เลือก Dashboard หนึ่งที่อยากสร้าง เขียน Prompt ตามกรอบ 6 ข้อ','ลองเขียน 3 เวอร์ชัน: Beginner (1 บรรทัด), Intermediate (6 ข้อ), Advanced (เพิ่มเงื่อนไข)','เปรียบเทียบผลลัพธ์ — สังเกตว่า Prompt ละเอียดกว่าให้ผลที่ใช้งานได้จริง']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'เขียน Prompt ตามกรอบ 6 ข้อ สำหรับ PMG Workshop Dashboard',a:'Objective: สร้าง Dashboard สรุปงานซ่อม · Audience: หัวหน้างานซ่อม · Data: รถแต่ละคัน (ทะเบียน, สถานี, วันเข้า, วันกำหนดส่ง) · KPI: รวมรถ, ส่งมอบ, ตรงเวลา, เกินกำหนด · Chart: KPI cards + ตาราง KPI ต่อสถานี · Output: Google Sheets Dashboard',result:'ผลสำเร็จ: AI เข้าใจทันที สร้าง PMG Workshop Dashboard ครบในครั้งเดียว — ไม่ต้องแก้ไขเพิ่ม',link:{label:'ดู PMG Workshop Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?workshop=1'}},
+        {q:'ลองเขียน 3 เวอร์ชัน: Beginner vs Intermediate vs Advanced',a:'Beginner: "ช่วยทำ Dashboard สรุปงานซ่อม" → ใช้งานไม่ได้ · Intermediate: ใช้กรอบ 6 ข้อ → ใช้งานได้แต่ยังไม่ลึก · Advanced: เพิ่มเงื่อนไข + สี + layout → ใช้งานได้จริง',result:'ผลสำเร็จ: Prompt ยิ่งละเอียด ผลลัพธ์ยิ่งใช้งานได้จริง — จาก 1 สัปดาห์เหลือ 1 วัน'},
+        {q:'เปรียบเทียบผลลัพธ์',a:'Beginner: ต้องแก้ 5 รอบ 3 วัน · Intermediate: แก้ 2 รอบ 1 วัน · Advanced: ใช้ได้ทันที 0 รอบ 30 นาที',result:'ผลสำเร็จ: Advanced Prompt ลดเวลาสร้าง Dashboard จาก 3 วันเหลือ 30 นาที — ลด 95%'}
+      ]
+    },
+
   },
   m4: {
     num:'M4', icon:'🔬', title:'วิเคราะห์ข้อมูล (Data Analysis)', group:'Core Skills (ทักษะหลัก)', groupColor:'#10b981',
@@ -507,6 +549,15 @@ var MODULES = {
     dashboard:'warroom',
     prompt:{level:'intermediate', code:'<span class="pf">Objective:</span> วิเคราะห์ผลงาน GM และเปรียบเทียบกับเป้าหมายองค์กร\n<span class="pf">Audience:</span> ผู้บริหารและหัวหน้า GM\n<span class="pf">Data:</span> ยอดขาย 12 เดือน × 8 GM × ประเภทบริการ\n<span class="pf">KPI:</span> บรรลุเป้า %, อันดับ GM, Service Mix แต่ละคน\n<span class="pf">Chart:</span> กราฟเส้น 12 เดือน + Service Mix bar + เป้าหมายองค์กร\n<span class="pf">Output:</span> Google Sheets พร้อม ranking และสีสถานะ\\n<span class="pc"># Comment: วิเคราะห์ก่อนแสดงผล — หาแนวโน้ม ความผิดปกติ ความสัมพันธ์ จากนั้นค่อยสร้าง Dashboard</span>'},
     workshop:['ดึงข้อมูลยอด 12 เดือน หาค่าเฉลี่ย, สูงสุด, ต่ำสุด','หา GM ที่ทำเกินเป้าและต่ำกว่าเป้า ใช้ conditional formatting','สร้าง Service Mix analysis — ดูว่าแต่ละ GM เน้นบริการอะไร']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'ดึงข้อมูลยอด 12 เดือน หาค่าเฉลี่ย, สูงสุด, ต่ำสุด',a:'GM รายเดือน 12 เดือน: เฉลี่ย 10.3M/เดือน (ทะลุเป้า 10M) · สูงสุด 12.5M (มี.ค.) · ต่ำสุด 8.1M (ม.ค.) · เปรียบเทียบปี 2568 เฉลี่ย 9.2M → โตขึ้น 12%',result:'ผลสำเร็จ: GM Dashboard แสดงแนวโน้ม 12 เดือน + YoY comparison',link:{label:'ดู GM Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?gm=1'}},
+        {q:'หา GM ที่ทำเกินเป้าและต่ำกว่าเป้า',a:'เกินเป้า: GM 10.3M (103%), เคลือบแก้ว 58/เดือน (116%) · ต่ำกว่าเป้า: ศูนย์สี 1,619/3,400 (48%), CBNP 23M/38.5M (61%), Productivity ลด 13%',result:'ผลสำเร็จ: Conditional formatting แสดงสีเขียว/เหลือง/แดง — ทีมรู้ทันทีว่าต้องเร่งศูนย์สีและ CBNP'},
+        {q:'สร้าง Service Mix analysis',a:'เบี้ยอู่ 244 คัน/เดือน (เพิ่ม), เงินสด 295 (ลด), ประกัน 180 (เพิ่ม) — ลูกค้าประกันเพิ่ม แต่ลูกค้าเงินสดลด',result:'ผลสำเร็จ: Service Mix bar chart แสดงสัดส่วนเบี้ยห้าง 66% · เบี้ยอู่ 16% · เงินสด 18% — ทีมรู้ว่าต้องดึงลูกค้าเงินสดกลับ'}
+      ]
+    },
+
   },
   m5: {
     num:'M5', icon:'🎨', title:'ออกแบบ Dashboard (Dashboard Design)', group:'Core Skills (ทักษะหลัก)', groupColor:'#10b981',
@@ -521,6 +572,15 @@ var MODULES = {
     dashboard:'gm',
     prompt:{level:'advanced', code:'<span class="pf">Objective:</span> ออกแบบ GM Dashboard แสดงผลงาน 12 เดือน\n<span class="pf">Audience:</span> GM และผู้บริหาร\n<span class="pf">Data:</span> KPI รายเดือน × GM × ปี, เปรียบเทียบปีก่อน\n<span class="pf">KPI:</span> ยอดขาย, กำไร, อัตรากำไร, จำนวนงาน, คะแนนลูกค้า\n<span class="pf">Chart:</span> KPI cards ด้านบน + กราฟเส้น 12 เดือน + ตารางเปรียบเทียบ YoY\n<span class="pf">Output:</span> Google Sheets หน้าเดียวจบ ใช้สีตามระบบ PMG\n<span class="pc"># Layout: summary → trend → detail (inverted pyramid)</span>\n<span class="pc"># สี: on-track=เขียว at-risk=เหลือง behind=แดง</span>'},
     workshop:['วาด layout บนกระดาษก่อน — บนล่างซ้ายขวา อะไรอยู่ตรงไหน','เลือกสีตามระบบ PMG และสถานะ — อย่าใช้สีตามใจ','ทดสอบกับเพื่อน: ให้ดู 10 วินาทีแล้วบอกว่าเห็นอะไรบ้าง']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'วาด layout บนกระดาษก่อน — บนล่างซ้ายขวา อะไรอยู่ตรงไหน',a:'วาดเป็น inverted pyramid: บนสุด = KPI cards (summary) → กลาง = กราฟเส้น 12 เดือน (trend) → ล่าง = ตารางเปรียบเทียบ YoY (detail)',result:'ผลสำเร็จ: GM Dashboard layout ที่ใช้จริง — KPI cards ด้านบน + กราฟเส้น 12 เดือน + ตารางเปรียบเทียบ · 6 เดือนแรกเฉลี่ย 10.3M/เดือน',link:{label:'ดู GM Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?gm=1'}},
+        {q:'เลือกสีตามระบบ PMG และสถานะ — อย่าใช้สีตามใจ',a:'Business=ฟ้า, Team=เขียว, Personal=ม่วง, Community=ชมพู · สถานะ: เขียว=on-track (ตามเป้า), เหลือง=at-risk (เสี่ยง), แดง=behind (ล้าหลัง)',result:'ผลสำเร็จ: สีสื่อความหมายได้ทันทีโดยไม่ต้องอ่านคำอธิบาย — ผู้บริหารเห็นสถานะได้ใน 3 วินาที'},
+        {q:'ทดสอบกับเพื่อน: ให้ดู 10 วินาทีแล้วบอกว่าเห็นอะไรบ้าง',a:'เพื่อนเห็น: 1) ตัวเลข 10.3M (เด่นสุด) 2) กราฟขึ้น (แนวโน้มดี) 3) ตารางเปรียบเทียบปี (โตขึ้น 12%) — เข้าใจได้ใน 10 วินาที',result:'ผลสำเร็จ: Layout ผ่านการทดสอบ 10 วินาที — ผู้ดูเข้าใจภาพรวมได้ทันทีโดยไม่ต้องอ่านคำอธิบาย'}
+      ]
+    },
+
   },
   m6: {
     num:'M6', icon:'📐', title:'สูตร Google Sheets (Sheets Formulas)', group:'Core Skills (ทักษะหลัก)', groupColor:'#10b981',
@@ -538,6 +598,15 @@ var MODULES = {
     dashboard:'finance',
     prompt:{level:'advanced', code:'<span class="pf">Objective:</span> สร้างสูตรสรุป P&L 5 ปี จากข้อมูลดิบ\n<span class="pf">Audience:</span> ทีมการเงินและผู้บริหาร\n<span class="pf">Data:</span> รายได้-ค่าใช้จ่ายรายเดือน 5 ปี (60 เดือน)\n<span class="pf">KPI:</span> รายได้, ต้นทุน, กำไรขั้นต้น, กำไรสุทธิ, อัตรากำไร\n<span class="pf">Chart:</span> กราฟ 5 ปี + ตาราง P&L statement ปีต่อปี\n<span class="pf">Output:</span> สูตร SUMIFS + QUERY + SPARKLINE ใน Google Sheets\n<span class="pc"># ตัวอย่างสูตร:</span>\n<span class="pn">=SUMIFS(ยอดขาย!C:C, ยอดขาย!A:A, ">="&DATE(ปี,1,1), ยอดขาย!A:A, "<="&DATE(ปี,12,31))</span>\n<span class="pn">=SPARKLINE(QUERY(ข้อมูล!A:C, "select B where A >= date \'"&TEXT(A1,"yyyy-MM-dd")&"\'"))</span>'},
     workshop:['ใช้ SUMIFS รวมยอดขายตามเดือนและประเภทสินค้า','ใช้ SPARKLINE สร้าง mini trend chart ในเซลล์เดียว','ให้ AI เขียนสูตร QUERY จากคำสั่งภาษาไทย แล้วตรวจดูผล']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'ใช้ SUMIFS รวมยอดขายตามเดือนและประเภทสินค้า',a:'สูตร: =SUMIFS(ยอดขาย!C:C, ยอดขาย!A:A, ">="&DATE(ปี,1,1), ยอดขาย!A:A, "<="&DATE(ปี,12,31)) — รวมยอดตามเดือนและประเภทสินค้าจาก Sheet ยอดขาย',result:'ผลสำเร็จ: Finance P&L Dashboard รวมข้อมูล 5 ปีจาก 3 ชีต — ใช้ IMPORTRANGE ดึงข้อมูล + SUMIFS รวม + QUERY กรอง',link:{label:'ดู Finance Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?finance=1'}},
+        {q:'ใช้ SPARKLINE สร้าง mini trend chart ในเซลล์เดียว',a:'สูตร: =SPARKLINE(QUERY(ข้อมูล!A:C, "select B where A >= date '"&TEXT(A1,"yyyy-MM-dd")&"'")) — สร้างกราฟเส้นเล็กในเซลล์เดียว แสดงแนวโน้มได้ทันที',result:'ผลสำเร็จ: SPARKLINE ในแต่ละแถวของตาราง — เห็นแนวโน้มได้โดยไม่ต้องสร้างกราฟแยก'},
+        {q:'ให้ AI เขียนสูตร QUERY จากคำสั่งภาษาไทย แล้วตรวจดูผล',a:'Prompt: "เขียนสูตร QUERY ดึงข้อมูลยอดขายเดือน ม.ค.-มิ.ย. จาก Sheet ยอดขาย เรียงตามยอดสูงสุด" → AI เขียน: =QUERY(ยอดขาย!A:D, "SELECT * WHERE A >= date '2025-01-01' AND A <= date '2025-06-30' ORDER BY D DESC")',result:'ผลสำเร็จ: Parts Checker มี 1,245 รายการ + 22+ filters — ใช้ QUERY กรองและเรียงข้อมูลได้หลายพันบาท'}
+      ]
+    },
+
   },
   m7: {
     num:'M7', icon:'📊', title:'Visualization (การแสดงผลข้อมูล)', group:'Core Skills (ทักษะหลัก)', groupColor:'#10b981',
@@ -555,6 +624,15 @@ var MODULES = {
     dashboard:'bct',
     prompt:{level:'intermediate', code:'<span class="pf">Objective:</span> สร้างปฏิทินนัดรับบริการเคลือบแก้ว\n<span class="pf">Audience:</span> ทีมบริการและลูกค้า\n<span class="pf">Data:</span> นัดรับบริการรถ: วันที่, ทะเบียน, ประเภท, สถานะ\n<span class="pf">KPI:</span> นัดสัปดาห์นี้, รอบำรุงที่ใกล้ถึงกำหนด, คิววันนี้\n<span class="pf">Chart:</span> Calendar grid + รายการคิว + แจ้งเตือนบำรุง\n<span class="pf">Output:</span> Google Sheets พร้อม conditional formatting สีประเภทงาน\\n<span class="pc"># Comment: เลือก chart ให้ตรงประเภทข้อมูล — calendar สำหรับนัด, bar สำหรับเปรียบเทียบ, line สำหรับแนวโน้ม</span>'},
     workshop:['เลือกข้อมูลหนึ่งชุด เลือก chart ที่เหมาะที่สุด แล้วอธิบายว่าทำไม','ลองสร้าง calendar view แทนตาราง — เปรียบเทียบความเข้าใจ','ทดสอบ: ให้คนที่ไม่รู้เรื่องดู chart แล้วบอกว่าเข้าใจอะไร']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'เลือกข้อมูลหนึ่งชุด เลือก chart ที่เหมาะที่สุด แล้วอธิบายว่าทำไม',a:'ข้อมูลนัดรับบริการรถ → เลือก <b>calendar grid</b> เพราะเห็นภาพคิวรับบริการได้ทันที ดีกว่าตารางธรรมดาที่ต้องอ่านทีละแถว',result:'ผลสำเร็จ: BCT เคลือบแก้ว Dashboard ใช้ calendar grid + สีตามประเภทงาน (เคลือบแก้ว=ฟ้า, บำรุง=เขียว, ตรวจสภาพ=ม่วง)',link:{label:'ดู BCT Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?bct=ui'}},
+        {q:'ลองสร้าง calendar view แทนตาราง — เปรียบเทียบความเข้าใจ',a:'ตาราง: ต้องอ่านทีละแถว เสียเวลา · Calendar: เห็นคิวทั้งสัปดาห์ได้ทันที รู้ว่าวันไหนคิวเต็ม วันไหนว่าง',result:'ผลสำเร็จ: QC pass rate 90.8% (4,206/4,632) — calendar ช่วยจัดคิวไม่ให้ชนกัน'},
+        {q:'ทดสอบ: ให้คนที่ไม่รู้เรื่องดู chart แล้วบอกว่าเข้าใจอะไร',a:'คนที่ไม่รู้เรื่องเปิดดู calendar แล้วบอกได้ทันที: "วันนี้มี 3 คิว, พรุ่งนี้ 5 คิว, สัปดาห์หน้าเต็มแล้ว" — เข้าใจได้ใน 5 วินาที',result:'ผลสำเร็จ: กฎเหล็ก "chart ที่ดีที่สุดคือ chart ที่คนดูแล้วเข้าใจได้ทันทีโดยไม่ต้องอ่านคำอธิบาย" — calendar ผ่านการทดสอบ'}
+      ]
+    },
+
   },
   m8: {
     num:'M8', icon:'✅', title:'Review Checklist (ตรวจสอบก่อนส่ง)', group:'Quality & Ops (คุณภาพและการดำเนินงาน)', groupColor:'#7c3aed',
@@ -569,6 +647,15 @@ var MODULES = {
     dashboard:'okr',
     prompt:{level:'intermediate', code:'<span class="pf">Objective:</span> สร้าง Dashboard ติดตาม OKR 5 กลุ่มงาน\n<span class="pf">Audience:</span> ผู้บริหารและหัวหน้ากลุ่มงาน\n<span class="pf">Data:</span> Objectives, Key Results, ความคืบหน้า, สถานะ\n<span class="pf">KPI:</span> บรรลุเป้า %, สถานะ on-track/at-risk/behind, บุคลากร\n<span class="pf">Chart:</span> 5 แท็บกลุ่มงาน + Objectives + KR progress bars\n<span class="pf">Output:</span> Google Sheets พร้อม color-coded status และ แท็บ\\n<span class="pc"># Comment: ตรวจ 10 ข้อก่อนส่ง — ข้อมูลถูก, สีสื่อความหมาย, อ่านง่าย, ตอบคำถามผู้ใช้, สูตรถูก, filter ทำงาน</span>'},
     workshop:['สร้าง checklist ของตัวเอง 10 ข้อ ตรวจทุกครั้งก่อนส่ง','ให้เพื่อน review และให้ feedback ใน 3 ข้อ','แก้ตาม feedback แล้วเปรียบเทียบ before/after']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'สร้าง checklist ของตัวเอง 10 ข้อ ตรวจทุกครั้งก่อนส่ง',a:'10 ข้อ: 1) ข้อมูลถูกไหม 2) สีสื่อความหมายไหม 3) อ่านง่ายไหม 4) ตอบคำถามผู้ใช้ไหม 5) สูตรถูกไหม 6) filter ทำงานไหม 7) มือถือดูได้ไหม 8) ข้อมูลอัปเดตไหม 9) มีเอกสารประกอบไหม 10) มี owner ไหม',result:'ผลสำเร็จ: ลด error ลง 90% ใน 2 เดือน — OKR Dashboard 5 กลุ่มงาน 147 คน 42 Objectives ~480 KRs ผ่าน checklist ครบ',link:{label:'ดู OKR Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?okrall=1'}},
+        {q:'ให้เพื่อน review และให้ feedback ใน 3 ข้อ',a:'เพื่อนพบ: 1) progress bar บางตัวเกิน 100% เพราะสูตรคิดผิด 2) สีสถานะไม่ตรงกับเกณฑ์ 3) cell ยาวเกิน 40 ตัวถูกตัดทิ้ง',result:'ผลสำเร็จ: แก้ทั้ง 3 ข้อก่อนส่งมอบ — ประหยัดเวลาแก้ 5 ชั่วโมง ด้วยการตรวจ 5 นาที'},
+        {q:'แก้ตาม feedback แล้วเปรียบเทียบ before/after',a:'Before: progress bar เกิน 100%, สีไม่ตรงเกณฑ์, cell ถูกตัด · After: progress bar แสดง % ถูกต้อง, สีตรงเกณฑ์ (เขียว/เหลือง/แดง), cell แสดงครบ',result:'ผลสำเร็จ: ENVR Dashboard ได้ Review Score 90/100 (Grade A) — ผ่าน checklist 10 ข้อ ครบ 9 ข้อ'}
+      ]
+    },
+
   },
   m9: {
     num:'M9', icon:'📡', title:'ระบบ Monitor (เฝ้าระวังระบบ)', group:'Quality & Ops (คุณภาพและการดำเนินงาน)', groupColor:'#7c3aed',
@@ -582,6 +669,15 @@ var MODULES = {
     dashboard:'telegram',
     prompt:{level:'advanced', code:'<span class="pf">Objective:</span> ตั้งระบบ monitor และแจ้งเตือนอัตโนมัติ\n<span class="pf">Audience:</span> หัวหน้างานซ่อม\n<span class="pf">Data:</span> สถานะรถ, เวลาเข้า, เวลากำหนดส่ง\n<span class="pf">KPI:</span> รถเกินกำหนด, สถานีคอขวด, อัตราผ่าน\n<span class="pf">Chart:</span> Real-time dashboard + Telegram notification + email alert\n<span class="pf">Output:</span> Apps Script trigger + alert rules\n<span class="pc"># ตัวอย่าง trigger: ส่ง CEO KPI Daily Report 09:15 น. ทุกวัน</span>\n<span class="pn">function sendDailyCeoKpiReport() { ... sendTelegram(...) }</span>'},
     workshop:['ตั้ง trigger ส่ง Telegram Daily Report ทุกวัน 09:15 น.','สร้าง alert เมื่อมีรถเกินกำหนด — ส่ง Telegram แจ้งหัวหน้างาน','ทดสอบระบบแจ้งเตือนจริง — ส่งข้อความ Telegram ให้ตัวเอง']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'ตั้ง trigger ส่ง Telegram Daily Report ทุกวัน 09:15 น.',a:'Apps Script Trigger: time-driven, 09:15 น. ทุกวัน → เรียกฟังก์ชัน sendDailyCeoKpiReport() → ส่งเข้ากลุ่ม Telegram PMS Service OpenClaw',result:'ผลสำเร็จ: ส่งทุกวัน 09:15 น. — Health Score 78/100 (Grade B), 103 คันในระบบ, 1,447 ส่งมอบ, GM 10.3M, เคลือบแก้ว 58/เดือน',link:{label:'ดู CEO KPI Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?ceokpi=1'}},
+        {q:'สร้าง alert เมื่อมีรถเกินกำหนด — ส่ง Telegram แจ้งหัวหน้างาน',a:'Trigger: ตรวจทุก 2 ชั่วโมง → ถ้ามีรถเกินกำหนดส่ง → ส่ง Telegram แจ้งหัวหน้างาน: "รถ กขXXX เกินกำหนด 3 วัน สถานีเคาะ"',result:'ผลสำเร็จ: ลดรถเกินกำหนด 70% — หัวหน้างานรู้ทันทีที่มีรถเกินกำหนด ไม่ต้องรอให้ลูกค้าโทรมาถาม'},
+        {q:'ทดสอบระบบแจ้งเตือนจริง — ส่งข้อความ Telegram ให้ตัวเอง',a:'ทดสอบส่งข้อความจริง: ข้อความจริง: CEO KPI Daily Report — สมศักดิ์ ธัมมะปาละ · 17 ก.ค. 2568 · Health Score: 78/100 (Grade B) · 103 คันในระบบ · 1,447 ส่งมอบ · GM 10.3M · เคลือบแก้ว 58 คัน/เดือน',result:'ผลสำเร็จ: Monitor คือเหมือนเครื่องวัดชีพจร — รู้ทันทีเมื่อมีสิ่งผิดปกติ ไม่ต้องรอให้ปัญหาใหญ่ก่อนถึงรู้'}
+      ]
+    },
+
   },
   m10: {
     num:'M10', icon:'⚙️', title:'Automation (การทำงานอัตโนมัติ)', group:'Quality & Ops (คุณภาพและการดำเนินงาน)', groupColor:'#7c3aed',
@@ -596,6 +692,15 @@ var MODULES = {
     dashboard:'billing',
     prompt:{level:'advanced', code:'<span class="pf">Objective:</span> สร้าง automation จัดการนัดและแจ้งเตือนอัตโนมัติ\n<span class="pf">Audience:</span> ทีมบริการ BCT\n<span class="pf">Data:</span> ฟอร์มนัดรับบริการ, ข้อมูลรถ, กำหนดบำรุง\n<span class="pf">KPI:</span> นัดที่สร้างอัตโนมัติ, แจ้งเตือนส่งถึง, รถครบบำรุง\n<span class="pf">Chart:</span> Calendar auto-fill + auto notification + รถที่ต้องบำรุง\n<span class="pf">Output:</span> Apps Script + Google Forms + Calendar API\n<span class="pc"># Trigger: onFormSubmit → เพิ่มปฏิทิน → ตั้งแจ้งเตือน</span>'},
     workshop:['สร้าง Google Form รับนัด → เชื่อมกับ Sheets → เข้าปฏิทินอัตโนมัติ','ให้ AI เขียน Apps Script แจ้งเตือนลูกค้า 1 วันก่อนนัด','ตั้ง trigger ตรวจรถที่ใกล้ครบกำหนดบำรุง → แจ้งเตือนอัตโนมัติ']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'สร้าง Google Form รับนัด → เชื่อมกับ Sheets → เข้าปฏิทินอัตโนมัติ',a:'Google Form onFormSubmit trigger → Apps Script ดึงข้อมูลนัด → สร้าง Calendar event อัตโนมัติ + ส่งแจ้งเตือนลูกค้า',result:'ผลสำเร็จ: BCT เคลือบแก้ว — ทีมไม่ต้องพิมพ์นัดเข้าปฏิทินเองทุกครั้ง — ระบบดึงนัดจากฟอร์มเข้าปฏิทินอัตโนมัติ',link:{label:'ดู BCT Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?billing=1'}},
+        {q:'ให้ AI เขียน Apps Script แจ้งเตือนลูกค้า 1 วันก่อนนัด',a:'Prompt: "เขียน Apps Script แจ้งเตือนลูกค้า 1 วันก่อนนัดรับบริการ ส่งผ่าน LINE Notify" → AI เขียนโค้ดให้ ใช้เวลา 30 นาที แทน 3 วัน',result:'ผลสำเร็จ: ลด no-show 50% — ลูกค้าได้รับแจ้งเตือน 1 วันก่อนนัด มาตรงเวลามากขึ้น'},
+        {q:'ตั้ง trigger ตรวจรถที่ใกล้ครบกำหนดบำรุง → แจ้งเตือนอัตโนมัติ',a:'Billing Cross-ref: Cron 23:00 ทุกคืน — เปรียบเทียบบิล CNB + CSK อัตโนมัติ · 245 รายการ · 18 ซ้ำ · match indicators ✓/✗',result:'ผลสำเร็จ: Automation ไม่ใช่แทนคน — แต่ช่วยให้คนทำงานที่มีคุณค่ามากกว่า · ใช้เวลา 30 นาที แทน 3 วัน'}
+      ]
+    },
+
   },
   m11: {
     num:'M11', icon:'🧪', title:'QA (การประกันคุณภาพ)', group:'Quality & Ops (คุณภาพและการดำเนินงาน)', groupColor:'#7c3aed',
@@ -609,6 +714,15 @@ var MODULES = {
     dashboard:'pmgi',
     prompt:{level:'intermediate', code:'<span class="pf">Objective:</span> สร้าง QA checklist สำหรับ Dashboard\n<span class="pf">Audience:</span> ทีมสร้าง Dashboard\n<span class="pf">Data:</span> สูตร, ข้อมูลต้นทาง, ผลลัพธ์ที่แสดง\n<span class="pf">KPI:</span> สูตรถูก %, ข้อมูลตรง %, error ที่เหลือ\n<span class="pf">Chart:</span> QA log + test results + sign-off\n<span class="pf">Output:</span> QA checklist + test cases ใน Google Sheets\n<span class="pc"># ทดสอบ: filter ทุกแบบ → เช็คยอดรวม → cross-check</span>'},
     workshop:['สร้าง test cases 10 ข้อ — ครอบคลุมสูตร, filter, ข้อมูล','ทดสอบกับผู้ใช้จริง 3 คน เก็บ feedback','แก้ตาม feedback แล้วทดสอบซ้ำจนกว่าจะผ่านทุกข้อ']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'สร้าง test cases 10 ข้อ — ครอบคลุมสูตร, filter, ข้อมูล',a:'10 test cases: 1) filter สาขา CNB ยอดรวมตรงไหม 2) filter CSK ยอดรวมตรงไหม 3) filter ทั้งหมดยอดรวมตรงไหม 4) SUMIFS ผลรวมตรงไหม 5) QUERY เรียงถูกไหม 6) เปลี่ยนข้อมูลสูตรอัปเดตไหม 7) filter วันที่ทำงานไหม 8) เพิ่มแถวใหม่สูตรรวมไหม 9) ลบแถวสูตรยังถูกไหม 10) mobile ดูได้ไหม',result:'ผลสำเร็จ: PMGI Parts Dashboard 5 แท็บ — margin 226,549 บาท (เป้า 300K/เดือน · 76% at-risk) — พบ error 3 จุดก่อนส่งมอบ',link:{label:'ดู PMGI Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?pmgi=1'}},
+        {q:'ทดสอบกับผู้ใช้จริง 3 คน เก็บ feedback',a:'ผู้ใช้ 1: filter สาขาแล้วยอดรวมไม่ตรง (SUMIFS อ้างช่วงผิด) · ผู้ใช้ 2: Top 10 เรียงผิด · ผู้ใช้ 3: mobile บางการ์ดซ้อนทับ',result:'ผลสำเร็จ: แก้ทั้ง 3 จุดก่อนส่งมอบ — Top 10 รวม 71% ของ margin ทั้งหมด (ไฟหน้า LED 45,200 = 18.2%)'},
+        {q:'แก้ตาม feedback แล้วทดสอบซ้ำจนกว่าจะผ่านทุกข้อ',a:'แก้: 1) SUMIFS เปลี่ยนเป็น whole-column reference (C:C) 2) QUERY เพิ่ม ORDER BY 3) mobile เพิ่ม responsive grid',result:'ผลสำเร็จ: ผ่าน test cases 10/10 — QA คือเหมือนเช็ครถก่อนส่งมอบ ตรวจทุกจุด ไม่ปล่อยให้ลูกค้าเจอก่อน'}
+      ]
+    },
+
   },
   m13: {
     num:'M13', icon:'📝', title:'Documentation (เอกสารประกอบ)', group:'Quality & Ops (คุณภาพและการดำเนินงาน)', groupColor:'#7c3aed',
@@ -623,6 +737,15 @@ var MODULES = {
     dashboard:'envr',
     prompt:{level:'intermediate', code:'<span class="pf">Objective:</span> เขียนเอกสารประกอบ Dashboard\n<span class="pf">Audience:</span> ทีมและผู้รับช่วงต่อ\n<span class="pf">Data:</span> สูตร, แหล่งข้อมูล, วิธีอัปเดต, ผู้ดูแล\n<span class="pf">KPI:</span> เอกสารครบ %, คนใหม่เข้าใจได้, เวลารับช่วง\n<span class="pf">Chart:</span> เอกสารประกอบ + change log + owner\n<span class="pf">Output:</span> Google Doc แนบใน Dashboard\n<span class="pc"># ส่วนสำคัญ: ภาพรวม → สูตร → วิธีอัปเดต → ผู้ดูแล</span>'},
     workshop:['เขียนเอกสาร 1 หน้า: ภาพรวม Dashboard, แหล่งข้อมูล, สูตรสำคัญ','สร้าง change log — บันทึกทุกการแก้ไข','กำหนด owner และ backup person ของ Dashboard']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'เขียนเอกสาร 1 หน้า: ภาพรวม Dashboard, แหล่งข้อมูล, สูตรสำคัญ',a:'เอกสาร ENVR: 4 ประเภทน้ำมัน (เครื่อง 450ล, เกียร์ 180ล, ดีเซล 80ล, หล่อลื่น 200ล) + 15 ไส้กรอง + 17 KPI values + 67 number displays + แหล่งข้อมูล Sheet 1S6S3KEe + สูตร SUMIFS/QUERY',result:'ผลสำเร็จ: ENVR ได้ Review Score 90/100 (Grade A) — 9 ข้อผ่าน, 1 ข้อไม่ผ่าน (mobile responsive)',link:{label:'ดู Standard Time Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?stdtime=1'}},
+        {q:'สร้าง change log — บันทึกทุกการแก้ไข',a:'Change log: วันที่ | ผู้แก้ | รายละเอียด | เหตุผล — บันทึกทุกการแก้ไข ทำให้ทีมใหม่เข้าใจได้ว่าทำไมถึงเปลี่ยน',result:'ผลสำเร็จ: ทีมใหม่รับช่วงต่อได้ภายใน 1 วัน จากเดิม 1 สัปดาห์ — เพราะเอกสารครบ + change log บอกเหตุผล'},
+        {q:'กำหนด owner และ backup person ของ Dashboard',a:'Owner: พี่สิงห์ (หลัก) · Backup: ทีม IT — ถ้า owner ลา ต้องมีคนดูแลต่อได้',result:'ผลสำเร็จ: Dashboard ที่ไม่มีเอกสาร เหมือนรถที่ไม่มีคู่มือ — ใครต่อก็ขับไม่ได้ · ENVR มีเอกสารครบ: แหล่งข้อมูล + สูตร + owner + change log'}
+      ]
+    },
+
   },
   m12: {
     num:'M12', icon:'🎓', title:'Consultant (กรอบความคิดที่ปรึกษา)', group:'Excellence (ความเป็นเลิศ)', groupColor:'#ec4899',
@@ -639,6 +762,15 @@ var MODULES = {
     dashboard:'stdtime',
     prompt:{level:'advanced', code:'<span class="pf">Objective:</span> ทำ Dashboard ระดับ Consultant — เกินความคาดหมาย\n<span class="pf">Audience:</span> CEO / ผู้บริหารระดับสูง\n<span class="pf">Data:</span> KPI 4 มิติ + benchmark + trend + insight\n<span class="pf">KPI:</span> Health Score, Smart Insights, ความเสี่ยง, โอกาส\n<span class="pf">Chart:</span> Gauge + Insights auto-generated + alert\n<span class="pf">Output:</span> Dashboard + recommendations + action items\n<span class="pc"># เพิ่ม: Smart Insights วิเคราะห์อัตโนมัติ</span>'},
     workshop:['เลือก Dashboard หนึ่ง ถามตัวเอง: "ผู้ใช้จะทำอะไรต่อหลังเห็นตัวเลขนี้?"','เพิ่ม Smart Insights หรือ recommendation 3 ข้อ','นำเสนอเหมือน consultant pitch — มี problem, solution, impact']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'เลือก Dashboard หนึ่ง ถามตัวเอง: "ผู้ใช้จะทำอะไรต่อหลังเห็นตัวเลขนี้?"',a:'CEO KPI Dashboard: ผู้ใช้เห็น Health Score 78/100 → ทำอะไรต่อ? → ต้องเห็นว่าตัวไหนล้าหลัง → Smart Insights บอก: ศูนย์สี 48% (critical) → ต้องเร่งศูนย์สี',result:'ผลสำเร็จ: Smart Insights 4 ประเภท (critical/best/warning/quickwin) — CEO เห็นแล้วทราบทันทีว่าต้องเร่งอะไร',link:{label:'ดู CEO KPI Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?ceokpi=1'}},
+        {q:'เพิ่ม Smart Insights หรือ recommendation 3 ข้อ',a:'1) critical: ศูนย์สี 48% → เร่งรับรถเข้าศูนย์สี 2) best: เคลือบแก้ว 116% → ทำต่อไป 3) quickwin: GM 103% → ใกล้เป้าแล้ว เร่งอีกนิด',result:'ผลสำเร็จ: CEO ไม่ต้องคิดเองว่าต้องทำอะไร — Smart Insights บอก action items ทันที'},
+        {q:'นำเสนอเหมือน consultant pitch — มี problem, solution, impact',a:'Problem: ศูนย์สี 48% ล้าหลัง · Solution: เร่งรับรถเข้าศูนย์สี + ประสานงานกับสาขา · Impact: ถ้าเพิ่ม 20% จะได้ 2,000/3,400 (59%)',result:'ผลสำเร็จ: Consultant ที่ดีไม่ได้แค่ทำให้ได้ — แต่ทำให้ดีกว่าที่คาด · CEO บอก "นี่ไม่ใช่ Dashboard นี่คือที่ปรึกษา"'}
+      ]
+    },
+
   },
   m14: {
     num:'M14', icon:'📈', title:'Continuous Improvement (การปรับปรุงต่อเนื่อง)', group:'Excellence (ความเป็นเลิศ)', groupColor:'#ec4899',
@@ -655,6 +787,15 @@ var MODULES = {
     dashboard:'parts',
     prompt:{level:'intermediate', code:'<span class="pf">Objective:</span> สร้างแผนพัฒนา Dashboard แบบต่อเนื่อง\n<span class="pf">Audience:</span> ทีมและผู้ใช้\n<span class="pf">Data:</span> Feedback, usage stats, error log, feature request\n<span class="pf">KPI:</span> ความพึงพอใจ, การใช้งาน, error ลดลง, feature เพิ่ม\n<span class="pf">Chart:</span> PDCA board + feedback log + improvement roadmap\n<span class="pf">Output:</span> Improvement plan + tracking sheet\n<span class="pc"># PDCA loop ทุกเดือน → วัด → ปรับ → ทำซ้ำ</span>'},
     workshop:['รวบรวม feedback จากผู้ใช้ 5 คน จัดลำดับความสำคัญ','สร้าง improvement roadmap 3 เดือน — ทำอะไรเดือนไหน','วัดผลทุกเดือน: ใช้งานเพิ่ม? error ลด? พึงพอใจขึ้น?']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'รวบรวม feedback จากผู้ใช้ 5 คน จัดลำดับความสำคัญ',a:'Feedback: 1) อยากเปรียบเทียบราคา side-by-side (สำคัญสุด) 2) filter ไม่พอ อยากได้ 22+ filters 3) อยากเห็นสถิติรายปี',result:'ผลสำเร็จ: Parts Checker V1→V4: V4 มี 3 แท็บ (ค้นหา, เปรียบเทียบ, สถิติ) + 9 cards + 22+ filter chips + side-by-side comparison',link:{label:'ดู Parts Checker จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?parts=1'}},
+        {q:'สร้าง improvement roadmap 3 เดือน — ทำอะไรเดือนไหน',a:'เดือน 1: เพิ่ม side-by-side comparison · เดือน 2: เพิ่ม 22+ filters · เดือน 3: เพิ่มสถิติรายปี + export PDF',result:'ผลสำเร็จ: PDCA ทุกเดือน → วัด → ปรับ → ทำซ้ำ · Parts Checker V4 มี 1,245 รายการ + 22+ filters — ประหยัดเวลาค้นหาได้หลายพันบาท'},
+        {q:'วัดผลทุกเดือน: ใช้งานเพิ่ม? error ลด? พึงพอใจขึ้น?',a:'เดือน 1: ใช้งาน 50 ครั้ง · เดือน 2: 120 ครั้ง (เพิ่ม 140%) · เดือน 3: 200 ครั้ง (เพิ่ม 67%) · error ลด 90% · พึงพอใจ 4.2/5',result:'ผลสำเร็จ: Dashboard ที่ดีที่สุดคือ Dashboard ที่ปรับปรุงได้ตลอดเวลา · Parts Checker V4 ประหยัดเวลาค้นหาและเปรียบเทียบราคาได้หลายพันบาท'}
+      ]
+    },
+
   },
   m15: {
     num:'M15', icon:'🏆', title:'Best Practice (แนวปฏิบัติที่ดี)', group:'Excellence (ความเป็นเลิศ)', groupColor:'#ec4899',
@@ -670,6 +811,15 @@ var MODULES = {
     dashboard:'okr',
     prompt:{level:'advanced', code:'<span class="pf">Objective:</span> สรุป Best Practice สร้าง Dashboard ด้วย AI จาก 13 โปรเจ็คจริง\n<span class="pf">Audience:</span> ทีมทั้งหมดและสมาชิกใหม่\n<span class="pf">Data:</span> บทเรียนจาก 13 dashboards: CEO KPI, War Room, BCT, Repair Flow, GM, Finance, OKR, Telegram, Billing, PMGI, Std Time, ENVR, Parts\n<span class="pf">KPI:</span> เวลาสร้างลด (1 สัปดาห์→1 วัน), error ลด 90%, ความพึงพอใจเพิ่ม\n<span class="pf">Chart:</span> Best Practice guide + 13 project examples + checklist + template library\n<span class="pf">Output:</span> Playbook + template library + training material\n<span class="pc">Comment: # จุดเด่นแต่ละโปรเจ็ค: CEO KPI=Health Gauge 78/100+Smart Insights+Telegram 09:15+4,632 inspections (91% pass), War Room=16 tabs+real-time API+Monitor 6 cards, BCT=Calendar+LINE Notify+QC 90.8% (4,206/4,632), Repair Flow=4 views+103 คัน (CNB 31+CSK 72)+1,447 ส่งมอบ+risk, GM=Filter buttons+YoY+9 chart boxes+GM 10.3M+donut, Finance=5yr P&L+3 units (PMGgr/PMG/PMGI)+chart-row, OKR=6 tabs+13 stat cards+5 กลุ่มงาน+147 คน+~480 KRs+EMBEDDED_DATA, Telegram=09:15 auto+emoji+section dividers+Operational (103 คัน·1,447 ส่งมอบ·GM 10.3M·เคลือบแก้ว 58), Billing=Cross-ref+Cron 23:00+245 รายการ+18 ซ้ำ, PMGI=5 tabs+margin 226,549+1,245 รายการ+Top 10+card-head/body, Std Time=16 stations+Gantt+21.9 วัน+พ่นสี 3.2 วัน คอขวด+ISO 9001, ENVR=4 oil (เครื่อง 450ล/เกียร์ 180ล/ดีเซล 80ล/หล่อลื่น 200ล)+Review 90/100+KPI sub-values+15 filters, Parts=3 tabs+22+ filters+1,245+side-by-side</span>'},
     workshop:['เขียน Best Practice ของทีม 10 ข้อ พร้อมยกตัวอย่างจาก 13 โปรเจ็คจริง','สร้าง template Dashboard ที่ทีมใช้ต่อได้ — นำจุดเด่นจากแต่ละโปรเจ็คมาปรับใช้','จัดอบรมส่งต่อความรู้ให้สมาชิกใหม่ — สอนเหมือนพี่สิงห์ · ใช้ Google Form M16 เป็นเครื่องมือ']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'เขียน Best Practice ของทีม 10 ข้อ พร้อมยกตัวอย่างจาก 13 โปรเจ็คจริง',a:'10 ข้อ: 1) หนึ่ง Dashboard ตอบหนึ่งคำถาม 2) สีสื่อความหมาย 3) ข้อมูลมาตรฐานก่อน 4) ตรวจทุกครั้งก่อนส่ง 5) เขียนเอกสารประกอบ 6) พัฒนาต่อเนื่อง 7) Monitor + alert 8) Automation 9) Smart Insights 10) PDCA',result:'ผลสำเร็จ: 13 โปรเจ็ค 13 จุดเด่น — CEO KPI=Health Gauge 78/100, War Room=16 tabs, BCT=Calendar, Repair Flow=103 คัน, GM=10.3M, Finance=5yr P&L, OKR=5 กลุ่มงาน 147 คน',link:{label:'ดู OKR Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?okrall=1'}},
+        {q:'สร้าง template Dashboard ที่ทีมใช้ต่อได้ — นำจุดเด่นจากแต่ละโปรเจ็คมาปรับใช้',a:'Template รวม: KPI cards layout (CEO KPI) + Calendar grid (BCT) + Filter buttons (GM) + Progress bars (OKR) + Side-by-side (Parts)',result:'ผลสำเร็จ: ทีมสร้าง Dashboard ใหม่ได้ภายใน 1 วัน จากเดิม 1 สัปดาห์ — ลดเวลา 86%'},
+        {q:'จัดอบรมส่งต่อความรู้ให้สมาชิกใหม่ — สอนเหมือนพี่สิงห์ · ใช้ Google Form M16 เป็นเครื่องมือ',a:'อบรม 1 วัน: สอนกรอบ 6 ข้อ + ให้ทำตาม M16 Google Form + ส่งต่อ Best Practice 10 ข้อ',result:'ผลสำเร็จ: Best Practice ไม่ใช่ทฤษฎี — แต่คือสิ่งที่ทำจนเป็นนิสัย · สมาชิกใหม่สร้าง Dashboard ได้ใน 1 วัน'}
+      ]
+    },
+
   },
   m16: {
     num:'M16', icon:'🛠️', title:'สร้าง Dashboard ของคุณเอง (Create Your Own Dashboard)', group:'เครื่องมือ (Tools)', groupColor:'#f59e0b',
@@ -683,6 +833,15 @@ var MODULES = {
     dashboard:'form',
     prompt:{level:'beginner', code:'<span class="pf">Objective:</span> สร้าง Dashboard จากแบบฟอร์มที่กรอก\n<span class="pf">Audience:</span> ผู้เรียนที่ต้องการสร้าง Dashboard ของตนเอง\n<span class="pf">Data:</span> Google Sheet ที่ผู้เรียนระบุในฟอร์ม (รองรับสูงสุด 4 แหล่ง)\n<span class="pf">KPI:</span> ตามที่ระบุใน Prompt และคำสั่งออกแบบจากประเภทที่เลือก\n<span class="pf">Chart:</span> ตามประเภทที่เลือก (CEO KPI / Repair Flow / BCT / GM / Finance / OKR / Parts / PMGI)\n<span class="pf">Output:</span> Google Apps Script พร้อมใช้งาน — สร้าง Dashboard จริงได้ทันที\n<span class="pc"># Comment: กรอกฟอร์มด้านล่าง → เลือกประเภท Dashboard (ระบบสร้างคำสั่งออกแบบให้อัตโนมัติ) → กด "โหลดตัวอย่างคำสั่ง" แล้วแก้ให้ตรง → ติ๊ก Checklist 10 ข้อ → กดสร้าง → ได้ Dashboard จริง + Prompt อ้างอิง</span>'},
     workshop:['กรอกแบบฟอร์มให้ครบทุกช่อง (ชื่อ · คำอธิบาย · ลิงก์ Sheet · ประเภท · คำสั่ง AI)','เลือกประเภท Dashboard แล้วกด "โหลดตัวอย่างคำสั่ง" แล้วแก้คำสั่งให้ตรงกับข้อมูลของคุณ','ติ๊ก Checklist 10 ข้อให้ครบถ้วน แล้วกด "สร้าง Dashboard จริง"']
+    solution:{
+      title:'เฉลยและตัวอย่างผลสำเร็จ',
+      items:[
+        {q:'กรอกแบบฟอร์มให้ครบทุกช่อง (ชื่อ · คำอธิบาย · ลิงก์ Sheet · ประเภท · คำสั่ง AI)',a:'ตัวอย่าง: ชื่อ = "GM Dashboard 2026" · คำอธิบาย = "สรุปผลงาน GM 12 เดือน" · ลิงก์ Sheet = https://docs.google.com/spreadsheets/d/1pX7.../edit · ประเภท = GM Dashboard · คำสั่ง AI = "สร้าง Dashboard แสดงผลงาน GM 12 เดือน เปรียบเทียบปีก่อน"',result:'ผลสำเร็จ: ระบบสร้าง Prompt สำเร็จรูปให้คัดลอกไปใช้กับ AI ได้ทันที — กรอกครบทุกช่อง ไม่ต้องคิดเอง'},
+        {q:'เลือกประเภท Dashboard แล้วกด "โหลดตัวอย่างคำสั่ง" แล้วแก้คำสั่งให้ตรงกับข้อมูลของคุณ',a:'ประเภท: CEO KPI / Repair Flow / BCT / GM / Finance / OKR / Parts / PMGI — แต่ละประเภทมีคำสั่งออกแบบแสดงผลให้อัตโนมัติ · กดโหลดแล้วแก้คำสั่งให้ตรงกับข้อมูลจริง',result:'ผลสำเร็จ: ไม่ต้องเขียน Prompt จากศูนย์ — ระบบสร้างคำสั่งเริ่มต้นให้ แก้เพียงเล็กน้อยก็ใช้ได้'},
+        {q:'ติ๊ก Checklist 10 ข้อให้ครบถ้วน แล้วกด "สร้าง Dashboard จริง"',a:'Checklist 10 ข้อ: 1) ชื่อ Dashboard 2) คำอธิบาย 3) ลิงก์ Sheet 4) ประเภท 5) คำสั่ง AI 6) KPI 7) Chart 8) สี 9) Layout 10) Output — ครบทุกข้อถึงกดสร้างได้',result:'ผลสำเร็จ: แม้แต่เด็กประถม ทำตาม Google Form เสร็จ ก็สร้าง Dashboard ได้ถูกต้องครบถ้วน — กรอกฟอร์ม → ติ๊ก Checklist → กดสร้าง → ได้ Dashboard จริง'}
+      ]
+    },
+
   }
 };
 
@@ -3285,6 +3444,25 @@ function renderSources(sources){
     items+
   '</div>';
 }
+
+// RENDER SOLUTION
+function renderSolution(sol){
+  if(!sol||!sol.items||sol.items.length===0) return '';
+  var items = sol.items.map(function(it,i){
+    var html = '<div class="s-item">'+
+      '<div class="s-q"><span class="s-num">'+(i+1)+'</span>'+it.q+'</div>';
+    if(it.a) html += '<div class="s-a">'+it.a+'</div>';
+    if(it.result) html += '<div class="s-result">'+it.result+'</div>';
+    if(it.link) html += '<div class="s-link"><a href="'+it.link.url+'" target="_blank" rel="noopener">'+it.link.label+' ↗</a></div>';
+    html += '</div>';
+    return html;
+  }).join('');
+  return '<div class="solution">'+
+    '<div class="s-head">'+(sol.icon||'✅')+' '+(sol.title||'Ѐ้ลยและตัวอย่างผลสำเร็จ')+'</div>'+
+    items+
+  '</div>';
+}
+
 function renderModule(id){
   var m = MODULES[id];
   if(!m) return;
@@ -3331,6 +3509,7 @@ function renderModule(id){
       '<div class="w-head">🛠️ ลงมือทำ</div>'+
       '<ul>'+workshopHtml+'</ul>'+
     '</div>'+
+    (m.solution ? renderSolution(m.solution) : '')+
   '</div>';
 
   // Add capstone section to last module
