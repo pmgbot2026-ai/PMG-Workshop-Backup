@@ -12374,6 +12374,11 @@ function matchKR_(krText, gmData, pmgiData, warroomData, cbnpData, warroom2Data)
     sourceDetail: ''
   };
 
+  // Skip §SUBCAT markers (e.g. §SUBCAT:Financial Target, §SUBCAT:Market Expansion)
+  if (krText.indexOf('§SUBCAT:') === 0) {
+    return { krText: krText, currentValue: null, targetValue: null, status: 'skip', progressPct: 0, source: '—', sourceUrl: '', sourceDetail: '' };
+  }
+
   // Skip non-KR text (team names, labels)
   var skipPatterns = ['ทีมรับใช้', 'ทีมศูนย์ซ่อม', 'ผู้เกี่ยวข้อง', 'ทีมงาน'];
   for (var sp = 0; sp < skipPatterns.length; sp++) {
@@ -12541,9 +12546,31 @@ function matchKR_(krText, gmData, pmgiData, warroomData, cbnpData, warroom2Data)
     return { krText: krText, currentValue: null, targetValue: Math.round(target), status: 'no-data', progressPct: 0, source: 'ต้องดึงจาก BCT Dashboard', sourceUrl: '', sourceDetail: '' };
   }
 
-  // ── KR: เคลือบแก้ว → War Room BCT (no direct data yet) ──
+  // ── KR: เคลือบแก้ว → War Room monitor.glassCoat.gmTotal.monthly (รถเคลือบแก้ว/เดือน) ──
   if (krText.indexOf('เคลือบแก้ว') >= 0) {
-    return { krText: krText, currentValue: null, targetValue: Math.round(target), status: 'no-data', progressPct: 0, source: 'ต้องดึงจาก BCT Dashboard', sourceUrl: '', sourceDetail: 'BCT Sheet — ค่าเคลือบแก้ว ยังไม่มี field แยก' };
+    if (warroomData && warroomData.monitor && warroomData.monitor.glassCoat && warroomData.monitor.glassCoat.gmTotal) {
+      var gcMonthly = warroomData.monitor.glassCoat.gmTotal.monthly || [];
+      var gcSum = 0, gcCount = 0;
+      for (var gci = 0; gci < Math.min(6, gcMonthly.length); gci++) {
+        var gcVal = gcMonthly[gci];
+        if (gcVal !== null && gcVal > 0) { gcSum += gcVal; gcCount++; }
+      }
+      // gcMonthly[0] = 397 (รวมปีก่อน), gcMonthly[1..6] = 32,38,34,39,92,115 (ม.ค.-มิ.ย.)
+      // คำนวณเฉลี่ยเดือน ม.ค.-มิ.ย. (index 1-6)
+      var gcMonthlySum = 0, gcMonthlyCount = 0;
+      for (var gci2 = 1; gci2 <= 6 && gci2 < gcMonthly.length; gci2++) {
+        var gcVal2 = gcMonthly[gci2];
+        if (gcVal2 !== null && gcVal2 > 0) { gcMonthlySum += gcVal2; gcMonthlyCount++; }
+      }
+      var gcAvg = gcMonthlyCount > 0 ? Math.round(gcMonthlySum / gcMonthlyCount) : 0;
+      if (gcAvg > 0) {
+        var stGC = computeStatus_(gcAvg, target);
+        return { krText: krText, currentValue: gcAvg, targetValue: Math.round(target), status: stGC.status, progressPct: stGC.progressPct,
+          source: 'War Room — เคลือบแก้ว (monitor.glassCoat)', sourceUrl: WARROOM_URL,
+          sourceDetail: 'เฉลี่ย ม.ค.-มิ.ย. = (32+38+34+39+92+115) ÷ 6 = ' + gcAvg + ' คัน/เดือน · เป้า ' + Math.round(target) + ' คัน/เดือน · ' + stGC.progressPct + '%' };
+      }
+    }
+    return { krText: krText, currentValue: null, targetValue: Math.round(target), status: 'no-data', progressPct: 0, source: 'War Room — เคลือบแก้ว', sourceUrl: WARROOM_URL, sourceDetail: 'ยังไม่สามารถดึงข้อมูลได้' };
   }
 
   // ── KR 7: เบี้ยซ่อมอู่ → War Room smix.categories — find 'เบี้ยอู่(คัน)' and use y2026 value ──
