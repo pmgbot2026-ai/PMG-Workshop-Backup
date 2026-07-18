@@ -843,6 +843,7 @@
         <div class="last-update" id="lastUpdate">กำลังโหลดข้อมูล...</div>
         <button class="refresh-btn" onclick="refreshData()">🔄 รีเฟรช</button>
         <button class="refresh-btn" id="editToggleBtn" onclick="toggleEditMode()" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.25)">✏️ แก้ไข</button>
+        <button class="refresh-btn" onclick="showChangeLog()" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.25)">📝 Change Log (บันทึกการเปลี่ยนแปลง)</button>
       </div>
     </div>
   </div>
@@ -3699,6 +3700,94 @@ function addKR(type) {
       showEditStatus('❌ ข้อผิดพลาด: ' + (err && err.message ? err.message : String(err)), true);
     })
     .gsSaveAddKR(payload);
+}
+
+/* ── Change Log Modal (5W1H) ── */
+function showChangeLog() {
+  var deptNames = ['PMG/PMGI', 'PMS ช่าง 4 สาขา', 'PMS ขาย', 'PMS ศูนย์บริการ', 'PMS/PMG Backoffice'];
+  var pending = deptNames.length;
+  var allEntries = [];
+
+  deptNames.forEach(function(dn) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success && res.entries) {
+          res.entries.forEach(function(e) {
+            allEntries.push({ dept: dn, when: e.when, who: e.who, what: e.what, where: e.where, why: e.why, how: e.how });
+          });
+        }
+        pending--;
+        if (pending === 0) renderChangeLogModal(allEntries);
+      })
+      .withFailureHandler(function(err) {
+        pending--;
+        if (pending === 0) renderChangeLogModal(allEntries);
+      })
+      .gsGetOKRChangeLog(dn);
+  });
+}
+
+function renderChangeLogModal(entries) {
+  // Remove existing modal
+  var old = document.getElementById('changelogModal');
+  if (old) old.remove();
+
+  entries.sort(function(a, b) {
+    var da = new Date(a.when).getTime() || 0;
+    var db = new Date(b.when).getTime() || 0;
+    return db - da;
+  });
+
+  var rowsHtml = '';
+  if (entries.length === 0) {
+    rowsHtml = '<div style="padding:30px;text-align:center;color:#94a3b8;font-size:14px">ยังไม่มีบันทึกการเปลี่ยนแปลง — เมื่อมีการแก้ไข KR หรือเพิ่มแท็บใหม่ ระบบจะบันทึกอัตโนมัติ</div>';
+  } else {
+    entries.forEach(function(e) {
+      var d = e.when ? new Date(e.when) : null;
+      var dateStr = d ? d.toLocaleString('th-TH') : String(e.when || '');
+      var whatColor = e.what && e.what.indexOf('เพิ่ม') >= 0 ? '#10b981' : e.what && e.what.indexOf('ลบ') >= 0 ? '#ef4444' : e.what && e.what.indexOf('Error') >= 0 ? '#dc2626' : '#f59e0b';
+      rowsHtml += '<tr style="border-bottom:1px solid #e2e8f0">' +
+        '<td style="padding:8px 10px;font-size:12px;color:#64748b;white-space:nowrap">' + esc(dateStr) + '</td>' +
+        '<td style="padding:8px 10px;font-size:12px;font-weight:600;color:#1e293b">' + esc(e.dept || '') + '</td>' +
+        '<td style="padding:8px 10px;font-size:12px;color:' + whatColor + ';font-weight:700">' + esc(e.what || '') + '</td>' +
+        '<td style="padding:8px 10px;font-size:12px;color:#475569">' + esc(e.where || '') + '</td>' +
+        '<td style="padding:8px 10px;font-size:12px;color:#475569">' + esc(e.who || '') + '</td>' +
+        '<td style="padding:8px 10px;font-size:12px;color:#94a3b8;max-width:300px">' + esc(e.why || '') + '</td>' +
+        '<td style="padding:8px 10px;font-size:12px;color:#94a3b8;max-width:200px">' + esc(e.how || '') + '</td>' +
+      '</tr>';
+    });
+  }
+
+  var modal = document.createElement('div');
+  modal.id = 'changelogModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.onclick = function(ev) { if (ev.target === modal) modal.remove(); };
+
+  modal.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:1100px;width:100%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3)">' +
+    '<div style="background:#0f172a;color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between">' +
+      '<div style="font-size:18px;font-weight:700">📝 Change Log (บันทึกการเปลี่ยนแปลง — 5W1H)</div>' +
+      '<button onclick="document.getElementById(\'changelogModal\').remove()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px">\u00d7</button>' +
+    '</div>' +
+    '<div style="padding:12px 24px;background:#f1f5f9;font-size:12px;color:#64748b">รวมทั้งหมด <b>' + entries.length + '</b> รายการ — เรียงจากใหม่ล่าสุด</div>' +
+    '<div style="overflow:auto;flex:1">' +
+      '<table style="width:100%;border-collapse:collapse">' +
+        '<thead style="position:sticky;top:0;background:#f8fafc;z-index:1">' +
+          '<tr>' +
+            '<th style="padding:10px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">When (เมื่อไหร่)</th>' +
+            '<th style="padding:10px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">Dept (กลุ่มงาน)</th>' +
+            '<th style="padding:10px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">What (อะไร)</th>' +
+            '<th style="padding:10px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">Where (ที่ไหน)</th>' +
+            '<th style="padding:10px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">Who (ใคร)</th>' +
+            '<th style="padding:10px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">Why (ทำไม)</th>' +
+            '<th style="padding:10px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">How (อย่างไร)</th>' +
+          '</tr>' +
+        '</thead>' +
+        '<tbody>' + rowsHtml + '</tbody>' +
+      '</table>' +
+    '</div>' +
+  '</div>';
+
+  document.body.appendChild(modal);
 }
 
 /* ── Start ── */

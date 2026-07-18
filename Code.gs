@@ -745,6 +745,19 @@ function doGet(e) {
   
   if (p.okrall === '1') {
     // ═══ Multi-Department OKR Dashboard (5 departments) ═══
+    if (p.action === 'setupTrigger') {
+      var triggerResult = setupOKRAutoRefreshTrigger();
+      return ContentService.createTextOutput(JSON.stringify(triggerResult)).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (p.action === 'manualRefresh') {
+      var refreshResult = okrAutoRefresh();
+      return ContentService.createTextOutput(JSON.stringify({success:true, entries: refreshResult.entries})).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (p.action === 'changelog') {
+      var deptName = p.dept || '';
+      var logResult = gsGetOKRChangeLog(deptName);
+      return ContentService.createTextOutput(JSON.stringify(logResult)).setMimeType(ContentService.MimeType.JSON);
+    }
     if (p.view === 'data') {
       var allData = getMultiOKRData_();
       return ContentService.createTextOutput(JSON.stringify(allData)).setMimeType(ContentService.MimeType.JSON);
@@ -10639,6 +10652,10 @@ function saveEditKR_(p) {
   
   if (!found) return { success: false, error: 'KR not found in sheet: ' + p.oldKR.substring(0, 50) };
   
+  // Log change (5W1H)
+  var ssid2 = p.ssid || OKR_SS_ID;
+  logOKRChange_(ssid2, 'ผู้ใช้ (ผ่าน Dashboard)', 'แก้ไข KR', p.sheetName, 'เปลี่ยนจาก: ' + p.oldKR.substring(0, 80), 'แก้ไขเป็น: ' + p.newKR.substring(0, 80));
+  
   // Clear cache so next read gets fresh data
   clearOKRCache_();
   
@@ -10675,6 +10692,10 @@ function saveDeleteKR_(p) {
   }
   
   if (!found) return { success: false, error: 'KR not found in sheet' };
+  
+  // Log change (5W1H)
+  var ssid3 = p.ssid || OKR_SS_ID;
+  logOKRChange_(ssid3, 'ผู้ใช้ (ผ่าน Dashboard)', 'ลบ KR', p.sheetName, 'ลบ KR: ' + p.krText.substring(0, 80), 'ลบผ่านหน้า Dashboard');
   
   clearOKRCache_();
   
@@ -10767,6 +10788,9 @@ function saveAddKR_(p) {
   
   sheet.getRange(insertRow + 1, krCol + 1).setValue(p.krText);
   
+  // Log change (5W1H)
+  logOKRChange_(ssid, 'ผู้ใช้ (ผ่าน Dashboard)', 'เพิ่ม KR', p.sheetName, 'เพิ่ม KR ใหม่: ' + p.krText.substring(0, 80), 'เพิ่มผ่านหน้า Dashboard ประเภท: ' + (p.growthType || 'Business Growth'));
+  
   clearOKRCache_();
   
   return { success: true, message: 'KR added', sheetName: p.sheetName, krText: p.krText.substring(0, 50), krCol: krCol, insertRow: insertRow };
@@ -10781,6 +10805,183 @@ function clearOKRCache_() {
   for (var i = 0; i < 5; i++) {
     cache.remove(cacheKey + '_chunk' + i);
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   OKR Auto-Refresh + Change Log (5W1H)
+   ═══════════════════════════════════════════════════════════════ */
+
+// Setup time-driven trigger for OKR auto-refresh (every 2 hours)
+function setupOKRAutoRefreshTrigger() {
+  // Remove existing triggers first
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'okrAutoRefresh') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  // Create new trigger — every 2 hours
+  ScriptApp.newTrigger('okrAutoRefresh')
+    .timeBased()
+    .everyHours(2)
+    .create();
+  return { success: true, message: 'OKR auto-refresh trigger created (every 2 hours)' };
+}
+
+// Auto-refresh: reads all OKR sheets, detects new tabs/data, updates cache, logs changes
+function okrAutoRefresh() {
+  var logEntries = [];
+  var prevSnapshot = CacheService.getScriptCache().get('okr_snapshot_v1');
+  var prevTabs = {};
+  if (prevSnapshot) {
+    try { prevTabs = JSON.parse(prevSnapshot); } catch(e) {}
+  }
+
+  var currentTabs = {};
+
+  for (var deptName in OKR_SS_IDS) {
+    var ssid = OKR_SS_IDS[deptName];
+    currentTabs[deptName] = { ssid: ssid, tabs: [] };
+    try {
+      var ss = SpreadsheetApp.openById(ssid);
+      var sheets = ss.getSheets();
+      var tabNames = [];
+      for (var si = 0; si < sheets.length; si++) {
+        var sName = sheets[si].getName();
+        tabNames.push(sName);
+      }
+      currentTabs[deptName].tabs = tabNames;
+
+      // Detect new tabs
+      if (prevTabs[deptName] && prevTabs[deptName].tabs) {
+        for (var ni = 0; ni < tabNames.length; ni++) {
+          if (prevTabs[deptName].tabs.indexOf(tabNames[ni]) < 0) {
+            // New tab found!
+            logEntries.push({
+              when: new Date().toISOString(),
+              who: 'ระบบอัตโนมัติ (Auto-refresh)',
+              what: 'เพิ่มแท็บใหม่',
+              where: deptName + ' → ' + tabNames[ni],
+              why: 'ตรวจพบแท็บใหม่ใน Sheet ต้นทาง',
+              how: 'auto-refresh trigger (every 2h)'
+            });
+          }
+        }
+        // Detect removed tabs
+        for (var ri = 0; ri < prevTabs[deptName].tabs.length; ri++) {
+          if (tabNames.indexOf(prevTabs[deptName].tabs[ri]) < 0) {
+            logEntries.push({
+              when: new Date().toISOString(),
+              who: 'ระบบอัตโนมัติ (Auto-refresh)',
+              what: 'ลบแท็บ',
+              where: deptName + ' → ' + prevTabs[deptName].tabs[ri],
+              why: 'แท็บถูกลบจาก Sheet ต้นทาง',
+              how: 'auto-refresh trigger (every 2h)'
+            });
+          }
+        }
+      } else {
+        // First run — log all existing tabs
+        for (var fi = 0; fi < tabNames.length; fi++) {
+          logEntries.push({
+            when: new Date().toISOString(),
+            who: 'ระบบอัตโนมัติ (Auto-refresh)',
+            what: 'แท็บเริ่มต้น',
+            where: deptName + ' → ' + tabNames[fi],
+            why: 'สแกนครั้งแรก',
+            how: 'auto-refresh initial scan'
+          });
+        }
+      }
+    } catch(e) {
+      logEntries.push({
+        when: new Date().toISOString(),
+        who: 'ระบบอัตโนมัติ (Auto-refresh)',
+        what: 'Error',
+        where: deptName,
+        why: String(e),
+        how: 'auto-refresh error'
+      });
+    }
+  }
+
+  // Save current tab snapshot
+  try {
+    CacheService.getScriptCache().put('okr_snapshot_v1', JSON.stringify(currentTabs), 259200); // 3 days
+  } catch(e) {}
+
+  // Clear OKR data cache so next read gets fresh data
+  clearOKRCache_();
+  // Force read fresh data
+  getMultiOKRData_();
+
+  // Write log entries to ChangeLog in each department's sheet
+  for (var li = 0; li < logEntries.length; li++) {
+    var entry = logEntries[li];
+    var deptParts = entry.where.split(' \u2192 ');
+    var dept = deptParts[0];
+    var ssid = OKR_SS_IDS[dept];
+    if (ssid) {
+      try { writeOKRChangeLog_(ssid, entry); } catch(e) {}
+    }
+  }
+
+  return { success: true, entries: logEntries.length, log: logEntries };
+}
+
+// Write a change log entry to the ChangeLog sheet
+function writeOKRChangeLog_(ssid, entry) {
+  var ss = SpreadsheetApp.openById(ssid);
+  var logSheet = ss.getSheetByName('ChangeLog');
+  if (!logSheet) {
+    logSheet = ss.insertSheet('ChangeLog');
+    logSheet.appendRow(['When (เมื่อไหร่)', 'Who (ใคร)', 'What (อะไร)', 'Where (ที่ไหน)', 'Why (ทำไม)', 'How (อย่างไร)']);
+    logSheet.getRange(1, 1, 1, 6).setFontWeight('bold');
+    logSheet.setFrozenRows(1);
+  }
+  logSheet.appendRow([
+    entry.when,
+    entry.who,
+    entry.what,
+    entry.where,
+    entry.why,
+    entry.how
+  ]);
+}
+
+// Log a manual edit (called from saveEditKR_, saveDeleteKR_, saveAddKR_, savePersonEdit_)
+function logOKRChange_(ssid, who, what, where, why, how) {
+  var entry = {
+    when: new Date().toISOString(),
+    who: who,
+    what: what,
+    where: where,
+    why: why,
+    how: how
+  };
+  try { writeOKRChangeLog_(ssid, entry); } catch(e) {}
+}
+
+// Public wrapper: get change log for a department
+function gsGetOKRChangeLog(deptName) {
+  var ssid = OKR_SS_IDS[deptName];
+  if (!ssid) return { success: false, error: 'Department not found' };
+  var ss = SpreadsheetApp.openById(ssid);
+  var logSheet = ss.getSheetByName('ChangeLog');
+  if (!logSheet) return { success: true, entries: [], message: 'No ChangeLog sheet yet' };
+  var data = logSheet.getDataRange().getValues();
+  var entries = [];
+  for (var i = 1; i < data.length; i++) {
+    entries.push({
+      when: data[i][0],
+      who: data[i][1],
+      what: data[i][2],
+      where: data[i][3],
+      why: data[i][4],
+      how: data[i][5]
+    });
+  }
+  return { success: true, entries: entries };
 }
 
 /* ═══════════════════════════════════════════════════════════════
