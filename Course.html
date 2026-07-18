@@ -326,6 +326,8 @@ body{font-family:'Sarabun','Segoe UI',system-ui,-apple-system,sans-serif;backgro
 .gf-select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
 .gf-checklist{background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin:8px 0}
 .gf-checklist-title{font-size:14px;font-weight:700;color:#1e293b;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.gf-check-all-btn{transition:.2s}
+.gf-check-all-btn:hover{background:#dcfce7 !important;border-color:#4ade80 !important}
 .gf-check-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;cursor:pointer;transition:.15s}
 .gf-check-item:hover{background:rgba(245,158,11,.05);border-radius:8px;padding-left:6px;padding-right:6px}
 .gf-check-box{width:20px;height:20px;min-width:20px;border:2px solid #cbd5e1;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:.2s;margin-top:1px}
@@ -2678,7 +2680,7 @@ function formDashboard(){
             '<div class="gf-prog-label"><span>ติ๊กแล้ว: <b id="gf-prog-count">0</b> / 10</span><span id="gf-prog-status">ยังไม่ครบ</span></div>'+
           '</div>'+
           '<div class="gf-checklist">'+
-            '<div class="gf-checklist-title">✅ ตรวจสอบให้ครบก่อนกดสร้าง</div>'+
+            '<div class="gf-checklist-title">✅ ตรวจสอบให้ครบก่อนกดสร้าง <button class="gf-check-all-btn" onclick="gfCheckAll()" style="margin-left:auto;padding:4px 12px;border:1px solid #10b981;border-radius:8px;background:#f0fdf4;color:#065f46;font-size:12px;font-weight:600;cursor:pointer;font-family:Sarabun,sans-serif">☑️ ติ๊กทั้งหมด</button></div>'+
             checklistHtml+
           '</div>'+
         '</div>'+
@@ -2938,6 +2940,15 @@ function gfAddStdCmd(btn){
 
 function gfToggleCheck(el){
   el.classList.toggle('checked');
+  gfUpdateProgress();
+}
+function gfCheckAll(){
+  var items = document.querySelectorAll('.gf-check-item');
+  var allChecked = document.querySelectorAll('.gf-check-item.checked').length === items.length;
+  for(var i=0; i<items.length; i++){
+    if(allChecked) items[i].classList.remove('checked');
+    else items[i].classList.add('checked');
+  }
   gfUpdateProgress();
 }
 function gfUpdateProgress(){
