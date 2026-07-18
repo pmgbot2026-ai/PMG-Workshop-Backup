@@ -2451,34 +2451,34 @@ function formDashboard(){
         '<div class="gf-h-inner">'+
           '<div class="gf-icon">🛠️</div>'+
           '<h3>สร้าง Dashboard ของคุณเอง</h3>'+
-          '<div class="gf-sub">กรอกแบบฟอร์ม → ติ๊ก Checklist → กดสร้าง → ได้ Dashboard จริงพร้อมลิงก์<br><span class="gf-pill">AI อ่าน Sheet ของคุณอัตโนมัติ วิเคราะห์แท็บ/คอลัมน์ แล้วสร้าง Dashboard ให้ทันที</span></div>'+
+          '<div class="gf-sub">กรอกแบบฟอร์ม → ติ๊ก Checklist → กดสร้าง → ได้ Dashboard จริงพร้อมลิงก์ (Fill Form → Check → Create → Get Dashboard)<br><span class="gf-pill">AI อ่าน Sheet ของคุณอัตโนมัติ วิเคราะห์แท็บ/คอลัมน์ แล้วสร้าง Dashboard ให้ทันที</span></div>'+
         '</div>'+
       '</div>'+
       '<div class="gf-body">'+
         // Info banner
         '<div style="background:linear-gradient(135deg,#dbeafe 0%,#e0e7ff 100%);border:1px solid #93c5fd;border-radius:10px;padding:14px 18px;margin-bottom:20px">'+
-          '<div style="font-weight:700;color:#1e40af;font-size:14px;margin-bottom:4px">🚀 ระบบใหม่ — สร้าง Dashboard จริงได้เลย!</div>'+
+          '<div style="font-weight:700;color:#1e40af;font-size:14px;margin-bottom:4px">🚀 ระบบใหม่ — สร้าง Dashboard จริงได้เลย! (New! Create Real Dashboard)</div>'+
           '<div style="font-size:12px;color:#3730a3">ไม่ต้องคัดลอก Prompt ไปวางที่อื่นอีกต่อไป — กรอกฟอร์มนี้แล้วกดสร้าง AI จะอ่าน Sheet ของคุณ วิเคราะห์ข้อมูล แล้วสร้าง Dashboard พร้อมลิงก์ให้ใช้ทันที และยังคุยสั่งแก้ไขได้ผ่านช่องแชทด้านล่าง</div>'+
         '</div>'+
 
-        '<div class="gf-section-title">📋 ข้อมูล Dashboard</div>'+
+        '<div class="gf-section-title">📋 ข้อมูล Dashboard (Dashboard Information)</div>'+
 
         // Field 1: ชื่อ Dashboard
         '<div class="gf-field">'+
-          '<div class="gf-field-label">1. ชื่อ Dashboard <span class="req">*จำเป็น</span></div>'+
+          '<div class="gf-field-label">1. ชื่อ Dashboard (Dashboard Name) <span class="req">*จำเป็น</span></div>'+
           '<input type="text" class="gf-input" id="gf-name" placeholder="เช่น CEO KPI Dashboard, ยอดขายรายเดือน, สถานะงานซ่อม">'+
           '<div class="gf-help"><span class="gf-help-icon">💡</span> ตั้งชื่อให้สื่อความหมาย — คนดูรู้ทันทีว่า Dashboard นี้เกี่ยวกับอะไร</div>'+
         '</div>'+
 
         // Field 2: คำอธิบาย/วัตถุประสงค์
         '<div class="gf-field">'+
-          '<div class="gf-field-label">2. คำอธิบาย / วัตถุประสงค์ <span class="req">*จำเป็น</span></div>'+
+          '<div class="gf-field-label">2. คำอธิบาย / วัตถุประสงค์ (Description / Objective) <span class="req">*จำเป็น</span></div>'+
           '<textarea class="gf-textarea" id="gf-desc" placeholder="เช่น สรุปภาพรวมองค์กรสำหรับ CEO ดูทุกเช้า ต้องเห็นคะแนน Health Score และ KPI สำคัญใน 10 วินาทีแรก"></textarea>'+
         '</div>'+
 
         // Field 3: ลิงก์ Google Sheet ต้นทาง (1 ช่องหลัก + 3 เสริม) + แนบไฟล์
         '<div class="gf-field">'+
-          '<div class="gf-field-label">3. ลิงก์ Google Sheet ต้นทาง <span class="req">*อย่างน้อย 1 ช่อง (ลิงก์ หรือ แนบไฟล์)</span></div>'+
+          '<div class="gf-field-label">3. ลิงก์ Google Sheet ต้นทาง (Source Sheet URL) <span class="req">*อย่างน้อย 1 ช่อง (ลิงก์ หรือ แนบไฟล์)</span></div>'+
           '<div class="gf-help"><span class="gf-help-icon">⚠️</span> แชร์ Sheet ให้ <b>"ผู้ใช้ทุกคนที่มีลิงก์"</b> ก่อน — ไม่งั้น AI อ่านข้อมูลไม่ได้ · ระบุได้สูงสุด 4 Sheet (AI จะรวมข้อมูลจากทุก Sheet ที่กรอก)</div>'+
           '<input type="url" class="gf-input" id="gf-sheet1" placeholder="https://docs.google.com/spreadsheets/d/XXXXX/edit (Sheet หลัก — จำเป็น)">'+
           '<input type="url" class="gf-input" id="gf-sheet2" placeholder="https://docs.google.com/spreadsheets/d/YYYYY/edit (Sheet เสริม 2 — ถ้ามี)" style="margin-top:6px">'+
@@ -2509,28 +2509,28 @@ function formDashboard(){
 
         // Field 3b: แท็บหลักที่ต้องการแสดงผล
         '<div class="gf-field">'+
-          '<div class="gf-field-label">3b. แท็บหลักที่ต้องการแสดงผล <span class="req">*ระบุอย่างน้อย 1 แท็บ</span></div>'+
+          '<div class="gf-field-label">3b. แท็บหลักที่ต้องการแสดงผล (Main Tabs to Display) <span class="req">*ระบุอย่างน้อย 1 แท็บ</span></div>'+
           '<div class="gf-help"><span class="gf-help-icon">💡</span> ระบุชื่อแท็บใน Sheet ที่ต้องการให้ AI ใช้เป็นข้อมูลหลัก — คั่นด้วยจุลภาค เช่น "เปรียบเทียบ GM/ปี, เป้า/ผลงาน ก.ค. 69"</div>'+
           '<input type="text" class="gf-input" id="gf-main-tabs" placeholder="เช่น เปรียบเทียบ GM/ปี, เป้า/ผลงาน ก.ค. 69">'+
         '</div>'+
 
         // Field 3c: แท็บอื่นๆ ที่ต้องดูเพื่อทำความเข้าใจ
         '<div class="gf-field">'+
-          '<div class="gf-field-label">3c. แท็บอื่นๆ ที่ AI ควรอ่านเพื่อทำความเข้าใจ <span style="font-size:12px;color:#64748b">(ไม่บังคับ)</span></div>'+
+          '<div class="gf-field-label">3c. แท็บอื่นๆ ที่ AI ควรอ่านเพื่อทำความเข้าใจ (Reference Tabs) <span style="font-size:12px;color:#64748b">(ไม่บังคับ)</span></div>'+
           '<div class="gf-help"><span class="gf-help-icon">💡</span> แท็บที่ไม่ได้แสดงผลโดยตรง แต่ AI ต้องอ่านเพื่อเข้าใจบริบท — เช่น แท็บข้อมูลตั้งต้น, แท็บคำอธิบาย, แท็บสูตร — คั่นด้วยจุลภาค</div>'+
           '<input type="text" class="gf-input" id="gf-ref-tabs" placeholder="เช่น ข้อมูลตั้งต้น, คำอธิบาย KPI, สูตรคำนวณ">'+
         '</div>'+
 
         // Field 3d: ช่วงข้อมูลที่ต้องการ
         '<div class="gf-field">'+
-          '<div class="gf-field-label">3d. ช่วงข้อมูล / คอลัมน์ที่สนใจ <span style="font-size:12px;color:#64748b">(ไม่บังคับ)</span></div>'+
+          '<div class="gf-field-label">3d. ช่วงข้อมูล / คอลัมน์ที่สนใจ (Data Range / Columns) <span style="font-size:12px;color:#64748b">(ไม่บังคับ)</span></div>'+
           '<div class="gf-help"><span class="gf-help-icon">💡</span> ระบุคอลัมน์หรือช่วงข้อมูลที่ต้องการให้ AI ใช้ — เช่น "คอลัมน์ A-F, แถว 1-100" หรือ "เดือน, สาขา, GM, รายได้, ต้นทุน"</div>'+
           '<input type="text" class="gf-input" id="gf-data-range" placeholder="เช่น เดือน, สาขา, GM, รายได้, ต้นทุน หรือ A1:F100">'+
         '</div>'+
 
         // Field 3e: ลิงก์โปรเจ็คตัวอย่าง (Reference Dashboard)
         '<div class="gf-field">'+
-          '<div class="gf-field-label">3e. ลิงก์โปรเจ็คตัวอย่างที่ต้องการให้ AI เรียนรู้รูปแบบ <span style="font-size:12px;color:#64748b">(ไม่บังคับ — แต่แนะนำอย่างยิ่ง)</span></div>'+
+          '<div class="gf-field-label">3e. ลิงก์โปรเจ็คตัวอย่างที่ต้องการให้ AI เรียนรู้รูปแบบ (Reference Dashboard URLs) <span style="font-size:12px;color:#64748b">(ไม่บังคับ — แต่แนะนำอย่างยิ่ง)</span></div>'+
           '<div class="gf-help"><span class="gf-help-icon">💡</span> ใส่ลิงก์ Dashboard ตัวอย่างที่คุณชอบ — AI จะเรียนรู้รูปแบบการออกแบบ สี การจัดวาง และนำมาปรับใช้กับ Dashboard ของคุณ · ใส่ได้สูงสุด 3 ลิงก์</div>'+
           '<input type="url" class="gf-input" id="gf-ref-dash1" placeholder="https://script.google.com/macros/s/.../exec?supplement=1 (ตัวอย่างที่ 1)">'+
           '<input type="url" class="gf-input" id="gf-ref-dash2" placeholder="https://script.google.com/macros/s/.../exec?course=1 (ตัวอย่างที่ 2)" style="margin-top:6px">'+
@@ -2538,7 +2538,7 @@ function formDashboard(){
 
           // ตัวอย่างโปรเจ็คจริงให้คลิก (quick fill)
           '<div style="margin-top:10px;padding:10px 12px;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px">'+
-            '<div style="font-size:12px;font-weight:600;color:#065f46;margin-bottom:6px">⭐ ตัวอย่างโปรเจ็คจริง (คลิกเพื่อใส่อัตโนมัติ):</div>'+
+            '<div style="font-size:12px;font-weight:600;color:#065f46;margin-bottom:6px">⭐ ตัวอย่างโปรเจ็คจริง (คลิกเพื่อใส่อัตโนมัติ) (Click to Auto-fill):</div>'+
             '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
               '<button class="gf-btn gf-btn-secondary" style="padding:4px 10px;font-size:11px" onclick="gfFillRefDash(1,\'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?supplement=1\')">📊 GM Supplement Dashboard</button>'+
               '<button class="gf-btn gf-btn-secondary" style="padding:4px 10px;font-size:11px" onclick="gfFillRefDash(2,\'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?course=1\')">📚 Course Dashboard</button>'+
@@ -2549,10 +2549,10 @@ function formDashboard(){
 
         // Field 4: ประเภท Dashboard (พร้อมคำสั่งออกแบบแสดงผล)
         '<div class="gf-field">'+
-          '<div class="gf-field-label">4. ประเภท Dashboard <span class="req">*จำเป็น</span></div>'+
+          '<div class="gf-field-label">4. ประเภท Dashboard (Dashboard Type) <span class="req">*จำเป็น</span></div>'+
           '<div class="gf-help"><span class="gf-help-icon">💡</span> เลือกประเภทแล้วระบบจะสร้าง <b>คำสั่งออกแบบแสดงผล</b> ให้อัตโนมัติ — ส่งไปใน Prompt เพื่อให้ AI ออกแบบ layout ที่เหมาะสม</div>'+
           '<select class="gf-select" id="gf-type" onchange="gfUpdateTypeDirective()">'+
-            '<option value="">— เลือกประเภท —</option>'+
+            '<option value="">— เลือกประเภท (Select Type) —</option>'+
             '<option value="CEO KPI">CEO KPI — สรุปภาพรวมองค์กร</option>'+
             '<option value="Repair Flow">Repair Flow — งานซ่อมตามสถานี</option>'+
             '<option value="BCT">BCT — ปฏิทินนัดรับบริการ</option>'+
@@ -2572,14 +2572,14 @@ function formDashboard(){
 
         // Field 4b: KPI ที่ต้องการแสดง
         '<div class="gf-field">'+
-          '<div class="gf-field-label">4b. KPI ที่ต้องการแสดง <span style="font-size:12px;color:#64748b">(ไม่บังคับ — แต่ยิ่งละเอียดยิ่งดี)</span></div>'+
+          '<div class="gf-field-label">4b. KPI ที่ต้องการแสดง (KPI List) <span style="font-size:12px;color:#64748b">(ไม่บังคับ — แต่ยิ่งละเอียดยิ่งดี)</span></div>'+
           '<div class="gf-help"><span class="gf-help-icon">💡</span> ระบุ KPI ที่ต้องการให้แสดงใน Dashboard — คั่นด้วยจุลภาค เช่น "GM รวม, GM/คัน, GM% เทียบเป้า, รายได้/คัน, เป้าส่งมอบ, ผลส่งมอบ, %บรรลุ"</div>'+
           '<input type="text" class="gf-input" id="gf-kpi-list" placeholder="เช่น GM รวม, GM/คัน, GM% เทียบเป้า, รายได้/คัน, %บรรลุ">'+
         '</div>'+
 
         // Field 4c: ประเภทกราฟที่ต้องการ
         '<div class="gf-field">'+
-          '<div class="gf-field-label">4c. ประเภทกราฟที่ต้องการ <span style="font-size:12px;color:#64748b">(ไม่บังคับ)</span></div>'+
+          '<div class="gf-field-label">4c. ประเภทกราฟที่ต้องการ (Chart Types) <span style="font-size:12px;color:#64748b">(ไม่บังคับ)</span></div>'+
           '<div class="gf-help"><span class="gf-help-icon">💡</span> เลือกประเภทกราฟ — สามารถเลือกหลายประเภท — เช่น bar เปรียบเทียบ, line แนวโน้ม, pie สัดส่วน, gauge วัดค่า</div>'+
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">'+
             '<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="gf-chart-cb" value="bar"> 📊 Bar (แท่ง)</label>'+
@@ -2592,21 +2592,21 @@ function formDashboard(){
 
         // Field 4d: ตัวกรอง (Filter) ที่ต้องการ
         '<div class="gf-field">'+
-          '<div class="gf-field-label">4d. ตัวกรอง (Filter) ที่ต้องการ <span style="font-size:12px;color:#64748b">(ไม่บังคับ)</span></div>'+
+          '<div class="gf-field-label">4d. ตัวกรอง (Filter) ที่ต้องการ (Filters) <span style="font-size:12px;color:#64748b">(ไม่บังคับ)</span></div>'+
           '<div class="gf-help"><span class="gf-help-icon">💡</span> ระบุตัวกรองที่ต้องการ — คั่นด้วยจุลภาค เช่น "เดือน, สาขา, บุคคล, ผลิตภัณฑ์เสริม"</div>'+
           '<input type="text" class="gf-input" id="gf-filter-list" placeholder="เช่น เดือน, สาขา, บุคคล, ผลิตภัณฑ์เสริม">'+
         '</div>'+
 
         // Field 4e: สี / ธีม
         '<div class="gf-field">'+
-          '<div class="gf-field-label">4e. สี / ธีม <span style="font-size:12px;color:#64748b">(ไม่บังคับ)</span></div>'+
+          '<div class="gf-field-label">4e. สี / ธีม (Color / Theme) <span style="font-size:12px;color:#64748b">(ไม่บังคับ)</span></div>'+
           '<div class="gf-help"><span class="gf-help-icon">💡</span> ระบุสีที่ต้องการ — เช่น "เขียว=ตามแผน (≥80%), เหลือง=เตือน (50-79%), แดง=วิกฤต (<50%)" หรือ "ธีมฟ้า-เทา"</div>'+
           '<input type="text" class="gf-input" id="gf-color-theme" placeholder="เช่น เขียว≥80% / เหลือง 50-79% / แดง<50% หรือ ธีมฟ้า-เทา">'+
         '</div>'+
 
         // Field 4f: ผู้ดู Dashboard
         '<div class="gf-field">'+
-          '<div class="gf-field-label">4f. ผู้ดู Dashboard <span style="font-size:12px;color:#64748b">(ไม่บังคับ)</span></div>'+
+          '<div class="gf-field-label">4f. ผู้ดู Dashboard (Audience) <span style="font-size:12px;color:#64748b">(ไม่บังคับ)</span></div>'+
           '<div class="gf-help"><span class="gf-help-icon">💡</span> ใครจะดู Dashboard — เช่น "ผู้บริหาร/หัวหน้างาน — ดูผ่านมือถือและคอมพิวเตอร์"</div>'+
           '<input type="text" class="gf-input" id="gf-audience" placeholder="เช่น ผู้บริหาร/หัวหน้างาน — ดูผ่านมือถือและคอมพิวเตอร์">'+
         '</div>'+
@@ -2615,54 +2615,54 @@ function formDashboard(){
 
         // Field 5: Prompt คำสั่ง AI (ตัวอย่างคำสั่งจริง แก้ไขได้)
         '<div class="gf-field">'+
-          '<div class="gf-field-label">5. Prompt คำสั่ง AI <span class="req">*แก้ไขให้ตรงความต้องการ</span></div>'+
+          '<div class="gf-field-label">5. Prompt คำสั่ง AI (AI Command Prompt) <span class="req">*แก้ไขให้ตรงความต้องการ</span></div>'+
           '<div class="gf-help"><span class="gf-help-icon">💡</span> เลือกประเภท Dashboard แล้วกดปุ่ม "โหลดตัวอย่างคำสั่ง" — แล้วแก้ไขให้ตรงกับข้อมูลของคุณ คำสั่งนี้จะถูกส่งไปยัง AI เพื่อสร้าง Dashboard</div>'+
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'+
-            '<button class="gf-btn gf-btn-secondary" style="padding:6px 14px;font-size:12px" onclick="gfLoadSampleCommand()">📋 โหลดตัวอย่างคำสั่ง (ตามประเภทที่เลือก)</button>'+
-            '<button class="gf-btn gf-btn-secondary" style="padding:6px 14px;font-size:12px" onclick="gfClearCommand()">🗑️ ล้างคำสั่ง</button>'+
+            '<button class="gf-btn gf-btn-secondary" style="padding:6px 14px;font-size:12px" onclick="gfLoadSampleCommand()">📋 โหลดตัวอย่างคำสั่ง (Load Sample Command)</button>'+
+            '<button class="gf-btn gf-btn-secondary" style="padding:6px 14px;font-size:12px" onclick="gfClearCommand()">🗑️ ล้างคำสั่ง (Clear Command)</button>'+
           '</div>'+
 
           // ── Standard Commands (คำสั่งมาตรฐานจาก 13 โปรเจ็คจริง) ──
           '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px 16px;margin-bottom:12px">'+
-            '<div style="font-weight:700;color:#15803d;font-size:13px;margin-bottom:8px">⚙️ คำสั่งมาตรฐาน — คลิกเพื่อเพิ่ม (จาก 13 โปรเจ็คจริง)</div>'+
+            '<div style="font-weight:700;color:#15803d;font-size:13px;margin-bottom:8px">⚙️ คำสั่งมาตรฐาน — คลิกเพื่อเพิ่ม (จาก 13 โปรเจ็คจริง) (Standard Commands)</div>'+
             '<div style="font-size:11px;color:#16a34a;margin-bottom:10px">คลิกคำสั่งที่ต้องการ → ระบบจะเพิ่มเข้าช่องคำสั่ง AI อัตโนมัติ คลิกได้หลายคำสั่ง</div>'+
             '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
 
               // Group 1: Data & Auto-update
-              '<div style="width:100%;font-size:11px;font-weight:700;color:#1e40af;margin-top:4px;margin-bottom:2px">📊 ข้อมูล & อัปเดตอัตโนมัติ</div>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="อัปเดตข้อมูลอัตโนมัติจาก Google Sheet ต้นทางทุก 10 นาที (setInterval + CacheService TTL 6 ชม.) — ไม่ต้อง refresh หน้าเว็บ">🔄 Auto-update ทุก 10 นาที</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="แก้ไขข้อมูลได้จากหน้า Dashboard และบันทึกกลับไปยัง Google Sheet ต้นทางอัตโนมัติ (bi-directional sync — คลิกเซลล์ → แก้ไข → บันทึก)">✏️ แก้ไขจาก Dashboard → อัปเดต Sheet</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ระบุแหล่งข้อมูลต้นทางใน footer ของ Dashboard (Sheet ID, ชื่อแท็บ, วันที่อัปเดตล่าสุด) เพื่อให้ผู้ใช้ตรวจสอบกลับได้">📌 ระบุแหล่งข้อมูลต้นทาง</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="สร้าง Cron Trigger อัปเดต cache ทุก 2 ชั่วโมง เพื่อให้ข้อมูลใหม่พร้อมใช้ทันทีที่เปิด Dashboard">⏰ Cron warm cache ทุก 2 ชม.</button>'+
+              '<div style="width:100%;font-size:11px;font-weight:700;color:#1e40af;margin-top:4px;margin-bottom:2px">📊 ข้อมูล & อัปเดตอัตโนมัติ (Data & Auto-update)</div>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="อัปเดตข้อมูลอัตโนมัติจาก Google Sheet ต้นทางทุก 10 นาที (setInterval + CacheService TTL 6 ชม.) — ไม่ต้อง refresh หน้าเว็บ">🔄 Auto-update ทุก 10 นาที (อัปเดตอัตโนมัติ)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="แก้ไขข้อมูลได้จากหน้า Dashboard และบันทึกกลับไปยัง Google Sheet ต้นทางอัตโนมัติ (bi-directional sync — คลิกเซลล์ → แก้ไข → บันทึก)">✏️ แก้ไขจาก Dashboard → อัปเดต Sheet (แก้ไขได้จากหน้าจอ)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ระบุแหล่งข้อมูลต้นทางใน footer ของ Dashboard (Sheet ID, ชื่อแท็บ, วันที่อัปเดตล่าสุด) เพื่อให้ผู้ใช้ตรวจสอบกลับได้">📌 ระบุแหล่งข้อมูลต้นทาง (Data Source)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="สร้าง Cron Trigger อัปเดต cache ทุก 2 ชั่วโมง เพื่อให้ข้อมูลใหม่พร้อมใช้ทันทีที่เปิด Dashboard">⏰ Cron warm cache ทุก 2 ชม. (อุ่นแคชทุก 2 ชั่วโมง)</button>'+
 
               // Group 2: Security & PDPA
-              '<div style="width:100%;font-size:11px;font-weight:700;color:#dc2626;margin-top:8px;margin-bottom:2px">🔒 ความปลอดภัย & PDPA</div>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ห้ามเผยแพร่ Dashboard สู่สาธารณะ — ตั้งค่า access control เฉพาะผู้ที่ได้รับอนุญาตเท่านั้น (Web App execute as: my email, access: only myself หรือ domain)">🚫 ห้ามเผยแพร่ + Access Control</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ป้องกันข้อมูลส่วนบุคคลตาม PDPA — ชื่อพนักงานแสดงเป็นชื่อย่อหรือ mask ชื่อ (เช่น สุด→ส●●) — ห้ามแสดงเบอร์โทร เลขบัตร ที่อยู่ ใน Dashboard">🛡️ PDPA — mask ชื่อพนักงาน</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="แสดงเฉพาะข้อมูลระดับสรุป (aggregate) ไม่แสดงรายละเอียดระดับบุคคลในหน้าหลัก — ข้อมูลส่วนบุคคลแสดงเฉพาะเมื่อคลิกเจาะลึกและมีสิทธิ์">👤 แสดงเฉพาะ aggregate data</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="บันทึก audit log ทุกครั้งที่มีการเข้าชมและแก้ไขข้อมูล (who, what, when) เก็บไว้ใน Google Sheet แยกต่างหาก">📝 Audit log ทุกการเข้าถึง</button>'+
+              '<div style="width:100%;font-size:11px;font-weight:700;color:#dc2626;margin-top:8px;margin-bottom:2px">🔒 ความปลอดภัย & PDPA (Security & Privacy)</div>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ห้ามเผยแพร่ Dashboard สู่สาธารณะ — ตั้งค่า access control เฉพาะผู้ที่ได้รับอนุญาตเท่านั้น (Web App execute as: my email, access: only myself หรือ domain)">🚫 ห้ามเผยแพร่ + Access Control (ควบคุมการเข้าถึง)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ป้องกันข้อมูลส่วนบุคคลตาม PDPA — ชื่อพนักงานแสดงเป็นชื่อย่อหรือ mask ชื่อ (เช่น สุด→ส●●) — ห้ามแสดงเบอร์โทร เลขบัตร ที่อยู่ ใน Dashboard">🛡️ PDPA — mask ชื่อพนักงาน (ปกปิดชื่อตามกฎหมาย)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="แสดงเฉพาะข้อมูลระดับสรุป (aggregate) ไม่แสดงรายละเอียดระดับบุคคลในหน้าหลัก — ข้อมูลส่วนบุคคลแสดงเฉพาะเมื่อคลิกเจาะลึกและมีสิทธิ์">👤 แสดงเฉพาะ aggregate data (ข้อมูลสรุประดับรวม)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="บันทึก audit log ทุกครั้งที่มีการเข้าชมและแก้ไขข้อมูล (who, what, when) เก็บไว้ใน Google Sheet แยกต่างหาก">📝 Audit log ทุกการเข้าถึง (บันทึกการเข้าใช้)</button>'+
 
               // Group 3: Design & UX
-              '<div style="width:100%;font-size:11px;font-weight:700;color:#7c3aed;margin-top:8px;margin-bottom:2px">🎨 การออกแบบ & UX</div>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ใช้สีตามมาตรฐาน PMG: เขียว=ตามแผน (≥80%) เหลือง=เสี่ยง (50-79%) แดง=ล่าช้า (<50%) ฟ้า=ปกติ — ทุก KPI card ต้องมีสีสื่อความหมาย">🎨 สีมาตรฐาน PMG (เขียว/เหลือง/แดง)</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="สร้าง layout แบบ inverted pyramid: KPI cards ด้านบน → กราฟสรุปกลางหน้า → ตารางรายละเอียดด้านล่าง — อ่านจากบนลงล่างได้ใน 10 วินาที">📐 Layout inverted pyramid (10 วิ. เข้าใจ)</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="รองรับมือถือและคอมพิวเตอร์ — responsive grid + media query ที่ breakpoint 768px — การ์ดซ้อนเป็น 1 คอลัมน์บนมือถือ">📱 Mobile responsive (ทุกอุปกรณ์)</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="เพิ่ม Smart Insights อัตโนมัติ: 🔴 Critical (ต่ำกว่าเป้ามาก) · 🟢 Best (ทำได้ดีที่สุด) · 🟡 Warning (ใกล้ถึงเป้า) · ⚡ Quick Win (พยายามอีกนิดถึง) — แสดงด้านบนของ Dashboard">🧠 Smart Insights (4 ประเภท)</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="เพิ่ม Health Score Gauge 0-100 มุมขวาบน — คะแนนรวมจาก KPI ทั้งหมด เขียว≥80 (เกรด A) · เหลือง 60-79 (B) · แดง<60 (C/D) — ผู้บริหารเห็นสถานะรวมใน 3 วินาที">🎯 Health Score Gauge (0-100)</button>'+
+              '<div style="width:100%;font-size:11px;font-weight:700;color:#7c3aed;margin-top:8px;margin-bottom:2px">🎨 การออกแบบ & UX (Design & User Experience)</div>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ใช้สีตามมาตรฐาน PMG: เขียว=ตามแผน (≥80%) เหลือง=เสี่ยง (50-79%) แดง=ล่าช้า (<50%) ฟ้า=ปกติ — ทุก KPI card ต้องมีสีสื่อความหมาย">🎨 สีมาตรฐาน PMG (เขียว/เหลือง/แดง) (PMG Color Standard)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="สร้าง layout แบบ inverted pyramid: KPI cards ด้านบน → กราฟสรุปกลางหน้า → ตารางรายละเอียดด้านล่าง — อ่านจากบนลงล่างได้ใน 10 วินาที">📐 Layout inverted pyramid (พีระมิดกลับด้าน — เข้าใจใน 10 วิ.)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="รองรับมือถือและคอมพิวเตอร์ — responsive grid + media query ที่ breakpoint 768px — การ์ดซ้อนเป็น 1 คอลัมน์บนมือถือ">📱 Mobile responsive (รองรับทุกอุปกรณ์)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="เพิ่ม Smart Insights อัตโนมัติ: 🔴 Critical (ต่ำกว่าเป้ามาก) · 🟢 Best (ทำได้ดีที่สุด) · 🟡 Warning (ใกล้ถึงเป้า) · ⚡ Quick Win (พยายามอีกนิดถึง) — แสดงด้านบนของ Dashboard">🧠 Smart Insights (ข้อมูลเชิงลึกอัจฉริยะ 4 ประเภท)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="เพิ่ม Health Score Gauge 0-100 มุมขวาบน — คะแนนรวมจาก KPI ทั้งหมด เขียว≥80 (เกรด A) · เหลือง 60-79 (B) · แดง<60 (C/D) — ผู้บริหารเห็นสถานะรวมใน 3 วินาที">🎯 Health Score Gauge (คะแนนสุขภาพ 0-100)</button>'+
 
               // Group 4: Notification & Export
-              '<div style="width:100%;font-size:11px;font-weight:700;color:#0891b2;margin-top:8px;margin-bottom:2px">📢 แจ้งเตือน & ส่งออก</div>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ส่งรายงานอัตโนมัติเข้า Telegram ทุกวันเวลา 09:15 น. — สรุป KPI สำคัญ, สถานะติด ๆ และแนวโน้ม พร้อม link เปิด Dashboard">📨 Telegram Daily Report 09:15 น.</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ส่งอีเมลแจ้งเตือนอัตโนมัติเมื่อ KPI ต่ำกว่าเกณฑ์ (เช่น <50%) — ระบุผู้รับ, เนื้อหาสรุปสถานะและ action required">📧 Email alert เมื่อ KPI วิกฤต</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="เพิ่มปุ่ม Export — ดาวน์โหลดเป็น PDF และ CSV — สำหรับรายงานประชุมและเก็บประวัติ">📥 Export PDF/CSV</button>'+
+              '<div style="width:100%;font-size:11px;font-weight:700;color:#0891b2;margin-top:8px;margin-bottom:2px">📢 แจ้งเตือน & ส่งออก (Notification & Export)</div>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ส่งรายงานอัตโนมัติเข้า Telegram ทุกวันเวลา 09:15 น. — สรุป KPI สำคัญ, สถานะติด ๆ และแนวโน้ม พร้อม link เปิด Dashboard">📨 Telegram Daily Report (รายงานประจำวัน) 09:15 น.</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ส่งอีเมลแจ้งเตือนอัตโนมัติเมื่อ KPI ต่ำกว่าเกณฑ์ (เช่น <50%) — ระบุผู้รับ, เนื้อหาสรุปสถานะและ action required">📧 Email alert (แจ้งเตือนทางเมล) เมื่อ KPI วิกฤต</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="เพิ่มปุ่ม Export — ดาวน์โหลดเป็น PDF และ CSV — สำหรับรายงานประชุมและเก็บประวัติ">📥 Export PDF/CSV (ส่งออกไฟล์)</button>'+
 
               // Group 5: Quality & Maintenance
-              '<div style="width:100%;font-size:11px;font-weight:700;color:#f59e0b;margin-top:8px;margin-bottom:2px">✅ คุณภาพ & บำรุงรักษา</div>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ตรวจสอบความถูกต้องของข้อมูลอัตโนมัติก่อนแสดง: ตัวเลขไม่ติดลบ, ไม่มี NaN, ไม่มี header rows ปนมา, รูปแบบวันที่เป็น ISO — แจ้งเตือนถ้าพบข้อมูลผิดปกติ">🔍 Data validation อัตโนมัติ</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="สร้าง change log บันทึกการเปลี่ยนแปลงทุกครั้ง: วันที่, ผู้แก้ไข, รายละเอียดที่เปลี่ยน — เก็บในแท็บ ChangeLog ของ Sheet">📋 Change log ทุกการแก้ไข</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="เพิ่มตัวกรอง (filter) แบบ interactive: เดือน, สาขา, บุคคล, ผลิตภัณฑ์ — ใช้ dropdown และ chips — เปลี่ยนค่าแล้ว Dashboard อัปเดตทันทีไม่ต้อง refresh">🔎 Interactive filters (เดือน/สาขา/คน/ผลิตภัณฑ์)</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="เขียนเอกสารประกอบ Dashboard: คู่มือผู้ใช้, คำอธิบาย KPI, แหล่งข้อมูล, วิธีอัปเดต — แสดงเป็น modal หรือ tab \"เกี่ยวกับ\" ใน Dashboard">📖 เอกสารประกอบ (User Guide)</button>'+
-              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="รองรับหลายภาษา (ไทย/อังกฤษ) — สลับภาษาได้ที่ปุ่มมุมขวาบน — ป้าย KPI และชื่อกราฟเปลี่ยนตามภาษาที่เลือก">🌐 รองรับหลายภาษา (TH/EN)</button>'+
+              '<div style="width:100%;font-size:11px;font-weight:700;color:#f59e0b;margin-top:8px;margin-bottom:2px">✅ คุณภาพ & บำรุงรักษา (Quality & Maintenance)</div>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="ตรวจสอบความถูกต้องของข้อมูลอัตโนมัติก่อนแสดง: ตัวเลขไม่ติดลบ, ไม่มี NaN, ไม่มี header rows ปนมา, รูปแบบวันที่เป็น ISO — แจ้งเตือนถ้าพบข้อมูลผิดปกติ">🔍 Data validation อัตโนมัติ (ตรวจสอบข้อมูลอัตโนมัติ)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="สร้าง change log บันทึกการเปลี่ยนแปลงทุกครั้ง: วันที่, ผู้แก้ไข, รายละเอียดที่เปลี่ยน — เก็บในแท็บ ChangeLog ของ Sheet">📋 Change log ทุกการแก้ไข (บันทึกการเปลี่ยนแปลง)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="เพิ่มตัวกรอง (filter) แบบ interactive: เดือน, สาขา, บุคคล, ผลิตภัณฑ์ — ใช้ dropdown และ chips — เปลี่ยนค่าแล้ว Dashboard อัปเดตทันทีไม่ต้อง refresh">🔎 Interactive filters (ตัวกรองโต้ตอบ: เดือน/สาขา/คน/ผลิตภัณฑ์)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="เขียนเอกสารประกอบ Dashboard: คู่มือผู้ใช้, คำอธิบาย KPI, แหล่งข้อมูล, วิธีอัปเดต — แสดงเป็น modal หรือ tab \"เกี่ยวกับ\" ใน Dashboard">📖 เอกสารประกอบ (User Guide — คู่มือผู้ใช้)</button>'+
+              '<button class="gf-std-cmd" onclick="gfAddStdCmd(this)" data-cmd="รองรับหลายภาษา (ไทย/อังกฤษ) — สลับภาษาได้ที่ปุ่มมุมขวาบน — ป้าย KPI และชื่อกราฟเปลี่ยนตามภาษาที่เลือก">🌐 รองรับหลายภาษา (TH/EN — ไทย/อังกฤษ)</button>'+
 
             '</div>'+
           '</div>'+
@@ -2674,22 +2674,22 @@ function formDashboard(){
 
         // Field 6: Checklist
         '<div class="gf-field">'+
-          '<div class="gf-field-label">6. Checklist ก่อนสร้าง Dashboard <span class="req">*ต้องติ๊กครบ 10 ข้อ</span></div>'+
+          '<div class="gf-field-label">6. Checklist ก่อนสร้าง Dashboard (Pre-creation Checklist) <span class="req">*ต้องติ๊กครบ 10 ข้อ</span></div>'+
           '<div class="gf-prog">'+
             '<div class="gf-prog-bar"><div class="gf-prog-fill" id="gf-prog-fill" style="width:0%"></div></div>'+
             '<div class="gf-prog-label"><span>ติ๊กแล้ว: <b id="gf-prog-count">0</b> / 10</span><span id="gf-prog-status">ยังไม่ครบ</span></div>'+
           '</div>'+
           '<div class="gf-checklist">'+
-            '<div class="gf-checklist-title">✅ ตรวจสอบให้ครบก่อนกดสร้าง <button class="gf-check-all-btn" onclick="gfCheckAll()" style="margin-left:auto;padding:4px 12px;border:1px solid #10b981;border-radius:8px;background:#f0fdf4;color:#065f46;font-size:12px;font-weight:600;cursor:pointer;font-family:Sarabun,sans-serif">☑️ ติ๊กทั้งหมด</button></div>'+
+            '<div class="gf-checklist-title">✅ ตรวจสอบให้ครบก่อนกดสร้าง (Check All Before Creating) <button class="gf-check-all-btn" onclick="gfCheckAll()" style="margin-left:auto;padding:4px 12px;border:1px solid #10b981;border-radius:8px;background:#f0fdf4;color:#065f46;font-size:12px;font-weight:600;cursor:pointer;font-family:Sarabun,sans-serif">☑️ ติ๊กทั้งหมด</button></div>'+
             checklistHtml+
           '</div>'+
         '</div>'+
 
         // Buttons
         '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px">'+
-          '<button class="gf-btn gf-btn-primary" id="gf-create-btn" onclick="gfCreateDashboard()">🚀 สร้าง Dashboard จริง</button>'+
-          '<button class="gf-btn gf-btn-secondary" id="gf-prompt-btn" onclick="gfTogglePrompt()">📋 ดู Prompt อ้างอิง</button>'+
-          '<button class="gf-btn" id="gf-pr-btn" style="background:#10b981;color:#fff;border-color:#10b981" onclick="gfOpenPRDashboard()">🎯 เปิด PR Dashboard ตัวอย่าง</button>'+
+          '<button class="gf-btn gf-btn-primary" id="gf-create-btn" onclick="gfCreateDashboard()">🚀 สร้าง Dashboard จริง (Create Dashboard)</button>'+
+          '<button class="gf-btn gf-btn-secondary" id="gf-prompt-btn" onclick="gfTogglePrompt()">📋 ดู Prompt อ้างอิง (View Reference Prompt)</button>'+
+          '<button class="gf-btn" id="gf-pr-btn" style="background:#10b981;color:#fff;border-color:#10b981" onclick="gfOpenPRDashboard()">🎯 เปิด PR Dashboard ตัวอย่าง (Open Sample Dashboard)</button>'+
         '</div>'+
 
         // Warning messages
@@ -2710,10 +2710,10 @@ function formDashboard(){
         // Prompt reference (collapsible)
         '<div id="gf-prompt-area" style="display:none;margin-top:20px">'+
           '<div class="gf-divider"></div>'+
-          '<div class="gf-section-title">📋 Prompt อ้างอิง (สำหรับใช้กับ AI อื่น)</div>'+
+          '<div class="gf-section-title">📋 Prompt อ้างอิง (Reference Prompt — สำหรับใช้กับ AI อื่น)</div>'+
           '<div class="gf-field-desc" style="margin-bottom:8px">Prompt นี้สร้างจากข้อมูลที่กรอก — สามารถคัดลอกไปใช้กับ ChatGPT / Claude / Gemini ได้</div>'+
           '<textarea class="gf-textarea" id="gf-prompt-text" style="min-height:200px;font-size:13px;font-family:monospace" readonly></textarea>'+
-          '<button class="gf-btn gf-btn-secondary" style="margin-top:8px" onclick="gfCopyPrompt()">📋 คัดลอก Prompt</button>'+
+          '<button class="gf-btn gf-btn-secondary" style="margin-top:8px" onclick="gfCopyPrompt()">📋 คัดลอก Prompt (Copy Prompt)</button>'+
         '</div>'+
       '</div>'+
     '</div>'+
@@ -3130,19 +3130,19 @@ function gfShowResult(result, formData){
 
       // Dashboard link
       '<div style="background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:16px;margin-bottom:16px">'+
-        '<div style="font-size:13px;color:#64748b;margin-bottom:6px">🔗 ลิงก์ Dashboard ของคุณ:</div>'+
+        '<div style="font-size:13px;color:#64748b;margin-bottom:6px">🔗 ลิงก์ Dashboard ของคุณ (Your Dashboard URL):</div>'+
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
           '<a href="'+dashUrl+'" target="_blank" style="color:#2563eb;font-weight:600;font-size:14px;word-break:break-all;text-decoration:none;flex:1">'+dashUrl+'</a>'+
           '<button class="gf-btn gf-btn-secondary" style="padding:6px 14px;font-size:12px" onclick="gfCopyLink(\''+dashUrl+'\')">📋 คัดลอก</button>'+
         '</div>'+
         '<div style="margin-top:10px">'+
-          '<a href="'+dashUrl+'" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 24px;border-radius:8px;font-weight:600;text-decoration:none;font-size:14px">📊 เปิด Dashboard →</a>'+
+          '<a href="'+dashUrl+'" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 24px;border-radius:8px;font-weight:600;text-decoration:none;font-size:14px">📊 เปิด Dashboard (Open Dashboard) →</a>'+
         '</div>'+
       '</div>'+
 
       // Analysis summary
       '<div style="background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:16px;margin-bottom:16px">'+
-        '<div style="font-weight:700;font-size:14px;color:#1e293b;margin-bottom:10px">📊 สรุปการวิเคราะห์ Sheet</div>'+
+        '<div style="font-weight:700;font-size:14px;color:#1e293b;margin-bottom:10px">📊 สรุปการวิเคราะห์ Sheet (Sheet Analysis Summary)</div>'+
         '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px">'+
           '<div style="text-align:center;padding:10px;background:#f8fafc;border-radius:8px"><div style="font-size:24px;font-weight:700;color:#2563eb">'+a.totalSheets+'</div><div style="font-size:11px;color:#64748b">แท็บทั้งหมด</div></div>'+
           '<div style="text-align:center;padding:10px;background:#f8fafc;border-radius:8px"><div style="font-size:24px;font-weight:700;color:#10b981">'+(a.selectedSheets||[]).length+'</div><div style="font-size:11px;color:#64748b">แท็บหลัก</div></div>'+
@@ -3159,8 +3159,8 @@ function gfShowResult(result, formData){
         '<div style="font-weight:700;font-size:14px;color:#1e293b;margin-bottom:10px">🤖 Prompt สำหรับ AI — คัดลอกไปใช้กับ ChatGPT / Claude / Gemini ได้</div>'+
         '<textarea id="gf-result-prompt" style="width:100%;min-height:120px;font-size:12px;font-family:monospace;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px" readonly>'+(result.prompt||'')+'</textarea>'+
         '<div style="display:flex;gap:8px;margin-top:8px">'+
-          '<button class="gf-btn gf-btn-secondary" style="padding:6px 14px;font-size:12px" onclick="gfCopyResultPrompt()">📋 คัดลอก Prompt</button>'+
-          '<a href="'+dashUrl+'" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:6px 14px;border-radius:8px;font-weight:600;text-decoration:none;font-size:12px">📊 เปิด Dashboard →</a>'+
+          '<button class="gf-btn gf-btn-secondary" style="padding:6px 14px;font-size:12px" onclick="gfCopyResultPrompt()">📋 คัดลอก Prompt (Copy Prompt)</button>'+
+          '<a href="'+dashUrl+'" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:6px 14px;border-radius:8px;font-weight:600;text-decoration:none;font-size:12px">📊 เปิด Dashboard (Open Dashboard) →</a>'+
         '</div>'+
       '</div>'+
 
@@ -3252,7 +3252,7 @@ function gfProcessChat(dashId, msg){
       // Append a "เปิด Dashboard" button so the user can see the refreshed dashboard
       var dashUrl = result.url || window.gfDashUrl || '';
       var openDashBtn = dashUrl
-        ? ' <a href="'+dashUrl+'" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600;text-decoration:none;font-size:12px;margin-left:6px">📊 เปิด Dashboard →</a>'
+        ? ' <a href="'+dashUrl+'" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:4px 12px;border-radius:6px;font-weight:600;text-decoration:none;font-size:12px;margin-left:6px">📊 เปิด Dashboard (Open Dashboard) →</a>'
         : '';
       if(logEl){
         logEl.innerHTML += '<div style="margin-bottom:6px"><span style="font-weight:600;color:#10b981">AI:</span> '+reply+openDashBtn+'</div>';
@@ -3350,7 +3350,7 @@ function gfGeneratePromptText(formData){
 '╚══════════════════════════════════════════════════════════╝\n'+
 '\n'+
 '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'+
-'📋 ข้อมูล Dashboard\n'+
+'📋 ข้อมูล Dashboard (Dashboard Information)\n'+
 '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'+
 '• ชื่อ Dashboard: '+(formData.title||'')+'\n'+
 '• ประเภท: '+(formData.type||'')+'\n'+
