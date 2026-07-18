@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GM Dashboard — กำไรขั้นต้น</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f0f4f8; --card: #fff; --accent: #2563eb; --accent2: #7c3aed;
+      --green: #059669; --red: #dc2626; --orange: #ea580c; --yellow: #d97706;
+      --purple: #7c3aed; --pink: #db2777; --cyan: #0891b2;
+      --text: #1e293b; --text2: #475569; --text3: #94a3b8;
+      --border: #e2e8f0; --radius: 14px;
+      --shadow: 0 2px 8px rgba(0,0,0,.06);
+      --sales: #2563eb; --aftersales: #059669;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; -webkit-user-select: none; -moz-user-select: none; user-select: none; }
+    
+    /* Anti-leak */
+    img::after { content: attr(data-watermark); position: absolute; }
+    
+    /* Header */
+    .header { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 14px 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+    .header h1 { font-size: 20px; color: #fff; display: flex; align-items: center; gap: 10px; }
+    .header .subtitle { font-size: 12px; color: rgba(255,255,255,.7); margin-top: 2px; }
+    .header .ver { font-size: 10px; color: rgba(255,255,255,.6); background: rgba(255,255,255,.15); padding: 2px 8px; border-radius: 4px; margin-left: 8px; }
+    
+    /* Filters */
+    .filters { background: #fff; border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; position: sticky; top: 52px; z-index: 90; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+    .filter-group { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; }
+    .filter-group label { font-size: 11px; color: var(--text3); margin-right: 4px; font-weight: 600; }
+    .fbtn { padding: 5px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; font-size: 12px; cursor: pointer; transition: .2s; color: var(--text2); }
+    .fbtn:hover:not(.active) { background: #eef2ff; }
+    .fbtn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+    select.fsel { padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: #fff; font-size: 12px; color: var(--text2); cursor: pointer; max-width: 220px; }
+    
+    /* Content */
+    .content { padding: 16px 20px 40px; max-width: 1400px; margin: 0 auto; }
+    
+    /* KPI Cards */
+    .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .kpi-card { background: var(--card); border-radius: var(--radius); padding: 16px; text-align: center; box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; overflow: hidden; }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+    .kpi-card.sales::before { background: var(--sales); }
+    .kpi-card.aftersales::before { background: var(--aftersales); }
+    .kpi-card.total::before { background: linear-gradient(90deg, var(--sales), var(--aftersales)); }
+    .kpi-card .icon { font-size: 24px; margin-bottom: 4px; }
+    .kpi-card .label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
+    .kpi-card .value { font-size: 22px; font-weight: 700; margin: 4px 0; }
+    .kpi-card .sub { font-size: 11px; color: var(--text3); }
+    .kpi-card .trend { font-size: 11px; font-weight: 600; margin-top: 2px; }
+    .trend.up { color: var(--green); }
+    .trend.down { color: var(--red); }
+    .kpi-card.sales .value { color: var(--sales); }
+    .kpi-card.aftersales .value { color: var(--aftersales); }
+    .kpi-card.total .value { color: var(--accent2); }
+    
+    /* Ratio Bar */
+    .ratio-section { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .ratio-section h3 { font-size: 15px; font-weight: 600; color: var(--accent2); margin-bottom: 10px; }
+    .ratio-bar-container { position: relative; height: 40px; border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
+    .ratio-bar-sales { height: 100%; background: var(--sales); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 13px; float: left; transition: width .5s; }
+    .ratio-bar-aftersales { height: 100%; background: var(--aftersales); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 13px; float: left; transition: width .5s; }
+    .ratio-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); }
+    .ratio-labels .sales-label { color: var(--sales); }
+    .ratio-labels .aftersales-label { color: var(--aftersales); }
+    
+    /* Section */
+    .section { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .section h3 { font-size: 15px; font-weight: 600; color: var(--accent2); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    
+    /* Chart */
+    .chart-box { position: relative; max-width: 100%; }
+    .chart-box canvas { width: 100% !important; max-height: 320px; }
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width: 900px) { .chart-row { grid-template-columns: 1fr; } }
+    
+    /* Table */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { background: #f8fafc; padding: 8px 6px; text-align: right; font-weight: 600; color: var(--text2); border-bottom: 2px solid var(--border); white-space: nowrap; position: sticky; top: 0; }
+    th:first-child, th:nth-child(2) { text-align: left; }
+    td { padding: 6px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    td:first-child, td:nth-child(2) { text-align: left; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tr:hover { background: #f8fafc; }
+    tr.section-header { background: #eef2ff; }
+    tr.section-header td { font-weight: 700; color: var(--accent2); }
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+    .zero { color: var(--text3); }
+    
+    /* Product cards */
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+    .product-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 12px; position: relative; cursor: pointer; transition: .2s; }
+    .product-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+    .product-card.selected { border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(124,58,237,.2); }
+    .product-card .pno { position: absolute; top: 8px; right: 10px; font-size: 10px; color: var(--text3); background: #e2e8f0; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+    .product-card .pname { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; padding-right: 24px; }
+    .product-card .pval { font-size: 18px; font-weight: 700; }
+    .product-card .psub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+    .product-card.sales-card { border-left: 3px solid var(--sales); }
+    .product-card.aftersales-card { border-left: 3px solid var(--aftersales); }
+    
+    /* Year selector chips */
+    .year-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0; }
+    .year-chip { padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: #fff; color: var(--text2); transition: .2s; }
+    .year-chip:hover { background: #eef2ff; }
+    .year-chip.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+    
+    /* Loading */
+    .loading { text-align: center; padding: 40px; color: var(--text3); }
+    .loading:after { content: ''; display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; margin-left: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Confidentiality */
+    .conf-bar { position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(90deg, #dc2626, #b91c1c); color: white; text-align: center; font-size: .7rem; padding: 4px 0; font-weight: 700; letter-spacing: 1px; z-index: 9999; }
+    .conf-badge { position: fixed; top: 8px; right: 16px; background: #dc2626; color: white; font-size: .65rem; padding: 3px 8px; border-radius: 10px; font-weight: 700; letter-spacing: .5px; z-index: 9999; box-shadow: 0 2px 8px rgba(220,38,38,.3); }
+    
+    /* Tooltip */
+    .tip { border-bottom: 1px dotted var(--text3); cursor: help; }
+
+    /* Watermark overlay */
+    .watermark-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9998; opacity: 0.03; overflow: hidden; }
+    .watermark-overlay div { transform: rotate(-30deg); font-size: 48px; font-weight: 900; color: #000; padding: 80px; white-space: nowrap; }
+    
+    @media(max-width: 600px) {
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+      .product-grid { grid-template-columns: 1fr 1fr; }
+      .content { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+<div class="conf-badge">🔒 PDPA ข้อมูลลับ</div>
+<div class="watermark-overlay" id="wmOverlay"></div>
+
+<div class="header">
+  <h1>📊 GM Dashboard <span class="ver">v2.1</span></h1>
+  <div class="subtitle">กำไรขั้นต้น — ธุรกิจขาย vs ธุรกิจหลังการขาย | PMG Group</div>
+</div>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>มุมมอง:</label>
+    <button class="fbtn active" data-view="overview" onclick="setView('overview')">ภาพรวม</button>
+    <button class="fbtn" data-view="products" onclick="setView('products')">รายผลิตภัณฑ์</button>
+    <button class="fbtn" data-view="trend" onclick="setView('trend')">แนวโน้ม</button>
+    <button class="fbtn" data-view="monthly" onclick="setView('monthly')">รายเดือน</button>
+  </div>
+  <div class="filter-group" id="yearFilter" style="display:none">
+    <label>ปี:</label>
+    <span id="yearBtns"></span>
+  </div>
+  <div class="filter-group" id="productFilter" style="display:none">
+    <label>ผลิตภัณฑ์:</label>
+    <select class="fsel" id="productSelect" onchange="setProduct(this.value)">
+      <option value="">-- เลือกผลิตภัณฑ์ --</option>
+    </select>
+  </div>
+</div>
+
+<div class="content" id="mainContent">
+  <div class="loading">กำลังโหลดข้อมูล</div>
+</div>
+
+<div class="conf-bar">⛔ ข้อมูลลับ — ห้ามเผยแพร่ หรือ ส่งออกโดยไม่ได้รับอนุญาต (PDPA)</div>
+
+<script>
+var SCRIPT_URL = '';
+var D = null;
+var currentView = 'overview';
+var currentYear = 2569;
+var currentProduct = '1';
+var charts = {};
+var MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+// Helper: current month index (0-based) for Thai fiscal year (May=0, Apr=11)
+// Used to exclude the incomplete current month from averages
+function getCurrentMonthIndex() {
+  var now = new Date();
+  var m = now.getMonth(); // 0=Jan..11=Dec
+  return m; // 0=ม.ค., 1=ก.พ., ..., 4=พ.ค.
+}
+
+// Helper: check if a month index is the current (incomplete) month for a given year
+function isIncompleteMonth(year, monthIdx) {
+  var now = new Date();
+  // Thai year = Gregorian year + 543
+  var currentThaiYear = now.getFullYear() + 543;
+  if (parseInt(year) !== currentThaiYear) return false;
+  return monthIdx === now.getMonth();
+}
+
+// Helper: check if a month should be included in averages/totals for a given year
+// For the current year: only past complete months (before current incomplete month)
+// For past years: all months with non-null data
+function shouldIncludeMonth(year, monthIdx, value) {
+  if (value === null || value === undefined) return false;
+  var now = new Date();
+  var currentThaiYear = now.getFullYear() + 543;
+  if (parseInt(year) === currentThaiYear) {
+    // Current year: only include months BEFORE the current (incomplete) month
+    // The current month itself is excluded by isIncompleteMonth, and future months
+    // (after current month) have placeholder 0 values that are not real data.
+    // A 0 after the current month is a future placeholder, not real data.
+    var curMonth = now.getMonth();
+    if (monthIdx > curMonth) return false; // future months with 0
+    if (monthIdx === curMonth) return false; // current incomplete month
+    return true;
+  }
+  // Past years: include all months with data (0 could be real)
+  return true;
+}
+
+// Anti-leak: disable right-click
+document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
+// Watermark
+function initWatermark() {
+  var wm = document.getElementById('wmOverlay');
+  if (!wm) return;
+  var h = '';
+  for (var i = 0; i < 20; i++) {
+    h += '<div>PMG CONFIDENTIAL</div>';
+  }
+  wm.innerHTML = h;
+}
+
+function fmt(n) {
+  if (n === null || n === undefined) return '-';
+  if (Math.abs(n) >= 1000000) return (n/1000000).toFixed(2) + 'M';
+  if (Math.abs(n) >= 1000) return (n/1000).toFixed(1) + 'K';
+  return n.toFixed(0);
+}
+function fmtFull(n) {
+  if (n === null || n === undefined) return '-';
+  return n.toLocaleString('th-TH', {maximumFractionDigits: 0});
+}
+function fmtPct(n) {
+  if (n === null || n === undefined) return '-';
+  return (n * 100).toFixed(1) + '%';
+}
+function fmtPct2(n) {
+  if (n === null || n === undefined) return '-';
+  return n.toFixed(1) + '%';
+}
+function cls(n) {
+  if (n === null || n === undefined) return 'zero';
+  return n >= 0 ? 'positive' : 'negative';
+}
+function yoyPct(cur, prev) {
+  if (!prev || prev === 0) return null;
+  return ((cur - prev) / Math.abs(prev) * 100).toFixed(1);
+}
+
+/* ── Product-to-monthly section mapping ── */
+var PRODUCT_SECTIONS = {
+  '1':  { section: 'parts', label: '🔩 อะไหล่และประดับยนต์', type: 'aftersales' },
+  '2':  { section: 'service', label: '🔧 ค่าแรงบริการ', type: 'aftersales' },
+  '3':  { section: 'carDeposit', label: '🅿️ โครงการฝากรถ', type: 'aftersales' },
+  '4':  { section: 'antirust', label: '🛡️ พ่นกันสนิม+ล้างรถ', type: 'aftersales' },
+  '5':  { section: 'insurance', label: '📋 ประกันภัย(ต่ออายุ)', type: 'aftersales' },
+  '6':  { section: 'usedGoods', label: '♻️ ขายของเก่า', type: 'aftersales' },
+  '7':  { section: 'pmgServiceLabor', label: '🏋️ PMG Service (ค่าแรง)', type: 'aftersales' },
+  '8':  { section: 'pmgServiceParts', label: '🔩 PMG Service (อะไหล่)', type: 'aftersales' },
+  '9':  { section: 'bodyRepair', label: '🚗 ศูนย์ซ่อมตัวถัง', type: 'aftersales' },
+  '10': { section: 'carSales', label: '🚙 ขายรถยนต์', type: 'sales' },
+  '11': { section: 'carReg', label: '📄 ทะเบียนรถใหม่', type: 'sales' },
+  '12': { section: 'newCarIns', label: '🛡️ ประกันภัยรถใหม่', type: 'sales' }
+};
+
+/* ── Initialize ── */
+function init() {
+  D = window.GM_RAW_DATA || null;
+  initWatermark();
+  if (!D) {
+    var baseUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL
+      : window.location.href.split('?')[0];
+    fetch(baseUrl + (baseUrl.indexOf('?') > -1 ? '&' : '?') + 'gm=1&view=data')
+      .then(function(r) { return r.json(); })
+      .then(function(d) { D = d; render(); })
+      .catch(function(e) {
+        document.getElementById('mainContent').innerHTML = '<div class="loading" style="color:#dc2626">❌ ไม่สามารถโหลดข้อมูลได้: ' + e.message + '</div>';
+      });
+  } else {
+    render();
+  }
+}
+
+function render() {
+  if (!D || !D.summary || D.summary.length === 0) {
+    document.getElementById('mainContent').innerHTML = '<div class="loading" style="color:#dc2626">❌ ไม่มีข้อมูล</div>';
+    return;
+  }
+  renderYearButtons();
+  renderProductSelect();
+  setView(currentView);
+}
+
+function renderYearButtons() {
+  var years = D.summary.map(function(s) { return s.year; }).reverse();
+  var h = '';
+  years.forEach(function(y) {
+    h += '<button class="fbtn' + (y === currentYear ? ' active' : '') + '" onclick="setYear(' + y + ')">' + y + '</button>';
+  });
+  document.getElementById('yearBtns').innerHTML = h;
+}
+
+function renderProductSelect() {
+  if (!D.products || D.products.length === 0) return;
+  var sel = document.getElementById('productSelect');
+  sel.innerHTML = '<option value="">-- เลือกผลิตภัณฑ์ --</option>';
+  var asGroup = document.createElement('optgroup');
+  asGroup.label = '🔧 ธุรกิจหลังการขาย';
+  var sGroup = document.createElement('optgroup');
+  sGroup.label = '🚗 ธุรกิจขาย';
+  D.products.forEach(function(p) {
+    var opt = document.createElement('option');
+    opt.value = String(p.no);
+    opt.textContent = p.no + '. ' + p.desc;
+    if (p.no <= 9) asGroup.appendChild(opt);
+    else sGroup.appendChild(opt);
+  });
+  sel.appendChild(asGroup);
+  sel.appendChild(sGroup);
+  sel.value = currentProduct;
+}
+
+function setYear(y) {
+  currentYear = y;
+  renderYearButtons();
+  setView(currentView);
+}
+
+function setProduct(p) {
+  currentProduct = p;
+  if (currentView === 'products' || currentView === 'monthly') {
+    setView(currentView);
+  }
+}
+
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('[data-view]').forEach(function(b) { b.classList.toggle('active', b.dataset.view === v); });
+  document.getElementById('yearFilter').style.display = (v === 'overview' || v === 'trend') ? 'flex' : 'none';
+  document.getElementById('productFilter').style.display = (v === 'products' || v === 'monthly') ? 'flex' : 'none';
+  // Destroy all charts
+  Object.keys(charts).forEach(function(k) { charts[k].destroy(); delete charts[k]; });
+  
+  switch(v) {
+    case 'overview': renderOverview(); break;
+    case 'products': renderProducts(); break;
+    case 'trend': renderTrend(); break;
+    case 'monthly': renderMonthly(); break;
+  }
+}
+
+/* ── Find data for current year ── */
+function findYear(y) {
+  return D.summary.find(function(s) { return s.year === y; }) || D.summary[D.summary.length - 1];
+}
+function prevYear(y) {
+  return D.summary.find(function(s) { return s.year === y - 1; });
+}
+
+/* ════════════════════════════════════
+   OVERVIEW
+   ════════════════════════════════════ */
+function renderOverview() {
+  var cur = findYear(currentYear);
+  var prev = prevYear(currentYear);
+  if (!cur) return;
+  
+  // Use annualized values for current (partial) year if available
+  var isPartial = cur.monthsWithData && cur.monthsWithData < 12;
+  var gmSales = isPartial ? (cur.gmSalesAnnualized || cur.gmSales || 0) : (cur.gmSales || 0);
+  var gmAS = isPartial ? (cur.gmAfterSalesAnnualized || cur.gmAfterSales || 0) : (cur.gmAfterSales || 0);
+  var gmTotal = isPartial ? (cur.gmTotalAnnualized || cur.gmTotal || 0) : (cur.gmTotal || 0);
+  var sRatio = cur.salesRatio || (gmTotal > 0 ? gmSales / gmTotal : 0);
+  var asRatio = cur.afterSalesRatio || (gmTotal > 0 ? gmAS / gmTotal : 0);
+  
+  var prevGmTotal = prev ? (prev.gmTotal || 0) : 0;
+  var prevGmSales = prev ? (prev.gmSales || 0) : 0;
+  var prevGmAS = prev ? (prev.gmAfterSales || 0) : 0;
+  // For YoY comparison with partial year, also annualize the previous year if needed
+  if (prev && prev.monthsWithData && prev.monthsWithData < 12) {
+    prevGmTotal = prev.gmTotalAnnualized || prevGmTotal;
+    prevGmSales = prev.gmSalesAnnualized || prevGmSales;
+    prevGmAS = prev.gmAfterSalesAnnualized || prevGmAS;
+  }
+  
+  var h = '';
+  
+  // KPI Cards
+  var partialNote = isPartial ? ' <span style="font-size:10px;color:var(--orange)">(ประมาณณ์ ×12/' + cur.monthsWithData + ')</span>' : '';
+  h += '<div class="kpi-row">';
+  h += kpiCard('🚗 กำไรขั้นต้น - ขาย' + partialNote, fmt(gmSales), fmtFull(gmSales), 'sales', yoyPct(gmSales, prevGmSales));
+  h += kpiCard('🔧 กำไรขั้นต้น - หลังการขาย' + partialNote, fmt(gmAS), fmtFull(gmAS), 'aftersales', yoyPct(gmAS, prevGmAS));
+  h += kpiCard('📊 กำไรขั้นต้นรวม' + partialNote, fmt(gmTotal), fmtFull(gmTotal), 'total', yoyPct(gmTotal, prevGmTotal));
+  h += kpiCard('📈 สัดส่วนขาย', fmtPct2(sRatio * 100) + '%', '', 'sales', null);
+  h += kpiCard('🛠️ สัดส่วนหลังการขาย', fmtPct2(asRatio * 100) + '%', '', 'aftersales', null);
+  h += '</div>';
+  
+  // Ratio Bar
+  h += '<div class="ratio-section">';
+  h += '<h3>📊 สัดส่วนกำไรขั้นต้น — ขาย vs หลังการขาย (ปี ' + currentYear + ')</h3>';
+  h += '<div class="ratio-bar-container">';
+  var salesPct = (sRatio * 100).toFixed(1);
+  var asPct = (asRatio * 100).toFixed(1);
+  h += '<div class="ratio-bar-sales" style="width:' + salesPct + '%">🚗 ขาย ' + salesPct + '%</div>';
+  h += '<div class="ratio-bar-aftersales" style="width:' + asPct + '%">🔧 หลังการขาย ' + asPct + '%</div>';
+  h += '</div>';
+  h += '<div class="ratio-labels"><span class="sales-label">🚗 ธุรกิจขาย ' + fmtFull(gmSales) + ' บาท</span><span class="aftersales-label">🔧 ธุรกิจหลังการขาย ' + fmtFull(gmAS) + ' บาท</span></div>';
+  h += '</div>';
+  
+  // Charts row
+  h += '<div class="chart-row">';
+  h += '<div class="section"><h3>📈 กำไรขั้นต้น ขาย vs หลังการขาย</h3><div class="chart-box"><canvas id="chartGmSplit"></canvas></div></div>';
+  h += '<div class="section"><h3>🔄 สัดส่วนแนวโน้ม</h3><div class="chart-box"><canvas id="chartRatio"></canvas></div></div>';
+  h += '</div>';
+  
+  // Summary Table
+  h += '<div class="section"><h3>📋 ตารางสรุปกำไรขั้นต้น</h3><div class="table-wrap"><table>';
+  h += '<thead><tr><th>ปี</th><th>กำไรขั้นต้น<br>ขาย (บาท)</th><th>กำไรขั้นต้น<br>หลังการขาย (บาท)</th><th>กำไรขั้นต้น<br>รวม (บาท)</th><th>สัดส่วน<br>ขาย</th><th>สัดส่วน<br>หลังการขาย</th><th>YoY รวม</th></tr></thead>';
+  h += '<tbody>';
+  D.summary.slice().reverse().forEach(function(s) {
+    var py = prevYear(s.year);
+    // Use annualized values for partial years in the table
+    var sSales = (s.monthsWithData && s.monthsWithData < 12) ? (s.gmSalesAnnualized || s.gmSales) : s.gmSales;
+    var sAS = (s.monthsWithData && s.monthsWithData < 12) ? (s.gmAfterSalesAnnualized || s.gmAfterSales) : s.gmAfterSales;
+    var sTotal = (s.monthsWithData && s.monthsWithData < 12) ? (s.gmTotalAnnualized || s.gmTotal) : s.gmTotal;
+    var pyTotal = py ? ((py.monthsWithData && py.monthsWithData < 12) ? (py.gmTotalAnnualized || py.gmTotal) : (py.gmTotal || 0)) : 0;
+    var sRatio2 = sTotal > 0 ? sSales / sTotal : (s.salesRatio || 0);
+    var asRatio2 = sTotal > 0 ? sAS / sTotal : (s.afterSalesRatio || 0);
+    var yoyVal = pyTotal > 0 ? ((sTotal - pyTotal) / Math.abs(pyTotal) * 100).toFixed(1) : '-';
+    var partialFlag = (s.monthsWithData && s.monthsWithData < 12) ? ' ⭐' + s.monthsWithData + 'เดือน' : '';
+    h += '<tr' + (s.year === currentYear ? ' style="background:#eff6ff;font-weight:600"' : '') + '>';
+    h += '<td>' + s.year + partialFlag + '</td>';
+    h += '<td class="num ' + cls(sSales) + '">' + fmtFull(sSales) + '</td>';
+    h += '<td class="num ' + cls(sAS) + '">' + fmtFull(sAS) + '</td>';
+    h += '<td class="num ' + cls(sTotal) + '">' + fmtFull(sTotal) + '</td>';
+    h += '<td class="num">' + fmtPct2(sRatio2 * 100) + '%</td>';
+    h += '<td class="num">' + fmtPct2(asRatio2 * 100) + '%</td>';
+    h += '<td class="num ' + cls(parseFloat(yoyVal)) + '">' + yoyVal + '%</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div></div>';
+  
+  document.getElementById('mainContent').innerHTML = h;
+  drawGmSplitChart();
+  drawRatioChart();
+}
+
+function kpiCard(icon, title, sub, type, yoy) {
+  var trendHtml = '';
+  if (yoy !== null && yoy !== undefined) {
+    var yoyNum = parseFloat(yoy);
+    trendHtml = '<div class="trend ' + cls(yoyNum) + '">' + (yoyNum >= 0 ? '▲' : '▼') + ' ' + yoy + '% YoY</div>';
+  }
+  return '<div class="kpi-card ' + type + '">' +
+    '<div class="icon">' + icon + '</div>' +
+    '<div class="label">' + title + '</div>' +
+    '<div class="value">' + (sub || '-') + '</div>' +
+    '<div class="sub">' + (sub ? sub : '') + '</div>' +
+    trendHtml + '</div>';
+}
+
+function drawGmSplitChart() {
+  var ctx = document.getElementById('chartGmSplit');
+  if (!ctx) return;
+  var years = D.summary.map(function(s) { return s.year + ((s.monthsWithData && s.monthsWithData < 12) ? '⭐' : ''); });
+  var salesData = D.summary.map(function(s) { return (s.monthsWithData && s.monthsWithData < 12) ? (s.gmSalesAnnualized || s.gmSales || 0) : (s.gmSales || 0); });
+  var asData = D.summary.map(function(s) { return (s.monthsWithData && s.monthsWithData < 12) ? (s.gmAfterSalesAnnualized || s.gmAfterSales || 0) : (s.gmAfterSales || 0); });
+  charts.gmSplit = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: years,
+      datasets: [
+        { label: '🚗 ขาย', data: salesData, backgroundColor: '#2563eb', borderRadius: 4 },
+        { label: '🔧 หลังการขาย', data: asData, backgroundColor: '#059669', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, ticks: { callback: function(v) { return fmt(v); } } }
+      }
+    }
+  });
+}
+
+function drawRatioChart() {
+  var ctx = document.getElementById('chartRatio');
+  if (!ctx) return;
+  var years = D.summary.map(function(s) { return s.year; });
+  var salesR = D.summary.map(function(s) { return ((s.salesRatio || 0) * 100).toFixed(1); });
+  var asR = D.summary.map(function(s) { return ((s.afterSalesRatio || 0) * 100).toFixed(1); });
+  charts.ratio = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: years,
+      datasets: [
+        { label: '🚗 ขาย %', data: salesR, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.1)', fill: true, tension: .3 },
+        { label: '🔧 หลังการขาย %', data: asR, borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.1)', fill: true, tension: .3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { y: { ticks: { callback: function(v) { return v + '%'; } } } }
+    }
+  });
+}
+
+/* ════════════════════════════════════
+   PRODUCTS — Product selection with yearly trends + YoY
+   ════════════════════════════════════ */
+function renderProducts() {
+  if (!D.products || D.products.length === 0) {
+    document.getElementById('mainContent').innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px">ไม่มีข้อมูลรายผลิตภัณฑ์</div>';
+    return;
+  }
+  
+  var h = '';
+  
+  // ── Calculate per-product averages from monthly data ──
+  var YEAR_COLS = [2566, 2567, 2568, 2569];
+  var calcAvgs = {};
+  D.products.forEach(function(p) {
+    var ps = PRODUCT_SECTIONS[String(p.no)];
+    if (!ps) { calcAvgs[p.no] = {}; YEAR_COLS.forEach(function(y){calcAvgs[p.no][y]=null;}); return; }
+    var sectionName = ps.section;
+    var monthlyItems = D.monthly[sectionName];
+    calcAvgs[p.no] = {};
+    YEAR_COLS.forEach(function(year) {
+      var sum = 0, count = 0;
+      if (monthlyItems) {
+        monthlyItems.forEach(function(item) {
+          if (parseInt(item.year) === year && item.monthly) {
+            for (var mi = 0; mi < item.monthly.length; mi++) {
+              var v = item.monthly[mi];
+              if (shouldIncludeMonth(year, mi, v)) {
+                sum += v; count++;
+              }
+            }
+          }
+        });
+      }
+      calcAvgs[p.no][year] = count > 0 ? Math.round(sum / count) : null;
+    });
+  });
+
+  // Product cards grid
+  h += '<div class="section"><h3>📋 สัดส่วน GMG รายผลิตภัณฑ์ — เฉลี่ย/เดือน ปี 2566-2569</h3>';
+  h += '<p style="font-size:11px;color:var(--text3);margin-bottom:10px">👆 กดที่ผลิตภัณฑ์เพื่อดูแนวโน้มรายปี + เปรียบเทียบ YoY</p>';
+  h += '<div class="product-grid">';
+  
+  var afterSalesProducts = D.products.filter(function(p) { return p.no >= 1 && p.no <= 9; });
+  var salesProducts = D.products.filter(function(p) { return p.no >= 10; });
+  
+  h += '<div style="grid-column:1/-1;padding:8px 0;font-weight:700;color:var(--aftersales);font-size:14px;border-bottom:2px solid var(--aftersales)">🔧 ธุรกิจหลังการขาย</div>';
+  afterSalesProducts.forEach(function(p) {
+    h += productCard(p, 'aftersales', calcAvgs);
+  });
+  
+  h += '<div style="grid-column:1/-1;padding:8px 0;font-weight:700;color:var(--sales);font-size:14px;border-bottom:2px solid var(--sales)">🚗 ธุรกิจขาย</div>';
+  salesProducts.forEach(function(p) {
+    h += productCard(p, 'sales', calcAvgs);
+  });
+  h += '</div></div>';
+  
+  // Product comparison table
+  h += '<div class="section"><h3>📊 เปรียบเทียบ GMG รายผลิตภัณฑ์ — เฉลี่ย/เดือน (เดือนที่จบแล้ว)</h3>';
+  h += '<div class="table-wrap"><table><thead><tr>';
+  h += '<th>No</th><th>ผลิตภัณฑ์</th>';
+  YEAR_COLS.forEach(function(y) {
+    h += '<th>เฉลี่ย ' + (y - 543) + '/' + y;
+    if (y === YEAR_COLS[YEAR_COLS.length - 1]) {
+      var curMonthIdx = new Date().getMonth();
+      var curMonthName = MONTHS_TH[curMonthIdx] || '';
+      h += ' <span style="font-size:8px;color:var(--orange)">⚠ไม่รวม' + curMonthName + '</span>';
+    }
+    h += '</th>';
+  });
+  var lastYear = YEAR_COLS[YEAR_COLS.length - 1];
+  var prevYear = YEAR_COLS[YEAR_COLS.length - 2];
+  h += '<th>YoY ' + (lastYear - 543) + '/' + lastYear + '</th>';
+  h += '</tr></thead><tbody>';
+  D.products.forEach(function(p) {
+    var type = p.no <= 9 ? 'aftersales' : 'sales';
+    var avgs = calcAvgs[p.no] || {};
+    var lastAvg = avgs[lastYear];
+    var prevAvg = avgs[prevYear];
+    var yoy = (lastAvg !== null && prevAvg !== null && prevAvg !== 0) ? ((lastAvg - prevAvg) / Math.abs(prevAvg) * 100).toFixed(1) : '-';
+    h += '<tr class="' + type + '-row" style="cursor:pointer" onclick="setProduct(\'' + p.no + '\'); setView(\'products\')">';
+    h += '<td>' + p.no + '</td>';
+    h += '<td style="white-space:nowrap;font-weight:600">' + p.desc + '</td>';
+    YEAR_COLS.forEach(function(y) {
+      var v = avgs[y];
+      h += '<td class="num ' + cls(v) + '">' + fmtFull(v) + '</td>';
+    });
+    h += '<td class="num ' + cls(parseFloat(yoy)) + '">' + yoy + (yoy !== '-' ? '%' : '') + '</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div></div>';
+  
+  // Detail panel for selected product
+  if (currentProduct) {
+    h += '<div id="productDetailPanel"></div>';
+  }
+  
+  document.getElementById('mainContent').innerHTML = h;
+  
+  // If a product is selected, render its detail
+  if (currentProduct) {
+    showProductDetail(parseInt(currentProduct));
+  }
+}
+
+function productCard(p, type, calcAvgs) {
+  var avgs = calcAvgs && calcAvgs[p.no] ? calcAvgs[p.no] : {};
+  var lastYear = 2569, prevYear = 2568;
+  var lastAvg = avgs[lastYear];
+  var prevAvg = avgs[prevYear];
+  var yoy = (lastAvg !== null && prevAvg !== null && prevAvg !== 0) ? ((lastAvg - prevAvg) / Math.abs(prevAvg) * 100).toFixed(1) : null;
+  var yoyColor = yoy !== null ? (parseFloat(yoy) >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--text3)';
+  var gmgPct = p.gmgPct;
+  var gmgColor = (gmgPct !== null && gmgPct >= 0) ? 'var(--green)' : 'var(--red)';
+  return '<div class="product-card ' + type + '-card" onclick="setProduct(\'' + p.no + '\'); setView(\'products\')">' +
+    '<div class="pno">' + p.no + '</div>' +
+    '<div class="pname">' + p.desc + '</div>' +
+    '<div class="pval" style="color:' + gmgColor + '">' + (gmgPct !== null ? fmtPct(gmgPct) : '-') + '</div>' +
+    '<div class="psub">เฉลี่ย 69: ' + fmtFull(lastAvg) + ' | YoY: ' + (yoy !== null ? yoy + '%' : '-') + '</div>' +
+    '</div>';
+}
+
+/* ── Get yearly + monthly data for a product ── */
+function getProductData(productNo) {
+  var ps = PRODUCT_SECTIONS[String(productNo)];
+  if (!ps) return { yearly: [], monthly: {} };
+  
+  var sectionName = ps.section;
+  var monthlyItems = D.monthly[sectionName];
+  if (!monthlyItems) return { yearly: [], monthly: {} };
+  
+  var yearlyTotals = {};
+  var yearlyTotalsComplete = {}; // totals excluding incomplete current month
+  var monthlyByYear = {};
+  
+  monthlyItems.forEach(function(item) {
+    if (!item.year || parseInt(item.year) < 2551 || parseInt(item.year) > 2569) return;
+    
+    var y = parseInt(item.year);
+    // Sum monthly values for yearly total
+    var monthSum = 0;
+    var monthSumComplete = 0; // excludes incomplete current month AND future months
+    var monthVals = [];
+    for (var m = 0; m < 12; m++) {
+      var val = (item.monthly && item.monthly[m]) ? item.monthly[m] : null;
+      monthVals.push(val);
+      if (shouldIncludeMonth(y, m, val)) {
+        monthSum += val;
+        monthSumComplete += val;
+      } else if (val !== null && val !== undefined) {
+        // Include in monthSum only if it's a past or current month with data (for compatibility)
+        monthSum += val;
+      }
+    }
+    // Use monthly sum, or fall back to total
+    var total = monthSum || item.total || 0;
+    var totalComplete = isPartialYear(y) ? monthSumComplete : total;
+    
+    if (!yearlyTotals[y]) yearlyTotals[y] = 0;
+    yearlyTotals[y] += total;
+    if (!yearlyTotalsComplete[y]) yearlyTotalsComplete[y] = 0;
+    yearlyTotalsComplete[y] += totalComplete;
+    
+    if (!monthlyByYear[y]) {
+      monthlyByYear[y] = [null,null,null,null,null,null,null,null,null,null,null,null];
+    }
+    for (var m = 0; m < 12; m++) {
+      if (monthVals[m] !== null && monthVals[m] !== undefined) {
+        monthlyByYear[y][m] = (monthlyByYear[y][m] || 0) + monthVals[m];
+      }
+    }
+  });
+  
+  var years = Object.keys(yearlyTotals).map(Number).sort(function(a,b){return a-b;});
+  var yearly = years.map(function(y) {
+    return { year: y, total: yearlyTotals[y], totalComplete: yearlyTotalsComplete[y] };
+  });
+  
+  return { yearly: yearly, monthly: monthlyByYear };
+}
+
+// Helper: check if a Thai year is the current (partial) year
+function isPartialYear(thaiYear) {
+  var now = new Date();
+  return parseInt(thaiYear) === now.getFullYear() + 543;
+}
+
+/* ── Show product detail panel ── */
+function showProductDetail(no) {
+  var ps = PRODUCT_SECTIONS[String(no)];
+  var p = D.products ? D.products.find(function(x){ return x.no === no; }) : null;
+  if (!ps) return;
+  
+  var data = getProductData(no);
+  var panel = document.getElementById('productDetailPanel');
+  if (!panel) return;
+  
+  var h = '<div class="section" style="border-left:4px solid ' + (no <= 9 ? 'var(--aftersales)' : 'var(--sales)') + '">';
+  h += '<h3 style="display:flex;align-items:center;gap:8px">' + (no <= 9 ? '🔧' : '🚗') + ' ' + (p ? p.desc : ps.label) + ' <span style="font-size:12px;color:var(--text3);font-weight:400">(' + (no <= 9 ? 'หลังการขาย' : 'ขาย') + ')</span></h3>';
+  
+  if (data.yearly.length === 0) {
+    h += '<p style="color:var(--text3)">ไม่มีข้อมูลรายเดือนสำหรับผลิตภัณฑ์นี้</p>';
+    h += '</div>';
+    panel.innerHTML = h;
+    panel.style.display = 'block';
+    panel.scrollIntoView({behavior:'smooth'});
+    return;
+  }
+  
+  // KPI summary — use totalComplete (excl. incomplete month) for current year
+  var latestY = data.yearly[data.yearly.length - 1];
+  var prevYData = data.yearly.length >= 2 ? data.yearly[data.yearly.length - 2] : null;
+  var latestTotal = isPartialYear(latestY.year) ? (latestY.totalComplete || latestY.total) : latestY.total;
+  // All-time avg: use totalComplete for partial years so current incomplete year doesn't drag avg down
+  var allTimeAvg = data.yearly.reduce(function(s,x){
+    var t = isPartialYear(x.year) ? (x.totalComplete || x.total) : x.total;
+    return s + (t || 0);
+  }, 0) / data.yearly.length;
+  
+  h += '<div class="kpi-row" style="margin-bottom:14px">';
+  h += kpiCard('📅 ล่าสุด (ปี ' + latestY.year + ')', fmt(latestTotal), fmtFull(latestTotal), 'total', prevYData ? yoyPct(latestTotal, prevYData.total) : null);
+  h += kpiCard('📊 เฉลี่ยตั้งแต่ ' + data.yearly[0].year, fmt(allTimeAvg), fmtFull(Math.round(allTimeAvg)), 'sales', null);
+  if (prevYData) {
+    h += kpiCard('📈 YoY', yoyPct(latestTotal, prevYData.total) + '%', prevYData.year + ': ' + fmtFull(prevYData.total), latestTotal >= prevYData.total ? 'sales' : 'aftersales', null);
+  }
+  h += '</div>';
+  
+  // Yearly trend chart
+  h += '<h4 style="font-size:13px;color:var(--text2);margin:12px 0 8px">📈 แนวโน้มกำไรขั้นต้นรายปี (' + data.yearly[0].year + ' - ' + latestY.year + ')</h4>';
+  h += '<div class="chart-box" style="max-height:300px"><canvas id="chartProductYearly"></canvas></div>';
+  
+  // Year selector chips for YoY
+  var availYears = data.yearly.map(function(y){ return y.year; });
+  var cy = availYears.indexOf(currentYear) >= 0 ? currentYear : availYears[availYears.length - 1];
+  var py = availYears.indexOf(cy - 1) >= 0 ? cy - 1 : (availYears.length >= 2 ? availYears[availYears.length - 2] : null);
+  
+  h += '<h4 style="font-size:13px;color:var(--text2);margin:16px 0 8px">🔄 เปรียบเทียบรายเดือน YoY</h4>';
+  h += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+  h += '<span style="font-size:12px;color:var(--text3)">เลือกปีเปรียบเทียบ:</span>';
+  h += '<div class="year-chips" id="yoyYearChips">';
+  for (var i = availYears.length - 1; i >= 1; i--) {
+    var yy = availYears[i];
+    var ppy = availYears[i-1];
+    h += '<span class="year-chip' + (yy === cy ? ' active' : '') + '" onclick="selectYoyYear(' + yy + ',' + no + ')" style="cursor:pointer">' + ppy + ' → ' + yy + '</span>';
+  }
+  h += '</div></div>';
+  h += '<div id="yoyChartArea"></div>';
+  
+  // Full yearly data table with average column
+  h += '<h4 style="font-size:13px;color:var(--text2);margin:16px 0 8px">📋 กำไรขั้นต้นรายปี</h4>';
+  h += '<div class="table-wrap"><table><thead><tr><th>ปี</th><th>กำไรขั้นต้น</th><th>เฉลี่ย/เดือน</th><th>YoY %</th></tr></thead><tbody>';
+  data.yearly.forEach(function(y, i) {
+    var yTotal = isPartialYear(y.year) ? (y.totalComplete || y.total) : y.total;
+    var prevTotal = i > 0 ? (isPartialYear(data.yearly[i-1].year) ? (data.yearly[i-1].totalComplete || data.yearly[i-1].total) : data.yearly[i-1].total) : 0;
+    var yoy = prevTotal !== 0 ? ((yTotal - prevTotal) / Math.abs(prevTotal) * 100).toFixed(1) : '-';
+    // Calculate average per month from monthly data — exclude incomplete current month
+    var ym = data.monthly[y.year];
+    var monthCount = 0, monthSum = 0;
+    if (ym) { for (var mi = 0; mi < 12; mi++) { if (shouldIncludeMonth(y.year, mi, ym[mi])) { monthSum += ym[mi]; monthCount++; } } }
+    var avgMonth = monthCount > 0 ? Math.round(monthSum / monthCount) : 0;
+    // For partial years, also show note about how many complete months
+    var avgNote = '';
+    if (monthCount > 0 && monthCount < 12) {
+      avgNote = ' <span style="font-size:9px;color:var(--orange)">(' + monthCount + 'เดือน⁂)</span>';
+    }
+    h += '<tr' + (y.year === cy ? ' style="background:#eff6ff;font-weight:600"' : '') + '><td>' + y.year + '</td><td class="num">' + fmtFull(yTotal) + '</td>';
+    h += '<td class="num" style="color:var(--accent2);font-weight:600">' + fmtFull(avgMonth) + avgNote + '</td>';
+    h += '<td class="num ' + cls(yTotal - prevTotal) + '">' + yoy + '%</td></tr>';
+  });
+  h += '</tbody></table></div>';
+  
+  h += '</div>';
+  
+  panel.innerHTML = h;
+  panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth'});
+  
+  // Draw yearly trend chart
+  setTimeout(function() {
+    try {
+      var labels = data.yearly.map(function(y){ return y.year; });
+      // Use totalComplete (excl. incomplete month) for current year in chart
+      var values = data.yearly.map(function(y){
+        return isPartialYear(y.year) ? (y.totalComplete || y.total) : y.total;
+      });
+      var avg = values.reduce(function(a,b){return a+b;},0) / values.length;
+      
+      charts.productYearly = new Chart(document.getElementById('chartProductYearly'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'กำไรขั้นต้น', data: values, backgroundColor: values.map(function(v,i){ return i === values.length-1 ? '#7c3aed' : '#93c5fd'; }), borderRadius: 4 },
+            { label: 'เฉลี่ย (' + fmtFull(Math.round(avg)) + ')', data: labels.map(function(){return avg;}), type: 'line', borderColor: '#f59e0b', borderDash: [6,4], pointRadius: 0, fill: false, borderWidth: 2 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top', labels: { font: { size: 10 } } } }, scales: { y: { ticks: { callback: function(v){ return fmt(v); }, font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } } }
+      });
+    } catch(e) {}
+  }, 100);
+  
+  // Draw initial YoY chart
+  if (py) {
+    drawYoyChart(no, cy, py);
+  }
+}
+
+function selectYoyYear(cy, productNo) {
+  var availYears = [];
+  if (D.yearly) availYears = D.yearly;
+  // Update active chip
+  document.querySelectorAll('#yoyYearChips .year-chip').forEach(function(c) {
+    c.classList.remove('active');
+  });
+  // Find the chip that matches
+  var chips = document.querySelectorAll('#yoyYearChips .year-chip');
+  chips.forEach(function(c) {
+    if (c.textContent.indexOf('→ ' + cy) >= 0) c.classList.add('active');
+  });
+  // Figure out previous year
+  var prevY = cy - 1;
+  drawYoyChart(productNo, cy, prevY);
+}
+
+function drawYoyChart(productNo, cy, py) {
+  var data = getProductData(productNo);
+  var cyData = data.monthly[cy];
+  var pyData = data.monthly[py];
+  
+  var chartArea = document.getElementById('yoyChartArea');
+  if (!chartArea) return;
+  
+  var h = '<div class="chart-box" style="max-height:300px"><canvas id="chartProductYoy"></canvas></div>';
+  h += '<div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>เดือน</th><th>ปี ' + py + '</th><th>ปี ' + cy + '</th><th>ต่าง</th><th>YoY %</th></tr></thead><tbody>';
+  var pyTotal = 0, cyTotal = 0, cyTotalComplete = 0;
+  var incompleteMonthIdx = -1;
+  var now = new Date();
+  var curThaiYear = now.getFullYear() + 543;
+  if (parseInt(cy) === curThaiYear) incompleteMonthIdx = now.getMonth();
+  for (var m = 0; m < 12; m++) {
+    var pv = pyData ? (pyData[m] || 0) : 0;
+    var cv = cyData ? (cyData[m] || 0) : 0;
+    pyTotal += pv;
+    cyTotal += cv;
+    if (m !== incompleteMonthIdx) cyTotalComplete += cv;
+    var diff = cv - pv;
+    var yoyVal = pv !== 0 ? ((diff / Math.abs(pv)) * 100).toFixed(1) : '-';
+    var incompleteStyle = (m === incompleteMonthIdx) ? ' style="background:#fff3cd;font-style:italic"' : '';
+    h += '<tr' + incompleteStyle + '><td>' + MONTHS_TH[m] + (m === incompleteMonthIdx ? ' ⚠' : '') + '</td><td class="num">' + fmtFull(pv) + '</td><td class="num">' + fmtFull(cv) + '</td>';
+    h += '<td class="num ' + cls(diff) + '">' + fmtFull(diff) + '</td>';
+    h += '<td class="num ' + cls(diff) + '">' + yoyVal + '%</td></tr>';
+  }
+  var totalDiff = cyTotalComplete - pyTotal;
+  var totalYoy = pyTotal !== 0 ? ((totalDiff / Math.abs(pyTotal)) * 100).toFixed(1) : '-';
+  var cyNote = incompleteMonthIdx >= 0 ? ' <span style="font-size:9px;color:var(--orange)">(ไม่รวม ' + MONTHS_TH[incompleteMonthIdx] + ')</span>' : '';
+  h += '<tr style="font-weight:700;border-top:2px solid var(--border)"><td>รวม</td><td class="num">' + fmtFull(pyTotal) + '</td><td class="num">' + fmtFull(cyTotalComplete) + cyNote + '</td>';
+  h += '<td class="num ' + cls(totalDiff) + '">' + fmtFull(totalDiff) + '</td>';
+  h += '<td class="num ' + cls(totalDiff) + '">' + totalYoy + '%</td></tr>';
+  h += '</tbody></table></div>';
+  
+  chartArea.innerHTML = h;
+  
+  // Draw chart
+  setTimeout(function() {
+    try {
+      if (charts.productYoy) { charts.productYoy.destroy(); delete charts.productYoy; }
+      charts.productYoy = new Chart(document.getElementById('chartProductYoy'), {
+        type: 'bar',
+        data: {
+          labels: MONTHS_TH,
+          datasets: [
+            { label: 'ปี ' + py, data: MONTHS_TH.map(function(m,i){ return pyData ? (pyData[i] || 0) : 0; }), backgroundColor: '#93c5fd', borderRadius: 4 },
+            { label: 'ปี ' + cy, data: MONTHS_TH.map(function(m,i){ return cyData ? (cyData[i] || 0) : 0; }), backgroundColor: '#7c3aed', borderRadius: 4 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top', labels: { font: { size: 10 } } } }, scales: { y: { ticks: { callback: function(v){ return fmt(v); }, font: { size: 10 } } }, x: { ticks: { font: { size: 10 } } } } }
+      });
+    } catch(e) {}
+  }, 100);
+}
+
+/* ════════════════════════════════════
+   TREND — Multi-year trend charts
+   ════════════════════════════════════ */
+function renderTrend() {
+  var h = '';
+  h += '<div class="chart-row">';
+  h += '<div class="section"><h3>📈 แนวโน้มกำไรขั้นต้น (ขาย vs หลังการขาย)</h3><div class="chart-box"><canvas id="chartTrendGM"></canvas></div></div>';
+  h += '<div class="section"><h3>🔄 สัดส่วนแนวโน้ม</h3><div class="chart-box"><canvas id="chartTrendRatio"></canvas></div></div>';
+  h += '</div>';
+  h += '<div class="section"><h3>📊 กำไรขั้นต้นรวม</h3><div class="chart-box"><canvas id="chartTrendTotal"></canvas></div></div>';
+  
+  document.getElementById('mainContent').innerHTML = h;
+  drawTrendCharts();
+}
+
+function drawTrendCharts() {
+  var years = D.summary.map(function(s) { return s.year + ((s.monthsWithData && s.monthsWithData < 12) ? '⭐' : ''); });
+  var salesData = D.summary.map(function(s) { return (s.monthsWithData && s.monthsWithData < 12) ? (s.gmSalesAnnualized || s.gmSales || 0) : (s.gmSales || 0); });
+  var asData = D.summary.map(function(s) { return (s.monthsWithData && s.monthsWithData < 12) ? (s.gmAfterSalesAnnualized || s.gmAfterSales || 0) : (s.gmAfterSales || 0); });
+  var totalData = D.summary.map(function(s) { return (s.monthsWithData && s.monthsWithData < 12) ? (s.gmTotalAnnualized || s.gmTotal || 0) : (s.gmTotal || 0); });
+  
+  var ctx1 = document.getElementById('chartTrendGM');
+  if (ctx1) {
+    charts.trendGM = new Chart(ctx1, {
+      type: 'line',
+      data: {
+        labels: years,
+        datasets: [
+          { label: '🚗 ขาย', data: salesData, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.1)', fill: false, tension: .3, pointRadius: 4 },
+          { label: '🔧 หลังการขาย', data: asData, borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.1)', fill: false, tension: .3, pointRadius: 4 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: function(v) { return fmt(v); } } } } }
+    });
+  }
+  
+  var ctx2 = document.getElementById('chartTrendRatio');
+  if (ctx2) {
+    charts.trendRatio = new Chart(ctx2, {
+      type: 'line',
+      data: {
+        labels: years,
+        datasets: [
+          { label: 'ขาย %', data: D.summary.map(function(s) { return ((s.salesRatio || 0) * 100); }), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.05)', fill: true, tension: .3 },
+          { label: 'หลังการขาย %', data: D.summary.map(function(s) { return ((s.afterSalesRatio || 0) * 100); }), borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.05)', fill: true, tension: .3 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: function(v) { return v + '%'; } } } } }
+    });
+  }
+  
+  var ctx3 = document.getElementById('chartTrendTotal');
+  if (ctx3) {
+    var avg = totalData.reduce(function(a,b){return a+b;},0) / totalData.length;
+    charts.trendTotal = new Chart(ctx3, {
+      type: 'bar',
+      data: {
+        labels: years,
+        datasets: [
+          { label: 'กำไรขั้นต้นรวม', data: totalData, backgroundColor: years.map(function(y) { return y === currentYear ? '#7c3aed' : '#818cf8'; }), borderRadius: 6 },
+          { label: 'เฉลี่ย (' + fmtFull(Math.round(avg)) + ')', data: years.map(function(){ return avg; }), type: 'line', borderColor: '#f59e0b', borderDash: [6,4], pointRadius: 0, fill: false, borderWidth: 2 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: function(v) { return fmt(v); } } } } }
+    });
+  }
+}
+
+/* ════════════════════════════════════
+   MONTHLY — Monthly breakdown for selected section
+   ════════════════════════════════════ */
+function renderMonthly() {
+  var h = '<div class="section"><h3>📅 ข้อมูลรายเดือน — เลือกสาขาธุรกิจ</h3>';
+  h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
+  var monthSections = [
+    { key: 'parts', label: '🔩 อะไหล่-ประดับยนต์' },
+    { key: 'service', label: '🔧 ค่าแรงบริการ' },
+    { key: 'pmgServiceLabor', label: '🏋️ PMG Service (ค่าแรง)' },
+    { key: 'pmgServiceParts', label: '🔩 PMG Service (อะไหล่)' },
+    { key: 'antirust', label: '🛡️ พ่นกันสนิม+ล้างรถ' },
+    { key: 'insurance', label: '📋 ประกันภัย(ต่ออายุ)' },
+    { key: 'usedGoods', label: '♻️ ขายของเก่า' },
+    { key: 'bodyRepair', label: '🚗 ศูนย์ซ่อมตัวถัง' },
+    { key: 'carSales', label: '🚙 ขายรถยนต์' },
+    { key: 'carReg', label: '📄 ทะเบียนรถใหม่' },
+    { key: 'newCarIns', label: '🛡️ ประกันภัยรถใหม่' },
+    { key: 'afterSalesTotal', label: '🔧 หลังการขาย (รวม)' },
+    { key: 'gmSalesMonthly', label: '📊 GM ขาย' }
+  ];
+  var defaultKey = monthSections[0].key;
+  monthSections.forEach(function(sec, i) {
+    if (!D.monthly[sec.key] || D.monthly[sec.key].length === 0) return;
+    h += '<button class="fbtn' + (i === 0 ? ' active' : '') + '" data-monthly-sec="' + sec.key + '" onclick="showMonthlySection(\'' + sec.key + '\', this)" style="font-size:11px">' + sec.label + '</button>';
+  });
+  h += '</div>';
+  h += '<div id="monthlyContent"><div class="loading">เลือกสาขาธุรกิจ</div></div>';
+  h += '</div>';
+  
+  document.getElementById('mainContent').innerHTML = h;
+  showMonthlySection(defaultKey, document.querySelector('[data-monthly-sec="' + defaultKey + '"]'));
+}
+
+function showMonthlySection(key, btn) {
+  document.querySelectorAll('[data-monthly-sec]').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  
+  var data = D.monthly[key];
+  if (!data || data.length === 0) {
+    document.getElementById('monthlyContent').innerHTML = '<div style="color:var(--text3);text-align:center;padding:20px">ไม่มีข้อมูล</div>';
+    return;
+  }
+  
+  // Filter only valid years
+  var validData = data.filter(function(d) { return d.year && d.year >= 2551 && d.year <= 2569; });
+  if (validData.length === 0) {
+    document.getElementById('monthlyContent').innerHTML = '<div style="color:var(--text3);text-align:center;padding:20px">ไม่มีข้อมูลที่ถูกต้อง</div>';
+    return;
+  }
+  
+  // ── Monthly average per year chart ──
+  var sortedData = validData.slice().sort(function(a,b){ return (a.year||0) - (b.year||0); });
+  var yearLabels = sortedData.map(function(d) { return d.year; });
+  var avgPerYear = sortedData.map(function(d) {
+    var m = d.monthly || [];
+    var count = 0, sum = 0;
+    m.forEach(function(v, idx) {
+      // Skip incomplete current month AND future months (placeholder 0 values)
+      if (shouldIncludeMonth(d.year, idx, v)) { sum += v; count++; }
+    });
+    return count > 0 ? Math.round(sum / count) : 0;
+  });
+  var totalPerYear = sortedData.map(function(d) {
+    var m = d.monthly || [];
+    var sum = 0;
+    m.forEach(function(v, idx) { if (shouldIncludeMonth(d.year, idx, v)) sum += v; });
+    return sum || (d.total || 0);
+  });
+  // Complete totals (excl. incomplete current month) for YoY and "รวม" column
+  var totalCompletePerYear = sortedData.map(function(d) {
+    var m = d.monthly || [];
+    var sum = 0;
+    m.forEach(function(v, idx) { if (shouldIncludeMonth(d.year, idx, v)) sum += v; });
+    return sum || (d.total || 0);
+  });
+  var overallAvg = avgPerYear.reduce(function(s,v){return s+v;},0) / avgPerYear.length;
+  var yearColors = sortedData.map(function(d) { return d.year === currentYear ? '#7c3aed' : '#93c5fd'; });
+  
+  var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">';
+  h += '<div class="section" style="margin:0"><h4 style="font-size:13px;color:var(--text2);margin-bottom:8px">📊 ค่าเฉลี่ยรายเดือน แต่ละปี</h4>';
+  h += '<div class="chart-box" style="max-height:280px"><canvas id="chartMonthlyAvg"></canvas></div></div>';
+  h += '<div class="section" style="margin:0"><h4 style="font-size:13px;color:var(--text2);margin-bottom:8px">📈 ยอดรวมรายปี</h4>';
+  h += '<div class="chart-box" style="max-height:280px"><canvas id="chartMonthlyTotal"></canvas></div></div>';
+  h += '</div>';
+  
+  h += '<div class="table-wrap"><table><thead><tr><th>ปี</th><th>เฉลี่ย/เดือน</th>';
+  MONTHS_TH.forEach(function(m) { h += '<th>' + m + '</th>'; });
+  h += '<th>รวม</th><th>YoY %</th></tr></thead><tbody>';
+  
+  sortedData.forEach(function(row, i) {
+    var yearDesc = row.desc || (row.year ? 'ปี ' + row.year : '-');
+    var completeMonths = 0;
+    var monthVals = [];
+    (row.monthly || []).forEach(function(v, idx) { 
+      monthVals.push(v);
+    });
+    // Count complete months (excluding incomplete current month) for the note
+    (row.monthly || []).forEach(function(v, idx) {
+      if (shouldIncludeMonth(row.year, idx, v)) completeMonths++;
+    });
+    var avg = avgPerYear[i];
+    // Use complete totals for YoY comparison (excl. incomplete current month)
+    var rowTotalComplete = totalCompletePerYear[i];
+    var prevTotal = i > 0 ? totalCompletePerYear[i-1] : 0;
+    var yoy = prevTotal !== 0 ? ((rowTotalComplete - prevTotal) / Math.abs(prevTotal) * 100).toFixed(1) : '-';
+    // Add note for current year rows about excluding incomplete month
+    var incompleteNote = '';
+    var now = new Date();
+    var currentThaiYear = now.getFullYear() + 543;
+    if (parseInt(row.year) === currentThaiYear) {
+      var curMonthIdx = now.getMonth();
+      var curMonthName = MONTHS_TH[curMonthIdx] || '';
+      incompleteNote = ' <span style="font-size:9px;color:var(--orange)">⚠ ไม่รวม ' + curMonthName + ' (ยังไม่จบเดือน)</span>';
+    }
+    h += '<tr' + (row.year === currentYear ? ' style="background:#eff6ff;font-weight:600"' : '') + '>';
+    h += '<td style="white-space:nowrap;font-weight:600">' + yearDesc + '</td>';
+    h += '<td class="num" style="font-weight:700;color:var(--accent2)">' + fmtFull(avg) + incompleteNote + '</td>';
+    monthVals.forEach(function(v, idx) {
+      // Highlight incomplete current month cell
+      var cellStyle = isIncompleteMonth(row.year, idx) ? ';background:#fff3cd;font-style:italic' : '';
+      h += '<td class="num ' + cls(v) + '"' + (cellStyle ? ' style="' + cellStyle.substring(1) + '"' : '') + '>' + fmtFull(v) + '</td>';
+    });
+    for (var j = monthVals.length; j < 12; j++) { h += '<td class="num">-</td>'; }
+    // Use complete total (excl. incomplete month) for current year
+    var totalDisplay = rowTotalComplete;
+    var totalNote = '';
+    if (isPartialYear(row.year)) {
+      var cmi = new Date().getMonth();
+      totalNote = ' <span style="font-size:9px;color:var(--orange)">(ไม่รวม' + MONTHS_TH[cmi] + ')</span>';
+    }
+    h += '<td class="num" style="font-weight:700;' + cls(totalDisplay) + '">' + fmtFull(totalDisplay) + totalNote + '</td>';
+    h += '<td class="num ' + cls(typeof yoy === 'number' ? yoy : 0) + '">' + yoy + (yoy !== '-' ? '%' : '') + '</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+  
+  document.getElementById('monthlyContent').innerHTML = h;
+  
+  // Draw monthly average chart
+  setTimeout(function() {
+    try {
+      charts.monthlyAvg = new Chart(document.getElementById('chartMonthlyAvg'), {
+        type: 'bar',
+        data: {
+          labels: yearLabels,
+          datasets: [
+            { label: 'เฉลี่ย/เดือน', data: avgPerYear, backgroundColor: yearColors, borderRadius: 4 },
+            { label: 'เฉลี่ยทั้งหมด (' + fmtFull(Math.round(overallAvg)) + ')', data: yearLabels.map(function(){return overallAvg;}), type: 'line', borderColor: '#f59e0b', borderDash: [6,4], pointRadius: 0, fill: false, borderWidth: 2 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top', labels: { font: { size: 10 } } } }, scales: { y: { ticks: { callback: function(v){ return fmt(v); }, font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } } }
+      });
+    } catch(e) {}
+    
+    try {
+      charts.monthlyTotalTrend = new Chart(document.getElementById('chartMonthlyTotal'), {
+        type: 'bar',
+        data: {
+          labels: yearLabels,
+          datasets: [
+            { label: 'ยอดรวม', data: totalCompletePerYear, backgroundColor: yearColors, borderRadius: 4 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top', labels: { font: { size: 10 } } } }, scales: { y: { ticks: { callback: function(v){ return fmt(v); }, font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } } }
+      });
+    } catch(e) {}
+  }, 100);
+}
+
+/* ── Start ── */
+var GM_RAW_DATA = null; // Data loaded via fetch
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

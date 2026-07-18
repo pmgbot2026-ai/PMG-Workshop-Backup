@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PMG OKR Dashboard — CEO Contract 2.0</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --accent: #3b82f6;
+      --accent2: #8b5cf6;
+      --green: #10b981;
+      --red: #ef4444;
+      --orange: #f59e0b;
+      --text: #1e293b;
+      --text2: #475569;
+      --text3: #94a3b8;
+      --border: #e2e8f0;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+      padding: 18px 24px;
+      box-shadow: 0 2px 10px rgba(59,130,246,0.15);
+    }
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header h1 {
+      font-size: 1.4rem;
+      color: #fff;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header .subtitle {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.85);
+      margin-top: 2px;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .last-update {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.18);
+      padding: 5px 12px;
+      border-radius: var(--radius-sm);
+    }
+    .refresh-btn {
+      background: rgba(255,255,255,0.25);
+      border: 1px solid rgba(255,255,255,0.4);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      transition: background 0.2s;
+      font-family: inherit;
+    }
+    .refresh-btn:hover { background: rgba(255,255,255,0.35); }
+
+    /* ── Tabs ── */
+    .tabs-bar {
+      background: #fff;
+      padding: 10px 24px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+    .tabs-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs-inner::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text2);
+      cursor: pointer;
+      font-size: 0.84rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .tab-btn:hover { background: #f0f4f8; color: var(--accent); }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(59,130,246,0.25);
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px 24px 60px;
+    }
+    .section { display: none; animation: fadeIn 0.3s ease; }
+    .section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .icon { color: var(--accent); }
+
+    /* ── Summary stat cards ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .stat-card .stat-icon { font-size: 1.8rem; margin-bottom: 6px; }
+    .stat-card .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--accent); }
+    .stat-card .stat-label { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+
+    /* ── Cascade flow (overview) ── */
+    .cascade-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-bottom: 24px;
+    }
+    .cascade-step {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      text-align: center;
+      position: relative;
+    }
+    .cascade-step .cs-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .cascade-step .cs-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .cascade-step .cs-desc { font-size: 0.82rem; color: var(--text2); margin-top: 4px; }
+    .cascade-arrow {
+      text-align: center;
+      color: var(--text3);
+      font-size: 1.2rem;
+      padding: 6px 0;
+    }
+    .cs-pkg { border-left: 4px solid #3b82f6; }
+    .cs-pkg .cs-label { color: #3b82f6; }
+    .cs-pmsg { border-left: 4px solid #10b981; }
+    .cs-pmsg .cs-label { color: #10b981; }
+    .cs-team { border-left: 4px solid #f59e0b; }
+    .cs-team .cs-label { color: #f59e0b; }
+    .cs-person { border-left: 4px solid #8b5cf6; }
+    .cs-person .cs-label { color: #8b5cf6; }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    thead th {
+      background: #f8fafc;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 700;
+      color: var(--text2);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      font-size: 0.78rem;
+    }
+    tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tbody tr:hover { background: #f8fafc; }
+    tbody tr:last-child td { border-bottom: none; }
+
+    /* ── KPI cell ── */
+    .kpi-cell { display: flex; flex-direction: column; gap: 3px; }
+    .kpi-value { font-weight: 700; color: var(--text); font-size: 0.82rem; }
+    .kpi-value.na { color: var(--text3); font-weight: 400; }
+    .kpi-badge {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 5px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      width: fit-content;
+    }
+    .badge-green { background: #d1fae5; color: #065f46; }
+    .badge-orange { background: #fef3c7; color: #92400e; }
+    .badge-gray { background: #f1f5f9; color: var(--text3); }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    .badge-purple { background: #ede9fe; color: #5b21b6; }
+
+    /* ── Person selector ── */
+    .person-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .person-chip {
+      padding: 7px 14px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text2);
+      transition: all 0.2s;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .person-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .person-chip.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 2px 8px rgba(59,130,246,0.25);
+    }
+    .person-chip.team-pkg.active { background: #3b82f6; border-color: #3b82f6; }
+    .person-chip.team-pmgg.active { background: #f59e0b; border-color: #f59e0b; }
+    .person-chip.team-pmgi.active { background: #8b5cf6; border-color: #8b5cf6; }
+
+    /* ── Person detail ── */
+    .person-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .person-name { font-size: 1.3rem; font-weight: 800; color: var(--text); }
+    .person-meta { font-size: 0.84rem; color: var(--text2); margin-top: 4px; }
+    .person-meta span { margin-right: 14px; }
+    .team-tag {
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .tag-pkg { background: #dbeafe; color: #1e40af; }
+    .tag-pmgg { background: #fef3c7; color: #92400e; }
+    .tag-pmgi { background: #ede9fe; color: #5b21b6; }
+
+    .subsection-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 18px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .acc-list { list-style: none; }
+    .acc-item {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 0.84rem;
+      color: var(--text2);
+      line-height: 1.6;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .acc-num {
+      min-width: 24px; height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── Objective blocks ── */
+    .obj-block {
+      background: #f8fafc;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--accent);
+    }
+    .obj-block.obj-business { border-left-color: #3b82f6; }
+    .obj-block.obj-team { border-left-color: #10b981; }
+    .obj-block.obj-personal { border-left-color: #8b5cf6; }
+    .obj-block.obj-community { border-left-color: #f59e0b; }
+    .obj-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .obj-type-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+    .tb-business { background: #dbeafe; color: #1e40af; }
+    .tb-team { background: #d1fae5; color: #065f46; }
+    .tb-personal { background: #ede9fe; color: #5b21b6; }
+    .tb-community { background: #fef3c7; color: #92400e; }
+    .obj-weight { font-size: 0.78rem; color: var(--text3); font-weight: 600; }
+    .obj-label { font-size: 0.86rem; color: var(--text); font-weight: 600; margin-bottom: 8px; line-height: 1.5; }
+    .kr-list { list-style: none; padding-left: 4px; }
+    .kr-item {
+      font-size: 0.82rem;
+      color: var(--text2);
+      padding: 5px 0 5px 16px;
+      position: relative;
+      line-height: 1.5;
+    }
+    .kr-item::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 11px;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* ── Weight bars ── */
+    .weight-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .weight-label { font-size: 0.78rem; font-weight: 600; color: var(--text2); min-width: 90px; }
+    .weight-bar-bg {
+      flex: 1;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .weight-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    .wbf-business { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .wbf-team { background: linear-gradient(90deg, #10b981, #34d399); }
+    .wbf-personal { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+    .wbf-community { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .weight-pct { font-size: 0.78rem; font-weight: 700; color: var(--text); min-width: 40px; text-align: right; }
+
+    .empty-placeholder {
+      font-size: 0.82rem;
+      color: var(--text3);
+      font-style: italic;
+      padding: 12px;
+      background: #f8fafc;
+      border-radius: var(--radius-sm);
+      text-align: center;
+    }
+
+    /* ── Connection Map ── */
+    .map-container {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .map-svg-wrap { min-width: 800px; }
+    .map-legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text2);
+    }
+    .legend-dot {
+      width: 14px; height: 14px;
+      border-radius: 4px;
+    }
+    .ld-pkg { background: #3b82f6; }
+    .ld-pmsg { background: #10b981; }
+    .ld-pmgg { background: #f59e0b; }
+    .ld-pmgi { background: #8b5cf6; }
+    .ld-person { background: #cbd5e1; }
+
+    .connection-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    .conn-kpi { font-size: 0.86rem; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .conn-people { display: flex; flex-wrap: wrap; gap: 5px; }
+    .conn-person {
+      padding: 3px 9px;
+      border-radius: 5px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .cp-pkg { background: #dbeafe; color: #1e40af; }
+    .cp-pmgg { background: #fef3c7; color: #92400e; }
+    .cp-pmgi { background: #ede9fe; color: #5b21b6; }
+    .cp-team { background: #d1fae5; color: #065f46; }
+
+    /* ── Loading / Error ── */
+    .loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 300px;
+      color: var(--text2);
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-msg { color: var(--red); font-size: 0.86rem; text-align: center; }
+
+    /* ── Two-column grid ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .header h1 { font-size: 1.1rem; }
+      .header { padding: 14px 16px; }
+      .container { padding: 14px 14px 40px; }
+      .tabs-bar { padding: 8px 14px; }
+      .tab-btn { padding: 6px 12px; font-size: 0.76rem; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .section-title { font-size: 1rem; }
+      table { font-size: 0.76rem; }
+      thead th { padding: 8px 8px; }
+      tbody td { padding: 8px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═════════ Header ═════════ -->
+  <div class="header">
+    <div class="header-inner">
+      <div>
+        <h1>🎯 PMG OKR Dashboard</h1>
+        <div class="subtitle">CEO Contract 2.0 — Contract of Extreme Ownership</div>
+      </div>
+      <div class="header-right">
+        <div class="last-update" id="lastUpdate">กำลังโหลดข้อมูล...</div>
+        <button class="refresh-btn" onclick="refreshData()">🔄 รีเฟรช</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════ Tabs ═════════ -->
+  <div class="tabs-bar">
+    <div class="tabs-inner" id="tabsBar">
+      <button class="tab-btn active" onclick="switchTab('overview', this)">📊 ภาพรวมองค์กร</button>
+      <button class="tab-btn" onclick="switchTab('kpi', this)">🎯 KPI &amp; ตัววัดผล</button>
+      <button class="tab-btn" onclick="switchTab('people', this)">👥 ทีม &amp; NCASS</button>
+      <button class="tab-btn" onclick="switchTab('linkage', this)">🔗 ความเชื่อมโยง</button>
+    </div>
+  </div>
+
+  <!-- ═════════ Content ═════════ -->
+  <div class="container">
+    <div id="loadingScreen" class="loading-screen">
+      <div class="spinner"></div>
+      <div>กำลังโหลดข้อมูล OKR...</div>
+    </div>
+
+    <div id="section-overview" class="section" style="display:none"></div>
+    <div id="section-kpi" class="section" style="display:none"></div>
+    <div id="section-people" class="section" style="display:none"></div>
+    <div id="section-linkage" class="section" style="display:none"></div>
+  </div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   PMG OKR Dashboard — Client-side logic
+   ═══════════════════════════════════════════════════ */
+var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
+// Fallback: if placeholder wasn't replaced by server (local testing), use window.location
+if (SCRIPT_URL === 'SCRIPT_URL_PLACEHOLDER' || !SCRIPT_URL) {
+  SCRIPT_URL = window.location.origin + window.location.pathname;
+}
+
+var D = null;          // Full data object
+var currentPerson = 0;  // Selected person index for People tab
+
+/* KPI ownership mapping — who is responsible for each KPI column */
+var KPI_OWNERSHIP = {
+  pkgYear:       { label: 'PKG (สมศักดิ์)',     badgeClass: 'badge-blue' },
+  pmsgMonth:     { label: 'PMSG / สมศักดิ์',    badgeClass: 'badge-green' },
+  pmggMonth:     { label: 'PMGG / กาญจนา',     badgeClass: 'badge-orange' },
+  teamCenter:    { label: 'ทีมศูนย์สี (PMGG)',  badgeClass: 'badge-orange' },
+  teamSA:        { label: 'ทีม SA (PMGG)',     badgeClass: 'badge-orange' },
+  teamPMGISell:  { label: 'ทีม PMGI (ขาย)',    badgeClass: 'badge-purple' },
+  teamParts:     { label: 'ทีมอะไหล่',         badgeClass: 'badge-purple' },
+  somsak:        { label: 'สมศักดิ์ (PKG)',     badgeClass: 'badge-blue' }
+};
+
+var KPI_COLUMNS = [
+  { key: 'kpi',          header: 'KPI',          ownerKey: null },
+  { key: 'pkgYear',      header: 'PKG (ปี)',      ownerKey: 'pkgYear' },
+  { key: 'pmsgMonth',    header: 'PMSG (เดือน)',  ownerKey: 'pmsgMonth' },
+  { key: 'pmggMonth',    header: 'PMGG (เดือน)',  ownerKey: 'pmggMonth' },
+  { key: 'teamCenter',   header: 'ทีมศูนย์สี',     ownerKey: 'teamCenter' },
+  { key: 'teamSA',       header: 'ทีม SA',        ownerKey: 'teamSA' },
+  { key: 'teamPMGISell', header: 'ทีม PMGI',      ownerKey: 'teamPMGISell' },
+  { key: 'teamParts',    header: 'อะไหล่',        ownerKey: 'teamParts' },
+  { key: 'somsak',       header: 'สมศักดิ์',      ownerKey: 'somsak' }
+];
+
+/* ── Initialize ── */
+function init() {
+  loadData();
+}
+
+function loadData() {
+  var url = SCRIPT_URL;
+  if (url.indexOf('?') > -1) url += '&okr=1&view=data';
+  else url += '?okr=1&view=data';
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      D = data;
+      onLoaded();
+    })
+    .catch(function(err) {
+      document.getElementById('loadingScreen').innerHTML =
+        '<div class="error-msg">❌ ไม่สามารถโหลดข้อมูลได้<br>' + err.message + '</div>';
+    });
+}
+
+function refreshToken() {
+  // Bypass cache by adding timestamp
+  var url = SCRIPT_URL;
+  if (url.indexOf('?') > -1) url += '&okr=1&view=data&_t=' + Date.now();
+  else url += '?okr=1&view=data&_t=' + Date.now();
+
+  return fetch(url).then(function(r) { return r.json(); });
+}
+
+function onLoaded() {
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('section-overview').style.display = 'block';
+  document.getElementById('section-overview').classList.add('active');
+
+  // Update timestamp
+  if (D && D.lastUpdate) {
+    try {
+      var d = new Date(D.lastUpdate);
+      document.getElementById('lastUpdate').textContent =
+        'อัปเดตล่าสุด: ' + d.toLocaleString('th-TH');
+    } catch(e) {
+      document.getElementById('lastUpdate').textContent = 'อัปเดตล่าสุด: ' + D.lastUpdate;
+    }
+  }
+
+  renderOverview();
+  renderKPI();
+  renderPeople();
+  renderLinkage();
+}
+
+function refreshData() {
+  document.getElementById('lastUpdate').textContent = 'กำลังรีเฟรช...';
+  refreshToken()
+    .then(function(data) {
+      D = data;
+      onLoaded();
+      // Re-render all tabs
+      renderOverview();
+      renderKPI();
+      renderPeople();
+      renderLinkage();
+    })
+    .catch(function(err) {
+      document.getElementById('lastUpdate').textContent = '❌ รีเฟรชล้มเหลว';
+    });
+}
+
+/* ── Tab switching ── */
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.section').forEach(function(s) {
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(function(t) {
+    t.classList.remove('active');
+  });
+  var section = document.getElementById('section-' + tabId);
+  if (section) {
+    section.style.display = 'block';
+    section.classList.add('active');
+  }
+  if (btn) btn.classList.add('active');
+}
+
+/* ═══════════════════════════════════════════════════
+   TAB 1: Overview — ภาพรวมองค์กร
+   ═══════════════════════════════════════════════════ */
+function renderOverview() {
+  if (!D) return;
+  var peopleCount = D.people ? D.people.length : 0;
+  var teamsSet = {};
+  if (D.people) D.people.forEach(function(p) { if (p.team) teamsSet[p.team] = 1; });
+  var teamCount = Object.keys(teamsSet).length;
+  var kpiCount = D.kpiSummary ? D.kpiSummary.length : 0;
+
+  var html = '';
+
+  // Cascade flow
+  html += '<div class="section-title"><span class="icon">📋</span> การไหลลงของเป้าหมาย (Cascade)</div>';
+  html += '<div class="cascade-flow">';
+  html += '<div class="cascade-step cs-pkg"><div class="cs-label">PKG — Purpose</div><div class="cs-title">ทุ่มเท รับใช้ผู้ใช้รถยนต์ อย่างใกล้ชิด ให้ประสบความสำเร็จ</div><div class="cs-desc">เป้าหมาย: งานบริการ 70 : ขาย 30 — CBNP 49 ลบ./ปี</div></div>';
+  html += '<div class="cascade-arrow">⬇</div>';
+  html += '<div class="cascade-step cs-pmsg"><div class="cs-label">PMSG — Business Unit</div><div class="cs-title">PMSG 39 ลบ./ปี + PMGG 10 ลบ./ปี</div><div class="cs-desc">หน่วยธุรกิจรับใช้ผู้ใช้รถยนต์ — Gross Margin 70% ของธุรกิจทั้งหมด</div></div>';
+  html += '<div class="cascade-arrow">⬇</div>';
+  html += '<div class="cascade-step cs-team"><div class="cs-label">ทีมรับใช้ — Service Teams</div><div class="cs-title">ทีม PMGG (ศูนย์สี/SA) + ทีม PMGI (อู่/อะไหล่)</div><div class="cs-desc">แบ่งเป้าหมายลงสู่ทีมย่อยตามภารกิจรับใช้</div></div>';
+  html += '<div class="cascade-arrow">⬇</div>';
+  html += '<div class="cascade-step cs-person"><div class="cs-label">บุคคล — NCASS</div><div class="cs-title">สมาชิกแต่ละคนมี OKR / NCASS เป็นของตน</div><div class="cs-desc">นำเป้าหมายทีมลงสู่ Key Results ส่วนตัว (Business/Team/Personal/Community)</div></div>';
+  html += '</div>';
+
+  // Summary stat cards
+  html += '<div class="section-title"><span class="icon">📊</span> สรุปภาพรวม</div>';
+  html += '<div class="stat-grid">';
+  html += '<div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value">' + peopleCount + '</div><div class="stat-label">บุคลากรทั้งหมด</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">🏢</div><div class="stat-value">' + teamCount + '</div><div class="stat-label">ทีม</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-value">' + kpiCount + '</div><div class="stat-label">ตัวชี้วัด KPI</div></div>';
+  html += '<div class="stat-card"><div class="stat-icon">📝</div><div class="stat-value">4</div><div class="stat-label">มิติการเติบโต</div></div>';
+  html += '</div>';
+
+  // Team summary table
+  html += '<div class="section-title"><span class="icon">📋</span> สรุปตามทีม</div>';
+  if (D.summary && D.summary.length > 0) {
+    html += '<div class="table-wrap"><table>';
+    html += '<thead><tr><th>ทีม / หน่วย</th><th>สมาชิก</th><th>กรอกแล้ว</th><th>ยังเหลือ</th><th>ความคืบหน้า</th></tr></thead><tbody>';
+    D.summary.forEach(function(s) {
+      var total = (s.done || 0) + (s.remain || 0);
+      var pct = total > 0 ? Math.round((s.done / total) * 100) : 0;
+      var pctColor = pct >= 75 ? 'var(--green)' : (pct >= 40 ? 'var(--orange)' : 'var(--red)');
+      html += '<tr>';
+      html += '<td><strong>' + esc(s.name) + '</strong></td>';
+      html += '<td>' + (s.members || 0) + '</td>';
+      html += '<td>' + (s.done || 0) + '</td>';
+      html += '<td>' + (s.remain || 0) + '</td>';
+      html += '<td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;max-width:120px;height:7px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:' + pctColor + ';border-radius:4px"></div></div><span style="font-size:0.76rem;font-weight:700;color:' + pctColor + '">' + pct + '%</span></div></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += '<div class="card"><div class="empty-placeholder">ยังไม่มีข้อมูลสรุปทีม</div></div>';
+  }
+
+  // Organization structure
+  html += '<div class="section-title" style="margin-top:24px"><span class="icon">🏗️</span> โครงสร้างองค์กร</div>';
+  html += '<div class="card">';
+  html += '<div style="text-align:center;margin-bottom:16px"><div style="display:inline-block;background:#dbeafe;color:#1e40af;padding:8px 20px;border-radius:8px;font-weight:700">ประวิทย์ ผ่องโสภา — ผู้นำ PKG</div></div>';
+  html += '<div style="text-align:center;margin-bottom:8px;color:var(--text3)">⬇</div>';
+  html += '<div style="text-align:center;margin-bottom:16px"><div style="display:inline-block;background:#dbeafe;color:#1e40af;padding:8px 20px;border-radius:8px;font-weight:700">สมศักดิ์ ธัมมะปาละ — ผู้รับใช้ทีม PKG</div></div>';
+  html += '<div style="text-align:center;margin-bottom:8px;color:var(--text3)">⬇ กำกับทั้งสองทีม</div>';
+  html += '<div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">';
+
+  // PMGG team
+  var pmggMembers = [];
+  var pmgiMembers = [];
+  if (D.people) {
+    D.people.forEach(function(p) {
+      if (p.team === 'PMGG' || p.team === 'PMG') pmggMembers.push(p);
+      else if (p.team === 'PMGI') pmgiMembers.push(p);
+    });
+  }
+  html += '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:14px;min-width:220px">';
+  html += '<div style="font-weight:700;color:#92400e;margin-bottom:8px">ทีม PMGG — ศูนย์ซ่อมตัวถังและสี</div>';
+  pmggMembers.forEach(function(p) {
+    var isLeader = p.role && p.role.indexOf('ผู้รับใช้ทีม') >= 0;
+    html += '<div style="font-size:0.8rem;padding:3px 0;color:var(--text2)">' + (isLeader ? '⭐ ' : '') + esc(p.name) + '</div>';
+  });
+  if (pmggMembers.length === 0) html += '<div style="font-size:0.8rem;color:var(--text3)">—</div>';
+  html += '</div>';
+
+  // PMGI team
+  html += '<div style="background:#ede9fe;border:1px solid #ddd6fe;border-radius:10px;padding:14px;min-width:220px">';
+  html += '<div style="font-weight:700;color:#5b21b6;margin-bottom:8px">ทีม PMGI — อู่/สาน &amp; อะไหล่</div>';
+  pmgiMembers.forEach(function(p) {
+    var isLeader = p.role && p.role.indexOf('ผู้รับใช้ทีม') >= 0;
+    html += '<div style="font-size:0.8rem;padding:3px 0;color:var(--text2)">' + (isLeader ? '⭐ ' : '') + esc(p.name) + '</div>';
+  });
+  if (pmgiMembers.length === 0) html += '<div style="font-size:0.8rem;color:var(--text3)">—</div>';
+  html += '</div>';
+  html += '</div></div>';
+
+  document.getElementById('section-overview').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════
+   TAB 2: KPI Dashboard
+   ═══════════════════════════════════════════════════ */
+function renderKPI() {
+  if (!D || !D.kpiSummary) return;
+  var html = '<div class="section-title"><span class="icon">🎯</span> KPI &amp; ตัววัดผล — เป้าหมายและผู้รับผิดชอบ</div>';
+
+  html += '<div class="card" style="margin-bottom:16px"><div style="font-size:0.82rem;color:var(--text2);line-height:1.6">';
+  html += '<strong>คำอธิบายสี:</strong> &nbsp;';
+  html += '<span class="kpi-badge badge-green">เขียว = มีเป้าหมาย</span> &nbsp;';
+  html += '<span class="kpi-badge badge-orange">ส้ม = มีเป้าหมาย (รอดำเนินการ)</span> &nbsp;';
+  html += '<span class="kpi-badge badge-gray">เทา = ไม่รับผิดชอบ (—)</span>';
+  html += '</div></div>';
+
+  html += '<div class="table-wrap"><table>';
+  html += '<thead><tr>';
+  KPI_COLUMNS.forEach(function(col) {
+    html += '<th>' + col.header + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  D.kpiSummary.forEach(function(kpi) {
+    html += '<tr>';
+    KPI_COLUMNS.forEach(function(col) {
+      var val = kpi[col.key] || '';
+      val = String(val).trim();
+      var isNA = val === '' || val === '—' || val === '-';
+      html += '<td>';
+      if (col.key === 'kpi') {
+        html += '<strong>' + esc(val) + '</strong>';
+      } else if (isNA) {
+        html += '<div class="kpi-cell"><span class="kpi-value na">—</span><span class="kpi-badge badge-gray">ไม่รับผิดชอบ</span></div>';
+      } else {
+        var owner = KPI_OWNERSHIP[col.ownerKey];
+        var badgeClass = owner ? owner.badgeClass : 'badge-green';
+        // Color-code the value: numeric values with "ลบ." or numbers = green (has target)
+        var valClass = 'kpi-value';
+        if (val.indexOf('ลบ.') >= 0 || val.match(/\d/)) {
+          valClass = 'kpi-value';
+        }
+        html += '<div class="kpi-cell"><span class="' + valClass + '">' + esc(val) + '</span>';
+        if (owner) {
+          html += '<span class="kpi-badge ' + badgeClass + '">' + esc(owner.label) + '</span>';
+        }
+        html += '</div>';
+      }
+      html += '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  document.getElementById('section-kpi').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════
+   TAB 3: People — ทีม & NCASS
+   ═══════════════════════════════════════════════════ */
+function renderPeople() {
+  if (!D || !D.people || D.people.length === 0) return;
+  var html = '<div class="section-title"><span class="icon">👥</span> ทีม &amp; NCASS — สัญญารับใช้รายบุคคล</div>';
+
+  // Person selector
+  html += '<div class="person-selector" id="personSelector">';
+  D.people.forEach(function(p, i) {
+    var teamClass = 'team-pmgg';
+    if (p.team === 'PKG') teamClass = 'team-pkg';
+    else if (p.team === 'PMGI') teamClass = 'team-pmgi';
+    var activeCls = (i === currentPerson) ? ' active' : '';
+    var shortName = p.name;
+    if (shortName.length > 25) shortName = shortName.substring(0, 23) + '..';
+    html += '<button class="person-chip ' + teamClass + activeCls + '" onclick="selectPerson(' + i + ', this)">' + esc(shortName) + '</button>';
+  });
+  html += '</div>';
+
+  // Person detail container
+  html += '<div id="personDetail"></div>';
+
+  document.getElementById('section-people').innerHTML = html;
+  renderPersonDetail(currentPerson);
+}
+
+function selectPerson(idx, btn) {
+  currentPerson = idx;
+  document.querySelectorAll('#personSelector .person-chip').forEach(function(c) {
+    c.classList.remove('active');
+  });
+  if (btn) btn.classList.add('active');
+  renderPersonDetail(idx);
+}
+
+function renderPersonDetail(idx) {
+  if (!D || !D.people || idx < 0 || idx >= D.people.length) return;
+  var p = D.people[idx];
+  var html = '';
+
+  // Header
+  var teamTagClass = 'tag-pmgg';
+  if (p.team === 'PKG') teamTagClass = 'tag-pkg';
+  else if (p.team === 'PMGI') teamTagClass = 'tag-pmgi';
+
+  html += '<div class="card" style="margin-bottom:16px">';
+  html += '<div class="person-header">';
+  html += '<div>';
+  html += '<div class="person-name">' + esc(p.name) + '</div>';
+  html += '<div class="person-meta">';
+  html += '<span>🏢 ทีม: <strong>' + esc(p.team || '—') + '</strong></span>';
+  html += '<span>👤 บทบาท: <strong>' + esc(p.role || '—') + '</strong></span>';
+  if (p.mentors && p.mentors.length > 0) {
+    html += '<span>🧑‍🏫 พี่เลี้ยง: <strong>' + p.mentors.filter(function(m, i, a) { return a.indexOf(m) === i; }).map(esc).join(', ') + '</strong></span>';
+  }
+  html += '</div>';
+  html += '</div>';
+  html += '<span class="team-tag ' + teamTagClass + '">' + esc(p.team || '—') + '</span>';
+  html += '</div>';
+
+  // Weights progress bars
+  html += '<div class="subsection-label" style="margin-top:8px">⚖️ สัดส่วนการเติบโต (Weights)</div>';
+  html += '<div class="weight-row"><span class="weight-label">Business</span><div class="weight-bar-bg"><div class="weight-bar-fill wbf-business" style="width:' + ((p.weightBusiness || 0) * 100) + '%"></div></div><span class="weight-pct">' + Math.round((p.weightBusiness || 0) * 100) + '%</span></div>';
+  html += '<div class="weight-row"><span class="weight-label">Team</span><div class="weight-bar-bg"><div class="weight-bar-fill wbf-team" style="width:' + ((p.weightTeam || 0) * 100) + '%"></div></div><span class="weight-pct">' + Math.round((p.weightTeam || 0) * 100) + '%</span></div>';
+  html += '<div class="weight-row"><span class="weight-label">Personal</span><div class="weight-bar-bg"><div class="weight-bar-fill wbf-personal" style="width:' + ((p.weightPersonal || 0) * 100) + '%"></div></div><span class="weight-pct">' + Math.round((p.weightPersonal || 0) * 100) + '%</span></div>';
+  html += '<div class="weight-row"><span class="weight-label">Community</span><div class="weight-bar-bg"><div class="weight-bar-fill wbf-community" style="width:' + ((p.weightCommunity || 0) * 100) + '%"></div></div><span class="weight-pct">' + Math.round((p.weightCommunity || 0) * 100) + '%</span></div>';
+
+  html += '</div>'; // end card
+
+  // Key Accountabilities
+  html += '<div class="card" style="margin-bottom:16px">';
+  html += '<div class="subsection-label">📋 Key Accountabilities — หน้าที่ความรับผิดชอบ</div>';
+  if (p.accountability && p.accountability.length > 0) {
+    html += '<ul class="acc-list">';
+    p.accountability.forEach(function(a, i) {
+      html += '<li class="acc-item"><span class="acc-num">' + (i + 1) + '</span>' + esc(a) + '</li>';
+    });
+    html += '</ul>';
+  } else {
+    html += '<div class="empty-placeholder">ยังไม่ได้กรอกข้อมูล Accountabilities</div>';
+  }
+  html += '</div>';
+
+  // Growth Objectives
+  html += '<div class="card">';
+  html += '<div class="subsection-label">🚀 Growth Objectives &amp; Key Results</div>';
+
+  var types = [
+    { key: 'Business Growth', cls: 'obj-business', badge: 'tb-business', label: 'Business Growth' },
+    { key: 'Team Growth',      cls: 'obj-team',     badge: 'tb-team',     label: 'Team Growth' },
+    { key: 'Personal Growth',  cls: 'obj-personal', badge: 'tb-personal', label: 'Personal Growth' },
+    { key: 'Community',        cls: 'obj-community', badge: 'tb-community', label: 'Community' }
+  ];
+
+  var hasAnyObj = false;
+  types.forEach(function(t) {
+    var objs = (p.objectives || []).filter(function(o) { return o.type === t.key; });
+    if (objs.length > 0) {
+      hasAnyObj = true;
+      objs.forEach(function(o) {
+        html += '<div class="obj-block ' + t.cls + '">';
+        html += '<div class="obj-head">';
+        html += '<span class="obj-type-badge ' + t.badge + '">' + esc(t.label) + '</span>';
+        if (o.weight > 0) {
+          html += '<span class="obj-weight">น้ำหนัก ' + Math.round(o.weight * 100) + '%</span>';
+        }
+        html += '</div>';
+        if (o.label && o.label.trim()) {
+          html += '<div class="obj-label">' + esc(o.label) + '</div>';
+        }
+        if (o.keyResults && o.keyResults.length > 0) {
+          html += '<ul class="kr-list">';
+          o.keyResults.forEach(function(kr) {
+            if (kr && kr.length > 3) {
+              html += '<li class="kr-item">' + esc(kr) + '</li>';
+            }
+          });
+          html += '</ul>';
+        } else if (!o.label || !o.label.trim()) {
+          html += '<div class="empty-placeholder">ยังไม่ได้กรอก Key Results</div>';
+        }
+        html += '</div>';
+      });
+    }
+  });
+
+  // If no objectives at all, show placeholder blocks for all types
+  if (!hasAnyObj) {
+    types.forEach(function(t) {
+      html += '<div class="obj-block ' + t.cls + '">';
+      html += '<div class="obj-head"><span class="obj-type-badge ' + t.badge + '">' + esc(t.label) + '</span></div>';
+      html += '<div class="empty-placeholder">ยังไม่ได้กรอก</div>';
+      html += '</div>';
+    });
+  }
+
+  html += '</div>';
+
+  document.getElementById('personDetail').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════
+   TAB 4: Connection Map — ความเชื่อมโยง
+   ═══════════════════════════════════════════════════ */
+function renderLinkage() {
+  if (!D) return;
+  var html = '<div class="section-title"><span class="icon">🔗</span> ความเชื่อมโยง — Cascade Map</div>';
+
+  // Legend
+  html += '<div class="map-legend">';
+  html += '<div class="legend-item"><div class="legend-dot ld-pkg"></div> PKG (Purpose)</div>';
+  html += '<div class="legend-item"><div class="legend-dot ld-pmsg"></div> PMSG (BU)</div>';
+  html += '<div class="legend-item"><div class="legend-dot ld-pmgg"></div> PMGG (ศูนย์สี/SA)</div>';
+  html += '<div class="legend-item"><div class="legend-dot ld-pmgi"></div> PMGI (อู่/อะไหล่)</div>';
+  html += '<div class="legend-item"><div class="legend-dot ld-person"></div> บุคคล</div>';
+  html += '</div>';
+
+  // SVG connection diagram
+  html += '<div class="map-container"><div class="map-svg-wrap">';
+  html += renderCascadeSVG();
+  html += '</div></div>';
+
+  // KPI → People responsibility cards
+  html += '<div class="section-title" style="margin-top:24px"><span class="icon">📌</span> ใครรับผิดชอบ KPI อะไร</div>';
+  html += '<div class="grid-2">';
+
+  // Build connection cards from KPI summary data
+  if (D.kpiSummary && D.kpiSummary.length > 0) {
+    D.kpiSummary.forEach(function(kpi) {
+      var people = [];
+      KPI_COLUMNS.forEach(function(col) {
+        if (!col.ownerKey) return;
+        var val = kpi[col.key];
+        if (val && val !== '—' && val !== '' && val !== '-') {
+          people.push({ who: KPI_OWNERSHIP[col.ownerKey].label, val: val, cls: getOwnerColorClass(col.ownerKey) });
+        }
+      });
+      if (people.length === 0) return;
+      html += '<div class="connection-card">';
+      html += '<div class="conn-kpi">' + esc(kpi.kpi) + '</div>';
+      html += '<div class="conn-people">';
+      people.forEach(function(pr) {
+        html += '<span class="conn-person ' + pr.cls + '">' + esc(pr.who) + ': ' + esc(pr.val) + '</span>';
+      });
+      html += '</div></div>';
+    });
+  }
+  html += '</div>';
+
+  // Summary
+  html += '<div class="card" style="margin-top:20px;background:linear-gradient(135deg,#dbeafe,#ede9fe);border:none">';
+  html += '<div style="font-size:0.9rem;font-weight:700;color:#1e40af;margin-bottom:10px">✅ สรุป: ทุกคนมุ่งสู่เป้าหมายเดียวกัน</div>';
+  html += '<div style="font-size:0.84rem;color:var(--text2);line-height:1.8">';
+  html += '<p>✅ <strong>Cascade จากบนลงล่าง</strong> — PKG → PMSG → ทีมรับใช้ → ทีมย่อย → สมาชิก</p>';
+  html += '<p>✅ <strong>CBNP 49 ลบ./ปี</strong> = PMSG 39 + PMGG 10 → สมศักดิ์รับผิดชอบทั้งสองส่วน</p>';
+  html += '<p>✅ <strong>GM &gt; 9.5 ลบ./เดือน</strong> → แบ่งลงทีมศูนย์ซ่อม + PMGI อะไหล่</p>';
+  html += '<p>✅ <strong>ยอดรถ 3,400 คัน/ปี</strong> → ทีมศูนย์สี + SA รับผิดชอบ</p>';
+  html += '<p>✅ <strong>GM อะไหล่ทางเลือก 300K</strong> → ทีม PMGI ขาย รับผิดชอบหลัก</p>';
+  html += '</div></div>';
+
+  document.getElementById('section-linkage').innerHTML = html;
+}
+
+function getOwnerColorClass(ownerKey) {
+  if (ownerKey === 'pkgYear' || ownerKey === 'somsak') return 'cp-pkg';
+  if (ownerKey === 'pmsgMonth') return 'cp-team';
+  if (ownerKey === 'pmggMonth' || ownerKey === 'teamCenter' || ownerKey === 'teamSA') return 'cp-pmgg';
+  if (ownerKey === 'teamPMGISell' || ownerKey === 'teamParts') return 'cp-pmgi';
+  return 'cp-team';
+}
+
+function renderCascadeSVG() {
+  // Collect people by team
+  var pmggPeople = [];
+  var pmgiPeople = [];
+  if (D && D.people) {
+    D.people.forEach(function(p) {
+      if (p.team === 'PMGG' || p.team === 'PMG') pmggPeople.push(p.name);
+      else if (p.team === 'PMGI') pmgiPeople.push(p.name);
+    });
+  }
+
+  // Get key KPI numbers from data
+  var cbnpPkg = '49 ลบ./ปี';
+  var cbnpPmsg = '39 ลบ./ปี';
+  var cbnpPmgg = '10 ลบ./ปี';
+  if (D && D.kpiSummary && D.kpiSummary.length > 0) {
+    var cbnpRow = D.kpiSummary.find(function(k) { return k.kpi && k.kpi.indexOf('CBNP') >= 0; });
+    if (cbnpRow) {
+      if (cbnpRow.pkgYear && cbnpRow.pkgYear !== '—') cbnpPkg = cbnpRow.pkgYear;
+      if (cbnpRow.pmsgMonth && cbnpRow.pmsgMonth !== '—') cbnpPmsg = cbnpRow.pmsgMonth;
+      if (cbnpRow.pmggMonth && cbnpRow.pmggMonth !== '—') cbnpPmgg = cbnpRow.pmggMonth;
+    }
+  }
+
+  var svg = '';
+  svg += '<svg width="100%" height="560" viewBox="0 0 800 560" xmlns="http://www.w3.org/2000/svg" style="max-width:100%">';
+
+  // Defs for arrow markers
+  svg += '<defs>';
+  svg += '<marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#3b82f6"/></marker>';
+  svg += '<marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#10b981"/></marker>';
+  svg += '<marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#f59e0b"/></marker>';
+  svg += '<marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#8b5cf6"/></marker>';
+  svg += '</defs>';
+
+  // Level 1: PKG
+  svg += '<rect x="300" y="10" width="200" height="55" rx="10" fill="#3b82f6" opacity="0.9"/>';
+  svg += '<text x="400" y="32" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">PKG — Purpose</text>';
+  svg += '<text x="400" y="50" text-anchor="middle" fill="#dbeafe" font-size="11">ทุ่มเทรับใช้ผู้ใช้รถยนต์</text>';
+  svg += '<text x="400" y="75" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="600">CBNP ' + esc(cbnpPkg) + '</text>';
+
+  // Arrow PKG → PMSG
+  svg += '<line x1="400" y1="85" x2="400" y2="105" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowBlue)"/>';
+
+  // Level 2: PMSG
+  svg += '<rect x="300" y="110" width="200" height="55" rx="10" fill="#10b981" opacity="0.9"/>';
+  svg += '<text x="400" y="132" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">PMSG — Business Unit</text>';
+  svg += '<text x="400" y="150" text-anchor="middle" fill="#d1fae5" font-size="11">รับใช้ผู้ใช้รถยนต์</text>';
+  svg += '<text x="400" y="175" text-anchor="middle" fill="#10b981" font-size="10" font-weight="600">CBNP ' + esc(cbnpPmsg) + '</text>';
+
+  // Arrow PMSG → split to PMGG and PMGI
+  svg += '<line x1="400" y1="185" x2="400" y2="205" stroke="#10b981" stroke-width="2"/>';
+  svg += '<line x1="200" y1="205" x2="600" y2="205" stroke="#10b981" stroke-width="2"/>';
+  svg += '<line x1="200" y1="205" x2="200" y2="225" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrowOrange)"/>';
+  svg += '<line x1="600" y1="205" x2="600" y2="225" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrowPurple)"/>';
+
+  // KPI labels on branches
+  svg += '<text x="270" y="220" text-anchor="middle" fill="#f59e0b" font-size="9" font-weight="600">PMGG ' + esc(cbnpPmgg) + '</text>';
+  svg += '<text x="530" y="220" text-anchor="middle" fill="#8b5cf6" font-size="9" font-weight="600">PMGI อะไหล่ 300K/เดือน</text>';
+
+  // Level 3: PMGG box
+  svg += '<rect x="80" y="230" width="240" height="70" rx="10" fill="#f59e0b" opacity="0.9"/>';
+  svg += '<text x="200" y="252" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">ทีม PMGG</text>';
+  svg += '<text x="200" y="270" text-anchor="middle" fill="#fef3c7" font-size="10">ศูนย์ซ่อมตัวถังและสี + SA</text>';
+  svg += '<text x="200" y="288" text-anchor="middle" fill="#fef3c7" font-size="10">ยอดรถ 3,400 คัน/ปี</text>';
+
+  // Level 3: PMGI box
+  svg += '<rect x="480" y="230" width="240" height="70" rx="10" fill="#8b5cf6" opacity="0.9"/>';
+  svg += '<text x="600" y="252" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">ทีม PMGI</text>';
+  svg += '<text x="600" y="270" text-anchor="middle" fill="#ede9fe" font-size="10">อู่/สานฯ + อะไหล่ทางเลือก</text>';
+  svg += '<text x="600" y="288" text-anchor="middle" fill="#ede9fe" font-size="10">รถเข้าซ่อม 200 คัน/เดือน</text>';
+
+  // Arrows to individuals
+  svg += '<line x1="200" y1="300" x2="200" y2="320" stroke="#f59e0b" stroke-width="1.5"/>';
+  svg += '<line x1="600" y1="300" x2="600" y2="320" stroke="#8b5cf6" stroke-width="1.5"/>';
+
+  // Level 4: Individual names (PMGG)
+  var pmggY = 325;
+  var pmggStartX = 100;
+  var pmggStep = 50;
+  pmggPeople.slice(0, 6).forEach(function(name, i) {
+    var x = pmggStartX + i * pmggStep;
+    if (x > 310) return;
+    var shortName = name.length > 12 ? name.substring(0, 10) + '..' : name;
+    svg += '<rect x="' + (x - 3) + '" y="' + pmggY + '" width="46" height="32" rx="6" fill="#fef3c7" stroke="#fde68a" stroke-width="1"/>';
+    svg += '<text x="' + (x + 20) + '" y="' + (pmggY + 14) + '" text-anchor="middle" fill="#92400e" font-size="7.5" font-weight="600">' + esc(shortName) + '</text>';
+    svg += '<text x="' + (x + 20) + '" y="' + (pmggY + 25) + '" text-anchor="middle" fill="#92400e" font-size="6.5">PMGG</text>';
+  });
+
+  // Level 4: Individual names (PMGI)
+  var pmgiY = 325;
+  var pmgiStartX = 500;
+  var pmgiStep = 50;
+  pmgiPeople.slice(0, 6).forEach(function(name, i) {
+    var x = pmgiStartX + i * pmgiStep;
+    if (x > 710) return;
+    var shortName = name.length > 12 ? name.substring(0, 10) + '..' : name;
+    svg += '<rect x="' + (x - 3) + '" y="' + pmgiY + '" width="46" height="32" rx="6" fill="#ede9fe" stroke="#ddd6fe" stroke-width="1"/>';
+    svg += '<text x="' + (x + 20) + '" y="' + (pmgiY + 14) + '" text-anchor="middle" fill="#5b21b6" font-size="7.5" font-weight="600">' + esc(shortName) + '</text>';
+    svg += '<text x="' + (x + 20) + '" y="' + (pmgiY + 25) + '" text-anchor="middle" fill="#5b21b6" font-size="6.5">PMGI</text>';
+  });
+
+  // Connection from teams to individuals (dashed lines)
+  svg += '<line x1="200" y1="320" x2="120" y2="325" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>';
+  svg += '<line x1="200" y1="320" x2="250" y2="325" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>';
+  svg += '<line x1="600" y1="320" x2="520" y2="325" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>';
+  svg += '<line x1="600" y1="320" x2="650" y2="325" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>';
+
+  // Bottom annotation
+  svg += '<rect x="100" y="400" width="600" height="140" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>';
+  svg += '<text x="400" y="425" text-anchor="middle" fill="#1e293b" font-size="12" font-weight="700">การเชื่อมโยง KPI → บุคคล</text>';
+  svg += '<text x="120" y="448" fill="#475569" font-size="10">• สมศักดิ์ (PKG) รับผิดชอบ CBNP ทั้งหมด 49 ลบ./ปี</text>';
+  svg += '<text x="120" y="466" fill="#475569" font-size="10">• ทีม PMGG: GM ศูนย์สี + SA, ยอดรถ 3,400 คัน/ปี</text>';
+  svg += '<text x="120" y="484" fill="#475569" font-size="10">• ทีม PMGI: GM อะไหล่ 300K/เดือน, รถซ่อม 200 คัน/เดือน</text>';
+  svg += '<text x="120" y="502" fill="#475569" font-size="10">• ทุกคนมี NCASS: Business + Team + Personal + Community</text>';
+  svg += '<text x="120" y="520" fill="#475569" font-size="10">• น้ำหนัก: Business 30% | Team 30% | Personal 20% | Community 20%</text>';
+
+  svg += '</svg>';
+  return svg;
+}
+
+/* ── Utility: HTML escape ── */
+function esc(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/* ── Start ── */
+init();
+</script>
+</body>
+</html>

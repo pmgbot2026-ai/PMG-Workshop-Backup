@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CEO KPI Dashboard — สมศักดิ์</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #10b981;
+    --green-bg: rgba(16,185,129,.10);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245,158,11,.10);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,.10);
+    --gray: #94a3b8;
+    --gray-bg: rgba(148,163,184,.10);
+    --blue: #2563eb;
+    --blue-bg: rgba(37,99,235,.10);
+    --purple: #7c3aed;
+    --purple-bg: rgba(124,58,237,.10);
+    --pink: #ec4899;
+    --pink-bg: rgba(236,72,153,.10);
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --text: #1e293b;
+    --text2: #475569;
+    --text3: #94a3b8;
+    --border: #e2e8f0;
+    --shadow: 0 2px 10px rgba(15,23,42,.06);
+    --shadow-lg: 0 8px 30px rgba(15,23,42,.12);
+    --radius: 16px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; }
+  body {
+    font-family: 'Sarabun','Segoe UI',system-ui,-apple-system,sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg,#0f172a 0%,#1e3a5f 45%,#2563eb 100%);
+    color: #fff;
+    padding: 26px 24px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::after {
+    content:'';
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 85% 20%, rgba(255,255,255,.10) 0%, transparent 50%),
+      radial-gradient(circle at 15% 90%, rgba(96,165,250,.15) 0%, transparent 55%);
+    pointer-events:none;
+  }
+  .header-inner { position:relative; z-index:1; max-width:1400px; margin:0 auto; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; }
+  .header .person-name { font-size:28px; font-weight:700; letter-spacing:.3px; }
+  .header .person-role { font-size:15px; color:rgba(255,255,255,.82); margin-top:4px; }
+  .header .person-dept { display:inline-block; margin-top:8px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); padding:3px 12px; border-radius:999px; font-size:13px; color:rgba(255,255,255,.9); }
+  .header .meta { text-align:right; font-size:13px; color:rgba(255,255,255,.7); }
+  .header .meta .ts-label { font-size:11px; text-transform:uppercase; letter-spacing:.6px; opacity:.7; }
+  .header .meta .ts-value { font-size:15px; font-weight:600; color:#fff; margin-top:2px; }
+
+  /* ── Refresh button ── */
+  .refresh-btn {
+    position:absolute; top:24px; right:24px; z-index:2;
+    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.22);
+    color:#fff; padding:8px 16px; border-radius:999px; cursor:pointer; font-size:13px;
+    font-family:inherit; font-weight:500; transition:.25s; display:flex; align-items:center; gap:6px;
+  }
+  .refresh-btn:hover { background:rgba(255,255,255,.22); transform:translateY(-1px); }
+  .refresh-btn .icon { font-size:15px; }
+  .refresh-btn.loading .icon { animation: spin 1s linear infinite; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Profile section ── */
+  .profile-card {
+    background: var(--card);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px 26px;
+    margin: -18px auto 22px;
+    max-width: 1400px;
+    position: relative;
+    z-index: 5;
+  }
+  .profile-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px 28px;
+  }
+  .profile-item { display:flex; align-items:flex-start; gap:8px; font-size:14px; }
+  .profile-item .pi-label { color:var(--text3); font-weight:500; min-width:90px; white-space:nowrap; }
+  .profile-item .pi-value { color:var(--text); font-weight:600; }
+  .profile-item .pi-icon { font-size:16px; line-height:1.5; }
+  .profile-full { grid-column: 1 / -1; }
+  .profile-full .pi-value { line-height:1.6; }
+
+  /* ── Weights section ── */
+  .weights-card {
+    background: var(--card);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 26px;
+    margin: 0 auto 22px;
+    max-width: 1400px;
+  }
+  .weights-title { font-size:16px; font-weight:700; color:#1e3a5f; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .weights-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+  .weight-bar-item { }
+  .weight-bar-item .wb-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .weight-bar-item .wb-label { font-size:13px; font-weight:600; color:var(--text2); }
+  .weight-bar-item .wb-pct { font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .weight-bar-item .wb-bar-bg {
+    height:14px; border-radius:999px; background:#f1f5f9; overflow:hidden; position:relative;
+  }
+  .weight-bar-item .wb-bar-fill {
+    height:100%; border-radius:999px; width:0;
+    transition: width 1s cubic-bezier(.4,0,.2,1);
+  }
+  .weight-bar-item.business .wb-bar-fill { background: linear-gradient(90deg,#2563eb,#3b82f6); }
+  .weight-bar-item.business .wb-pct { color:var(--blue); }
+  .weight-bar-item.team .wb-bar-fill { background: linear-gradient(90deg,#10b981,#34d399); }
+  .weight-bar-item.team .wb-pct { color:var(--green); }
+  .weight-bar-item.personal .wb-bar-fill { background: linear-gradient(90deg,#7c3aed,#8b5cf6); }
+  .weight-bar-item.personal .wb-pct { color:var(--purple); }
+  .weight-bar-item.community .wb-bar-fill { background: linear-gradient(90deg,#ec4899,#f472b6); }
+  .weight-bar-item.community .wb-pct { color:var(--pink); }
+
+  /* ── Accountabilities ── */
+  .acc-card {
+    background: var(--card);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 26px;
+    margin: 0 auto 22px;
+    max-width: 1400px;
+  }
+  .acc-title { font-size:16px; font-weight:700; color:#1e3a5f; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .acc-list { list-style:none; counter-reset: acc; }
+  .acc-list li {
+    counter-increment: acc;
+    position:relative;
+    padding:8px 0 8px 36px;
+    font-size:15px;
+    color:var(--text);
+    line-height:1.5;
+    border-bottom:1px solid var(--border);
+  }
+  .acc-list li:last-child { border-bottom:none; }
+  .acc-list li::before {
+    content: counter(acc);
+    position:absolute; left:0; top:8px;
+    width:26px; height:26px; border-radius:50%;
+    background:linear-gradient(135deg,#2563eb,#3b82f6);
+    color:#fff; font-size:13px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ── Summary bar ── */
+  .summary-bar {
+    background: var(--card);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px 22px;
+    margin: 0 auto 22px;
+    max-width: 1400px;
+    position: relative;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+  }
+  .summary-item { text-align:center; }
+  .summary-item .num { font-size:30px; font-weight:700; line-height:1; font-variant-numeric: tabular-nums; }
+  .summary-item .lbl { font-size:13px; color:var(--text2); margin-top:5px; font-weight:500; }
+  .summary-item.total .num { color:#1e3a5f; }
+  .summary-item.on-track .num { color:var(--green); }
+  .summary-item.at-risk .num { color:var(--amber); }
+  .summary-item.behind .num { color:var(--red); }
+  .summary-item.no-data .num { color:var(--gray); }
+
+  /* ── Main layout ── */
+  .container { max-width:1400px; margin:0 auto; padding:0 20px 60px; }
+
+  /* ── Section header ── */
+  .section-header { display:flex; align-items:center; gap:10px; margin:30px 0 16px; }
+  .section-header .dot { width:10px; height:10px; border-radius:50%; }
+  .section-header h2 { font-size:20px; font-weight:700; color:#1e3a5f; }
+  .section-header .count { background:#eff6ff; color:#2563eb; font-size:13px; font-weight:600; padding:3px 10px; border-radius:999px; }
+  .section-header .weight-badge { font-size:13px; font-weight:700; padding:3px 12px; border-radius:999px; }
+  .section-header .weight-badge.business { background:var(--blue-bg); color:var(--blue); }
+  .section-header .weight-badge.team { background:var(--green-bg); color:var(--green); }
+
+  /* ── Objective label ── */
+  .obj-label {
+    background: linear-gradient(135deg,#f8fafc,#f1f5f9);
+    border:1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text2);
+    line-height: 1.5;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .obj-label .obj-num {
+    flex-shrink:0;
+    min-width:28px; height:28px; border-radius:8px;
+    background:linear-gradient(135deg,#2563eb,#3b82f6);
+    color:#fff; font-size:14px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .obj-label.team .obj-num { background:linear-gradient(135deg,#10b981,#34d399); }
+
+  /* ── KPI grid ── */
+  .kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+
+  /* ── KPI Card ── */
+  .kpi-card {
+    background: var(--card);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding:20px 22px;
+    position:relative;
+    overflow:hidden;
+    transition: transform .25s, box-shadow .25s;
+    display:flex; flex-direction:column;
+  }
+  .kpi-card:hover { transform:translateY(-3px); box-shadow:var(--shadow-lg); }
+  .kpi-card::before {
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:4px;
+  }
+  .kpi-card.on-track::before { background: linear-gradient(90deg,#10b981,#34d399); }
+  .kpi-card.at-risk::before  { background: linear-gradient(90deg,#f59e0b,#fbbf24); }
+  .kpi-card.behind::before   { background: linear-gradient(90deg,#ef4444,#f87171); }
+  .kpi-card.no-data::before { background: linear-gradient(90deg,#94a3b8,#cbd5e1); }
+
+  .kpi-card .kr-num { font-size:12px; font-weight:700; color:var(--text3); margin-bottom:4px; }
+  .kpi-card .kr-text {
+    font-size:14px; font-weight:600; color:var(--text2);
+    line-height:1.4; min-height:40px; cursor:help;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+
+  .kpi-card .value-row { display:flex; align-items:baseline; gap:10px; margin:14px 0 6px; flex-wrap:wrap; }
+  .kpi-card .current-value { font-size:34px; font-weight:700; line-height:1; font-variant-numeric: tabular-nums; }
+  .kpi-card.on-track .current-value { color:var(--green); }
+  .kpi-card.at-risk .current-value  { color:var(--amber); }
+  .kpi-card.behind .current-value   { color:var(--red); }
+  .kpi-card.no-data .current-value  { color:var(--gray); }
+  .kpi-card .target-value { font-size:15px; color:var(--text3); font-variant-numeric: tabular-nums; }
+  .kpi-card .target-value .lbl { font-size:12px; }
+
+  .kpi-card .progress-section { margin:14px 0 10px; }
+  .kpi-card .progress-bar-bg {
+    height:10px; background:#f1f5f9; border-radius:999px; overflow:hidden; position:relative;
+  }
+  .kpi-card .progress-bar-fill {
+    height:100%; border-radius:999px; width:0;
+    transition: width 1.1s cubic-bezier(.4,0,.2,1);
+  }
+  .kpi-card.on-track .progress-bar-fill { background: linear-gradient(90deg,#10b981,#34d399); }
+  .kpi-card.at-risk  .progress-bar-fill { background: linear-gradient(90deg,#f59e0b,#fbbf24); }
+  .kpi-card.behind  .progress-bar-fill { background: linear-gradient(90deg,#ef4444,#f87171); }
+  .kpi-card.no-data .progress-bar-fill { background: linear-gradient(90deg,#94a3b8,#cbd5e1); }
+  .kpi-card .progress-pct-row { display:flex; justify-content:space-between; align-items:center; margin-top:7px; }
+  .kpi-card .progress-pct { font-size:22px; font-weight:700; font-variant-numeric: tabular-nums; }
+  .kpi-card.on-track .progress-pct { color:var(--green); }
+  .kpi-card.at-risk .progress-pct  { color:var(--amber); }
+  .kpi-card.behind .progress-pct   { color:var(--red); }
+  .kpi-card.no-data .progress-pct  { color:var(--gray); }
+
+  .kpi-card .status-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:5px 13px; border-radius:999px; font-size:13px; font-weight:600;
+    margin-top:6px; align-self:flex-start;
+  }
+  .kpi-card.on-track .status-badge { background:var(--green-bg); color:var(--green); }
+  .kpi-card.at-risk  .status-badge { background:var(--amber-bg); color:var(--amber); }
+  .kpi-card.behind   .status-badge { background:var(--red-bg); color:var(--red); }
+  .kpi-card.no-data  .status-badge { background:var(--gray-bg); color:var(--gray); }
+
+  .kpi-card .source-row { margin-top:14px; padding-top:13px; border-top:1px solid var(--border); }
+  .kpi-card .source-name { font-size:13px; color:var(--text2); display:flex; align-items:center; gap:5px; font-weight:500; }
+  .kpi-card .source-name a { color:#2563eb; text-decoration:none; display:inline-flex; align-items:center; gap:3px; }
+  .kpi-card .source-name a:hover { text-decoration:underline; }
+  .kpi-card .source-name .no-link { color:var(--text3); display:inline-flex; align-items:center; gap:4px; }
+  .kpi-card .source-detail-toggle {
+    margin-top:8px;
+    font-size:13px; color:var(--text3);
+    cursor:pointer; display:inline-flex; align-items:center; gap:4px;
+    transition: color .2s;
+  }
+  .kpi-card .source-detail-toggle:hover { color:var(--text2); }
+  .kpi-card .source-detail-content {
+    margin-top:8px; font-size:13px; color:var(--text2);
+    background:#f8fafc; border:1px solid var(--border); border-radius:8px;
+    padding:10px 12px; line-height:1.5; display:none;
+  }
+  .kpi-card .source-detail-content.show { display:block; }
+
+  /* ── No-data section ── */
+  .nodata-section {
+    margin-top:36px; background:var(--card);
+    border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:var(--shadow); overflow:hidden;
+  }
+  .nodata-header {
+    padding:16px 22px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+    background:linear-gradient(135deg,#f8fafc,#f1f5f9);
+    transition: background .25s;
+  }
+  .nodata-header:hover { background:#eef2f7; }
+  .nodata-header .left { display:flex; align-items:center; gap:10px; }
+  .nodata-header h2 { font-size:17px; font-weight:700; color:#475569; }
+  .nodata-header .badge { background:var(--gray-bg); color:var(--gray); font-size:13px; font-weight:600; padding:3px 11px; border-radius:999px; }
+  .nodata-header .chev { font-size:18px; color:var(--text3); transition: transform .3s; }
+  .nodata-section.open .nodata-header .chev { transform: rotate(180deg); }
+  .nodata-content { max-height:0; overflow:hidden; transition: max-height .4s ease; padding:0 22px; }
+  .nodata-section.open .nodata-content { max-height:3000px; padding:6px 22px 22px; }
+  .nodata-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:8px; }
+  .nodata-item {
+    background:#f8fafc; border:1px solid var(--border); border-radius:12px; padding:14px 16px;
+  }
+  .nodata-item .kr { font-size:14px; font-weight:600; color:var(--text2); line-height:1.4; margin-bottom:8px; }
+  .nodata-item .src { font-size:13px; color:var(--text3); }
+  .nodata-item .detail { font-size:12px; color:var(--text3); margin-top:6px; line-height:1.4; }
+
+  /* ── Loading ── */
+  .loading-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:90px 20px; min-height:50vh; }
+  .spinner {
+    width:54px; height:54px; border:5px solid #e2e8f0;
+    border-top-color:#2563eb; border-radius:50%; animation: spin 1s linear infinite;
+  }
+  .loading-text { margin-top:18px; color:var(--text2); font-size:16px; font-weight:500; }
+
+  /* ── Error ── */
+  .error-wrap { text-align:center; padding:80px 24px; }
+  .error-wrap .emoji { font-size:54px; }
+  .error-wrap .msg { margin-top:16px; color:var(--red); font-size:17px; font-weight:600; }
+
+  /* ── Footer ── */
+  .footer-note { text-align:center; color:var(--text3); font-size:13px; margin-top:40px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 1024px) {
+    .kpi-grid, .nodata-grid { grid-template-columns:repeat(2,1fr); }
+    .summary-bar { grid-template-columns:repeat(5,1fr); }
+    .weights-grid { grid-template-columns:repeat(2,1fr); }
+    .profile-grid { grid-template-columns:repeat(2,1fr); }
+  }
+  @media (max-width: 640px) {
+    .header { padding:22px 16px 18px; }
+    .header-inner { flex-direction:column; align-items:flex-start; gap:14px; }
+    .header .meta { text-align:left; }
+    .refresh-btn { position:static; margin-bottom:4px; }
+    .header .person-name { font-size:23px; }
+    .summary-bar { grid-template-columns:repeat(2,1fr); gap:18px; margin:0 12px 18px; border-radius:12px; padding:14px; }
+    .container { padding:0 12px 40px; }
+    .kpi-grid, .nodata-grid { grid-template-columns:1fr; }
+    .kpi-card { padding:18px 16px; }
+    .kpi-card .current-value { font-size:30px; }
+    .weights-grid { grid-template-columns:repeat(2,1fr); }
+    .profile-grid { grid-template-columns:1fr; }
+    .profile-card, .weights-card, .acc-card { margin-left:12px; margin-right:12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-inner">
+    <div class="person-info">
+      <div class="person-name" id="hdrName">สมศักดิ์ ธัมมะปาละ</div>
+      <div class="person-role" id="hdrRole">ผู้รับใช้ทีม PKG</div>
+      <span class="person-dept" id="hdrDept">PMG/PMGI</span>
+    </div>
+    <div class="meta">
+      <div class="ts-label">อัปเดตล่าสุด</div>
+      <div class="ts-value" id="timestamp">—</div>
+    </div>
+  </div>
+  <button class="refresh-btn" onclick="loadData()">
+    <span class="icon">↻</span><span>รีเฟรช</span>
+  </button>
+</div>
+
+<!-- Profile card -->
+<div class="profile-card" id="profileCard" style="display:none;">
+  <div class="profile-grid">
+    <div class="profile-item"><span class="pi-icon">🏢</span><span class="pi-label">กลุ่มงาน</span><span class="pi-value" id="pfDept">—</span></div>
+    <div class="profile-item"><span class="pi-icon">👥</span><span class="pi-label">ทีม</span><span class="pi-value" id="pfTeam">—</span></div>
+    <div class="profile-item"><span class="pi-icon">👤</span><span class="pi-label">บทบาท</span><span class="pi-value" id="pfRole">—</span></div>
+    <div class="profile-item"><span class="pi-icon">🧑‍🏫</span><span class="pi-label">พี่เลี้ยง</span><span class="pi-value" id="pfMentors">—</span></div>
+    <div class="profile-item profile-full"><span class="pi-icon">🎯</span><span class="pi-label">Purpose</span><span class="pi-value" id="pfPurpose">—</span></div>
+    <div class="profile-item profile-full"><span class="pi-icon">🔭</span><span class="pi-label">Vision</span><span class="pi-value" id="pfVision">—</span></div>
+  </div>
+</div>
+
+<!-- Weights card -->
+<div class="weights-card" id="weightsCard" style="display:none;">
+  <div class="weights-title">⚖️ สัดส่วนการประเมิน (Weights)</div>
+  <div class="weights-grid">
+    <div class="weight-bar-item business">
+      <div class="wb-head"><span class="wb-label">💼 Business Growth</span><span class="wb-pct" id="wBusiness">0%</span></div>
+      <div class="wb-bar-bg"><div class="wb-bar-fill" id="wBarBusiness" style="width:0%"></div></div>
+    </div>
+    <div class="weight-bar-item team">
+      <div class="wb-head"><span class="wb-label">👥 Team Growth</span><span class="wb-pct" id="wTeam">0%</span></div>
+      <div class="wb-bar-bg"><div class="wb-bar-fill" id="wBarTeam" style="width:0%"></div></div>
+    </div>
+    <div class="weight-bar-item personal">
+      <div class="wb-head"><span class="wb-label">🌱 Personal Growth</span><span class="wb-pct" id="wPersonal">0%</span></div>
+      <div class="wb-bar-bg"><div class="wb-bar-fill" id="wBarPersonal" style="width:0%"></div></div>
+    </div>
+    <div class="weight-bar-item community">
+      <div class="wb-head"><span class="wb-label" style="font-size:12px;line-height:1.3">🏛️ Personal Credit in PKG Community<br>(OC,HC,IC)</span><span class="wb-pct" id="wCommunity">0%</span></div>
+      <div class="wb-bar-bg"><div class="wb-bar-fill" id="wBarCommunity" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Accountabilities card -->
+<div class="acc-card" id="accCard" style="display:none;">
+  <div class="acc-title">📋 หน้าที่ความรับผิดชอบหลัก (Key Accountabilities)</div>
+  <ol class="acc-list" id="accList"></ol>
+</div>
+
+<!-- Summary bar -->
+<div class="summary-bar" id="summaryBar" style="display:none;">
+  <div class="summary-item total"><div class="num" id="sumTotal">0</div><div class="lbl">ทั้งหมด</div></div>
+  <div class="summary-item on-track"><div class="num" id="sumOnTrack">0</div><div class="lbl">🟢 ตามเป้า</div></div>
+  <div class="summary-item at-risk"><div class="num" id="sumAtRisk">0</div><div class="lbl">🟡 เสี่ยง</div></div>
+  <div class="summary-item behind"><div class="num" id="sumBehind">0</div><div class="lbl">🔴 ล้าหลัง</div></div>
+  <div class="summary-item no-data"><div class="num" id="sumNoData">0</div><div class="lbl">⚪ ไม่มีข้อมูล</div></div>
+</div>
+
+<!-- Main content -->
+<div class="container">
+  <div id="content">
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <div class="loading-text">กำลังดึงข้อมูล CEO…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── Helpers ──
+  function esc(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function fmtValue(v) {
+    if (v === null || v === undefined || v === '') return '—';
+    if (typeof v === 'number') {
+      if (Math.abs(v) >= 1000000) return (v / 1000000).toFixed(2) + ' ลบ.';
+      if (Math.abs(v) >= 1000) return v.toLocaleString('en-US', {maximumFractionDigits: 0});
+      return Math.round(v).toLocaleString('en-US');
+    }
+    // Try numeric string
+    var n = parseFloat(v);
+    if (!isNaN(n) && String(v).match(/^\d/)) {
+      if (Math.abs(n) >= 1000000) return (n / 1000000).toFixed(2) + ' ลบ.';
+      if (Math.abs(n) >= 1000) return n.toLocaleString('en-US', {maximumFractionDigits: 0});
+      return Math.round(n).toLocaleString('en-US');
+    }
+    return esc(String(v));
+  }
+
+  function shortKR(text, max) {
+    max = max || 90;
+    if (!text) return '';
+    var t = String(text);
+    // strip leading "KR NN:" pattern
+    t = t.replace(/^KR\s*\d+\s*:?\s*/i, '');
+    // strip leading "O1-KR1:" type pattern
+    t = t.replace(/^O\d+-KR\s*\d+\s*:?\s*/i, '');
+    if (t.length > max) return t.substring(0, max - 1) + '…';
+    return t;
+  }
+
+  var STATUS_META = {
+    'on-track': { badge:'🟢 ตามเป้า',  cls:'on-track' },
+    'at-risk':  { badge:'🟡 เสี่ยง',     cls:'at-risk'  },
+    'behind':   { badge:'🔴 ล้าหลัง',  cls:'behind'   },
+    'no-data':  { badge:'⚪ ไม่มีข้อมูล', cls:'no-data'  },
+    'skip':     { badge:'—',            cls:'no-data'  }
+  };
+
+  function statusMeta(s) { return STATUS_META[s] || STATUS_META['no-data']; }
+
+  // ── Fuzzy match KR text from KPI items to OKR keyResults ──
+  function normalizeText(t) {
+    if (!t) return '';
+    return String(t).replace(/\s+/g, '').replace(/^KR\s*\d+\s*:?\s*/i, '').replace(/^O\d+-KR\s*\d+\s*:?\s*/i, '').toLowerCase();
+  }
+
+  function matchKpiToKR(krText, kpiItems) {
+    if (!krText || !kpiItems || kpiItems.length === 0) return null;
+    var normKR = normalizeText(krText);
+    if (!normKR) return null;
+    // Exact match first
+    for (var i = 0; i < kpiItems.length; i++) {
+      if (normalizeText(kpiItems[i].krText) === normKR) return kpiItems[i];
+    }
+    // First 25 chars match
+    var krPrefix = normKR.substring(0, 25);
+    if (krPrefix.length >= 10) {
+      for (var i = 0; i < kpiItems.length; i++) {
+        var normItem = normalizeText(kpiItems[i].krText);
+        if (normItem.substring(0, 25) === krPrefix) return kpiItems[i];
+      }
+    }
+    // First 15 chars match
+    var krPrefix15 = normKR.substring(0, 15);
+    if (krPrefix15.length >= 8) {
+      for (var i = 0; i < kpiItems.length; i++) {
+        var normItem = normalizeText(kpiItems[i].krText);
+        if (normItem.substring(0, 15) === krPrefix15) return kpiItems[i];
+      }
+    }
+    // Contains check (one direction)
+    for (var i = 0; i < kpiItems.length; i++) {
+      var normItem = normalizeText(kpiItems[i].krText);
+      if (normItem.length > 10 && (normItem.indexOf(normKR.substring(0, 20)) >= 0 || normKR.indexOf(normItem.substring(0, 20)) >= 0)) {
+        return kpiItems[i];
+      }
+    }
+    return null;
+  }
+
+  // ── Render profile section ──
+  function renderProfile(person) {
+    if (!person) return;
+    document.getElementById('hdrName').textContent = person.name || 'สมศักดิ์ ธัมมะปาละ';
+    document.getElementById('hdrRole').textContent = person.role || 'ผู้รับใช้ทีม PKG';
+    document.getElementById('hdrDept').textContent = 'PMG/PMGI';
+    document.getElementById('pfDept').textContent = 'PMG/PMGI';
+    document.getElementById('pfTeam').textContent = person.team || 'PKG';
+    document.getElementById('pfRole').textContent = person.role || 'ผู้รับใช้ทีม PKG';
+    document.getElementById('pfMentors').textContent = (person.mentors && person.mentors.length > 0) ? person.mentors.join(', ') : 'กาญจนา ขุนจิตต์';
+    document.getElementById('pfPurpose').textContent = person.purpose || 'Personal Goal';
+    document.getElementById('pfVision').textContent = person.vision || 'ทีมศูนย์ซ่อมตัวถังและสี รวมถึง PMGI สามารถดำเนินงานได้ตามเป้าหมาย พร้อมยกระดับคุณภาพงานและรายได้อย่างต่อเนื่อง';
+    document.getElementById('profileCard').style.display = 'block';
+  }
+
+  // ── Render weights ──
+  function renderWeights(person) {
+    var wb = 0, wt = 0, wp = 0, wc = 0;
+    if (person) {
+      wb = Math.round((person.weightBusiness || 0) * 100);
+      wt = Math.round((person.weightTeam || 0) * 100);
+      wp = Math.round((person.weightPersonal || 0) * 100);
+      wc = Math.round((person.weightCommunity || 0) * 100);
+    } else {
+      wb = 30; wt = 30; // fallback defaults
+    }
+    document.getElementById('wBusiness').textContent = wb + '%';
+    document.getElementById('wTeam').textContent = wt + '%';
+    document.getElementById('wPersonal').textContent = wp + '%';
+    document.getElementById('wCommunity').textContent = wc + '%';
+    document.getElementById('weightsCard').style.display = 'block';
+    setTimeout(function() {
+      document.getElementById('wBarBusiness').style.width = wb + '%';
+      document.getElementById('wBarTeam').style.width = wt + '%';
+      document.getElementById('wBarPersonal').style.width = wp + '%';
+      document.getElementById('wBarCommunity').style.width = wc + '%';
+    }, 100);
+  }
+
+  // ── Render accountabilities ──
+  function renderAccountabilities(person) {
+    var accList = document.getElementById('accList');
+    var items = (person && person.accountability && person.accountability.length > 0) ? person.accountability : [];
+    if (items.length === 0) {
+      // Fallback defaults
+      items = [
+        'เป็นพี่เลี้ยงในทีมศูนย์ซ่อมตัวถังและสี',
+        'เป็นพี่เลี้ยงในทีม PMGI',
+        'สนับสนุนและมีส่วนในการดำเนินธุรกิจหลังการขายให้ได้ตามเป้าหมาย',
+        'ร่วมขับเคลื่อนการเชื่อมโยงระบบงานและการปรับปรุงงานที่ยังซ้ำซ้อนให้ดีขึ้น',
+        'ร่วมแสวงหาโอกาสใหม่เพื่อเพิ่มรายได้และคุณค่าจากเครือข่าย ลูกค้า และระบบงาน'
+      ];
+    }
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+      html += '<li>' + esc(items[i]) + '</li>';
+    }
+    accList.innerHTML = html;
+    document.getElementById('accCard').style.display = 'block';
+  }
+
+  // ── Build KPI card HTML ──
+  var _cardIdx = 0;
+  function kpiCardHtml(item, krIndex) {
+    var s = statusMeta(item.status);
+    var pct = item.progressPct || 0;
+    var krShort = shortKR(item.krText, 95);
+    var fullKR = esc(item.krText || '');
+
+    var sourceHtml = '';
+    if (item.sourceUrl) {
+      sourceHtml = '<span class="source-name"><a href="' + esc(item.sourceUrl) + '" target="_blank" rel="noopener">' + esc(item.source || 'ลิงก์') + ' <span style="font-size:12px;">↗</span></a></span>';
+    } else {
+      sourceHtml = '<span class="source-name"><span class="no-link">📊 ' + esc(item.source || 'ไม่ระบุ') + '</span></span>';
+    }
+
+    var detailToggle = '';
+    if (item.sourceDetail) {
+      var detailId = 'detail_' + _cardIdx;
+      detailToggle = '<span class="source-detail-toggle" onclick="var el=document.getElementById(\'' + detailId + '\');el.classList.toggle(\'show\');this.querySelector(\'.arrow\').textContent=el.classList.contains(\'show\')?\'▲\':\'▼\';"><span class="arrow">▼</span> รายละเอียดแหล่งข้อมูล</span>';
+      detailToggle += '<div class="source-detail-content" id="' + detailId + '">' + esc(item.sourceDetail) + '</div>';
+    }
+
+    var html = '<div class="kpi-card ' + s.cls + '">';
+    html += '<div class="kr-num">KR ' + (krIndex + 1) + '</div>';
+    html += '<div class="kr-text" title="' + fullKR + '">' + esc(krShort) + '</div>';
+    html += '<div class="value-row"><span class="current-value">' + fmtValue(item.currentValue) + '</span><span class="target-value"><span class="lbl">เป้า </span>' + fmtValue(item.targetValue) + '</span></div>';
+    html += '<div class="progress-section">';
+    html += '  <div class="progress-bar-bg"><div class="progress-bar-fill" data-bar-idx="' + _cardIdx + '" style="width:0%"></div></div>';
+    html += '  <div class="progress-pct-row"><span class="progress-pct">' + pct + '%</span><span class="status-badge">' + s.badge + '</span></div>';
+    html += '</div>';
+    html += '<div class="source-row">' + sourceHtml + detailToggle + '</div>';
+    html += '</div>';
+
+    _cardIdx++;
+    return html;
+  }
+
+  // ── Main render ──
+  function renderData(res) {
+    var content = document.getElementById('content');
+    var refreshBtn = document.querySelector('.refresh-btn');
+    refreshBtn.classList.remove('loading');
+
+    // Timestamp
+    var ts = '—';
+    var tsSource = (res.kpi && res.kpi.timestamp) || res.timestamp || '';
+    if (tsSource) {
+      try { ts = new Date(tsSource).toLocaleString('th-TH', {dateStyle:'long', timeStyle:'short'}); }
+      catch(e){ ts = String(tsSource); }
+    }
+    document.getElementById('timestamp').textContent = ts;
+
+    // Profile section
+    renderProfile(res.person);
+    renderWeights(res.person);
+    renderAccountabilities(res.person);
+
+    // KPI items
+    var kpiItems = (res.kpi && res.kpi.items) ? res.kpi.items : [];
+    var items = kpiItems.filter(function(it){ return it.status !== 'skip'; });
+
+    // Counts
+    var counts = { 'on-track':0, 'at-risk':0, 'behind':0, 'no-data':0 };
+    items.forEach(function(it){ if (counts[it.status] !== undefined) counts[it.status]++; });
+    document.getElementById('sumTotal').textContent = items.length;
+    document.getElementById('sumOnTrack').textContent = counts['on-track'];
+    document.getElementById('sumAtRisk').textContent = counts['at-risk'];
+    document.getElementById('sumBehind').textContent = counts['behind'];
+    document.getElementById('sumNoData').textContent = counts['no-data'];
+    document.getElementById('summaryBar').style.display = 'grid';
+
+    // If we have OKR person data with objectives, use it to group KRs
+    // Otherwise fall back to heuristic classification
+    var objectives = (res.person && res.person.objectives) ? res.person.objectives : [];
+
+    _cardIdx = 0;
+
+    if (objectives.length > 0) {
+      content.innerHTML = renderObjectivesHtml(objectives, items);
+    } else {
+      content.innerHTML = renderHeuristicHtml(items);
+    }
+
+    // Animate progress bars after a brief delay
+    setTimeout(function(){
+      document.querySelectorAll('.progress-bar-fill[data-bar-idx]').forEach(function(bar) {
+        var idx = parseInt(bar.getAttribute('data-bar-idx'));
+        // Find matching item — we stored items in a global
+        var allItems = window._allRenderItems || [];
+        if (allItems[idx]) {
+          var pct = Math.min(allItems[idx].progressPct || 0, 100);
+          bar.style.width = pct + '%';
+        }
+      });
+    }, 80);
+  }
+
+  // ── Render with OKR objectives ──
+  function renderObjectivesHtml(objectives, kpiItems) {
+    // Build a map of matched KPI items so we don't duplicate
+    var matchedKpiIndices = {};
+    var allRendered = [];
+    window._allRenderItems = allRendered;
+
+    // Group objectives by type, preserving order: Business Growth first, Team Growth, then others
+    var typeOrder = ['Business Growth', 'Team Growth', 'Personal Growth', 'Community'];
+    var grouped = {};
+    for (var oi = 0; oi < objectives.length; oi++) {
+      var t = objectives[oi].type || 'Other';
+      if (!grouped[t]) grouped[t] = [];
+      grouped[t].push(objectives[oi]);
+    }
+
+    var html = '';
+
+    for (var toi = 0; toi < typeOrder.length; toi++) {
+      var typeName = typeOrder[toi];
+      var objs = grouped[typeName];
+      if (!objs || objs.length === 0) continue;
+
+      var typeWeight = 0;
+      // Get weight for this type
+      for (var w = 0; w < objs.length; w++) {
+        if (objs[w].weight && objs[w].weight > 0) { typeWeight = Math.round(objs[w].weight * 100); break; }
+      }
+
+      // Section header
+      var dotColor = typeName === 'Business Growth' ? '#2563eb' : typeName === 'Team Growth' ? '#10b981' : typeName === 'Personal Growth' ? '#7c3aed' : '#ec4899';
+      var weightBadgeCls = typeName === 'Business Growth' ? 'business' : 'team';
+      html += '<div class="section-header"><span class="dot" style="background:' + dotColor + ';"></span><h2>' + esc(typeName) + '</h2>';
+      if (typeWeight > 0) html += '<span class="weight-badge ' + weightBadgeCls + '">' + typeWeight + '%</span>';
+      html += '</div>';
+
+      // Each objective
+      for (var obi = 0; obi < objs.length; obi++) {
+        var obj = objs[obi];
+        var isTeam = (typeName === 'Team Growth');
+        var labelNum = (obi + 1);
+
+        html += '<div class="obj-label' + (isTeam ? ' team' : '') + '">';
+        html += '<span class="obj-num">' + labelNum + '</span>';
+        html += '<span>' + esc(obj.label || '') + '</span>';
+        html += '</div>';
+
+        // Match KRs to KPI items
+        var krs = obj.keyResults || [];
+        if (krs.length === 0) {
+          html += '<p style="color:var(--text3);font-size:13px;margin-bottom:16px;">ไม่พบ Key Results</p>';
+          continue;
+        }
+
+        // Split KRs into data vs no-data
+        var dataKRs = [];
+        var noDataKRs = [];
+        for (var kri = 0; kri < krs.length; kri++) {
+          var matched = matchKpiToKR(krs[kri], kpiItems);
+          if (matched) {
+            dataKRs.push(matched);
+            allRendered.push(matched);
+          } else {
+            // Create a no-data item from the KR text
+            var ndItem = { krText: krs[kri], currentValue: '', targetValue: '', status: 'no-data', progressPct: 0, source: '', sourceUrl: '', sourceDetail: '' };
+            noDataKRs.push(ndItem);
+            allRendered.push(ndItem);
+          }
+        }
+
+        // Render data KRs as cards
+        if (dataKRs.length > 0) {
+          html += '<div class="kpi-grid">';
+          for (var dki = 0; dki < dataKRs.length; dki++) {
+            html += kpiCardHtml(dataKRs[dki], kri_index(krs, dataKRs[dki]));
+          }
+          html += '</div>';
+        }
+
+        // Render no-data KRs inline
+        if (noDataKRs.length > 0) {
+          html += '<div style="margin-top:14px;margin-bottom:18px;">';
+          html += '<div style="font-size:13px;color:var(--text3);margin-bottom:8px;">⚪ ไม่มีข้อมูลอัตโนมัติ (' + noDataKRs.length + ' KR)</div>';
+          html += '<div class="nodata-grid">';
+          for (var ndi = 0; ndi < noDataKRs.length; ndi++) {
+            html += '<div class="nodata-item">';
+            html += '<div class="kr">' + esc(shortKR(noDataKRs[ndi].krText, 120)) + '</div>';
+            html += '<div class="src">ยังไม่เชื่อมต่อแหล่งข้อมูลอัตโนมัติ</div>';
+            html += '</div>';
+          }
+          html += '</div>';
+          html += '</div>';
+        }
+      }
+    }
+
+    // Also include any KPI items that didn't match any KR (show in a catch-all section)
+    var unmatched = [];
+    for (var ui = 0; ui < kpiItems.length; ui++) {
+      if (kpiItems[ui].status === 'skip') continue;
+      var foundMatch = false;
+      for (var ri = 0; ri < allRendered.length; ri++) {
+        if (allRendered[ri] === kpiItems[ui]) { foundMatch = true; break; }
+      }
+      if (!foundMatch) {
+        unmatched.push(kpiItems[ui]);
+        allRendered.push(kpiItems[ui]);
+      }
+    }
+    if (unmatched.length > 0) {
+      html += '<div class="section-header"><span class="dot" style="background:#94a3b8;"></span><h2>KPI อื่นๆ</h2><span class="count">' + unmatched.length + ' KR</span></div>';
+      html += '<div class="kpi-grid">';
+      for (var uii = 0; uii < unmatched.length; uii++) {
+        html += kpiCardHtml(unmatched[uii], 0);
+      }
+      html += '</div>';
+    }
+
+    html += '<div class="footer-note">ข้อมูลดึงอัตโนมัติจากแหล่งข้อมูลต่างๆ — อัปเดตล่าสุด ' + esc(document.getElementById('timestamp').textContent) + '</div>';
+
+    return html;
+  }
+
+  // Find KR index in the original krs array for a matched KPI item
+  function kri_index(krs, matchedItem) {
+    for (var i = 0; i < krs.length; i++) {
+      if (matchKpiToKR(krs[i], [matchedItem])) return i;
+    }
+    return 0;
+  }
+
+  // ── Fallback heuristic rendering (when no OKR objectives) ──
+  function renderHeuristicHtml(items) {
+    if (!items || items.length === 0) {
+      return '<div class="error-wrap"><div class="emoji">📭</div><div class="msg">ไม่พบ Key Results สำหรับบุคคลนี้</div></div>';
+    }
+    window._allRenderItems = items;
+
+    function krType(text) {
+      var t = (text || '').toLowerCase();
+      var teamKeywords = ['พัฒนา','เรียนรู้','ทักษะ','ทีม','คน','บุคลากร','coaching','mentoring',
+                          'data','ai','dashboard','analytics','productivity','mapp','mr',
+                          'เครือข่าย','ประสบการณ์','วัฒนธรรม','engagement','ศูนย์สี','เชียร์เคลม','เคลือบแก้ว'];
+      for (var i = 0; i < teamKeywords.length; i++) {
+        if (t.indexOf(teamKeywords[i]) >= 0) return 'team';
+      }
+      return 'business';
+    }
+
+    var dataKRs = items.filter(function(it){ return it.status !== 'no-data'; });
+    var noDataKRs = items.filter(function(it){ return it.status === 'no-data'; });
+    var business = dataKRs.filter(function(it){ return krType(it.krText) === 'business'; });
+    var team = dataKRs.filter(function(it){ return krType(it.krText) === 'team'; });
+
+    var html = '';
+
+    if (business.length > 0) {
+      html += '<div class="section-header"><span class="dot" style="background:#2563eb;"></span><h2>Business Growth</h2><span class="weight-badge business">30%</span><span class="count">' + business.length + ' KR</span></div>';
+      html += '<div class="kpi-grid">';
+      business.forEach(function(it, i){ html += kpiCardHtml(it, i); });
+      html += '</div>';
+    }
+
+    if (team.length > 0) {
+      html += '<div class="section-header"><span class="dot" style="background:#10b981;"></span><h2>Team Growth</h2><span class="weight-badge team">30%</span><span class="count">' + team.length + ' KR</span></div>';
+      html += '<div class="kpi-grid">';
+      team.forEach(function(it, i){ html += kpiCardHtml(it, i); });
+      html += '</div>';
+    }
+
+    if (noDataKRs.length > 0) {
+      html += '<div class="nodata-section" id="nodataSection">';
+      html += '  <div class="nodata-header" onclick="document.getElementById(\'nodataSection\').classList.toggle(\'open\')">';
+      html += '    <div class="left"><span>⚪</span><h2>ไม่มีข้อมูลอัตโนมัติ</h2><span class="badge">' + noDataKRs.length + ' KR</span></div>';
+      html += '    <span class="chev">▾</span>';
+      html += '  </div>';
+      html += '  <div class="nodata-content">';
+      html += '    <p style="color:var(--text3);font-size:13px;margin:10px 0 14px;">KR เหล่านี้ยังไม่มีแหล่งข้อมูลอัตโนมัติเชื่อมต่อ — ต้องวัดด้วยมือหรือระบบอื่น</p>';
+      html += '    <div class="nodata-grid">';
+      noDataKRs.forEach(function(it){
+        html += '<div class="nodata-item">';
+        html += '<div class="kr" title="' + esc(it.krText || '') + '">' + esc(shortKR(it.krText, 120)) + '</div>';
+        html += '<div class="src">แหล่งข้อมูล: ' + esc(it.source || 'ไม่ระบุ') + '</div>';
+        if (it.sourceDetail) html += '<div class="detail">' + esc(it.sourceDetail) + '</div>';
+        html += '</div>';
+      });
+      html += '    </div>';
+      html += '  </div>';
+      html += '</div>';
+    }
+
+    html += '<div class="footer-note">ข้อมูลดึงอัตโนมัติจากแหล่งข้อมูลต่างๆ — อัปเดตล่าสุด ' + esc(document.getElementById('timestamp').textContent) + '</div>';
+
+    return html;
+  }
+
+  // ── Load data via google.script.run ──
+  function loadData() {
+    var content = document.getElementById('content');
+    var refreshBtn = document.querySelector('.refresh-btn');
+    refreshBtn.classList.add('loading');
+    content.innerHTML = '<div class="loading-wrap"><div class="spinner"></div><div class="loading-text">กำลังดึงข้อมูล CEO…</div></div>';
+    document.getElementById('summaryBar').style.display = 'none';
+    _cardIdx = 0;
+
+    google.script.run
+      .withSuccessHandler(renderData)
+      .withFailureHandler(showError)
+      .gsGetCEOData('สมศักดิ์ ธัมมะปาละ', 'PMG/PMGI');
+  }
+  window.loadData = loadData;
+
+  function showError(err) {
+    var content = document.getElementById('content');
+    var refreshBtn = document.querySelector('.refresh-btn');
+    refreshBtn.classList.remove('loading');
+    var msg = (err && err.message) ? err.message : String(err);
+    content.innerHTML = '<div class="error-wrap"><div class="emoji">⚠️</div><div class="msg">ไม่สามารถดึงข้อมูลได้</div><p style="margin-top:10px;color:var(--text3);">' + esc(msg) + '</p><p style="margin-top:14px;"><button class="refresh-btn" style="position:static;" onclick="loadData()"><span class="icon">↻</span> ลองอีกครั้ง</button></p></div>';
+  }
+  window.showError = showError;
+
+  // Auto-load on page ready
+  window.loadData();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ENVR | ระบบบริหารจัดการน้ำมัน</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#2E7D32;--primary-dark:#1B5E20;--primary-light:#4CAF50;--accent:#FF6F00;--bg:#f1f8e9;--card:#fff;--text:#212121;--text2:#616161;--border:#c8e6c9;--success:#43A047;--danger:#D32F2F;--warning:#F9A825;--info:#1565C0;--shadow:0 2px 8px rgba(0,0,0,.12)}
+body{font-family:'Sarabun','Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.app{max-width:1400px;margin:0 auto;padding:12px}
+.header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:16px 20px;border-radius:12px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.header h1{font-size:1.4rem;font-weight:700;display:flex;align-items:center;gap:8px}
+.header h1 span.emoji{font-size:1.6rem}
+.header-info{font-size:.8rem;opacity:.85}
+.tabs{display:flex;gap:4px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
+.tab-btn{padding:10px 18px;border:2px solid var(--primary);background:#fff;color:var(--primary);border-radius:8px 8px 0 0;cursor:pointer;font-size:.9rem;font-weight:600;white-space:nowrap;transition:all .2s}
+.tab-btn:hover{background:var(--border)}
+.tab-btn.active{background:var(--primary);color:#fff}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+.kpi-card{background:var(--card);border-radius:10px;padding:14px;box-shadow:var(--shadow);border-left:4px solid var(--primary)}
+.kpi-card.danger{border-left-color:var(--danger)}
+.kpi-card.warning{border-left-color:var(--warning)}
+.kpi-card.info{border-left-color:var(--info)}
+.kpi-card.success{border-left-color:var(--success)}
+.kpi-card.accent{border-left-color:var(--accent)}
+.kpi-label{font-size:.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.kpi-value{font-size:1.4rem;font-weight:700;color:var(--text);margin-top:2px}
+.kpi-sub{font-size:.72rem;color:var(--text2);margin-top:2px}
+.card{background:var(--card);border-radius:10px;padding:16px;box-shadow:var(--shadow);margin-bottom:16px}
+.card-title{font-size:1rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px;color:var(--primary-dark)}
+.section-header{font-size:1.05rem;font-weight:700;color:var(--primary-dark);padding:10px 0 6px;border-bottom:2px solid var(--primary);margin:12px 0 8px;display:flex;align-items:center;gap:8px}
+.section-header .emoji{font-size:1.2rem}
+.place-group{margin-bottom:12px}
+.place-label{font-size:.88rem;font-weight:700;color:var(--accent);padding:4px 10px;background:#FFF3E0;border-radius:6px;display:inline-block;margin-bottom:6px}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th{background:var(--primary);color:#fff;padding:7px 8px;text-align:left;font-weight:600;white-space:nowrap;position:sticky;top:0;z-index:1;font-size:.75rem}
+td{padding:6px 8px;border-bottom:1px solid #e0e0e0;font-size:.78rem}
+tr:nth-child(even){background:#f9fbe7}
+tr:hover{background:#e8f5e9}
+tr.place-row td{background:#FFF8E1;font-weight:600;border-bottom:2px solid #FFB74D}
+tr.subtotal-row td{background:#E8F5E9;font-weight:700;border-top:2px solid var(--primary);border-bottom:2px solid var(--primary)}
+tr.grandtotal-row td{background:#1B5E20;color:#fff;font-weight:700;font-size:.85rem}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.7rem;font-weight:600;color:#fff}
+.badge.import{background:#43A047}
+.badge.export{background:#D32F2F}
+.badge.transfer{background:#F9A825;color:#333}
+.badge.adjust{background:#1565C0}
+.badge.production{background:#7B1FA2}
+.refresh-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:600;transition:.2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-outline{background:#fff;color:var(--primary);border:1.5px solid var(--primary)}
+.btn-outline:hover{background:var(--border)}
+.btn-sm{padding:5px 10px;font-size:.78rem}
+.btn-active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.spinner{display:inline-block;width:18px;height:18px;border:3px solid #e0e0e0;border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:12px}
+.loading-overlay.hidden{display:none}
+.table-wrap{overflow-x:auto;max-height:65vh;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:end}
+.filter-group{display:flex;flex-direction:column;gap:2px}
+.filter-group label{font-size:.72rem;color:var(--text2);font-weight:600}
+.filter-group input,.filter-group select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:.82rem}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty-state .emoji{font-size:2.5rem}
+.oil-type-section{margin-bottom:20px}
+.oil-type-section.oil1 .section-header{color:#6A1B9A;border-bottom-color:#6A1B9A}
+.oil-type-section.oil2 .section-header{color:#0D47A1;border-bottom-color:#0D47A1}
+.oil-type-section.oil3 .section-header{color:#BF360C;border-bottom-color:#BF360C}
+.oil-type-section.oil1 .place-label{background:#F3E5F5;color:#6A1B9A}
+.oil-type-section.oil2 .place-label{background:#E3F2FD;color:#0D47A1}
+.oil-type-section.oil3 .place-label{background:#FBE9E7;color:#BF360C}
+.balance-positive{color:var(--success);font-weight:700}
+.balance-negative{color:var(--danger);font-weight:700}
+
+/* Chart styles */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.chart-card{background:var(--card);border-radius:10px;padding:14px;box-shadow:var(--shadow)}
+.chart-card-title{font-size:.88rem;font-weight:700;color:var(--primary-dark);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.chart-card-title .emoji{font-size:1.1rem}
+.chart-wrap{position:relative;height:280px}
+.chart-wrap.tall{height:350px}
+.chart-controls{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.chart-controls label{font-size:.75rem;color:var(--text2);font-weight:600}
+.oil-filter-btns{display:flex;gap:4px;flex-wrap:wrap}
+.oil-filter-btn{padding:4px 10px;border-radius:20px;font-size:.72rem;font-weight:600;cursor:pointer;border:1.5px solid #bbb;background:#fff;transition:.2s}
+.oil-filter-btn.active-all{background:var(--primary);color:#fff;border-color:var(--primary)}
+.oil-filter-btn.active-oil1{background:#6A1B9A;color:#fff;border-color:#6A1B9A}
+.oil-filter-btn.active-oil2{background:#0D47A1;color:#fff;border-color:#0D47A1}
+.oil-filter-btn.active-oil3{background:#BF360C;color:#fff;border-color:#BF360C}
+.period-btns{display:flex;gap:4px}
+.period-btn{padding:4px 12px;border-radius:16px;font-size:.75rem;font-weight:600;cursor:pointer;border:1.5px solid var(--primary);background:#fff;color:var(--primary);transition:.2s}
+.period-btn.active{background:var(--primary);color:#fff}
+
+@media(max-width:900px){
+  .chart-row{grid-template-columns:1fr}
+}
+@media(max-width:768px){
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .header h1{font-size:1.1rem}
+  .tab-btn{padding:8px 12px;font-size:.8rem}
+  th,td{padding:4px 5px;font-size:.72rem}
+  .chart-wrap{height:220px}
+  .chart-wrap.tall{height:260px}
+  div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+}
+@media(max-width:480px){
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .app{padding:8px}
+}
+@media print{
+  .no-print{display:none!important}
+  .header{background:#2E7D32!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  th{background:#2E7D32!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="spinner" style="width:40px;height:40px;border-width:4px"></div>
+  <div style="font-weight:600;color:var(--primary)">กำลังโหลดข้อมูล...</div>
+</div>
+
+<div class="app" id="app" style="display:none">
+
+<!-- Header -->
+<div class="header">
+  <h1><span class="emoji">🛢️</span> ENVR ระบบบริหารจัดการน้ำมัน</h1>
+  <div class="refresh-bar no-print">
+    <span id="lastUpdated" style="font-size:.8rem"></span>
+    <button class="btn btn-outline" onclick="refreshData()" id="refreshBtn">🔄 รีเฟรช</button>
+    <button class="btn btn-outline" onclick="window.print()">🖨️ พิมพ์</button>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs no-print" id="tabBar">
+  <button class="tab-btn active" data-tab="stock" onclick="switchTab('stock')">🛢️ สต็อกน้ำมัน</button>
+  <button class="tab-btn" data-tab="transactions" onclick="switchTab('transactions')">📋 ธุรกรรม</button>
+  <button class="tab-btn" data-tab="sales" onclick="switchTab('sales')">💰 รายงานขาย</button>
+  <button class="tab-btn" data-tab="production" onclick="switchTab('production')">🏭 การผลิต</button>
+</div>
+
+<!-- Tab: Stock Summary (REDESIGNED with Charts) -->
+<div class="tab-content active" id="tab-stock">
+  <!-- Top KPI cards: total per oil type -->
+  <div class="kpi-row" id="stockKpi"></div>
+  
+  <!-- Charts Section -->
+  <div class="card no-print">
+    <div class="card-title">📊 แนวโน้มการเคลื่อนไหวน้ำมัน</div>
+    <div class="chart-controls">
+      <label>ประเภทน้ำมัน:</label>
+      <div class="oil-filter-btns">
+        <button class="oil-filter-btn active-all" data-oil="all" onclick="setOilFilter('all')">ทั้งหมด</button>
+        <button class="oil-filter-btn" data-oil="oil1" onclick="setOilFilter('oil1')">🛢️ เครื่องเก่า</button>
+        <button class="oil-filter-btn" data-oil="oil2" onclick="setOilFilter('oil2')">⛽ เอนกประสงค์</button>
+        <button class="oil-filter-btn" data-oil="oil3" onclick="setOilFilter('oil3')">⚠️ อเนก(ใช้ไม่ได้)</button>
+      </div>
+    </div>
+    
+    <!-- Monthly Trend Chart -->
+    <div class="chart-card">
+      <div class="chart-card-title"><span class="emoji">📅</span> แนวโน้มประจำเดือน (รับเข้า / เบิกออก / คงเหลือสุทธิ)</div>
+      <div class="chart-wrap tall">
+        <canvas id="monthlyChart"></canvas>
+      </div>
+      <div class="chart-controls" style="margin-top:6px">
+        <label>ช่วงเวลา:</label>
+        <div class="period-btns">
+          <button class="period-btn" data-months="6" onclick="setMonthRange(6)">6 เดือน</button>
+          <button class="period-btn active" data-months="12" onclick="setMonthRange(12)">12 เดือน</button>
+          <button class="period-btn" data-months="24" onclick="setMonthRange(24)">24 เดือน</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Daily + Net trend side by side -->
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-card-title"><span class="emoji">📆</span> แนวโน้มประจำวัน (30 วันย้อนหลัง)</div>
+        <div class="chart-wrap">
+          <canvas id="dailyChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title"><span class="emoji">📈</span> สต็อกสุทธิรายเดือน (นำเข้า − เบิกออก)</div>
+        <div class="chart-wrap">
+          <canvas id="netChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Oil Type Comparison (stacked bar) -->
+    <div class="chart-card">
+      <div class="chart-card-title"><span class="emoji">🛢️</span> เปรียบเทียบตามประเภทน้ำมัน (รับเข้า vs เบิกออก)</div>
+      <div class="chart-wrap tall">
+        <canvas id="oilTypeChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Detailed tables per oil type -->
+  <div id="stockDetailContainer"></div>
+  
+  <!-- Branch sales data -->
+  <div class="card" id="branchCard" style="display:none">
+    <div class="card-title">🏪 ข้อมูลสาขา — น้ำมันเครื่องเก่า (รับเข้า/ขายออก)</div>
+    <div class="table-wrap">
+      <table id="branchTable">
+        <thead><tr>
+          <th>บ่อ</th>
+          <th>สาขา</th>
+          <th class="num">สต็อกตั้งต้น (ลิตร)</th>
+          <th class="num">รับนอกระบบ</th>
+          <th class="num">รับในระบบ</th>
+          <th class="num">ขายนอกระบบ</th>
+          <th class="num">ขายในระบบ</th>
+          <th class="num">คงเหลือ (ขายในระบบ)</th>
+        </tr></thead>
+        <tbody id="branchBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Transactions -->
+<div class="tab-content" id="tab-transactions">
+  <!-- KPI summary cards -->
+  <div class="kpi-row" id="txnKpi"></div>
+
+  <!-- Quick date range + filters -->
+  <div class="card no-print" style="margin-bottom:12px">
+    <div class="card-title">📅 เลือกช่วงเวลาและตัวกรอง</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px">
+      <button class="oil-filter-btn" onclick="setTxnRange('thisMonth')" style="padding:6px 14px">เดือนนี้</button>
+      <button class="oil-filter-btn" onclick="setTxnRange('lastMonth')" style="padding:6px 14px">เดือนก่อน</button>
+      <button class="oil-filter-btn" onclick="setTxnRange('3months')" style="padding:6px 14px">3 เดือน</button>
+      <button class="oil-filter-btn" onclick="setTxnRange('6months')" style="padding:6px 14px">6 เดือน</button>
+      <button class="oil-filter-btn" onclick="setTxnRange('1year')" style="padding:6px 14px">1 ปี</button>
+      <button class="oil-filter-btn active-all" onclick="setTxnRange('all')" style="padding:6px 14px">ทั้งหมด</button>
+    </div>
+    <div class="filter-row" style="margin-bottom:0">
+      <div class="filter-group">
+        <label>ประเภทธุรกรรม</label>
+        <select id="filterType" onchange="renderTransactions()">
+          <option value="">ทั้งหมด</option>
+          <option value="นำเข้า">📦 นำเข้า</option>
+          <option value="ขาย">💰 ขาย</option>
+          <option value="เบิก">📋 เบิก</option>
+          <option value="ย้ายที่เก็บ">🔄 ย้ายที่เก็บ</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>ประเภทน้ำมัน</label>
+        <select id="filterOil" onchange="renderTransactions()"></select>
+      </div>
+      <div class="filter-group">
+        <label>จากวันที่</label>
+        <input type="date" id="filterDateFrom" onchange="renderTransactions()">
+      </div>
+      <div class="filter-group">
+        <label>ถึงวันที่</label>
+        <input type="date" id="filterDateTo" onchange="renderTransactions()">
+      </div>
+      <div class="filter-group">
+        <label>&nbsp;</label>
+        <button class="btn btn-outline" onclick="clearFilters()">✖ ล้างตัวกรอง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts: Monthly trend + Type pie -->
+  <div class="chart-row">
+    <div class="card">
+      <div class="card-title">📊 แนวโน้มธุรกรรมรายเดือน</div>
+      <div style="position:relative;height:300px">
+        <canvas id="txnMonthlyChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🥧 สัดส่วนตามประเภท</div>
+      <div style="position:relative;height:300px">
+        <canvas id="txnTypePie"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transaction table -->
+  <div class="card">
+    <div class="card-title">📋 รายการธุรกรรม <span id="txnCountInfo" style="font-weight:400;font-size:.8rem;color:var(--text2)"></span></div>
+    <div class="table-wrap">
+      <table id="txnTable">
+        <thead><tr>
+          <th>เลขที่</th>
+          <th>วันเวลา</th>
+          <th>ประเภท</th>
+          <th>ชื่อรายการ</th>
+          <th>ประเภทน้ำมัน</th>
+          <th>แหล่งจัดเก็บ</th>
+          <th class="num">ปริมาณ (ลิตร)</th>
+          <th>ผู้เบิก/ผู้ซื้อ</th>
+          <th>หน่วยงาน</th>
+        </tr></thead>
+        <tbody id="txnBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Sales Report -->
+<div class="tab-content" id="tab-sales">
+  <!-- Date range filter -->
+  <div class="card no-print" style="margin-bottom:12px">
+    <div class="card-title">📅 เลือกช่วงวันที่</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <label style="font-size:.85rem">จาก:</label>
+      <input type="date" id="salesDateFrom" onchange="renderSales()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:.85rem">
+      <label style="font-size:.85rem">ถึง:</label>
+      <input type="date" id="salesDateTo" onchange="renderSales()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:.85rem">
+      <button class="oil-filter-btn" onclick="setSalesRange('thisMonth')" style="padding:6px 14px">เดือนนี้</button>
+      <button class="oil-filter-btn" onclick="setSalesRange('lastMonth')" style="padding:6px 14px">เดือนก่อน</button>
+      <button class="oil-filter-btn" onclick="setSalesRange('3months')" style="padding:6px 14px">3 เดือน</button>
+      <button class="oil-filter-btn" onclick="setSalesRange('6months')" style="padding:6px 14px">6 เดือน</button>
+      <button class="oil-filter-btn" onclick="setSalesRange('1year')" style="padding:6px 14px">1 ปี</button>
+      <button class="oil-filter-btn" onclick="setSalesRange('all')" style="padding:6px 14px">ทั้งหมด</button>
+      <label style="font-size:.85rem;margin-left:12px">ประเภท:</label>
+      <select id="salesTypeFilter" onchange="renderSales()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:.85rem">
+        <option value="all">ทุกประเภท</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="kpi-row" id="salesKpi"></div>
+
+  <!-- Charts -->
+  <div class="card">
+    <div class="card-title">📊 แนวโน้มยอดขายรายเดือน</div>
+    <div class="chart-controls" style="margin-bottom:8px">
+      <label style="font-size:.8rem;color:var(--text2)">มุมมอง:</label>
+      <button class="oil-filter-btn active-all" id="salesChartMode_revenue" onclick="setSalesChartMode('revenue')">฿ ยอดเงิน</button>
+      <button class="oil-filter-btn" id="salesChartMode_liters" onclick="setSalesChartMode('liters')">🛢️ ลิตร</button>
+    </div>
+    <div style="position:relative;height:320px">
+      <canvas id="salesMonthlyChart"></canvas>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="card">
+      <div class="card-title">🥧 สัดส่วนตามประเภทขาย</div>
+      <div style="position:relative;height:260px">
+        <canvas id="salesTypePie"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏪 สัดส่วนตามเจ้าของน้ำมัน</div>
+      <div style="position:relative;height:260px">
+        <canvas id="salesOwnerPie"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary by sell type -->
+  <div class="card">
+    <div class="card-title">📋 สรุปยอดขายตามประเภท</div>
+    <div class="table-wrap">
+      <table id="salesSummaryTable">
+        <thead><tr>
+          <th>ประเภทการขาย</th>
+          <th class="num">จำนวนรายการ</th>
+          <th class="num">ปริมาณ (ลิตร)</th>
+          <th class="num">ยอดเงิน (฿)</th>
+          <th class="num">ราคาเฉลี่ย/ลิตร</th>
+        </tr></thead>
+        <tbody id="salesSummaryBody"></tbody>
+        <tfoot id="salesSummaryFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Detail table -->
+  <div class="card">
+    <div class="card-title">📝 รายละเอียดการขาย</div>
+    <div style="margin-bottom:8px;font-size:.8rem;color:var(--text2)" id="salesFilteredInfo"></div>
+    <div class="table-wrap">
+      <table id="salesTable">
+        <thead><tr>
+          <th>วันที่</th>
+          <th>ประเภทน้ำมัน</th>
+          <th>แหล่งเก็บ</th>
+          <th>ลูกค้า/ผู้รับ</th>
+          <th>ประเภทขาย</th>
+          <th>เจ้าของน้ำมัน</th>
+          <th class="num">ปริมาณ (ลิตร)</th>
+          <th class="num">ราคา/ลิตร</th>
+          <th class="num" style="font-weight:700">ยอดเงิน (฿)</th>
+          <th>สด/เครดิต</th>
+        </tr></thead>
+        <tbody id="salesBody"></tbody>
+        <tfoot id="salesFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Production -->
+<div class="tab-content" id="tab-production">
+  <div class="kpi-row" id="prodKpi"></div>
+  <div class="card">
+    <div class="card-title">🏭 รายการผลิตน้ำมัน</div>
+    <div class="table-wrap">
+      <table id="prodTable">
+        <thead><tr>
+          <th>วันที่ผลิต</th>
+          <th>รหัสเครื่อง</th>
+          <th class="num">ดีเซลที่ผลิตได้ (ลิตร)</th>
+          <th class="num">ใช้น้ำมันเครื่องเก่า (ลิตร)</th>
+          <th class="num">คงเหลือในเครื่อง (ลิตร)</th>
+          <th class="num">ของเสีย (ลิตร)</th>
+          <th>วันที่หยุดผลิต</th>
+          <th class="num">ใช้ไฟ (หน่วย)</th>
+          <th class="num">ค่าซีเทน</th>
+          <th>แหล่งจัดเก็บ</th>
+        </tr></thead>
+        <tbody id="prodBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ═══════ Data & State ═══════
+var DATA = {};
+var currentTab = 'stock';
+var refreshTimer = null;
+var currentOilFilter = 'all';
+var currentMonthRange = 12;
+
+// Chart instances
+var monthlyChartInst = null;
+var dailyChartInst = null;
+var netChartInst = null;
+var oilTypeChartInst = null;
+
+function init() {
+  try {
+    DATA = JSON.parse('ENVR_DATA_PLACEHOLDER');
+  } catch(e) {
+    try {
+      DATA = JSON.parse(document.getElementById('envrData') ? document.getElementById('envrData').textContent : '{}');
+    } catch(e2) {
+      DATA = {};
+    }
+  }
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('app').style.display = '';
+  // Init sales date filter - set to 1 year back
+  var _today = new Date();
+  var _yearAgo = new Date(_today); _yearAgo.setFullYear(_yearAgo.getFullYear()-1);
+  document.getElementById('salesDateFrom').value = _yearAgo.toISOString().split('T')[0];
+  document.getElementById('salesDateTo').value = _today.toISOString().split('T')[0];
+  renderAll();
+  refreshTimer = setInterval(refreshData, 5 * 60 * 1000);
+}
+
+function fmtNum(n, dec) {
+  if (n === null || n === undefined || n === '' || isNaN(n)) return '-';
+  dec = dec !== undefined ? dec : 2;
+  return Number(n).toLocaleString('th-TH', {minimumFractionDigits: dec, maximumFractionDigits: dec});
+}
+
+function fmtInt(n) {
+  if (n === null || n === undefined || n === '' || isNaN(n)) return '-';
+  return Number(n).toLocaleString('th-TH', {maximumFractionDigits:0});
+}
+
+function fmtDate(d) {
+  if (!d) return '-';
+  try {
+    var dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    return dt.toLocaleDateString('th-TH', {year:'numeric',month:'short',day:'numeric'});
+  } catch(e) { return d; }
+}
+
+function fmtDateTime(d) {
+  if (!d) return '-';
+  try {
+    var dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    return dt.toLocaleDateString('th-TH', {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  } catch(e) { return d; }
+}
+
+function fmtMonth(m) {
+  // "2026-05" → "พ.ค. 69" (thai short month)
+  if (!m) return '-';
+  try {
+    var parts = m.split('-');
+    var dt = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+    return dt.toLocaleDateString('th-TH', {year:'2-digit',month:'short'});
+  } catch(e) { return m; }
+}
+
+function fmtDayShort(d) {
+  if (!d) return '-';
+  try {
+    var dt = new Date(d);
+    return dt.toLocaleDateString('th-TH', {day:'numeric',month:'short'});
+  } catch(e) { return d; }
+}
+
+function typeBadge(type) {
+  var map = {'ขาย':'export','เบิก':'export','ย้ายที่เก็บ':'transfer','นำเข้า':'import','ปรับปรุง':'adjust'};
+  var cls = map[type] || 'adjust';
+  var icons = {'import':'🟢','export':'🔴','transfer':'🟡','adjust':'🔵'};
+  return '<span class="badge ' + cls + '">' + (icons[cls]||'🔵') + ' ' + (type||'-') + '</span>';
+}
+
+function balanceClass(val) {
+  var n = Number(val) || 0;
+  if (n > 0) return 'balance-positive';
+  if (n < 0) return 'balance-negative';
+  return '';
+}
+
+// ═══════ Tab Switching ═══════
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
+  document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.toggle('active', c.id === 'tab-' + tab); });
+}
+
+// ═══════ Chart Filter Controls ═══════
+var OIL_TYPE_MAP = {
+  'oil1': 'น้ำมันเครื่องเก่า',
+  'oil2': 'น้ำมันเอนกประสงค์',
+  'oil3': 'น้ำมันเอนกประสงค์(ใช้ไม่ได้)'
+};
+
+var OIL_COLORS = {
+  'น้ำมันเครื่องเก่า': {border: '#6A1B9A', bg: 'rgba(106,27,154,0.15)', importBg: 'rgba(106,27,154,0.6)', exportBg: 'rgba(206,147,216,0.6)'},
+  'น้ำมันเอนกประสงค์': {border: '#0D47A1', bg: 'rgba(13,71,161,0.15)', importBg: 'rgba(13,71,161,0.6)', exportBg: 'rgba(144,164,174,0.6)'},
+  'น้ำมันเอนกประสงค์(ใช้ไม่ได้)': {border: '#BF360C', bg: 'rgba(191,54,12,0.15)', importBg: 'rgba(191,54,12,0.6)', exportBg: 'rgba(255,138,101,0.6)'}
+};
+
+function setOilFilter(filter) {
+  currentOilFilter = filter;
+  document.querySelectorAll('.oil-filter-btn').forEach(function(b) {
+    b.className = 'oil-filter-btn';
+    if (b.dataset.oil === filter) {
+      b.classList.add('active-' + filter);
+    }
+  });
+  renderCharts();
+}
+
+function setMonthRange(months) {
+  currentMonthRange = months;
+  document.querySelectorAll('.period-btn').forEach(function(b) {
+    b.classList.toggle('active', parseInt(b.dataset.months) === months);
+  });
+  renderCharts();
+}
+
+// ═══════ Render All ═══════
+function renderAll() {
+  renderStock();
+  renderCharts();
+  renderTransactions();
+  renderSales();
+  renderProduction();
+  var lu = DATA.lastUpdated ? new Date(DATA.lastUpdated) : new Date();
+  document.getElementById('lastUpdated').textContent = '🔄 อัปเดตล่าสุด: ' + fmtDateTime(lu);
+}
+
+// ═══════ Stock Tab (Tables) ═══════
+function renderStock() {
+  var detail = DATA.stockDetail || [];
+  var branch = DATA.branchData || [];
+  
+  // Group by oil type
+  var oilTypeGroups = {};
+  detail.forEach(function(d) {
+    var ot = d.oil_type || '-';
+    if (!oilTypeGroups[ot]) oilTypeGroups[ot] = [];
+    oilTypeGroups[ot].push(d);
+  });
+  
+  // Define oil type display order and metadata
+  var oilTypeOrder = [
+    {key: 'น้ำมันเครื่องเก่า', css: 'oil1', emoji: '🛢️', exportCols: [
+      {field:'export_refinery', label:'โรงกลั่น'},
+      {field:'export_cnb', label:'CNB'},
+      {field:'export_csk', label:'CSK'},
+      {field:'export_spray_booth', label:'อู่เคาะพ่นสี'},
+      {field:'export_external', label:'ลูกค้าภายนอก'}
+    ]},
+    {key: 'น้ำมันเอนกประสงค์', css: 'oil2', emoji: '⛽', exportCols: [
+      {field:'export_generator', label:'เครื่องเจน'},
+      {field:'export_spray_booth', label:'อู่เคาะพ่นสี'},
+      {field:'export_nnr', label:'สวน NNR'},
+      {field:'export_refinery_use', label:'โรงกลั่นเบิกใช้'},
+      {field:'export_vehicle', label:'รถใช้งาน'},
+      {field:'export_cnb', label:'CNB'},
+      {field:'export_external', label:'ลูกค้าภายนอก'}
+    ]},
+    {key: 'น้ำมันเอนกประสงค์(ใช้ไม่ได้)', css: 'oil3', emoji: '⚠️', exportCols: [
+      {field:'export_generator', label:'เครื่องเจน'},
+      {field:'export_spray_booth', label:'อู่เคาะพ่นสี'},
+      {field:'export_nnr', label:'สวน NNR'},
+      {field:'export_refinery_use', label:'โรงกลั่นเบิกใช้'},
+      {field:'export_vehicle', label:'รถใช้งาน'},
+      {field:'export_cnb', label:'CNB'},
+      {field:'export_external', label:'ลูกค้าภายนอก'}
+    ]}
+  ];
+  
+  // KPI cards — show physical stock (sum of meaningful balances)
+  // Balances < 5 are treated as effectively zero (measurement noise / data artifacts)
+  var kpiHtml = '';
+  var grandPhysical = 0;
+  oilTypeOrder.forEach(function(ot) {
+    var items = oilTypeGroups[ot.key] || [];
+    var phyStock = 0, totalExport = 0;
+    items.forEach(function(it) {
+      var bal = Number(it.balance) || 0;
+      if (bal >= 5) phyStock += bal;
+      totalExport += (Number(it.export_refinery) || 0) + (Number(it.export_cnb) || 0) +
+        (Number(it.export_csk) || 0) + (Number(it.export_spray_booth) || 0) +
+        (Number(it.export_external) || 0) + (Number(it.export_generator) || 0) +
+        (Number(it.export_nnr) || 0) + (Number(it.export_refinery_use) || 0) +
+        (Number(it.export_vehicle) || 0);
+    });
+    grandPhysical += phyStock;
+    kpiHtml += '<div class="kpi-card ' + ot.css + '">';
+    kpiHtml += '<div class="kpi-label">' + ot.emoji + ' ' + ot.key + '</div>';
+    kpiHtml += '<div class="kpi-value">' + fmtInt(phyStock) + '</div>';
+    kpiHtml += '<div class="kpi-sub">รวม ' + items.length + ' บ่อ (≥5 ลิตร) | เบิกออก ' + fmtInt(totalExport) + ' ลิตร</div>';
+    kpiHtml += '</div>';
+  });
+  kpiHtml += '<div class="kpi-card success"><div class="kpi-label">📊 สต็อกจริงรวม</div><div class="kpi-value">' + fmtInt(grandPhysical) + '</div><div class="kpi-sub">ลิตร (บ่อที่มีสต็อก ≥5 ลิตร)</div></div>';
+  document.getElementById('stockKpi').innerHTML = kpiHtml;
+  
+  // Build detailed tables per oil type
+  var containerHtml = '';
+  oilTypeOrder.forEach(function(ot) {
+    var items = oilTypeGroups[ot.key] || [];
+    if (!items.length) return;
+    
+    containerHtml += '<div class="oil-type-section ' + ot.css + ' card">';
+    containerHtml += '<div class="section-header"><span class="emoji">' + ot.emoji + '</span> ' + ot.key + '</div>';
+    
+    // Group by place
+    var placeGroups = {};
+    var placeOrder = [];
+    items.forEach(function(it) {
+      var p = it.place || '(ไม่ระบุ)';
+      if (!placeGroups[p]) { placeGroups[p] = []; placeOrder.push(p); }
+      placeGroups[p].push(it);
+    });
+    
+    placeOrder.forEach(function(place) {
+      var placeItems = placeGroups[place];
+      
+      // Subtotal for this place
+      var sub = {import_direct:0, import_transfer_in:0, total_import:0, stock_transfer_out:0, balance:0};
+      ot.exportCols.forEach(function(ec) { sub[ec.field] = 0; });
+      placeItems.forEach(function(it) {
+        sub.import_direct += Number(it.import_direct) || 0;
+        sub.import_transfer_in += Number(it.import_transfer_in) || 0;
+        sub.total_import += Number(it.total_import) || 0;
+        sub.stock_transfer_out += Number(it.stock_transfer_out) || 0;
+        sub.balance += Number(it.balance) || 0;
+        ot.exportCols.forEach(function(ec) { sub[ec.field] += Number(it[ec.field]) || 0; });
+      });
+      
+      containerHtml += '<div class="place-group">';
+      containerHtml += '<div class="place-label">📍 ' + place + '</div>';
+      containerHtml += '<div class="table-wrap"><table>';
+      
+      // Header
+      containerHtml += '<thead><tr>';
+      containerHtml += '<th>บ่อ</th>';
+      containerHtml += '<th class="num">รับเข้าโดยตรง</th>';
+      containerHtml += '<th class="num">ย้ายจากคลังอื่นเข้า</th>';
+      containerHtml += '<th class="num" style="background:var(--primary-dark)">รวมรับเข้า</th>';
+      ot.exportCols.forEach(function(ec) {
+        containerHtml += '<th class="num">' + ec.label + '</th>';
+      });
+      containerHtml += '<th class="num">ย้าย Stock ออก</th>';
+      containerHtml += '<th class="num" style="background:var(--accent)">คงเหลือ</th>';
+      containerHtml += '</tr></thead>';
+      
+      // Body
+      containerHtml += '<tbody>';
+      placeItems.forEach(function(it) {
+        containerHtml += '<tr>';
+        containerHtml += '<td>' + (it.tank || '-') + '</td>';
+        containerHtml += '<td class="num">' + fmtInt(it.import_direct) + '</td>';
+        containerHtml += '<td class="num">' + fmtInt(it.import_transfer_in) + '</td>';
+        containerHtml += '<td class="num" style="font-weight:600">' + fmtInt(it.total_import) + '</td>';
+        ot.exportCols.forEach(function(ec) {
+          var val = Number(it[ec.field]) || 0;
+          containerHtml += '<td class="num' + (val > 0 ? '' : '') + '">' + (val ? fmtInt(val) : '-') + '</td>';
+        });
+        containerHtml += '<td class="num">' + (it.stock_transfer_out ? fmtInt(it.stock_transfer_out) : '-') + '</td>';
+        containerHtml += '<td class="num ' + balanceClass(it.balance) + '">' + fmtInt(it.balance) + '</td>';
+        containerHtml += '</tr>';
+      });
+      
+      // Subtotal row
+      containerHtml += '<tr class="subtotal-row">';
+      containerHtml += '<td>รวม ' + place + '</td>';
+      containerHtml += '<td class="num">' + fmtInt(sub.import_direct) + '</td>';
+      containerHtml += '<td class="num">' + fmtInt(sub.import_transfer_in) + '</td>';
+      containerHtml += '<td class="num">' + fmtInt(sub.total_import) + '</td>';
+      ot.exportCols.forEach(function(ec) {
+        containerHtml += '<td class="num">' + (sub[ec.field] ? fmtInt(sub[ec.field]) : '-') + '</td>';
+      });
+      containerHtml += '<td class="num">' + (sub.stock_transfer_out ? fmtInt(sub.stock_transfer_out) : '-') + '</td>';
+      containerHtml += '<td class="num ' + balanceClass(sub.balance) + '">' + fmtInt(sub.balance) + '</td>';
+      containerHtml += '</tr>';
+      
+      containerHtml += '</tbody></table></div>';
+      containerHtml += '</div>';
+    });
+    
+    // Grand total for this oil type
+    var grand = {import_direct:0, import_transfer_in:0, total_import:0, stock_transfer_out:0, balance:0};
+    ot.exportCols.forEach(function(ec) { grand[ec.field] = 0; });
+    items.forEach(function(it) {
+      grand.import_direct += Number(it.import_direct) || 0;
+      grand.import_transfer_in += Number(it.import_transfer_in) || 0;
+      grand.total_import += Number(it.total_import) || 0;
+      grand.stock_transfer_out += Number(it.stock_transfer_out) || 0;
+      grand.balance += Number(it.balance) || 0;
+      ot.exportCols.forEach(function(ec) { grand[ec.field] += Number(it[ec.field]) || 0; });
+    });
+    
+    containerHtml += '<div style="padding:4px 0"><table><tbody>';
+    containerHtml += '<tr class="grandtotal-row">';
+    containerHtml += '<td>รวมทั้งหมด ' + ot.key + '</td>';
+    containerHtml += '<td class="num">' + fmtInt(grand.import_direct) + '</td>';
+    containerHtml += '<td class="num">' + fmtInt(grand.import_transfer_in) + '</td>';
+    containerHtml += '<td class="num">' + fmtInt(grand.total_import) + '</td>';
+    ot.exportCols.forEach(function(ec) {
+      containerHtml += '<td class="num">' + (grand[ec.field] ? fmtInt(grand[ec.field]) : '-') + '</td>';
+    });
+    containerHtml += '<td class="num">' + (grand.stock_transfer_out ? fmtInt(grand.stock_transfer_out) : '-') + '</td>';
+    containerHtml += '<td class="num">' + fmtInt(grand.balance) + '</td>';
+    containerHtml += '</tr>';
+    containerHtml += '</tbody></table></div>';
+    
+    containerHtml += '</div>';
+  });
+  
+  document.getElementById('stockDetailContainer').innerHTML = containerHtml;
+  
+  // Branch data
+  if (branch.length) {
+    document.getElementById('branchCard').style.display = '';
+    var bHtml = '';
+    branch.forEach(function(b) {
+      bHtml += '<tr>';
+      bHtml += '<td>' + (b.tank || '-') + '</td>';
+      bHtml += '<td>' + (b.branch || '-') + '</td>';
+      bHtml += '<td class="num">' + fmtInt(b.opening_stock) + '</td>';
+      bHtml += '<td class="num">' + (b.import_offline ? fmtInt(b.import_offline) : '-') + '</td>';
+      bHtml += '<td class="num">' + (b.import_online ? fmtInt(b.import_online) : '-') + '</td>';
+      bHtml += '<td class="num">' + (b.export_offline ? fmtInt(b.export_offline) : '-') + '</td>';
+      bHtml += '<td class="num">' + (b.export_online ? fmtInt(b.export_online) : '-') + '</td>';
+      bHtml += '<td class="num ' + balanceClass(b.system_balance) + '">' + fmtInt(b.system_balance) + '</td>';
+      bHtml += '</tr>';
+    });
+    document.getElementById('branchBody').innerHTML = bHtml;
+  }
+}
+
+// ═══════ Charts ═══════
+function renderCharts() {
+  var monthly = DATA.monthlyTrends || [];
+  var daily = DATA.dailyTrends || [];
+  
+  if (!monthly.length && !daily.length) return;
+  
+  // Get the oil types to show based on filter
+  var showOilTypes = [];
+  if (currentOilFilter === 'all') {
+    showOilTypes = ['น้ำมันเครื่องเก่า', 'น้ำมันเอนกประสงค์', 'น้ำมันเอนกประสงค์(ใช้ไม่ได้)'];
+  } else {
+    showOilTypes = [OIL_TYPE_MAP[currentOilFilter]];
+  }
+  
+  // Slice monthly data based on range
+  var maxMonths = monthly.length;
+  var sliceCount = Math.min(currentMonthRange, maxMonths);
+  var monthlySlice = monthly.slice(-sliceCount);
+  
+  // ── 1. Monthly Bar+Line Chart (Import/Export bars, Net line) ──
+  var mLabels = monthlySlice.map(function(m) { return fmtMonth(m.month); });
+  var mImportData, mExportData, mNetData;
+  
+  if (currentOilFilter === 'all') {
+    mImportData = monthlySlice.map(function(m) { return m.total_import; });
+    mExportData = monthlySlice.map(function(m) { return m.total_export; });
+    mNetData = monthlySlice.map(function(m) { return m.net; });
+  } else {
+    var otKey = OIL_TYPE_MAP[currentOilFilter];
+    mImportData = monthlySlice.map(function(m) { return (m.byOilType[otKey] || {}).import || 0; });
+    mExportData = monthlySlice.map(function(m) { return (m.byOilType[otKey] || {}).export || 0; });
+    mNetData = monthlySlice.map(function(m) { return (m.byOilType[otKey] || {}).net || 0; });
+  }
+  
+  var ctx1 = document.getElementById('monthlyChart');
+  if (monthlyChartInst) monthlyChartInst.destroy();
+  monthlyChartInst = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: mLabels,
+      datasets: [
+        {
+          label: '📦 รับเข้า (ลิตร)',
+          data: mImportData,
+          backgroundColor: 'rgba(67,160,71,0.7)',
+          borderColor: '#43A047',
+          borderWidth: 1,
+          order: 2
+        },
+        {
+          label: '📤 เบิกออก (ลิตร)',
+          data: mExportData,
+          backgroundColor: 'rgba(211,47,47,0.55)',
+          borderColor: '#D32F2F',
+          borderWidth: 1,
+          order: 2
+        },
+        {
+          label: '📈 สุทธิ (รับเข้า − เบิกออก)',
+          data: mNetData,
+          type: 'line',
+          borderColor: '#FF6F00',
+          backgroundColor: 'rgba(255,111,0,0.1)',
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#FF6F00',
+          fill: true,
+          tension: 0.3,
+          order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11 }, usePointStyle: true } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              return ctx.dataset.label + ': ' + Number(ctx.raw).toLocaleString('th-TH') + ' ลิตร';
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          beginAtZero: false,
+          ticks: {
+            callback: function(v) { return v >= 0 ? v.toLocaleString('th-TH') : '(' + Math.abs(v).toLocaleString('th-TH') + ')'; }
+          }
+        }
+      }
+    }
+  });
+  
+  // ── 2. Daily Trend (last 30 days) ──
+  var dailySlice = daily.slice(-30);
+  var dLabels = dailySlice.map(function(d) { return fmtDayShort(d.day); });
+  var dImportData, dExportData;
+  
+  if (currentOilFilter === 'all') {
+    dImportData = dailySlice.map(function(d) { return d.total_import; });
+    dExportData = dailySlice.map(function(d) { return d.total_export; });
+  } else {
+    var otKey2 = OIL_TYPE_MAP[currentOilFilter];
+    dImportData = dailySlice.map(function(d) { return (d.byOilType[otKey2] || {}).import || 0; });
+    dExportData = dailySlice.map(function(d) { return (d.byOilType[otKey2] || {}).export || 0; });
+  }
+  
+  var ctx2 = document.getElementById('dailyChart');
+  if (dailyChartInst) dailyChartInst.destroy();
+  dailyChartInst = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: dLabels,
+      datasets: [
+        {
+          label: '📦 รับเข้า',
+          data: dImportData,
+          backgroundColor: 'rgba(67,160,71,0.8)',
+          borderColor: '#43A047',
+          borderWidth: 1
+        },
+        {
+          label: '📤 เบิกออก',
+          data: dExportData,
+          backgroundColor: 'rgba(211,47,47,0.6)',
+          borderColor: '#D32F2F',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 10 }, usePointStyle: true } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return ctx.dataset.label + ': ' + Number(ctx.raw).toLocaleString('th-TH') + ' ลิตร'; }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 45 } },
+        y: { beginAtZero: true, ticks: { callback: function(v) { return v.toLocaleString('th-TH'); } } }
+      }
+    }
+  });
+  
+  // ── 3. Net (Cumulative Balance) Area Chart ──
+  var netLabels = monthlySlice.map(function(m) { return fmtMonth(m.month); });
+  var netDataByOil = {};
+  showOilTypes.forEach(function(ot) {
+    netDataByOil[ot] = monthlySlice.map(function(m) { return (m.byOilType[ot] || {}).net || 0; });
+  });
+  
+  var netDatasets = [];
+  if (currentOilFilter === 'all') {
+    // Show each oil type as separate line + total
+    netDatasets.push({
+      label: '📊 รวมทั้งหมด',
+      data: monthlySlice.map(function(m) { return m.net; }),
+      borderColor: '#FF6F00',
+      backgroundColor: 'rgba(255,111,0,0.12)',
+      borderWidth: 3,
+      pointRadius: 3,
+      fill: true,
+      tension: 0.3
+    });
+  }
+  showOilTypes.forEach(function(ot) {
+    var colors = OIL_COLORS[ot] || {border: '#666', bg: 'rgba(100,100,100,0.1)'};
+    netDatasets.push({
+      label: (ot.indexOf('เครื่อง') >= 0 ? '🛢️ ' : ot.indexOf('ใช้ไม่ได้') >= 0 ? '⚠️ ' : '⛽ ') + ot.replace('น้ำมัน', ''),
+      data: netDataByOil[ot],
+      borderColor: colors.border,
+      backgroundColor: colors.bg,
+      borderWidth: 2,
+      pointRadius: 3,
+      fill: currentOilFilter !== 'all',
+      tension: 0.3
+    });
+  });
+  
+  var ctx3 = document.getElementById('netChart');
+  if (netChartInst) netChartInst.destroy();
+  netChartInst = new Chart(ctx3, {
+    type: 'line',
+    data: {
+      labels: netLabels,
+      datasets: netDatasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 10 }, usePointStyle: true } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              return ctx.dataset.label + ': ' + Number(ctx.raw).toLocaleString('th-TH') + ' ลิตร';
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          ticks: {
+            callback: function(v) { return v >= 0 ? v.toLocaleString('th-TH') : '(' + Math.abs(v).toLocaleString('th-TH') + ')'; }
+          }
+        }
+      }
+    }
+  });
+  
+  // ── 4. Oil Type Comparison (stacked bar by month) ──
+  if (currentOilFilter === 'all') {
+    var oilCompareLabels = monthlySlice.map(function(m) { return fmtMonth(m.month); });
+    var datasets = [];
+    
+    showOilTypes.forEach(function(ot) {
+      var colors = OIL_COLORS[ot] || {importBg: 'rgba(100,100,100,0.6)', exportBg: 'rgba(200,200,200,0.6)'};
+      var shortName = ot.replace('น้ำมัน', '').replace('เอนกประสงค์', 'อเนก');
+      datasets.push({
+        label: '📥 ' + shortName + ' (รับเข้า)',
+        data: monthlySlice.map(function(m) { return (m.byOilType[ot] || {}).import || 0; }),
+        backgroundColor: colors.importBg,
+        borderColor: colors.border || '#666',
+        borderWidth: 1,
+        stack: 'import'
+      });
+      datasets.push({
+        label: '📤 ' + shortName + ' (เบิกออก)',
+        data: monthlySlice.map(function(m) { return (m.byOilType[ot] || {}).export || 0; }),
+        backgroundColor: colors.exportBg,
+        borderColor: colors.border || '#666',
+        borderWidth: 1,
+        stack: 'export'
+      });
+    });
+    
+    var ctx4 = document.getElementById('oilTypeChart');
+    if (oilTypeChartInst) oilTypeChartInst.destroy();
+    oilTypeChartInst = new Chart(ctx4, {
+      type: 'bar',
+      data: {
+        labels: oilCompareLabels,
+        datasets: datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 10 }, usePointStyle: true } },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) { return ctx.dataset.label + ': ' + Number(ctx.raw).toLocaleString('th-TH') + ' ลิตร'; }
+            }
+          }
+        },
+        scales: {
+          x: { stacked: true, grid: { display: false } },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: { callback: function(v) { return v.toLocaleString('th-TH'); } }
+          }
+        }
+      }
+    });
+  } else {
+    // Single oil type selected — hide comparison chart, show message
+    var ctx4 = document.getElementById('oilTypeChart');
+    if (oilTypeChartInst) oilTypeChartInst.destroy();
+    oilTypeChartInst = new Chart(ctx4, {
+      type: 'bar',
+      data: {
+        labels: monthlySlice.map(function(m) { return fmtMonth(m.month); }),
+        datasets: [
+          {
+            label: '📥 รับเข้า',
+            data: monthlySlice.map(function(m) { return (m.byOilType[OIL_TYPE_MAP[currentOilFilter]] || {}).import || 0; }),
+            backgroundColor: 'rgba(67,160,71,0.7)',
+            borderColor: '#43A047',
+            borderWidth: 1
+          },
+          {
+            label: '📤 เบิกออก',
+            data: monthlySlice.map(function(m) { return (m.byOilType[OIL_TYPE_MAP[currentOilFilter]] || {}).export || 0; }),
+            backgroundColor: 'rgba(211,47,47,0.55)',
+            borderColor: '#D32F2F',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 11 }, usePointStyle: true } },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) { return ctx.dataset.label + ': ' + Number(ctx.raw).toLocaleString('th-TH') + ' ลิตร'; }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, ticks: { callback: function(v) { return v.toLocaleString('th-TH'); } } }
+        }
+      }
+    });
+  }
+}
+
+// ═══════ Transactions Tab ═══════
+var txnMonthlyChartInstance = null;
+var txnTypePieInstance = null;
+
+function setTxnRange(range) {
+  var today = new Date();
+  var from, to;
+  to = today.toISOString().split('T')[0];
+  if (range === 'thisMonth') {
+    from = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-01';
+  } else if (range === 'lastMonth') {
+    var lm = new Date(today.getFullYear(), today.getMonth()-1, 1);
+    from = lm.getFullYear() + '-' + String(lm.getMonth()+1).padStart(2,'0') + '-01';
+    var lmEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    to = lmEnd.getFullYear() + '-' + String(lmEnd.getMonth()+1).padStart(2,'0') + '-' + String(lmEnd.getDate()).padStart(2,'0');
+  } else if (range === '3months') {
+    var d = new Date(today); d.setMonth(d.getMonth()-3);
+    from = d.toISOString().split('T')[0];
+  } else if (range === '6months') {
+    var d = new Date(today); d.setMonth(d.getMonth()-6);
+    from = d.toISOString().split('T')[0];
+  } else if (range === '1year') {
+    var d = new Date(today); d.setFullYear(d.getFullYear()-1);
+    from = d.toISOString().split('T')[0];
+  } else {
+    from = '2020-01-01';
+    to = '2099-12-31';
+  }
+  document.getElementById('filterDateFrom').value = from;
+  document.getElementById('filterDateTo').value = to;
+  // Highlight active button
+  document.querySelectorAll('#tab-transactions .oil-filter-btn').forEach(function(b) {
+    var r = b.getAttribute('onclick');
+    b.className = 'oil-filter-btn' + (r && r.indexOf("'" + range + "'") >= 0 ? ' active-all' : '');
+  });
+  renderTransactions();
+}
+
+function classifyTxnType(t) {
+  var tp = String(t.type || t.environ_type || '').trim();
+  if (!tp || tp === 'TEXT' || tp === 'environ_type') return '';
+  var tl = tp.toLowerCase();
+  if (tl.indexOf('นำเข้า') >= 0 || tl === 'import') return 'นำเข้า';
+  if (tl.indexOf('ขาย') >= 0) return 'ขาย';
+  if (tl.indexOf('เบิก') >= 0) return 'เบิก';
+  if (tl.indexOf('ย้าย') >= 0) return 'ย้ายที่เก็บ';
+  return tp; // unknown, keep original
+}
+
+function getFilteredTransactions() {
+  var txns = DATA.transactions || [];
+  var typeFilter = document.getElementById('filterType').value;
+  var oilFilter = document.getElementById('filterOil').value;
+  var dateFrom = document.getElementById('filterDateFrom').value;
+  var dateTo = document.getElementById('filterDateTo').value;
+  if (typeFilter) txns = txns.filter(function(t){ return classifyTxnType(t) === typeFilter; });
+  if (oilFilter) txns = txns.filter(function(t){ return (t.oil_type || t.environ_oil_type || '') === oilFilter; });
+  if (dateFrom) {
+    var df = new Date(dateFrom);
+    txns = txns.filter(function(t) {
+      var td = t.date_use || t.timestamp || t.environ_date_use || '';
+      return td && new Date(td) >= df;
+    });
+  }
+  if (dateTo) {
+    var dt = new Date(dateTo);
+    dt.setHours(23,59,59);
+    txns = txns.filter(function(t) {
+      var td = t.date_use || t.timestamp || t.environ_date_use || '';
+      return td && new Date(td) <= dt;
+    });
+  }
+  return txns;
+}
+
+function renderTransactions() {
+  var allTxns = DATA.transactions || [];
+  // Skip header-like rows
+  var validTxns = allTxns.filter(function(t) {
+    var r = String(t.running || t.environ_running || '');
+    if (r === 'running' || r === 'environ_running') return false;
+    var tt = String(t.type || t.environ_type || '');
+    if (tt === 'environ_type' || tt === 'TEXT') return false;
+    return true;
+  });
+
+  // Populate oil type filter
+  var oilSel = document.getElementById('filterOil');
+  var oilTypes = {};
+  validTxns.forEach(function(t){ var ot = t.oil_type || t.environ_oil_type || ''; if (ot && ot !== 'TEXT') oilTypes[ot] = true; });
+  var curVal = oilSel.value;
+  oilSel.innerHTML = '<option value="">ทั้งหมด</option>';
+  Object.keys(oilTypes).sort().forEach(function(ot){
+    var opt = document.createElement('option');
+    opt.value = ot; opt.textContent = ot || '-';
+    if (ot === curVal) opt.selected = true;
+    oilSel.appendChild(opt);
+  });
+
+  var txns = getFilteredTransactions();
+
+  // Classify and count
+  var countByType = { 'นำเข้า': 0, 'ขาย': 0, 'เบิก': 0, 'ย้ายที่เก็บ': 0, 'อื่นๆ': 0 };
+  var literByType = { 'นำเข้า': 0, 'ขาย': 0, 'เบิก': 0, 'ย้ายที่เก็บ': 0, 'อื่นๆ': 0 };
+  var agencySet = {};
+  txns.forEach(function(t) {
+    var ct = classifyTxnType(t);
+    if (!ct) return;
+    if (!(ct in countByType)) { countByType['อื่นๆ']++; literByType['อื่นๆ'] += Number(t.liter || t.environ_liter || 0); }
+    else { countByType[ct]++; literByType[ct] += Number(t.liter || t.environ_liter || 0); }
+    var ag = String(t.agency || t.environ_agency || t.company || t.environ_id_company_management || '');
+    if (ag && ag !== '-' && ag !== 'TEXT') agencySet[ag] = true;
+  });
+
+  var totalLiter = 0;
+  txns.forEach(function(t){ totalLiter += Number(t.liter || t.environ_liter || 0); });
+  var numAgencies = Object.keys(agencySet).length;
+
+  // KPI cards
+  var kpiHtml = '';
+  kpiHtml += '<div class="kpi-card"><div class="kpi-label">📋 รายการทั้งหมด</div><div class="kpi-value">' + txns.length + '</div><div class="kpi-sub">รายการ</div></div>';
+  kpiHtml += '<div class="kpi-card success"><div class="kpi-label">📦 นำเข้า</div><div class="kpi-value">' + countByType['นำเข้า'] + '</div><div class="kpi-sub">' + fmtNum(literByType['นำเข้า'],0) + ' ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card danger"><div class="kpi-label">💰 ขาย</div><div class="kpi-value">' + countByType['ขาย'] + '</div><div class="kpi-sub">' + fmtNum(literByType['ขาย'],0) + ' ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card warning"><div class="kpi-label">📋 เบิกใช้</div><div class="kpi-value">' + countByType['เบิก'] + '</div><div class="kpi-sub">' + fmtNum(literByType['เบิก'],0) + ' ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card" style="border-left-color:#7B1FA2"><div class="kpi-label">🔄 ย้ายที่เก็บ</div><div class="kpi-value">' + countByType['ย้ายที่เก็บ'] + '</div><div class="kpi-sub">' + fmtNum(literByType['ย้ายที่เก็บ'],0) + ' ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card info"><div class="kpi-label">🔋 ปริมาณรวม</div><div class="kpi-value">' + fmtNum(totalLiter,0) + '</div><div class="kpi-sub">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card" style="border-left-color:#00695C"><div class="kpi-label">🏢 หน่วยงาน</div><div class="kpi-value">' + numAgencies + '</div><div class="kpi-sub">หน่วยงาน</div></div>';
+  document.getElementById('txnKpi').innerHTML = kpiHtml;
+
+  // Render charts
+  renderTxnCharts(txns);
+
+  // Count info
+  document.getElementById('txnCountInfo').textContent = 'แสดง ' + txns.length + ' รายการ';
+
+  var tb = document.getElementById('txnBody');
+  if (!txns.length) { tb.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="emoji">📋</div>ไม่มีข้อมูลธุรกรรมในช่วงที่เลือก</td></tr>'; return; }
+  var html = '';
+  txns.forEach(function(t) {
+    var tp = t.type || t.environ_type || '-';
+    html += '<tr>';
+    html += '<td>' + (t.running || t.environ_running || '-') + '</td>';
+    html += '<td>' + fmtDateTime(t.date_use || t.timestamp || t.environ_date_use) + '</td>';
+    html += '<td>' + typeBadge(tp) + '</td>';
+    html += '<td>' + (t.name || t.environ_id_name || '-') + '</td>';
+    html += '<td>' + (t.oil_type || t.environ_oil_type || '-') + '</td>';
+    html += '<td>' + (t.storage || t.environ_storage || '-') + '</td>';
+    html += '<td class="num">' + fmtNum(t.liter || t.environ_liter) + '</td>';
+    html += '<td>' + (t.out_person || t.environ_out || t.environ_sell_customer || '-') + '</td>';
+    html += '<td>' + (t.agency || t.environ_agency || '-') + '</td>';
+    html += '</tr>';
+  });
+  tb.innerHTML = html;
+}
+
+function renderTxnCharts(txns) {
+  if (!txns) txns = getFilteredTransactions();
+
+  // Monthly trend by type
+  var monthlyByType = {};  // { "2025-01": { "นำเข้า": liters, "ขาย": liters, ... } }
+  var typeColors = {
+    'นำเข้า': '#43A047',
+    'ขาย': '#D32F2F',
+    'เบิก': '#F9A825',
+    'ย้ายที่เก็บ': '#7B1FA2',
+    'อื่นๆ': '#1565C0'
+  };
+  var typeLabels = ['นำเข้า', 'ขาย', 'เบิก', 'ย้ายที่เก็บ'];
+
+  txns.forEach(function(t) {
+    var ct = classifyTxnType(t);
+    if (!ct) return;
+    var dt = t.date_use || t.timestamp || t.environ_date_use || '';
+    if (!dt) return;
+    var ds = dt instanceof Date ? dt.toISOString() : String(dt);
+    var month = ds.substring(0, 7);
+    if (month.length !== 7 || month.indexOf('-') < 0) return;
+    if (month.substring(0, 2) === '25') return;
+    var liter = Number(t.liter || t.environ_liter || 0);
+    if (!monthlyByType[month]) monthlyByType[month] = {};
+    if (!monthlyByType[month][ct]) monthlyByType[month][ct] = 0;
+    monthlyByType[month][ct] += liter;
+  });
+
+  var months = Object.keys(monthlyByType).sort();
+  // Limit to last 24 months
+  if (months.length > 24) months = months.slice(months.length - 24);
+
+  var datasets = typeLabels.map(function(label) {
+    return {
+      label: label,
+      data: months.map(function(m) { return Math.round((monthlyByType[m] && monthlyByType[m][label]) || 0); }),
+      backgroundColor: typeColors[label] || '#999',
+      borderColor: typeColors[label] || '#999',
+      borderWidth: 1
+    };
+  });
+
+  if (txnMonthlyChartInstance) txnMonthlyChartInstance.destroy();
+  txnMonthlyChartInstance = new Chart(document.getElementById('txnMonthlyChart'), {
+    type: 'bar',
+    data: { labels: months, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return ctx.dataset.label + ': ' + fmtNum(ctx.parsed.y, 0) + ' ลิตร'; }
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, ticks: { callback: function(v) { return fmtNum(v, 0); } } }
+      }
+    }
+  });
+
+  // Pie chart — transaction count by type
+  var pieData = typeLabels.map(function(label) { return countByType_Pie(txns, label); });
+  var pieColors = typeLabels.map(function(label) { return typeColors[label]; });
+
+  if (txnTypePieInstance) txnTypePieInstance.destroy();
+  txnTypePieInstance = new Chart(document.getElementById('txnTypePie'), {
+    type: 'doughnut',
+    data: {
+      labels: typeLabels,
+      datasets: [{ data: pieData, backgroundColor: pieColors }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return ctx.label + ': ' + ctx.parsed + ' รายการ'; }
+          }
+        }
+      }
+    }
+  });
+}
+
+function countByType_Pie(txns, type) {
+  var c = 0;
+  txns.forEach(function(t) { if (classifyTxnType(t) === type) c++; });
+  return c;
+}
+
+function clearFilters() {
+  document.getElementById('filterType').value = '';
+  document.getElementById('filterOil').value = '';
+  document.getElementById('filterDateFrom').value = '';
+  document.getElementById('filterDateTo').value = '';
+  renderTransactions();
+}
+
+// ═══════ Sales Tab ═══════
+var salesChartMode = 'revenue'; // 'revenue' or 'liters'
+var salesMonthlyChartInstance = null;
+var salesTypePieInstance = null;
+var salesOwnerPieInstance = null;
+
+function setSalesChartMode(mode) {
+  salesChartMode = mode;
+  document.getElementById('salesChartMode_revenue').className = 'oil-filter-btn' + (mode === 'revenue' ? ' active-all' : '');
+  document.getElementById('salesChartMode_liters').className = 'oil-filter-btn' + (mode === 'liters' ? ' active-all' : '');
+  renderSalesCharts();
+}
+
+function setSalesRange(range) {
+  var today = new Date();
+  var from, to;
+  to = today.toISOString().split('T')[0];
+  if (range === 'thisMonth') {
+    from = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-01';
+  } else if (range === 'lastMonth') {
+    var lm = new Date(today.getFullYear(), today.getMonth()-1, 1);
+    from = lm.getFullYear() + '-' + String(lm.getMonth()+1).padStart(2,'0') + '-01';
+    var lmEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    to = lmEnd.getFullYear() + '-' + String(lmEnd.getMonth()+1).padStart(2,'0') + '-' + String(lmEnd.getDate()).padStart(2,'0');
+  } else if (range === '3months') {
+    var d = new Date(today); d.setMonth(d.getMonth()-3);
+    from = d.toISOString().split('T')[0];
+  } else if (range === '6months') {
+    var d = new Date(today); d.setMonth(d.getMonth()-6);
+    from = d.toISOString().split('T')[0];
+  } else if (range === '1year') {
+    var d = new Date(today); d.setFullYear(d.getFullYear()-1);
+    from = d.toISOString().split('T')[0];
+  } else {
+    // all - set very wide range
+    from = '2020-01-01';
+    to = '2099-12-31';
+  }
+  document.getElementById('salesDateFrom').value = from;
+  document.getElementById('salesDateTo').value = to;
+  renderSales();
+}
+
+function getFilteredSales() {
+  var rows = DATA.salesRows || [];
+  var fromVal = document.getElementById('salesDateFrom').value;
+  var toVal = document.getElementById('salesDateTo').value;
+  var typeFilter = document.getElementById('salesTypeFilter').value;
+  var filtered = rows;
+  if (fromVal) filtered = filtered.filter(function(r) { return r.date >= fromVal; });
+  if (toVal) filtered = filtered.filter(function(r) { return r.date <= toVal + 'T23:59:59'; });
+  if (typeFilter && typeFilter !== 'all') filtered = filtered.filter(function(r) { return r.sellType === typeFilter; });
+  return filtered;
+}
+
+function renderSales() {
+  if (!DATA.salesRows) return;
+  // Populate type filter dropdown (once)
+  var sel = document.getElementById('salesTypeFilter');
+  var types = {};
+  DATA.salesRows.forEach(function(r) { if (r.sellType) types[r.sellType] = true; });
+  var curVal = sel.value;
+  sel.innerHTML = '<option value="all">ทุกประเภท</option>';
+  Object.keys(types).sort().forEach(function(t) {
+    var opt = document.createElement('option');
+    opt.value = t; opt.textContent = t;
+    if (t === curVal) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  var sales = getFilteredSales();
+  var totalRevenue = 0, totalLiters = 0, countSales = sales.length;
+  var byType = {}, byOwner = {};
+  sales.forEach(function(s) {
+    totalLiters += s.liters;
+    totalRevenue += s.revenue;
+    if (!byType[s.sellType]) byType[s.sellType] = { liters: 0, revenue: 0, count: 0 };
+    byType[s.sellType].liters += s.liters;
+    byType[s.sellType].revenue += s.revenue;
+    byType[s.sellType].count++;
+    if (!byOwner[s.sellOil]) byOwner[s.sellOil] = { liters: 0, revenue: 0, count: 0 };
+    byOwner[s.sellOil].liters += s.liters;
+    byOwner[s.sellOil].revenue += s.revenue;
+    byOwner[s.sellOil].count++;
+  });
+  var avgPrice = totalLiters > 0 ? totalRevenue / totalLiters : 0;
+
+  // KPI cards
+  var kpiHtml = '';
+  kpiHtml += '<div class="kpi-card success"><div class="kpi-label">💰 ยอดขายรวม</div><div class="kpi-value">฿' + fmtNum(totalRevenue,0) + '</div><div class="kpi-sub">บาท</div></div>';
+  kpiHtml += '<div class="kpi-card info"><div class="kpi-label">🛢️ ปริมาณขายรวม</div><div class="kpi-value">' + fmtNum(totalLiters,0) + '</div><div class="kpi-sub">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card"><div class="kpi-label">📋 รายการขาย</div><div class="kpi-value">' + countSales + '</div><div class="kpi-sub">รายการ</div></div>';
+  kpiHtml += '<div class="kpi-card warning"><div class="kpi-label">📊 ราคาเฉลี่ย/ลิตร</div><div class="kpi-value">฿' + fmtNum(avgPrice,2) + '</div><div class="kpi-sub">บาท</div></div>';
+  document.getElementById('salesKpi').innerHTML = kpiHtml;
+
+  // Render charts
+  renderSalesCharts(sales, byType, byOwner);
+
+  // Summary table by sell type
+  var sumHtml = '';
+  Object.keys(byType).sort(function(a,b) { return byType[b].revenue - byType[a].revenue; }).forEach(function(t) {
+    var d = byType[t];
+    var avgP = d.liters > 0 ? d.revenue / d.liters : 0;
+    sumHtml += '<tr><td>' + t + '</td><td class="num">' + d.count + '</td><td class="num">' + fmtNum(d.liters,0) + '</td><td class="num" style="font-weight:700">฿' + fmtNum(d.revenue,0) + '</td><td class="num">฿' + fmtNum(avgP,2) + '</td></tr>';
+  });
+  document.getElementById('salesSummaryBody').innerHTML = sumHtml;
+  document.getElementById('salesSummaryFoot').innerHTML = '<tr class="grandtotal-row"><td><b>รวมทั้งหมด</b></td><td class="num"><b>' + countSales + '</b></td><td class="num"><b>' + fmtNum(totalLiters,0) + '</b></td><td class="num"><b>฿' + fmtNum(totalRevenue,0) + '</b></td><td class="num"><b>฿' + fmtNum(avgPrice,2) + '</b></td></tr>';
+
+  // Detail table
+  document.getElementById('salesFilteredInfo').textContent = 'แสดง ' + countSales + ' รายการ';
+  if (!sales.length) {
+    document.getElementById('salesBody').innerHTML = '<tr><td colspan="10" class="empty-state"><div class="emoji">💰</div>ไม่มีข้อมูลขายในช่วงที่เลือก</td></tr>';
+    document.getElementById('salesFoot').innerHTML = '';
+    return;
+  }
+  var html = '';
+  sales.forEach(function(s) {
+    var dateStr = fmtDate(s.date);
+    var sellTypeShort = s.sellType.length > 20 ? s.sellType.substring(0,18) + '…' : s.sellType;
+    html += '<tr>';
+    html += '<td>' + dateStr + '</td>';
+    html += '<td>' + (s.oilType || '-') + '</td>';
+    html += '<td>' + (s.storage || '-') + '</td>';
+    html += '<td>' + (s.buyer || s.outPerson || '-') + '</td>';
+    html += '<td>' + sellTypeShort + '</td>';
+    html += '<td>' + (s.sellOil || '-') + '</td>';
+    html += '<td class="num">' + fmtNum(s.liters,0) + '</td>';
+    html += '<td class="num">฿' + fmtNum(s.pricePerLiter,2) + '</td>';
+    html += '<td class="num" style="font-weight:700;color:var(--success)">฿' + fmtNum(s.revenue,0) + '</td>';
+    html += '<td>' + (s.sellMethod || '-') + '</td>';
+    html += '</tr>';
+  });
+  document.getElementById('salesBody').innerHTML = html;
+  document.getElementById('salesFoot').innerHTML = '<tr class="grandtotal-row"><td colspan="6"><b>รวมทั้งหมด</b></td><td class="num"><b>' + fmtNum(totalLiters,0) + '</b></td><td class="num"><b>฿' + fmtNum(avgPrice,2) + '</b></td><td class="num"><b>฿' + fmtNum(totalRevenue,0) + '</b></td><td></td></tr>';
+}
+
+function renderSalesCharts(sales, byType, byOwner) {
+  if (!sales) sales = getFilteredSales();
+  if (!byType) { byType = {}; sales.forEach(function(s) { if (!byType[s.sellType]) byType[s.sellType] = {liters:0,revenue:0,count:0}; byType[s.sellType].liters+=s.liters; byType[s.sellType].revenue+=s.revenue; byType[s.sellType].count++; }); }
+  if (!byOwner) { byOwner = {}; sales.forEach(function(s) { if (!byOwner[s.sellOil]) byOwner[s.sellOil] = {liters:0,revenue:0,count:0}; byOwner[s.sellOil].liters+=s.liters; byOwner[s.sellOil].revenue+=s.revenue; byOwner[s.sellOil].count++; }); }
+
+  // Monthly chart from salesMonthlySummary
+  var monthly = (DATA.salesMonthlySummary || []).filter(function(m) {
+    var fromVal = document.getElementById('salesDateFrom').value;
+    var toVal = document.getElementById('salesDateTo').value;
+    if (fromVal && m.month < fromVal.substring(0,7)) return false;
+    if (toVal && m.month > toVal.substring(0,7)) return false;
+    return true;
+  });
+
+  // Collect all sell types across months
+  var allTypes = {};
+  monthly.forEach(function(m) { for (var t in m.byType) { allTypes[t] = true; } });
+  var typeKeys = Object.keys(allTypes).sort();
+
+  var labels = monthly.map(function(m) { return m.month; });
+  var isRevenue = salesChartMode === 'revenue';
+
+  var datasets = typeKeys.map(function(t, i) {
+    var colors = ['#43A047','#FF6F00','#1565C0','#D32F2F','#7B1FA2','#00695C','#E65100','#283593'];
+    var c = colors[i % colors.length];
+    return {
+      label: t,
+      data: monthly.map(function(m) { var d = (m.byType || {})[t] || {}; return isRevenue ? Math.round(d.revenue || 0) : Math.round(d.liters || 0); }),
+      backgroundColor: c,
+      borderColor: c,
+      borderWidth: 1
+    };
+  });
+
+  // Add total line
+  datasets.push({
+    label: 'รวมทั้งหมด',
+    data: monthly.map(function(m) { return isRevenue ? Math.round(m.totalRevenue) : Math.round(m.totalLiters); }),
+    type: 'line',
+    borderColor: '#1B5E20',
+    backgroundColor: 'rgba(27,94,32,0.1)',
+    borderWidth: 2,
+    fill: false,
+    pointRadius: 3,
+    tension: 0.3
+  });
+
+  if (salesMonthlyChartInstance) salesMonthlyChartInstance.destroy();
+  salesMonthlyChartInstance = new Chart(document.getElementById('salesMonthlyChart'), {
+    type: 'bar',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return ctx.dataset.label + ': ' + (isRevenue ? '฿' : '') + fmtNum(ctx.parsed.y, 0) + (isRevenue ? ' บาท' : ' ลิตร'); }
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, ticks: { callback: function(v) { return isRevenue ? '฿' + fmtNum(v,0) : fmtNum(v,0); } } }
+      }
+    }
+  });
+
+  // Pie charts
+  var pieColors = ['#43A047','#FF6F00','#1565C0','#D32F2F','#7B1FA2','#00695C','#E65100','#283593','#F9A825','#4CAF50'];
+  var typeLabels = Object.keys(byType).sort(function(a,b) { return byType[b].revenue - byType[a].revenue; });
+  var typeData = typeLabels.map(function(t) { return isRevenue ? Math.round(byType[t].revenue) : Math.round(byType[t].liters); });
+
+  if (salesTypePieInstance) salesTypePieInstance.destroy();
+  salesTypePieInstance = new Chart(document.getElementById('salesTypePie'), {
+    type: 'doughnut',
+    data: { labels: typeLabels, datasets: [{ data: typeData, backgroundColor: pieColors.slice(0, typeLabels.length) }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } },
+        tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + (isRevenue ? '฿' : '') + fmtNum(ctx.parsed, 0) + (isRevenue ? ' บาท' : ' ลิตร'); } } }
+      }
+    }
+  });
+
+  var ownerLabels = Object.keys(byOwner).sort(function(a,b) { return byOwner[b].revenue - byOwner[a].revenue; });
+  var ownerData = ownerLabels.map(function(t) { return isRevenue ? Math.round(byOwner[t].revenue) : Math.round(byOwner[t].liters); });
+
+  if (salesOwnerPieInstance) salesOwnerPieInstance.destroy();
+  salesOwnerPieInstance = new Chart(document.getElementById('salesOwnerPie'), {
+    type: 'doughnut',
+    data: { labels: ownerLabels, datasets: [{ data: ownerData, backgroundColor: pieColors.slice(0, ownerLabels.length).concat(pieColors) }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } },
+        tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + (isRevenue ? '฿' : '') + fmtNum(ctx.parsed, 0) + (isRevenue ? ' บาท' : ' ลิตร'); } } }
+      }
+    }
+  });
+}
+
+// ═══════ Production Tab ═══════
+function renderProduction() {
+  var prod = DATA.production || [];
+  var totalDiesel = 0, totalWaste = 0, totalOldOil = 0, countProd = prod.length;
+  prod.forEach(function(p) {
+    totalDiesel += Number(p.diesel_produced || p.generate_col_5 || 0);
+    totalWaste += Number(p.waste || p.generate_col_12 || 0);
+    totalOldOil += Number(p.old_oil_used || p.generate_col_6 || 0);
+  });
+  var kpiHtml = '';
+  kpiHtml += '<div class="kpi-card success"><div class="kpi-label">🏭 ดีเซลผลิตได้รวม</div><div class="kpi-value">' + fmtNum(totalDiesel,0) + '</div><div class="kpi-sub">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card warning"><div class="kpi-label">🛢️ ใช้น้ำมันเครื่องเก่ารวม</div><div class="kpi-value">' + fmtNum(totalOldOil,0) + '</div><div class="kpi-sub">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card danger"><div class="kpi-label">🗑️ ของเสียรวม</div><div class="kpi-value">' + fmtNum(totalWaste,0) + '</div><div class="kpi-sub">ลิตร</div></div>';
+  kpiHtml += '<div class="kpi-card"><div class="kpi-label">📋 จำนวนรอบผลิต</div><div class="kpi-value">' + countProd + '</div><div class="kpi-sub">รอบ</div></div>';
+  document.getElementById('prodKpi').innerHTML = kpiHtml;
+
+  var tb = document.getElementById('prodBody');
+  if (!prod.length) { tb.innerHTML = '<tr><td colspan="10" class="empty-state"><div class="emoji">🏭</div>ไม่มีข้อมูลการผลิต</td></tr>'; return; }
+  var html = '';
+  prod.forEach(function(p) {
+    html += '<tr>';
+    html += '<td>' + fmtDate(p.generate_col_1 || p.start_date) + '</td>';
+    html += '<td>' + (p.environ_id_name || p.machine_name || '-') + '</td>';
+    html += '<td class="num" style="font-weight:700;color:var(--primary)">' + fmtNum(p.generate_col_5 || p.diesel_produced) + '</td>';
+    html += '<td class="num">' + fmtNum(p.generate_col_6 || p.old_oil_used) + '</td>';
+    html += '<td class="num">' + fmtNum(p.generate_col_11 || p.remaining) + '</td>';
+    html += '<td class="num" style="color:var(--danger)">' + fmtNum(p.generate_col_12 || p.waste) + '</td>';
+    html += '<td>' + fmtDate(p.generate_col_13 || p.end_date) + '</td>';
+    html += '<td class="num">' + fmtNum(p.generate_col_15 || p.electricity) + '</td>';
+    html += '<td class="num">' + fmtNum(p.generate_col_17 || p.cetane) + '</td>';
+    html += '<td>' + (p.generate_col_18 || p.storage || '-') + '</td>';
+    html += '</tr>';
+  });
+  tb.innerHTML = html;
+}
+
+// ═══════ Refresh ═══════
+function refreshData() {
+  var btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> กำลังโหลด...';
+  window.location.reload();
+}
+
+// ═══════ Init ═══════
+window.addEventListener('DOMContentLoaded', init);
+</script>

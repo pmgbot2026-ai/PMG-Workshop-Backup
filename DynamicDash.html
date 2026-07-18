@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang='th'>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>Dynamic Dashboard</title>
+  <script src='https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'></script>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #fff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --green: #16a34a;
+      --green-bg: #dcfce7;
+      --yellow: #ca8a04;
+      --yellow-bg: #fef9c3;
+      --red: #dc2626;
+      --red-bg: #fee2e2;
+      --blue: #2563eb;
+      --blue-bg: #dbeafe;
+      --purple: #8b5cf6;
+      --purple-bg: #ede9fe;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Sarabun', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 1600px; margin: 0 auto; padding: 16px; }
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: #fff;
+      padding: 24px 28px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-md);
+    }
+    .header h1 { font-size: 1.6rem; font-weight: 700; }
+    .header .sub { font-size: .9rem; opacity: .85; margin-top: 6px; }
+    .header .info-row { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+    .header .info-pill {
+      font-size: .8rem; background: rgba(255,255,255,.15);
+      padding: 4px 14px; border-radius: 20px; white-space: nowrap;
+    }
+    .loading {
+      display: flex; justify-content: center; align-items: center;
+      min-height: 400px; flex-direction: column; gap: 16px;
+    }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid #e2e8f0;
+      border-top: 4px solid var(--blue);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { color: var(--muted); font-size: .9rem; }
+    .hidden { display: none !important; }
+
+    /* Tabs */
+    .tabs {
+      display: flex; gap: 4px; margin-bottom: 20px;
+      border-bottom: 2px solid var(--border); padding-bottom: 0;
+    }
+    .tab {
+      padding: 10px 20px; cursor: pointer; border-radius: 8px 8px 0 0;
+      font-weight: 600; font-size: .9rem; color: var(--muted);
+      transition: all .2s; border-bottom: 3px solid transparent; margin-bottom: -2px;
+    }
+    .tab.active { color: var(--blue); border-bottom-color: var(--blue); background: var(--blue-bg); }
+    .tab:hover { background: #f1f5f9; }
+
+    /* Filters */
+    .filters {
+      display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: .75rem; color: var(--muted); font-weight: 600; }
+    .filter-group select {
+      padding: 8px 12px; border: 1px solid var(--border);
+      border-radius: 8px; background: #fff; font-size: .9rem;
+      cursor: pointer; outline: none; transition: border-color .2s;
+      min-width: 140px;
+    }
+    .filter-group select:focus { border-color: var(--blue); }
+    .filter-reset {
+      padding: 8px 14px; background: #f1f5f9; border: 1px solid var(--border);
+      border-radius: 8px; font-size: .85rem; cursor: pointer; color: var(--muted);
+    }
+    .filter-reset:hover { background: #e2e8f0; }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px; margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--card); border-radius: var(--radius);
+      padding: 20px; box-shadow: var(--shadow);
+      border-left: 4px solid var(--blue);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .kpi-card.green { border-left-color: var(--green); }
+    .kpi-card.yellow { border-left-color: var(--yellow); }
+    .kpi-card.red { border-left-color: var(--red); }
+    .kpi-card.purple { border-left-color: var(--purple); }
+    .kpi-label { font-size: .82rem; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+    .kpi-value { font-size: 1.7rem; font-weight: 700; color: var(--text); }
+    .kpi-value .unit { font-size: .85rem; font-weight: 500; color: var(--muted); }
+    .kpi-target { font-size: .82rem; color: var(--muted); margin-top: 4px; }
+    .kpi-pct {
+      display: inline-block; font-size: .82rem; font-weight: 700;
+      padding: 2px 10px; border-radius: 12px; margin-top: 8px;
+    }
+    .kpi-pct.green { background: var(--green-bg); color: var(--green); }
+    .kpi-pct.yellow { background: var(--yellow-bg); color: var(--yellow); }
+    .kpi-pct.red { background: var(--red-bg); color: var(--red); }
+    .progress-bar { width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; margin-top: 10px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width .8s ease; }
+    .progress-fill.green { background: var(--green); }
+    .progress-fill.yellow { background: var(--yellow); }
+    .progress-fill.red { background: var(--red); }
+    .progress-fill.blue { background: var(--blue); }
+
+    /* Section */
+    .section {
+      background: var(--card); border-radius: var(--radius);
+      padding: 24px; box-shadow: var(--shadow); margin-bottom: 24px;
+    }
+    .section-title {
+      font-size: 1.15rem; font-weight: 700; margin-bottom: 16px;
+      padding-bottom: 10px; border-bottom: 2px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title .icon { font-size: 1.3rem; }
+    .section-title .badge-count {
+      font-size: .75rem; font-weight: 600; color: var(--muted);
+      background: #f1f5f9; padding: 2px 10px; border-radius: 10px; margin-left: auto;
+    }
+
+    /* Chart Grid */
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+    @media (max-width: 1024px) { .chart-grid { grid-template-columns: 1fr; } }
+    .chart-wrapper { position: relative; height: 340px; }
+
+    /* Table */
+    .table-wrapper { overflow-x: auto; max-height: 600px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+    thead th {
+      background: #f1f5f9; padding: 10px 12px; text-align: left;
+      font-weight: 700; color: var(--text); border-bottom: 2px solid var(--border);
+      white-space: nowrap; position: sticky; top: 0; z-index: 1;
+    }
+    tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    tbody tr:hover { background: #e0f2fe; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: .72rem; font-weight: 700;
+    }
+    .badge.green { background: var(--green-bg); color: var(--green); }
+    .badge.yellow { background: var(--yellow-bg); color: var(--yellow); }
+    .badge.red { background: var(--red-bg); color: var(--red); }
+    .badge.blue { background: var(--blue-bg); color: var(--blue); }
+
+    .empty-state {
+      text-align: center; padding: 40px; color: var(--muted);
+    }
+    .footer { text-align: center; padding: 20px; color: var(--muted); font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <div class='header'>
+      <h1 id='dashTitle'>Dashboard</h1>
+      <div class='sub' id='dashDesc'></div>
+      <div class='info-row' id='infoRow'></div>
+    </div>
+
+    <div class='loading' id='loadingScreen'>
+      <div class='spinner'></div>
+      <div class='loading-text'>กำลังดึงข้อมูลจาก Google Sheet...</div>
+    </div>
+
+    <div id='mainContent' class='hidden'>
+      <!-- Tabs -->
+      <div class='tabs'>
+        <div class='tab active' data-tab='overview'>📊 ภาพรวม</div>
+        <div class='tab' data-tab='table'>📋 ตาราง</div>
+      </div>
+
+      <!-- Tab: Overview -->
+      <div id='tab-overview' class='tab-content'>
+        <div class='filters' id='filtersContainer'></div>
+        <div class='kpi-grid' id='kpiGrid'></div>
+        <div class='chart-grid' id='chartGrid'></div>
+      </div>
+
+      <!-- Tab: Table -->
+      <div id='tab-table' class='tab-content hidden'>
+        <div class='section'>
+          <div class='section-title'>
+            <span class='icon'>📋</span>ตารางรายละเอียด
+            <span class='badge-count' id='tableCount'></span>
+          </div>
+          <div class='table-wrapper'>
+            <table id='dataTable'>
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class='footer'>
+        <p>สร้างโดย AI for Dashboard Creation (M16) — Dynamic Dashboard</p>
+        <p style='margin-top:4px;' id='footerMeta'></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── State ──
+    var DASH_DATA = null;
+    var CHARTS = [];
+    var config_id = 'CONFIG_ID_PLACEHOLDER';
+    var ACTIVE_FILTERS = {};
+
+    // ── Helpers ──
+    function fmt(n) {
+      if (n === null || n === undefined || n === '' || isNaN(n)) return '-';
+      return Math.round(Number(n)).toLocaleString('en-US');
+    }
+    function fmtMoney(n) {
+      if (n === null || n === undefined || n === '' || isNaN(n)) return '-';
+      var a = Math.abs(Number(n));
+      if (a >= 1e6) return (Number(n) / 1e6).toFixed(2) + 'M';
+      if (a >= 1e3) return (Number(n) / 1e3).toFixed(0) + 'K';
+      return Math.round(Number(n)).toLocaleString('en-US');
+    }
+    function fmtShort(n) {
+      if (n === null || n === undefined || isNaN(n)) return '-';
+      var a = Math.abs(Number(n));
+      if (a >= 1e6) return (Number(n) / 1e6).toFixed(1) + 'M';
+      if (a >= 1e3) return (Number(n) / 1e3).toFixed(0) + 'K';
+      return Math.round(Number(n)).toLocaleString('en-US');
+    }
+    function pctColor(p) {
+      if (p >= 80) return 'green';
+      if (p >= 50) return 'yellow';
+      return 'red';
+    }
+    function esc(s) {
+      s = String(s === null || s === undefined ? '' : s);
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+    }
+
+    // ── Main entry ──
+    function init() {
+      loadData();
+      setInterval(loadData, 10 * 60 * 1000);
+    }
+
+    function loadData() {
+      google.script.run
+        .withSuccessHandler(function(data) {
+          DASH_DATA = data;
+          render();
+        })
+        .withFailureHandler(function(err) {
+          console.error('Fetch error:', err);
+          var ls = document.getElementById('loadingScreen');
+          if (ls) {
+            ls.innerHTML = '<div class="loading-text" style="color:var(--red);">⚠️ ไม่สามารถดึงข้อมูลได้: ' + esc(String(err)) + '</div>';
+          }
+        })
+        .fetchDynamicDashboardData(config_id);
+    }
+
+    // ── Render ──
+    function render() {
+      document.getElementById('loadingScreen').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+
+      // Title/desc
+      if (DASH_DATA.title) document.getElementById('dashTitle').textContent = '📊 ' + DASH_DATA.title;
+      if (DASH_DATA.desc !== undefined) document.getElementById('dashDesc').textContent = DASH_DATA.desc || '';
+
+      // Info row
+      var meta = DASH_DATA.configMeta || {};
+      var pills = '<span class="info-pill">🕐 อัปเดต: ' + esc(DASH_DATA.timestampStr || '') + '</span>';
+      if (DASH_DATA.sheetName) pills += '<span class="info-pill">📑 Sheet: ' + esc(DASH_DATA.sheetName) + '</span>';
+      pills += '<span class="info-pill">🎯 KPI: ' + (DASH_DATA.kpiData || []).length + '</span>';
+      pills += '<span class="info-pill">📈 กราฟ: ' + (DASH_DATA.chartData || []).length + '</span>';
+      var rowCount = (DASH_DATA.tableData && DASH_DATA.tableData.rows) ? DASH_DATA.tableData.rows.length : 0;
+      pills += '<span class="info-pill">📋 แถว: ' + rowCount + '</span>';
+      if (meta.mainTabs && meta.mainTabs.length > 0) pills += '<span class="info-pill">🏷️ แท็บ: ' + esc(meta.mainTabs.join(', ')) + '</span>';
+      document.getElementById('infoRow').innerHTML = pills;
+
+      // Footer meta
+      var metaEl = document.getElementById('footerMeta');
+      if (metaEl) {
+        var fm = 'อัปเดตอัตโนมัติ';
+        if (DASH_DATA.sheetId) fm += ' | Sheet ID: ' + DASH_DATA.sheetId;
+        if (DASH_DATA.sheetName) fm += ' | Sheet: ' + DASH_DATA.sheetName;
+        metaEl.textContent = fm;
+      }
+
+      renderFilters();
+      renderKPI();
+      renderCharts();
+      renderTable();
+      attachTabSwitch();
+    }
+
+    // ── Tabs ──
+    function attachTabSwitch() {
+      var tabs = document.querySelectorAll('.tab');
+      for (var i = 0; i < tabs.length; i++) {
+        // Avoid duplicate binding by cloning
+        var t = tabs[i];
+        t.onclick = function() {
+          var tabName = this.getAttribute('data-tab');
+          document.querySelectorAll('.tab').forEach(function(x) { x.classList.remove('active'); });
+          this.classList.add('active');
+          document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.add('hidden'); });
+          var content = document.getElementById('tab-' + tabName);
+          if (content) content.classList.remove('hidden');
+        };
+      }
+    }
+
+    // ── Filters ──
+    function renderFilters() {
+      var fo = DASH_DATA.filterOptions || {};
+      var container = document.getElementById('filtersContainer');
+      var keys = Object.keys(fo);
+      if (keys.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        var options = fo[key] || [];
+        var optsHtml = '<option value="">ทั้งหมด</option>' +
+          options.map(function(v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('');
+        html += '<div class="filter-group"><label>' + esc(key) + '</label>' +
+          '<select data-filter-key="' + esc(key) + '">' + optsHtml + '</select></div>';
+      }
+      html += '<button class="filter-reset" id="filterResetBtn">🔄 รีเซ็ต</button>';
+      container.innerHTML = html;
+      var selects = container.querySelectorAll('select');
+      for (var s = 0; s < selects.length; s++) {
+        selects[s].addEventListener('change', onFilterChange);
+      }
+      var resetBtn = document.getElementById('filterResetBtn');
+      if (resetBtn) resetBtn.addEventListener('click', resetFilters);
+    }
+
+    function onFilterChange(e) {
+      var key = e.target.getAttribute('data-filter-key');
+      var val = e.target.value;
+      if (val) ACTIVE_FILTERS[key] = val;
+      else delete ACTIVE_FILTERS[key];
+      renderTable();
+    }
+
+    function resetFilters() {
+      ACTIVE_FILTERS = {};
+      var selects = document.querySelectorAll('#filtersContainer select');
+      for (var i = 0; i < selects.length; i++) selects[i].value = '';
+      renderTable();
+    }
+
+    // ── KPI Cards ──
+    function renderKPI() {
+      var kpis = DASH_DATA.kpiData || [];
+      var grid = document.getElementById('kpiGrid');
+      if (kpis.length === 0) {
+        grid.innerHTML = '<div class="empty-state">ไม่มี KPI ให้แสดง — ตรวจสอบว่าระบุ kpiList ในการสร้าง Dashboard</div>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < kpis.length; i++) {
+        var k = kpis[i];
+        var c = k.color || pctColor(k.pct || 0);
+        var bw = Math.min(k.pct || 0, 100);
+        var v = fmt(k.value);
+        html +=
+          '<div class="kpi-card ' + c + '">' +
+            '<div class="kpi-label">' + esc(k.label || ('KPI ' + (i + 1))) + '</div>' +
+            '<div class="kpi-value">' + v + (k.unit ? ' <span class="unit">' + esc(k.unit) + '</span>' : '') + '</div>' +
+            (k.target ? '<div class="kpi-target">เป้า: ' + fmt(k.target) + (k.unit ? ' ' + esc(k.unit) : '') + '</div>' : '') +
+            (k.pct ? '<div class="kpi-pct ' + c + '">' + Math.round(k.pct) + '%</div>' : '') +
+            '<div class="progress-bar"><div class="progress-fill ' + c + '" style="width:' + bw + '%"></div></div>' +
+          '</div>';
+      }
+      grid.innerHTML = html;
+    }
+
+    // ── Charts ──
+    function renderCharts() {
+      var chartsData = DASH_DATA.chartData || [];
+      // Destroy old charts
+      for (var i = 0; i < CHARTS.length; i++) {
+        try { CHARTS[i].destroy(); } catch (e) {}
+      }
+      CHARTS = [];
+
+      var grid = document.getElementById('chartGrid');
+      if (chartsData.length === 0) {
+        grid.innerHTML = '<div class="empty-state">ไม่มีกราฟให้แสดง — ตรวจสอบว่าระบุ chartTypes ในการสร้าง Dashboard</div>';
+        return;
+      }
+      // Build chart sections dynamically
+      var html = '';
+      for (var ci = 0; ci < chartsData.length; ci++) {
+        var cd = chartsData[ci];
+        var icon = cd.type === 'line' ? '📈' : (cd.type === 'pie' || cd.type === 'doughnut' ? '🥧' : '📊');
+        html +=
+          '<div class="section chart-section">' +
+            '<div class="section-title"><span class="icon">' + icon + '</span>' + esc(cd.title || '') + '</div>' +
+            '<div class="chart-wrapper"><canvas id="chart-' + ci + '"></canvas></div>' +
+          '</div>';
+      }
+      grid.innerHTML = html;
+
+      var palette = [
+        'rgba(37,99,235,.7)', 'rgba(22,163,74,.7)', 'rgba(202,138,4,.7)',
+        'rgba(220,38,38,.7)', 'rgba(139,92,246,.7)', 'rgba(236,72,153,.7)'
+      ];
+      var borderPalette = [
+        'rgba(37,99,235,1)', 'rgba(22,163,74,1)', 'rgba(202,138,4,1)',
+        'rgba(220,38,38,1)', 'rgba(139,92,246,1)', 'rgba(236,72,153,1)'
+      ];
+
+      for (var i2 = 0; i2 < chartsData.length; i2++) {
+        var cd2 = chartsData[i2];
+        var ctx = document.getElementById('chart-' + i2);
+        if (!ctx) continue;
+        var cfg = {
+          type: cd2.type,
+          data: {
+            labels: cd2.labels || [],
+            datasets: (cd2.datasets || []).map(function(d, idx) {
+              var isPie = cd2.type === 'pie' || cd2.type === 'doughnut';
+              return {
+                label: d.label,
+                data: d.data,
+                backgroundColor: isPie ? palette.slice(0, (d.data || []).length) : palette[idx % palette.length],
+                borderColor: isPie ? '#fff' : borderPalette[idx % borderPalette.length],
+                borderWidth: 1,
+                borderRadius: cd2.type === 'bar' ? 4 : 0,
+                tension: cd2.type === 'line' ? 0.3 : 0,
+                pointRadius: cd2.type === 'line' ? 5 : 0,
+                pointBackgroundColor: cd2.type === 'line' ? borderPalette[idx % borderPalette.length] : undefined,
+                fill: cd2.type === 'line' ? false : undefined
+              };
+            })
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top', labels: { font: { size: 12 }, padding: 12 } },
+              tooltip: {
+                callbacks: {
+                  label: function(c) {
+                    var v = c.parsed.y !== undefined ? c.parsed.y : c.parsed;
+                    return c.dataset.label + ': ' + fmt(v);
+                  }
+                }
+              }
+            },
+            scales: (cd2.type === 'pie' || cd2.type === 'doughnut') ? {} : {
+              y: { beginAtZero: true, ticks: { callback: function(v) { return fmtShort(v); }, font: { size: 11 } } },
+              x: { ticks: { font: { size: 12 } } }
+            }
+          }
+        };
+        try { CHARTS.push(new Chart(ctx, cfg)); } catch (e) { console.error('Chart error:', e); }
+      }
+    }
+
+    // ── Table ──
+    function renderTable() {
+      var td = DASH_DATA.tableData || {};
+      var table = document.getElementById('dataTable');
+      var countEl = document.getElementById('tableCount');
+      var headers = td.headers || [];
+      var rows = td.rows || [];
+
+      // Apply filters (client-side matching by column index based on filter key matching header)
+      var filteredRows = rows;
+      var filterKeys = Object.keys(ACTIVE_FILTERS);
+      if (filterKeys.length > 0 && headers.length > 0) {
+        filteredRows = rows.filter(function(r) {
+          for (var fk = 0; fk < filterKeys.length; fk++) {
+            var fKey = filterKeys[fk];
+            var fVal = ACTIVE_FILTERS[fKey];
+            // Find matching column index
+            var colIdx = -1;
+            for (var hh = 0; hh < headers.length; hh++) {
+              if (String(headers[hh] || '').trim() === fKey) { colIdx = hh; break; }
+            }
+            if (colIdx < 0) continue;
+            var cellVal = String(r[colIdx] === null || r[colIdx] === undefined ? '' : r[colIdx]);
+            if (cellVal !== fVal) return false;
+          }
+          return true;
+        });
+      }
+
+      if (countEl) countEl.textContent = filteredRows.length + ' แถว';
+
+      if (headers.length > 0) {
+        table.querySelector('thead').innerHTML =
+          '<tr>' + headers.map(function(h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr>';
+      } else {
+        table.querySelector('thead').innerHTML = '';
+      }
+      if (filteredRows.length > 0) {
+        table.querySelector('tbody').innerHTML = filteredRows.map(function(r, idx) {
+          return '<tr>' + r.map(function(c) {
+            if (typeof c === 'number') {
+              return '<td class="text-right num">' + fmt(c) + '</td>';
+            }
+            return '<td>' + esc(c) + '</td>';
+          }).join('') + '</tr>';
+        }).join('');
+      } else {
+        table.querySelector('tbody').innerHTML = '<tr><td class="text-center" style="padding:20px;color:var(--muted);" colspan="' + Math.max(headers.length, 1) + '">ไม่มีข้อมูล' + (Object.keys(ACTIVE_FILTERS).length > 0 ? 'ตามตัวกรองที่เลือก' : '') + '</td></tr>';
+      }
+    }
+
+    // ── Start ──
+    init();
+  </script>
+</body>
+</html>

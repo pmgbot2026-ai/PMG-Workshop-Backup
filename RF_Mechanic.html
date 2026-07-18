@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>🔧 ช่างซ่อม — PMG</title>
+<style>
+:root{--bg:#f0f4f8;--card:#fff;--accent:#2563eb;--green:#059669;--red:#dc2626;--orange:#ea580c;--text:#1e293b;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--radius:14px;--shadow:0 2px 8px rgba(0,0,0,.06)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.5;padding-bottom:80px;-webkit-tap-highlight-color:transparent}
+
+.header{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:14px 16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(37,99,235,.25)}
+.header h1{font-size:20px;color:#fff;display:flex;align-items:center;gap:8px}
+.header .sub{font-size:13px;color:rgba(255,255,255,.75);margin-top:3px}
+
+/* Mechanic name bar */
+.mech-bar{background:#fff;border-bottom:2px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:62px;z-index:95}
+.mech-bar label{font-size:13px;color:var(--text3);white-space:nowrap;font-weight:600}
+.mech-bar input{padding:10px 14px;border:2px solid var(--border);border-radius:10px;font-size:16px;flex:1;outline:none;transition:.2s}
+.mech-bar input:focus{border-color:var(--accent)}
+.mech-bar .badge{background:var(--green);color:#fff;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:600;white-space:nowrap}
+
+/* Station tabs */
+.station-bar{display:flex;gap:6px;padding:10px 12px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:108px;z-index:90;-webkit-overflow-scrolling:touch}
+.station-btn{padding:10px 16px;border:2px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;font-size:14px;white-space:nowrap;transition:.15s;color:var(--text2);font-weight:600;min-width:fit-content}
+.station-btn .count{display:inline-block;background:var(--border);color:var(--text);padding:2px 8px;border-radius:12px;font-size:12px;margin-left:4px;font-weight:700}
+.station-btn.active{color:#fff;border-color:transparent}
+.station-btn.active .count{background:rgba(255,255,255,.3);color:#fff}
+
+/* Content */
+.content{padding:12px 14px;max-width:600px;margin:0 auto}
+
+/* Job card */
+.job-card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);border:2px solid var(--border);transition:.2s}
+.job-card.active{border-color:var(--accent);box-shadow:0 4px 16px rgba(37,99,235,.15)}
+.job-card.done{opacity:.55}
+
+.job-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.job-plate{font-size:22px;font-weight:800;color:var(--text);letter-spacing:.5px}
+.job-status{font-size:12px;padding:4px 10px;border-radius:12px;font-weight:700}
+.job-status.waiting{background:#fef3c7;color:#b45309}
+.job-status.active{background:#dbeafe;color:#1d4ed8;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+
+.job-info{font-size:14px;color:var(--text2);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:12px}
+.job-info span{display:flex;align-items:center;gap:3px}
+
+.job-stations{display:flex;gap:4px;flex-wrap:wrap;margin:10px 0}
+.station-pill{padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;transition:.2s}
+.station-pill.done{opacity:.4;text-decoration:line-through}
+.station-pill.current{box-shadow:0 0 0 3px rgba(37,99,235,.3);transform:scale(1.05)}
+
+.timer{font-size:15px;color:var(--orange);font-weight:700;margin:8px 0;display:flex;align-items:center;gap:4px}
+
+/* Big buttons */
+.btn{width:100%;padding:18px;border:none;border-radius:12px;font-size:18px;font-weight:700;cursor:pointer;transition:.15s;-webkit-tap-highlight-color:transparent;user-select:none}
+.btn:active{transform:scale(.97)}
+.btn-accept{background:linear-gradient(135deg,#059669,#10b981);color:#fff;box-shadow:0 4px 12px rgba(5,150,105,.3)}
+.btn-finish{background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;box-shadow:0 4px 12px rgba(220,38,38,.3)}
+.btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+
+.loading{text-align:center;padding:60px 20px;color:var(--text3)}
+.loading .spinner{font-size:40px;animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty .icon{font-size:56px;margin-bottom:12px}
+.empty .title{font-size:18px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.empty .desc{font-size:14px}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:14px 24px;border-radius:12px;font-size:15px;font-weight:600;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.2);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{opacity:1;bottom:30px}
+.toast.success{background:var(--green)}
+.toast.error{background:var(--red)}
+
+/* Refresh indicator */
+.refresh-bar{position:fixed;bottom:0;left:0;right:0;background:#1e293b;color:#fff;padding:8px 16px;font-size:12px;text-align:center;z-index:80;display:flex;justify-content:space-between;align-items:center}
+.refresh-bar .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:6px;animation:pulse 2s infinite}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔧 ช่างซ่อม</h1>
+  <div class="sub" id="branchLabel">—</div>
+</div>
+
+<div class="mech-bar">
+  <label>👤 ชื่อช่าง:</label>
+  <input type="text" id="mechanicName" placeholder="พิมพ์ชื่อของคุณ..." autocomplete="off" list="mechanicList">
+  <datalist id="mechanicList"></datalist>
+  <span class="badge" id="stationBadge" style="display:none"></span>
+</div>
+
+<div class="station-bar" id="stationBar"></div>
+
+<div class="content" id="jobList">
+  <div class="loading"><span class="spinner">⏳</span><p style="margin-top:12px">กำลังโหลดงาน...</p></div>
+</div>
+
+<div class="refresh-bar">
+  <span><span class="dot"></span>อัปเดตอัตโนมัติทุก 30 วิ</span>
+  <span id="lastUpdate">—</span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
+var currentBranch = 'cnb';
+var currentStation = '';
+var mechanicName = '';
+var jobs = [];
+var stationColors = {
+  knock:'#dc2626', patch:'#ea580c', squirt:'#d97706',
+  assemble:'#059669', polish:'#2563eb', wash:'#7c3aed',
+  supQC:'#db2777', deliver:'#16a34a'
+};
+var stationNames = {
+  knock:'เคาะ', patch:'โป๊ว', squirt:'พ่น',
+  assemble:'ประกอบ', polish:'ขัดสี', wash:'ล้าง',
+  supQC:'SUP QC', deliver:'ส่งมอบ'
+};
+var stationOrder = ['knock','patch','squirt','assemble','polish','wash','supQC','deliver'];
+
+function init() {
+  var params = new URLSearchParams(window.location.search);
+  currentBranch = params.get('branch') || 'cnb';
+  document.getElementById('branchLabel').textContent = (currentBranch === 'cnb' ? '🏗️ มหาราช (CNB)' : '🏗️ ซีเอสเค (CSK)') + ' — เลือกสถานีของคุณ';
+  
+  // Restore mechanic name from localStorage
+  var savedName = localStorage.getItem('rf_mech_' + currentBranch);
+  if (savedName) {
+    mechanicName = savedName;
+    document.getElementById('mechanicName').value = savedName;
+  }
+  
+  // Save mechanic name on change
+  document.getElementById('mechanicName').addEventListener('input', function() {
+    mechanicName = this.value.trim();
+    localStorage.setItem('rf_mech_' + currentBranch, mechanicName);
+  });
+  
+  // Also save on blur (when leaving the field)
+  document.getElementById('mechanicName').addEventListener('blur', function() {
+    mechanicName = this.value.trim();
+    localStorage.setItem('rf_mech_' + currentBranch, mechanicName);
+  });
+  
+  loadMechanics();
+  renderStationBar();
+  loadJobs();
+  
+  // Auto-refresh every 30 seconds
+  setInterval(loadJobs, 30000);
+  setInterval(updateTimers, 1000);
+}
+
+function loadMechanics() {
+  fetch(SCRIPT_URL + '?rf=1&action=getMechanics&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch}))
+  ).then(function(r) { return r.json(); }).then(function(r) {
+    if (r.success && r.mechanics) {
+      var dl = document.getElementById('mechanicList');
+      dl.innerHTML = r.mechanics.map(function(m) { 
+        return '<option value="' + esc(m.name) + '">' + esc(m.name) + '</option>'; 
+      }).join('');
+    }
+  }).catch(function(e) {});
+}
+
+function renderStationBar() {
+  var html = '';
+  stationOrder.forEach(function(s) {
+    var count = jobs.filter(function(j) { return j.currentStation === s && j.status !== 'completed'; }).length;
+    var color = stationColors[s];
+    var isActive = currentStation === s;
+    var bg = isActive ? color : '#fff';
+    var fg = isActive ? '#fff' : 'var(--text2)';
+    var border = isActive ? color : 'var(--border)';
+    html += '<button class="station-btn' + (isActive ? ' active' : '') + '" style="background:' + bg + ';color:' + fg + ';border-color:' + border + '" onclick="selectStation(\'' + s + '\')">' + stationNames[s] + ' <span class="count">' + count + '</span></button>';
+  });
+  // "All" button
+  var allCount = jobs.filter(function(j) { return j.status !== 'completed'; }).length;
+  var allActive = currentStation === '';
+  html += '<button class="station-btn' + (allActive ? ' active' : '') + '" style="background:' + (allActive ? 'var(--accent)' : '#fff') + ';color:' + (allActive ? '#fff' : 'var(--text2)') + ';border-color:' + (allActive ? 'var(--accent)' : 'var(--border)') + '" onclick="selectStation(\'\')">ทั้งหมด <span class="count">' + allCount + '</span></button>';
+  document.getElementById('stationBar').innerHTML = html;
+  
+  // Update station badge
+  if (currentStation) {
+    var badge = document.getElementById('stationBadge');
+    badge.textContent = stationNames[currentStation];
+    badge.style.background = stationColors[currentStation];
+    badge.style.display = 'inline-block';
+  } else {
+    document.getElementById('stationBadge').style.display = 'none';
+  }
+}
+
+function selectStation(s) {
+  currentStation = s;
+  renderStationBar();
+  renderJobs();
+}
+
+function loadJobs() {
+  fetch(SCRIPT_URL + '?rf=1&action=getMechanicJobs&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch, station: currentStation}))
+  ).then(function(r) { return r.json(); }).then(function(r) {
+    if (r.success) {
+      jobs = r.jobs || [];
+      renderStationBar();
+      renderJobs();
+      document.getElementById('lastUpdate').textContent = '⏰ ' + new Date().toLocaleTimeString('th-TH');
+    } else {
+      document.getElementById('jobList').innerHTML = '<div class="empty"><div class="icon">⚠️</div><div class="title">โหลดไม่ได้</div><div class="desc">' + esc(r.error || 'ไม่ทราบสาเหตุ') + '</div></div>';
+    }
+  }).catch(function(e) {
+    document.getElementById('jobList').innerHTML = '<div class="empty"><div class="icon">⚠️</div><div class="title">เชื่อมต่อไม่ได้</div><div class="desc">' + esc(e.message) + '</div></div>';
+  });
+}
+
+function renderJobs() {
+  if (jobs.length === 0) {
+    document.getElementById('jobList').innerHTML = '<div class="empty"><div class="icon">📭</div><div class="title">ไม่มีงานในสถานีนี้</div><div class="desc' + (currentStation ? '' : '') + '">' + (currentStation ? 'ลองเปลี่ยนสถานี หรือกด "ทั้งหมด"' : 'รอหัวหน้าจ่ายงาน') + '</div></div>';
+    return;
+  }
+  
+  var html = '';
+  jobs.forEach(function(j) {
+    var isAccepted = j.isAccepted;
+    var cardClass = isAccepted ? ' active' : '';
+    
+    // Station pills — show progress
+    var pillsHtml = '';
+    var stations = j.stations || [];
+    var currentIdx = stations.indexOf(j.currentStation);
+    stations.forEach(function(s, idx) {
+      var isCurrent = s === j.currentStation;
+      var isDone = idx < currentIdx;
+      var color = stationColors[s] || '#999';
+      var bg = isCurrent ? color : (isDone ? '#d1fae5' : '#f1f5f9');
+      var fg = isCurrent ? '#fff' : (isDone ? '#059669' : '#94a3b8');
+      var cls = isCurrent ? ' current' : (isDone ? ' done' : '');
+      pillsHtml += '<span class="station-pill' + cls + '" style="background:' + bg + ';color:' + fg + '">' + (stationNames[s] || s) + '</span>';
+    });
+    
+    var statusBadge = '';
+    if (isAccepted) {
+      statusBadge = '<span class="job-status active">🔴 กำลังทำ</span>';
+    } else {
+      statusBadge = '<span class="job-status waiting">⏳ รอรับงาน</span>';
+    }
+    
+    var timer = '';
+    if (isAccepted && j.acceptTime) {
+      timer = '<div class="timer" id="timer_' + j.orderId + '" data-accept="' + j.acceptTime + '">⏱️ 0:00</div>';
+    }
+    
+    var button = '';
+    if (isAccepted) {
+      if (j.acceptedBy === mechanicName || !j.acceptedBy) {
+        button = '<button class="btn btn-finish" onclick="finishJob(\'' + j.orderId + '\',\'' + esc(j.plate) + '\',\'' + (j.currentStation||'') + '\')">✅ จบงาน — ' + esc(stationNames[j.currentStation]||j.currentStation) + '</button>';
+      } else {
+        button = '<div style="text-align:center;padding:14px;background:#fef3c7;border-radius:10px;font-size:15px;font-weight:600;color:#b45309">🔒 ' + esc(j.acceptedBy) + ' กำลังทำอยู่</div>';
+      }
+    } else {
+      button = '<button class="btn btn-accept" onclick="acceptJob(\'' + j.orderId + '\',\'' + esc(j.plate) + '\',\'' + (j.currentStation||'') + '\')">👉 รับงาน — ' + esc(stationNames[j.currentStation]||j.currentStation) + '</button>';
+    }
+    
+    html += '<div class="job-card' + cardClass + '">';
+    html += '<div class="job-head"><span class="job-plate">' + esc(j.plate) + '</span>' + statusBadge + '</div>';
+    html += '<div class="job-info">';
+    if (j.brand) html += '<span>🚙 ' + esc(j.brand) + ' ' + esc(j.model||'') + '</span>';
+    if (j.sa) html += '<span>👤 SA: ' + esc(j.sa) + '</span>';
+    if (j.insurance) html += '<span>🛡️ ' + esc(j.insurance) + '</span>';
+    html += '</div>';
+    if (j.damageDesc) html += '<div class="job-info" style="color:var(--text3)">📝 ' + esc(j.damageDesc.substring(0, 120)) + '</div>';
+    html += '<div class="job-stations">' + pillsHtml + '</div>';
+    html += timer;
+    html += button;
+    html += '</div>';
+  });
+  document.getElementById('jobList').innerHTML = html;
+}
+
+function acceptJob(orderId, plate, station) {
+  if (!mechanicName || mechanicName.length < 2) {
+    showToast('กรุณาพิมพ์ชื่อของคุณก่อน', 'error');
+    document.getElementById('mechanicName').focus();
+    return;
+  }
+  if (!confirm('รับงาน: ' + plate + '\nสถานี: ' + (stationNames[station]||station) + '\n\nกด "ตกลง" เพื่อยืนยัน')) return;
+  
+  var data = { orderId: orderId, branch: currentBranch, plate: plate, station: station, mechanicName: mechanicName };
+  fetch(SCRIPT_URL + '?rf=1&action=acceptJob&data=' + encodeURIComponent(JSON.stringify(data))
+  ).then(function(r) { return r.json(); }).then(function(r) {
+    if (r.success) {
+      showToast('✅ รับงานสำเร็จ: ' + plate, 'success');
+      loadJobs();
+    } else {
+      showToast('❌ ' + (r.error || 'รับงานไม่สำเร็จ'), 'error');
+      loadJobs();
+    }
+  }).catch(function(e) { showToast('❌ ' + e.message, 'error'); });
+}
+
+function finishJob(orderId, plate, station) {
+  if (!confirm('จบงาน: ' + plate + '\nสถานี: ' + (stationNames[station]||station) + '\n\nรถจะเคลื่อนไปสถานีถัดไปอัตโนมัติ')) return;
+  
+  var data = { orderId: orderId, branch: currentBranch, plate: plate, station: station, mechanicName: mechanicName };
+  fetch(SCRIPT_URL + '?rf=1&action=finishJob&data=' + encodeURIComponent(JSON.stringify(data))
+  ).then(function(r) { return r.json(); }).then(function(r) {
+    if (r.success) {
+      showToast('✅ จบงานสำเร็จ! ใช้เวลา ' + r.durationMin + ' นาที', 'success');
+      loadJobs();
+    } else {
+      showToast('❌ ' + (r.error || 'จบงานไม่สำเร็จ'), 'error');
+    }
+  }).catch(function(e) { showToast('❌ ' + e.message, 'error'); });
+}
+
+function updateTimers() {
+  document.querySelectorAll('[id^="timer_"]').forEach(function(el) {
+    var acceptTime = el.getAttribute('data-accept');
+    if (!acceptTime) return;
+    var elapsed = new Date() - new Date(acceptTime);
+    var mins = Math.floor(elapsed / 60000);
+    var secs = Math.floor(elapsed / 1000) % 60;
+    el.textContent = '⏱️ ' + mins + ':' + (secs < 10 ? '0' : '') + secs + ' นาที';
+  });
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  setTimeout(function() { t.className = 'toast ' + (type || ''); }, 3000);
+}
+
+function esc(s) { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+init();
+</script>
+</body>
+</html>

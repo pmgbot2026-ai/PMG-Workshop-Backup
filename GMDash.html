@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang='th'>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>GM Dashboard</title>
+  <script src='https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0;
+      --green: #16a34a; --green-bg: #dcfce7; --yellow: #ca8a04; --yellow-bg: #fef9c3;
+      --red: #dc2626; --red-bg: #fee2e2; --blue: #2563eb; --blue-bg: #dbeafe;
+      --purple: #8b5cf6; --purple-bg: #ede9fe;
+      --radius: 12px; --shadow: 0 1px 3px rgba(0,0,0,.08); --shadow-md: 0 4px 6px rgba(0,0,0,.07);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Sarabun','Segoe UI',system-ui,sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    .container { max-width: 1600px; margin: 0 auto; padding: 16px; }
+    .header { background: linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%); color:#fff; padding:24px 28px; border-radius:var(--radius); margin-bottom:20px; box-shadow:var(--shadow-md); }
+    .header h1 { font-size:1.6rem; font-weight:700; }
+    .header .sub { font-size:.9rem; opacity:.85; margin-top:6px; }
+    .header .info-row { display:flex; gap:12px; margin-top:12px; flex-wrap:wrap; }
+    .header .info-pill { font-size:.8rem; background:rgba(255,255,255,.15); padding:4px 14px; border-radius:20px; white-space:nowrap; }
+    .loading { display:flex; justify-content:center; align-items:center; min-height:400px; flex-direction:column; gap:16px; }
+    .spinner { width:48px; height:48px; border:4px solid #e2e8f0; border-top:4px solid var(--blue); border-radius:50%; animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-text { color:var(--muted); font-size:.9rem; }
+    .hidden { display:none !important; }
+    .tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:2px solid var(--border); }
+    .tab { padding:10px 20px; cursor:pointer; border-radius:8px 8px 0 0; font-weight:600; font-size:.9rem; color:var(--muted); border-bottom:3px solid transparent; margin-bottom:-2px; transition:all .2s; }
+    .tab.active { color:var(--blue); border-bottom-color:var(--blue); background:var(--blue-bg); }
+    .tab:hover { background:#f1f5f9; }
+    .kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-bottom:24px; }
+    .kpi-card { background:var(--card); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); border-left:4px solid var(--blue); transition:transform .2s; }
+    .kpi-card:hover { transform:translateY(-2px); }
+    .kpi-card.green { border-left-color:var(--green); } .kpi-card.yellow { border-left-color:var(--yellow); }
+    .kpi-card.red { border-left-color:var(--red); } .kpi-card.purple { border-left-color:var(--purple); }
+    .kpi-label { font-size:.82rem; color:var(--muted); font-weight:600; margin-bottom:8px; }
+    .kpi-value { font-size:1.6rem; font-weight:700; }
+    .kpi-value .unit { font-size:.8rem; font-weight:500; color:var(--muted); }
+    .kpi-target { font-size:.82rem; color:var(--muted); margin-top:4px; }
+    .kpi-pct { display:inline-block; font-size:.82rem; font-weight:700; padding:2px 10px; border-radius:12px; margin-top:8px; }
+    .kpi-pct.green { background:var(--green-bg); color:var(--green); } .kpi-pct.yellow { background:var(--yellow-bg); color:var(--yellow); }
+    .kpi-pct.red { background:var(--red-bg); color:var(--red); }
+    .progress-bar { width:100%; height:6px; background:#e2e8f0; border-radius:3px; margin-top:10px; overflow:hidden; }
+    .progress-fill { height:100%; border-radius:3px; transition:width .8s; }
+    .progress-fill.green { background:var(--green); } .progress-fill.yellow { background:var(--yellow); }
+    .progress-fill.red { background:var(--red); } .progress-fill.blue { background:var(--blue); }
+    .section { background:var(--card); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); margin-bottom:24px; }
+    .section-title { font-size:1.15rem; font-weight:700; margin-bottom:16px; padding-bottom:10px; border-bottom:2px solid var(--border); display:flex; align-items:center; gap:8px; }
+    .section-title .icon { font-size:1.3rem; }
+    .section-title .badge-count { font-size:.75rem; color:var(--muted); background:#f1f5f9; padding:2px 10px; border-radius:10px; margin-left:auto; }
+    .chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px; }
+    @media (max-width:1024px) { .chart-grid { grid-template-columns:1fr; } }
+    .chart-wrapper { position:relative; height:340px; }
+    .table-wrapper { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:.83rem; }
+    thead th { background:#f1f5f9; padding:10px 12px; text-align:left; font-weight:700; border-bottom:2px solid var(--border); white-space:nowrap; position:sticky; top:0; }
+    tbody td { padding:8px 12px; border-bottom:1px solid var(--border); white-space:nowrap; }
+    tbody tr:nth-child(even) { background:#f8fafc; }
+    tbody tr:hover { background:#e0f2fe; }
+    .text-right { text-align:right; } .text-center { text-align:center; }
+    .num { font-variant-numeric:tabular-nums; font-weight:600; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:.72rem; font-weight:700; }
+    .badge.green { background:var(--green-bg); color:var(--green); } .badge.yellow { background:var(--yellow-bg); color:var(--yellow); }
+    .badge.red { background:var(--red-bg); color:var(--red); } .badge.blue { background:var(--blue-bg); color:var(--blue); }
+    .sa-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
+    .sa-card { background:var(--card); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); border-top:4px solid var(--blue); transition:transform .2s; }
+    .sa-card:hover { transform:translateY(-2px); }
+    .sa-card.green { border-top-color:var(--green); } .sa-card.yellow { border-top-color:var(--yellow); } .sa-card.red { border-top-color:var(--red); }
+    .sa-name { font-size:1.05rem; font-weight:700; }
+    .sa-branch { font-size:.8rem; color:var(--muted); margin-bottom:8px; }
+    .sa-stats { display:flex; gap:12px; flex-wrap:wrap; }
+    .sa-stat { font-size:.82rem; }
+    .sa-stat .v { font-weight:700; font-size:1rem; }
+    .footer { text-align:center; padding:20px; color:var(--muted); font-size:.8rem; }
+    .goal-card { background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%); color:#fff; border-radius:var(--radius); padding:24px; margin-bottom:24px; box-shadow:var(--shadow-md); }
+    .goal-card h2 { font-size:1.2rem; font-weight:700; margin-bottom:12px; }
+    .goal-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-top:16px; }
+    .goal-item { background:rgba(255,255,255,.1); border-radius:8px; padding:16px; }
+    .goal-item .label { font-size:.8rem; opacity:.8; }
+    .goal-item .value { font-size:1.4rem; font-weight:700; margin-top:4px; }
+    .goal-item .delta { font-size:.82rem; margin-top:4px; }
+    .goal-item .delta.up { color:#4ade80; } .goal-item .delta.down { color:#f87171; }
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <div class='header'>
+      <h1 id='dashTitle'>GM Dashboard</h1>
+      <div class='sub' id='dashDesc'></div>
+      <div class='info-row' id='infoRow'></div>
+    </div>
+    <div class='loading' id='loadingScreen'>
+      <div class='spinner'></div>
+      <div class='loading-text'>กำลังดึงข้อมูลจาก Google Sheet...</div>
+    </div>
+    <div id='mainContent' class='hidden'>
+      <div class='tabs'>
+        <div class='tab active' data-tab='overview'>ภาพรวม GM</div>
+        <div class='tab' data-tab='sa'>ผลงาน SA</div>
+        <div class='tab' data-tab='goal'>เป้า GM 2.5M</div>
+      </div>
+      <div id='tab-overview' class='tab-content'>
+        <div class='kpi-grid' id='kpiGrid'></div>
+        <div class='chart-grid'>
+          <div class='section'>
+            <div class='section-title'><span class='icon'>📊</span>GM เป้า vs ทำได้ รายเดือน (ปี 69)</div>
+            <div class='chart-wrapper'><canvas id='chartGMTarget'></canvas></div>
+          </div>
+          <div class='section'>
+            <div class='section-title'><span class='icon'>📈</span>เปรียบเทียบ GM ปี 69 vs ปี 67</div>
+            <div class='chart-wrapper'><canvas id='chartGMCompare'></canvas></div>
+          </div>
+        </div>
+        <div class='section'>
+          <div class='section-title'><span class='icon'>📉</span>รายได้ผลิตภัณฑ์เสริม vs GM รายเดือน</div>
+          <div class='chart-wrapper'><canvas id='chartRevGM'></canvas></div>
+        </div>
+        <div class='section'>
+          <div class='section-title'><span class='icon'>📋</span>ตารางเปรียบเทียบ GM รายเดือน<span class='badge-count' id='monthCount'></span></div>
+          <div class='table-wrapper'><table id='monthTable'><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id='tab-sa' class='tab-content hidden'>
+        <div class='kpi-grid' id='saKpiGrid'></div>
+        <div class='section'>
+          <div class='section-title'><span class='icon'>👥</span>ผลงาน SA แต่ละคน<span class='badge-count' id='saCount'></span></div>
+          <div class='sa-grid' id='saGrid'></div>
+        </div>
+        <div class='section'>
+          <div class='section-title'><span class='icon'>🏆</span>อันดับ SA ตาม GM ผลิตภัณฑ์เสริม</div>
+          <div class='chart-wrapper' style='height:400px;'><canvas id='chartSARank'></canvas></div>
+        </div>
+        <div class='section'>
+          <div class='section-title'><span class='icon'>📋</span>ตารางผลงาน SA แบบละเอียด</div>
+          <div class='table-wrapper'><table id='saTable'><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id='tab-goal' class='tab-content hidden'>
+        <div id='goalContent'></div>
+      </div>
+      <div class='footer'>
+        <p>สร้างโดย AI for Dashboard Creation (M16) — GM Dashboard</p>
+        <p style='margin-top:4px;' id='footerMeta'></p>
+      </div>
+    </div>
+  </div>
+<script>
+var DATA=null, CHARTS={};
+function fmt(n){ if(n===null||n===undefined||n===''||isNaN(n)) return '-'; return Math.round(Number(n)).toLocaleString('en-US'); }
+function fmtM(n){ if(n===null||n===undefined||n===''||isNaN(n)) return '-'; var a=Math.abs(Number(n)); if(a>=1e6) return (Number(n)/1e6).toFixed(2)+'M'; if(a>=1e3) return (Number(n)/1e3).toFixed(0)+'K'; return Math.round(Number(n)).toLocaleString('en-US'); }
+function fmtS(n){ if(n===null||n===undefined||isNaN(n)) return '-'; var a=Math.abs(Number(n)); if(a>=1e6) return (Number(n)/1e6).toFixed(1)+'M'; if(a>=1e3) return (Number(n)/1e3).toFixed(0)+'K'; return Math.round(Number(n)).toLocaleString('en-US'); }
+function pctC(p){ if(p>=80) return 'green'; if(p>=50) return 'yellow'; return 'red'; }
+function esc(s){ s=String(s===null||s===undefined?'':s); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;'); }
+function init(){ loadData(); }
+function loadData(){
+  google.script.run
+    .withSuccessHandler(function(data){ DATA=data; render(); })
+    .withFailureHandler(function(err){
+      var ls=document.getElementById('loadingScreen');
+      if(ls) ls.innerHTML='<div style="color:var(--red);">ไม่สามารถดึงข้อมูลได้: '+esc(String(err))+'</div>';
+    })
+    .fetchGMDashboardData();
+}
+function render(){
+  document.getElementById('loadingScreen').classList.add('hidden');
+  document.getElementById('mainContent').classList.remove('hidden');
+  if(DATA.title) document.getElementById('dashTitle').textContent=DATA.title;
+  if(DATA.desc) document.getElementById('dashDesc').textContent=DATA.desc;
+  if(DATA.timestampStr){
+    document.getElementById('infoRow').innerHTML=
+      '<span class="info-pill">อัปเดต: '+esc(DATA.timestampStr)+'</span>'+
+      '<span class="info-pill">เดือน: '+(DATA.monthlyData||[]).length+' เดือน</span>'+
+      '<span class="info-pill">SA: '+(DATA.saData||[]).length+' คน</span>';
+  }
+  var m=document.getElementById('footerMeta'); if(m) m.textContent='Sheet: '+esc(DATA.sheetName||'')+' | อัปเดตอัตโนมัติ';
+  renderOverview(); renderSA(); renderGoal();
+  var tabs=document.querySelectorAll('.tab');
+  for(var i=0;i<tabs.length;i++){
+    tabs[i].addEventListener('click',function(){
+      var tn=this.getAttribute('data-tab');
+      document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+      this.classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(function(c){c.classList.add('hidden');});
+      var c=document.getElementById('tab-'+tn); if(c) c.classList.remove('hidden');
+    });
+  }
+}
+function renderOverview(){
+  var s=DATA.summary||{};
+  var kpis=[
+    {label:'GM ทำได้ (ปี 69)',value:s.gmTotal,unit:'บาท',target:s.gmTarget,pct:s.gmPct},
+    {label:'เป้า GM/เดือน',value:s.gmTarget,unit:'บาท',target:0,pct:0},
+    {label:'รายได้ผลิตภัณฑ์เสริม',value:s.revTotal,unit:'บาท',target:0,pct:0},
+    {label:'ยอดรถรวม',value:s.carTotal,unit:'คัน',target:0,pct:0},
+    {label:'GM/คัน',value:s.gmPerCar,unit:'บาท',target:600,pct:s.gmPerCarPct},
+    {label:'รายได้/คัน',value:s.revPerCar,unit:'บาท',target:0,pct:0},
+    {label:'%GM การขาย',value:s.gmPctSales,unit:'%',target:50,pct:s.gmPctSales/50*100},
+    {label:'เดือนที่บรรลุเป้า',value:s.monthsHit,unit:'เดือน',target:12,pct:s.monthsHit/12*100}
+  ];
+  var h='';
+  for(var i=0;i<kpis.length;i++){
+    var k=kpis[i], c=pctC(k.pct), v=(k.unit==='บาท'?fmtM(k.value):fmt(k.value)), bw=Math.min(k.pct||0,100);
+    h+='<div class="kpi-card '+c+'"><div class="kpi-label">'+esc(k.label)+'</div>'+
+      '<div class="kpi-value">'+v+' <span class="unit">'+k.unit+'</span></div>'+
+      (k.target?'<div class="kpi-target">เป้า: '+(k.unit==='บาท'?fmtM(k.target):fmt(k.target))+'</div>':'')+
+      (k.pct?'<div class="kpi-pct '+c+'">'+Math.round(k.pct)+'%</div>':'')+
+      '<div class="progress-bar"><div class="progress-fill '+c+'" style="width:'+bw+'%"></div></div></div>';
+  }
+  document.getElementById('kpiGrid').innerHTML=h;
+  renderGMTargetChart(); renderGMCompareChart(); renderRevGMChart(); renderMonthTable();
+}
+function renderGMTargetChart(){
+  var ctx=document.getElementById('chartGMTarget'); if(!ctx) return;
+  var m=DATA.monthlyData||[];
+  CHARTS.gmT=new Chart(ctx,{type:'bar',data:{
+    labels:m.map(function(d){return d.month;}),
+    datasets:[
+      {label:'เป้า GM',data:m.map(function(d){return d.gmTarget;}),backgroundColor:'rgba(202,138,4,.5)',borderColor:'rgba(202,138,4,1)',borderWidth:1,borderRadius:4},
+      {label:'ทำได้ GM',data:m.map(function(d){return d.gmActual;}),backgroundColor:m.map(function(d){return d.gmPct>=80?'rgba(22,163,74,.7)':d.gmPct>=50?'rgba(202,138,4,.7)':'rgba(220,38,38,.7)';}),borderWidth:1,borderRadius:4}
+    ]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+fmtM(c.parsed.y)+' บาท';}}}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return fmtS(v);}}}}}});
+}
+function renderGMCompareChart(){
+  var ctx=document.getElementById('chartGMCompare'); if(!ctx) return;
+  var m=DATA.monthlyData||[];
+  CHARTS.gmC=new Chart(ctx,{type:'line',data:{
+    labels:m.map(function(d){return d.month;}),
+    datasets:[
+      {label:'GM ปี 69',data:m.map(function(d){return d.gmActual;}),borderColor:'rgba(37,99,235,1)',backgroundColor:'rgba(37,99,235,.1)',borderWidth:2,tension:0.3,pointRadius:5,fill:false},
+      {label:'GM ปี 67',data:m.map(function(d){return d.gmOld||0;}),borderColor:'rgba(139,92,246,1)',backgroundColor:'rgba(139,92,246,.1)',borderWidth:2,tension:0.3,pointRadius:5,fill:false,borderDash:[5,5]}
+    ]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+fmtM(c.parsed.y)+' บาท';}}}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return fmtS(v);}}}}}});
+}
+function renderRevGMChart(){
+  var ctx=document.getElementById('chartRevGM'); if(!ctx) return;
+  var m=DATA.monthlyData||[];
+  CHARTS.rg=new Chart(ctx,{type:'bar',data:{
+    labels:m.map(function(d){return d.month;}),
+    datasets:[
+      {label:'รายได้ผลิตภัณฑ์เสริม',data:m.map(function(d){return d.revenue;}),backgroundColor:'rgba(37,99,235,.7)',borderWidth:1,borderRadius:4},
+      {label:'GM ผลิตภัณฑ์เสริม',data:m.map(function(d){return d.gmActual;}),backgroundColor:'rgba(22,163,74,.7)',borderWidth:1,borderRadius:4}
+    ]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+fmtM(c.parsed.y)+' บาท';}}}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return fmtS(v);}}}}}});
+}
+function renderMonthTable(){
+  var m=DATA.monthlyData||[];
+  document.getElementById('monthCount').textContent=m.length+' เดือน';
+  var t=document.getElementById('monthTable');
+  t.querySelector('thead').innerHTML='<tr><th>เดือน</th><th>ยอดรถ</th><th>รายได้ผลิตภัณฑ์เสริม</th><th>เป้า GM</th><th>ทำได้ GM</th><th>%</th><th>รายได้/คัน</th><th>GM/คัน</th><th>GM ปี 67</th></tr>';
+  var tb='';
+  for(var i=0;i<m.length;i++){
+    var d=m[i], c=pctC(d.gmPct||0);
+    tb+='<tr><td>'+esc(d.month)+'</td><td class="text-right num">'+fmt(d.cars)+'</td><td class="text-right num">'+fmtM(d.revenue)+'</td><td class="text-right num">'+fmtM(d.gmTarget)+'</td><td class="text-right num">'+fmtM(d.gmActual)+'</td><td class="text-center"><span class="badge '+c+'">'+Math.round(d.gmPct||0)+'%</span></td><td class="text-right num">'+fmt(d.revPerCar)+'</td><td class="text-right num">'+fmt(d.gmPerCar)+'</td><td class="text-right num">'+fmtM(d.gmOld||0)+'</td></tr>';
+  }
+  t.querySelector('tbody').innerHTML=tb;
+}
+function renderSA(){
+  var sa=DATA.saData||[];
+  document.getElementById('saCount').textContent=sa.length+' SA';
+  var s=DATA.summary||{};
+  var kpis=[
+    {label:'เป้ายอดรถ',value:s.saCarTarget,unit:'คัน',pct:0},
+    {label:'รับรถแล้ว',value:s.saCarActual,unit:'คัน',target:s.saCarTarget,pct:s.saCarPct},
+    {label:'เป้า GM ผลิตภัณฑ์เสริม',value:s.saGmTarget,unit:'บาท',pct:0},
+    {label:'ทำได้ GM ผลิตภัณฑ์เสริม',value:s.saGmActual,unit:'บาท',target:s.saGmTarget,pct:s.saGmPct},
+    {label:'เป้ารายได้รวม',value:s.saRevTarget,unit:'บาท',pct:0},
+    {label:'ทำได้รายได้รวม',value:s.saRevActual,unit:'บาท',target:s.saRevTarget,pct:s.saRevPct}
+  ];
+  var h='';
+  for(var i=0;i<kpis.length;i++){
+    var k=kpis[i],c=pctC(k.pct),v=k.unit==='บาท'?fmtM(k.value):fmt(k.value),bw=Math.min(k.pct||0,100);
+    h+='<div class="kpi-card '+c+'"><div class="kpi-label">'+esc(k.label)+'</div><div class="kpi-value">'+v+' <span class="unit">'+k.unit+'</span></div>'+(k.target?'<div class="kpi-target">เป้า: '+(k.unit==='บาท'?fmtM(k.target):fmt(k.target))+'</div>':'')+(k.pct?'<div class="kpi-pct '+c+'">'+Math.round(k.pct)+'%</div>':'')+'<div class="progress-bar"><div class="progress-fill '+c+'" style="width:'+bw+'%"></div></div></div>';
+  }
+  document.getElementById('saKpiGrid').innerHTML=h;
+  var ch='';
+  for(var i2=0;i2<sa.length;i2++){
+    var d=sa[i2],c2=pctC(d.gmPct||0);
+    ch+='<div class="sa-card '+c2+'"><div class="sa-name">'+esc(d.name)+'</div><div class="sa-branch">'+esc(d.branch)+' · '+esc(d.status||'')+'</div><div class="sa-stats"><div class="sa-stat">รถ: <span class="v">'+fmt(d.carActual)+'</span>/'+fmt(d.carTarget)+'</div><div class="sa-stat">GM: <span class="v">'+fmtM(d.gmActual)+'</span></div><div class="sa-stat">รายได้: <span class="v">'+fmtM(d.revActual)+'</span></div></div></div>';
+  }
+  document.getElementById('saGrid').innerHTML=ch;
+  renderSARankChart();
+  var t=document.getElementById('saTable');
+  t.querySelector('thead').innerHTML='<tr><th>NO</th><th>สาขา</th><th>SA</th><th>สถานะ</th><th>เป้ารถ</th><th>รับรถ</th><th>%</th><th>เป้ารายได้</th><th>ทำได้รายได้</th><th>%</th><th>เป้าGM</th><th>ทำได้GM</th><th>%</th><th>GM/คัน</th></tr>';
+  var tb2='';
+  for(var j=0;j<sa.length;j++){
+    var s2=sa[j],cc=pctC(s2.carPct||0),gc=pctC(s2.gmPct||0);
+    tb2+='<tr><td>'+(j+1)+'</td><td>'+esc(s2.branch)+'</td><td>'+esc(s2.name)+'</td><td>'+esc(s2.status||'')+'</td><td class="text-right num">'+fmt(s2.carTarget)+'</td><td class="text-right num">'+fmt(s2.carActual)+'</td><td class="text-center"><span class="badge '+cc+'">'+Math.round(s2.carPct||0)+'%</span></td><td class="text-right num">'+fmtM(s2.revTarget)+'</td><td class="text-right num">'+fmtM(s2.revActual)+'</td><td class="text-center">'+Math.round(s2.revPct||0)+'%</td><td class="text-right num">'+fmtM(s2.gmTarget)+'</td><td class="text-right num">'+fmtM(s2.gmActual)+'</td><td class="text-center"><span class="badge '+gc+'">'+Math.round(s2.gmPct||0)+'%</span></td><td class="text-right num">'+fmt(s2.gmPerCar)+'</td></tr>';
+  }
+  t.querySelector('tbody').innerHTML=tb2;
+}
+function renderSARankChart(){
+  var ctx=document.getElementById('chartSARank'); if(!ctx) return;
+  var sa=(DATA.saData||[]).slice().sort(function(a,b){return (b.gmActual||0)-(a.gmActual||0);});
+  CHARTS.saR=new Chart(ctx,{type:'bar',data:{
+    labels:sa.map(function(s){return s.name;}),
+    datasets:[{label:'GM ผลิตภัณฑ์เสริม',data:sa.map(function(s){return s.gmActual||0;}),backgroundColor:sa.map(function(s){return pctC(s.gmPct||0)==='green'?'rgba(22,163,74,.7)':pctC(s.gmPct||0)==='yellow'?'rgba(202,138,4,.7)':'rgba(220,38,38,.7)';}),borderWidth:1,borderRadius:4}]
+  },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return fmtM(c.parsed.x)+' บาท';}}}},scales:{x:{beginAtZero:true,ticks:{callback:function(v){return fmtS(v);}}}}}});
+}
+function renderGoal(){
+  var s=DATA.summary||{}, m=DATA.monthlyData||[], sa=DATA.saData||[];
+  var curGM=s.gmTotal||0, targetGM=2500000, gap=targetGM-curGM, avgGM=0;
+  if(m.length>0){var sum=0;for(var i=0;i<m.length;i++){sum+=(m[i].gmActual||0);}avgGM=sum/m.length;}
+  var topSA=(sa||[]).slice().sort(function(a,b){return(b.gmActual||0)-(a.gmActual||0);}).slice(0,3);
+  var lowSA=(sa||[]).slice().sort(function(a,b){return(a.gmActual||0)-(b.gmActual||0);}).slice(0,3);
+  var h='';
+  h+='<div class="goal-card"><h2>🎯 เป้าหมาย GM 2.5 ล้านบาท/เดือน — วิเคราะห์แนวโน้ม</h2><div class="goal-grid">'+
+    '<div class="goal-item"><div class="label">GM รวมปี 69</div><div class="value">'+fmtM(curGM)+' บาท</div><div class="delta '+(curGM>=targetGM?'up':'down')+'">'+(curGM>=targetGM?'✅ บรรลุ':'ยังขาด '+fmtM(gap))+'</div></div>'+
+    '<div class="goal-item"><div class="label">เป้า GM/เดือน</div><div class="value">2.5M บาท</div><div class="delta '+(curGM>=targetGM?'up':'down')+'">'+(curGM>=targetGM?'เกิน '+fmtM(curGM-targetGM):'ขาด '+Math.round(gap/targetGM*100)+'%')+'</div></div>'+
+    '<div class="goal-item"><div class="label">GM เฉลี่ย/เดือน</div><div class="value">'+fmtM(avgGM)+' บาท</div><div class="delta '+(avgGM>=targetGM?'up':'down')+'">'+(avgGM>=targetGM?'✅ ถึงเป้า':'ต้องเพิ่ม '+Math.round(targetGM/avgGM*100-100)+'%')+'</div></div>'+
+    '<div class="goal-item"><div class="label">GM/คัน</div><div class="value">'+fmt(s.gmPerCar)+' บาท</div><div class="delta">เป้า 600 บาท/คัน</div></div>'+
+    '<div class="goal-item"><div class="label">เดือนที่บรรลุเป้า</div><div class="value">'+s.monthsHit+'/'+m.length+'</div><div class="delta">'+Math.round(s.monthsHit/m.length*100)+'% ของปี</div></div>'+
+    '<div class="goal-item"><div class="label">%GM การขาย</div><div class="value">'+Math.round(s.gmPctSales||0)+'%</div><div class="delta '+(s.gmPctSales>=50?'up':'down')+'">'+(s.gmPctSales>=50?'✅ ดี':'ต่ำกว่า 50%')+'</div></div>'+
+    '</div></div>';
+  h+='<div class="section"><div class="section-title"><span class="icon">💡</span>กลยุทธ์เพื่อบรรลุเป้า GM 2.5M</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">'+
+    '<div><h3 style="font-size:1rem;font-weight:700;margin-bottom:12px;">🏆 Top 3 SA</h3>'+
+    topSA.map(function(s){return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><span>'+esc(s.name)+' ('+esc(s.branch)+')</span><span class="num" style="color:var(--green);">'+fmtM(s.gmActual)+' บาท</span></div>';}).join('')+'</div>'+
+    '<div><h3 style="font-size:1rem;font-weight:700;margin-bottom:12px;">📈 ต้องปรับปรุง</h3>'+
+    lowSA.map(function(s){return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><span>'+esc(s.name)+' ('+esc(s.branch)+')</span><span class="num" style="color:var(--red);">'+fmtM(s.gmActual)+' บาท</span></div>';}).join('')+'</div></div></div>';
+  h+='<div class="section"><div class="section-title"><span class="icon">📊</span>แนวโน้ม GM รายเดือน vs เป้า 2.5M</div><div class="chart-wrapper" style="height:400px;"><canvas id="chartGoal"></canvas></div></div>';
+  h+='<div class="section"><div class="section-title"><span class="icon">🎯</span>ข้อเสนอแนะ</div><div style="display:grid;gap:12px;">'+
+    '<div style="padding:16px;background:var(--blue-bg);border-radius:8px;"><strong>1. เพิ่ม GM/คัน</strong><br>ปัจจุบัน '+fmt(s.gmPerCar)+' บาท/คัน เป้า 600 — ถ้าเพิ่มเป็น 600 จะได้ GM เพิ่ม '+fmtM((600-(s.gmPerCar||0))*(s.carTotal||0))+' บาท</div>'+
+    '<div style="padding:16px;background:var(--green-bg);border-radius:8px;"><strong>2. โฟกัสเดือนที่ทำได้ดี</strong><br>เดือนที่บรรลุเป้า: '+s.monthsHit+' เดือน — ศึกษาสาเหตุและทำซ้ำ</div>'+
+    '<div style="padding:16px;background:var(--yellow-bg);border-radius:8px;"><strong>3. ยกระดับ SA ที่ทำต่ำ</strong><br>ฝึกอบรม SA ที่ทำ GM ต่ำให้เทียบเคียง Top SA</div>'+
+    '<div style="padding:16px;background:var(--red-bg);border-radius:8px;"><strong>4. เพิ่มยอดรถรับเข้า</strong><br>ถ้ารับรถเพิ่ม 10% GM จะเพิ่ม ~'+fmtM((s.gmTotal||0)*0.1)+' บาท</div>'+
+    '<div style="padding:16px;background:var(--purple-bg);border-radius:8px;"><strong>5. เพิ่ม %GM การขาย</strong><br>ปัจจุบัน '+Math.round(s.gmPctSales||0)+'% ถ้าเพิ่ม 5% จะได้ GM เพิ่ม '+fmtM((s.revTotal||0)*0.05)+' บาท</div></div></div>';
+  document.getElementById('goalContent').innerHTML=h;
+  setTimeout(function(){
+    var ctx=document.getElementById('chartGoal'); if(!ctx) return;
+    var months=m.map(function(d){return d.month;});
+    var actual=m.map(function(d){return d.gmActual;});
+    var target=m.map(function(){return 2500000;});
+    CHARTS.goal=new Chart(ctx,{type:'line',data:{labels:months,datasets:[
+      {label:'GM ทำได้',data:actual,borderColor:'rgba(37,99,235,1)',backgroundColor:'rgba(37,99,235,.1)',borderWidth:2,tension:0.3,pointRadius:5,fill:true},
+      {label:'เป้า 2.5M',data:target,borderColor:'rgba(220,38,38,1)',borderWidth:2,borderDash:[8,4],pointRadius:0,fill:false}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+fmtM(c.parsed.y)+' บาท';}}}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return fmtS(v);}}}}}});
+  },100);
+}
+init();
+</script>
+</body>
+</html>

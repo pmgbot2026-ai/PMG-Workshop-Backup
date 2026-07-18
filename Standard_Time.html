@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Standard Time | มาตรฐานเวลางานซ่อม PMG</title>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--card2:#f1f5f9;--accent:#2563eb;--accent2:#7c3aed;--green:#16a34a;--red:#dc2626;--orange:#ea580c;--yellow:#d97706;--purple:#7c3aed;--text:#1e293b;--text2:#475569;--border:#e2e8f0;--shadow:0 1px 3px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.container{max-width:1200px;margin:0 auto;padding:12px}
+h1{font-size:1.5rem;color:var(--accent);margin-bottom:8px}
+h2{font-size:1.2rem;color:var(--accent2);margin:12px 0 6px}
+h3{font-size:1.05rem;margin:8px 0 4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin:8px 0;box-shadow:var(--shadow)}
+.card2{background:var(--card2);border-radius:8px;padding:12px;margin:6px 0}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;background:var(--card2);padding:6px;border-radius:10px}
+.tab-btn{padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text2);cursor:pointer;font-size:.95rem;transition:all .2s}
+.tab-btn:hover{background:#eff6ff;color:var(--accent)}
+.tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Form */
+.input-group{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
+.input-group label{font-weight:600;min-width:100px;color:var(--text2)}
+.input-group input,.input-group select{flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:.95rem;background:#fff}
+.btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-size:.95rem;font-weight:600;transition:all .2s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-success{background:var(--green);color:#fff}
+.btn-danger{background:var(--red);color:#fff}
+.btn-orange{background:var(--orange);color:#fff}
+
+/* Table */
+table.std{width:100%;border-collapse:collapse;margin:8px 0}
+table.std th,table.std td{padding:6px 10px;border:1px solid var(--border);font-size:.9rem}
+table.std th{background:#eff6ff;color:var(--accent);font-weight:600;text-align:left;white-space:nowrap}
+table.std td{background:#fff}
+table.std tr:nth-child(even) td{background:#fafbfc}
+
+/* Station badges */
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.82rem;font-weight:600}
+.badge-green{background:#dcfce7;color:#16a34a}
+.badge-blue{background:#dbeafe;color:#2563eb}
+.badge-red{background:#fee2e2;color:#dc2626}
+.badge-orange{background:#fff7ed;color:#ea580c}
+.badge-purple{background:#f3e8ff;color:#7c3aed}
+
+/* Gantt chart */
+.gantt-container{overflow-x:auto;padding:4px}
+.gantt{width:100%;min-width:600px}
+.gantt-header{display:flex;background:#eff6ff;border-radius:8px 8px 0 0;font-size:.8rem;font-weight:600}
+.gantt-header>div{padding:4px 2px;text-align:center;border-right:1px solid var(--border);min-width:36px}
+.gantt-row{display:flex;border-bottom:1px solid var(--border);align-items:center}
+.gantt-label{width:110px;min-width:110px;padding:4px 8px;font-size:.85rem;font-weight:600;background:var(--card2);border-right:1px solid var(--border)}
+.gantt-cells{display:flex;flex:1}
+.gantt-cell{min-width:36px;height:28px;border-right:1px solid #f1f5f9;position:relative}
+.gantt-cell.weekend{background:#fef9c3}
+.gantt-bar{position:absolute;top:4px;height:20px;border-radius:4px;font-size:.7rem;color:#fff;display:flex;align-items:center;justify-content:center;z-index:2;min-width:20px;overflow:hidden;white-space:nowrap}
+.gantt-bar.planned{background:var(--accent);opacity:.7}
+.gantt-bar.actual{background:var(--green);top:2px;height:12px;border-radius:3px;opacity:.85}
+.gantt-bar.late{background:var(--red);top:2px;height:12px;border-radius:3px;opacity:.85}
+
+/* Work Order Print */
+.work-order{background:#fff;border:2px solid #333;padding:16px;font-size:.9rem;max-width:210mm;margin:0 auto}
+.work-order h2{text-align:center;margin-bottom:8px}
+.wo-header{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.wo-header .field{padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#fafafa}
+.wo-header .field label{font-weight:700;color:var(--text2)}
+.wo-checklist{font-size:.85rem;color:var(--text2)}
+.wo-checklist li{margin:2px 0}
+.wo-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;padding:12px;background:#eff6ff;border-radius:8px}
+
+/* Loading spinner */
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Progress comparison */
+.compare-row{display:flex;align-items:center;gap:8px;padding:4px 0}
+.compare-bar{flex:1;height:22px;border-radius:6px;background:var(--card2);position:relative;overflow:hidden}
+.compare-fill{height:100%;border-radius:6px;transition:width .3s}
+.compare-fill.on-time{background:var(--green)}
+.compare-fill.late{background:var(--red)}
+.compare-label{position:absolute;right:4px;top:2px;font-size:.75rem;color:#fff;font-weight:600}
+
+@media print{.tabs,.tab-btn{display:none}.tab-panel{display:block!important}.work-order{border:1px solid #000;box-shadow:none}}
+@media(max-width:768px){.input-group{flex-direction:column}.input-group label{min-width:auto}.wo-header{grid-template-columns:1fr} .gantt-label{width:80px;min-width:80px;font-size:.75rem} .gantt-cell{min-width:28px}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+<div class="container">
+<h1>⏱️ Standard Time — มาตรฐานเวลางานซ่อม</h1>
+<p style="color:var(--text2);margin-bottom:8px">คำนวณเวลามาตรฐานตามค่าแรง → ออกใบสั่งงาน → แผนปฏิทินซ่อมรายคัน</p>
+
+<div class="tabs">
+<button class="tab-btn active" onclick="switchTab('input',this)">🔗 ใส่ลิงก์ใบสั่งซ่อม</button>
+<button class="tab-btn" onclick="switchTab('workorder',this)">📋 ใบสั่งงาน</button>
+<button class="tab-btn" onclick="switchTab('plan',this)">📅 แผนการซ่อม</button>
+<button class="tab-btn" onclick="switchTab('lookup',this)">📊 ตารางเวลามาตรฐาน</button>
+</div>
+
+<!-- ═══ Tab 1: ใส่ลิงก์ ═══ -->
+<div id="tab-input" class="tab-panel active">
+<div class="card">
+<h2>🔗 ใส่ลิงก์ใบสั่งซ่อมจากระบบประกัน</h2>
+<div class="input-group">
+<label>URL ใบสั่งซ่อม:</label>
+<input type="url" id="repairUrl" placeholder="https://devdev.prachakij.com/bct_pmg/document_repair.php?qu_id=...&repair_id=..." style="flex:2">
+<button class="btn btn-primary" onclick="fetchRepairOrder()">🔍 ดึงข้อมูล</button>
+</div>
+<div id="repairInfo" style="display:none;margin-top:12px"></div>
+</div>
+
+<div id="stdTimeResult" style="display:none" class="card">
+<h2>⏱️ เวลามาตรฐานตามค่าแรง</h2>
+<div id="stdTimeTable"></div>
+</div>
+</div>
+
+<!-- ═══ Tab 2: ใบสั่งงาน ═══ -->
+<div id="tab-workorder" class="tab-panel">
+<div class="card">
+<h2>📋 ใบควบคุมเวลาและตรวจสอบคุณภาพงานซ่อม</h2>
+<div id="workOrderContent">
+<p style="color:var(--text2)">กรุณาใส่ลิงก์ใบสั่งซ่อมและคำนวณเวลามาตรฐานก่อน</p>
+</div>
+</div>
+</div>
+
+<!-- ═══ Tab 3: แผนการซ่อม ═══ -->
+<div id="tab-plan" class="tab-panel">
+<div class="card">
+<h2>📅 แผนการซ่อมรายคัน</h2>
+<div class="input-group">
+<label>วันเริ่มงาน:</label>
+<input type="date" id="startDate" onchange="renderGantt()">
+<label>จอดรถ:</label>
+<select id="parkingStatus" onchange="renderGantt()">
+<option value="parked">จอด</option>
+<option value="not_parked">ไม่จอด</option>
+</select>
+</div>
+<div id="ganttChart" class="gantt-container"></div>
+<div id="planActualCompare" style="margin-top:16px"></div>
+</div>
+
+<div class="card" style="margin-top:12px">
+<h2>📆 แผนปฏิบัติการซ่อมรายเดือน</h2>
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+<button class="btn btn-primary" onclick="changeMonth(-1)">◀ เดือนก่อน</button>
+<span id="monthLabel" style="font-weight:700;font-size:1.1rem;min-width:160px;text-align:center"></span>
+<button class="btn btn-primary" onclick="changeMonth(1)">เดือนถัดไป ▶</button>
+<button class="btn btn-success" onclick="goCurrentMonth()" style="margin-left:8px">เดือนปัจจุบัน</button>
+</div>
+<div id="monthlyPlanTable"><p style="color:var(--text2)">กำลังโหลดข้อมูล...</p></div>
+</div>
+</div>
+
+<!-- ═══ Tab 4: ตารางเวลามาตรฐาน ═══ -->
+<div id="tab-lookup" class="tab-panel">
+<div class="card">
+<h2>📊 ตารางเวลามาตรฐานตามค่าแรง</h2>
+<p style="color:var(--text2);margin-bottom:8px">ช่วงค่าแรงที่ประกันอนุมัติ → เวลามาตรฐานแต่ละสถานี (ชม.)</p>
+<div id="lookupTable"></div>
+</div>
+</div>
+</div>
+
+<script>
+// ═══ Standard Time Data ═══
+const STD_TIME_DATA = [{"wage_from": 1, "wage_to": 5000, "range": "1-5000", "remove": 0.25, "body_repair": 0.5, "frame_repair": 0, "putty": 0.25, "putty_drying": 0.25, "putty_prep": 0.92, "primary_drying": 0.5, "primary_prep": 0.67, "mixing": 1.25, "painting": 0.75, "bake": 0.5, "paint_drying": 4, "assembly": 0.5, "polish": 0.5, "washing": 0.75, "final_check": 0.42, "total_system_hr": 1, "mechanic_work_hr": 8.01, "working_hr_income": 374.53183520599254, "mechanic_days": 1.1442857142857144, "parking_days": 1.8585714285714285}, {"wage_from": 5001, "wage_to": 6000, "range": "5001-6000", "remove": 0.5, "body_repair": 0.75, "frame_repair": 0, "putty": 0.34, "putty_drying": 0.25, "putty_prep": 1.17, "primary_drying": 0.5, "primary_prep": 0.75, "mixing": 1.25, "painting": 0.84, "bake": 0.5, "paint_drying": 4, "assembly": 0.67, "polish": 0.75, "washing": 0.75, "final_check": 0.42, "total_system_hr": 1, "mechanic_work_hr": 9.44, "working_hr_income": 582.6800847457628, "mechanic_days": 1.3485714285714285, "parking_days": 2.0628571428571427}, {"wage_from": 6001, "wage_to": 7000, "range": "6001-7000", "remove": 0.67, "body_repair": 1, "frame_repair": 0, "putty": 0.42, "putty_drying": 0.25, "putty_prep": 1.34, "primary_drying": 0.5, "primary_prep": 0.84, "mixing": 1.25, "painting": 0.92, "bake": 0.5, "paint_drying": 4, "assembly": 0.84, "polish": 1.17, "washing": 1, "final_check": 0.42, "total_system_hr": 1, "mechanic_work_hr": 11.12, "working_hr_income": 584.5773381294964, "mechanic_days": 1.5885714285714285, "parking_days": 2.3028571428571425}, {"wage_from": 7001, "wage_to": 8000, "range": "7001-8000", "remove": 0.84, "body_repair": 1.25, "frame_repair": 0, "putty": 0.5, "putty_drying": 0.25, "putty_prep": 1.5, "primary_drying": 0.5, "primary_prep": 0.92, "mixing": 1.25, "painting": 1, "bake": 0.5, "paint_drying": 4, "assembly": 1, "polish": 1.25, "washing": 1, "final_check": 0.42, "total_system_hr": 1, "mechanic_work_hr": 12.18, "working_hr_income": 615.8045977011494, "mechanic_days": 1.74, "parking_days": 2.454285714285714}, {"wage_from": 8001, "wage_to": 9000, "range": "8001-9000", "remove": 1, "body_repair": 1.5, "frame_repair": 0, "putty": 0.59, "putty_drying": 0.25, "putty_prep": 1.67, "primary_drying": 0.5, "primary_prep": 1, "mixing": 1.25, "painting": 1.09, "bake": 0.5, "paint_drying": 4, "assembly": 1.17, "polish": 1.34, "washing": 1, "final_check": 0.42, "total_system_hr": 1, "mechanic_work_hr": 13.28, "working_hr_income": 640.097891566265, "mechanic_days": 1.897142857142857, "parking_days": 2.6114285714285717}, {"wage_from": 9001, "wage_to": 10000, "range": "9001-10000", "remove": 1.17, "body_repair": 1.75, "frame_repair": 0, "putty": 0.67, "putty_drying": 0.25, "putty_prep": 1.84, "primary_drying": 0.5, "primary_prep": 1.09, "mixing": 1.25, "painting": 1.17, "bake": 0.5, "paint_drying": 4, "assembly": 1.34, "polish": 1.42, "washing": 1, "final_check": 0.42, "total_system_hr": 1, "mechanic_work_hr": 14.37, "working_hr_income": 661.134307585247, "mechanic_days": 2.052857142857143, "parking_days": 2.7671428571428573}, {"wage_from": 10001, "wage_to": 11000, "range": "10001-11000", "remove": 1.34, "body_repair": 2, "frame_repair": 0, "putty": 0.75, "putty_drying": 0.25, "putty_prep": 2.09, "primary_drying": 0.5, "primary_prep": 1.17, "mixing": 1.25, "painting": 1.25, "bake": 0.5, "paint_drying": 4, "assembly": 1.5, "polish": 1.5, "washing": 1, "final_check": 0.42, "total_system_hr": 1, "mechanic_work_hr": 15.52, "working_hr_income": 676.5786082474227, "mechanic_days": 2.217142857142857, "parking_days": 2.931428571428572}, {"wage_from": 11001, "wage_to": 12000, "range": "11001-12000", "remove": 1.5, "body_repair": 2.25, "frame_repair": 0, "putty": 0.84, "putty_drying": 0.25, "putty_prep": 2.25, "primary_drying": 0.5, "primary_prep": 1.25, "mixing": 1.25, "painting": 1.34, "bake": 0.5, "paint_drying": 4, "assembly": 1.67, "polish": 1.59, "washing": 1, "final_check": 0.42, "total_system_hr": 1, "mechanic_work_hr": 16.61, "working_hr_income": 692.384105960265, "mechanic_days": 2.3728571428571428, "parking_days": 3.0871428571428576}, {"wage_from": 12001, "wage_to": 13000, "range": "12001-13000", "remove": 1.67, "body_repair": 2.5, "frame_repair": 0, "putty": 0.92, "putty_drying": 0.25, "putty_prep": 2.42, "primary_drying": 0.5, "primary_prep": 1.34, "mixing": 1.25, "painting": 1.42, "bake": 0.5, "paint_drying": 4, "assembly": 1.84, "polish": 1.67, "washing": 1, "final_check": 0.42, "total_system_hr": 1.5, "mechanic_work_hr": 17.700000000000003, "working_hr_income": 706.2429378531073, "mechanic_days": 2.528571428571429, "parking_days": 3.3142857142857145}, {"wage_from": 13001, "wage_to": 14000, "range": "13001-14000", "remove": 1.84, "body_repair": 2.75, "frame_repair": 0, "putty": 1, "putty_drying": 0.25, "putty_prep": 2.59, "primary_drying": 0.5, "primary_prep": 1.42, "mixing": 1.25, "painting": 1.5, "bake": 0.5, "paint_drying": 4, "assembly": 2, "polish": 1.75, "washing": 1, "final_check": 0.42, "total_system_hr": 1.5, "mechanic_work_hr": 18.770000000000003, "working_hr_income": 719.2594565796483, "mechanic_days": 2.681428571428572, "parking_days": 3.4671428571428575}, {"wage_from": 14001, "wage_to": 15000, "range": "14001-15000", "remove": 2, "body_repair": 3, "frame_repair": 0, "putty": 1.09, "putty_drying": 0.25, "putty_prep": 2.75, "primary_drying": 0.5, "primary_prep": 1.5, "mixing": 1.25, "painting": 1.59, "bake": 0.5, "paint_drying": 4, "assembly": 2.17, "polish": 1.84, "washing": 1, "final_check": 0.42, "total_system_hr": 1.5, "mechanic_work_hr": 19.860000000000003, "working_hr_income": 730.1359516616313, "mechanic_days": 2.8371428571428576, "parking_days": 3.622857142857143}, {"wage_from": 15001, "wage_to": 16000, "range": "15001-16000", "remove": 2.17, "body_repair": 3.25, "frame_repair": 1, "putty": 1.17, "putty_drying": 0.25, "putty_prep": 3, "primary_drying": 0.5, "primary_prep": 1.59, "mixing": 1.25, "painting": 1.67, "bake": 0.5, "paint_drying": 4, "assembly": 2.34, "polish": 1.92, "washing": 1, "final_check": 0.42, "total_system_hr": 1.5, "mechanic_work_hr": 22.03, "working_hr_income": 703.608715388107, "mechanic_days": 3.1471428571428572, "parking_days": 3.932857142857143}, {"wage_from": 16001, "wage_to": 17000, "range": "16001-17000", "remove": 2.34, "body_repair": 3.5, "frame_repair": 1.34, "putty": 1.25, "putty_drying": 0.25, "putty_prep": 3.17, "primary_drying": 0.5, "primary_prep": 1.59, "mixing": 1.25, "painting": 1.75, "bake": 0.5, "paint_drying": 4, "assembly": 2.5, "polish": 2, "washing": 1, "final_check": 0.42, "total_system_hr": 1.5, "mechanic_work_hr": 23.36, "working_hr_income": 706.3570205479452, "mechanic_days": 3.337142857142857, "parking_days": 4.122857142857143}, {"wage_from": 17001, "wage_to": 18000, "range": "17001-18000", "remove": 2.5, "body_repair": 3.75, "frame_repair": 1.67, "putty": 1.34, "putty_drying": 0.25, "putty_prep": 3.34, "primary_drying": 0.5, "primary_prep": 1.59, "mixing": 1.25, "painting": 1.84, "bake": 0.5, "paint_drying": 4, "assembly": 2.67, "polish": 2.09, "washing": 1, "final_check": 0.42, "total_system_hr": 1.5, "mechanic_work_hr": 24.709999999999997, "working_hr_income": 708.2355321732093, "mechanic_days": 3.53, "parking_days": 4.315714285714285}, {"wage_from": 18001, "wage_to": 19000, "range": "18001-19000", "remove": 2.67, "body_repair": 4, "frame_repair": 2, "putty": 1.42, "putty_drying": 0.25, "putty_prep": 3.5, "primary_drying": 0.5, "primary_prep": 1.59, "mixing": 1.25, "painting": 1.92, "bake": 0.5, "paint_drying": 4, "assembly": 2.84, "polish": 2.17, "washing": 1, "final_check": 0.42, "total_system_hr": 1.5, "mechanic_work_hr": 26.03, "working_hr_income": 710.7376104494813, "mechanic_days": 3.718571428571429, "parking_days": 4.5042857142857144}, {"wage_from": 19001, "wage_to": 20000, "range": "19001-20000", "remove": 2.84, "body_repair": 4.25, "frame_repair": 2.34, "putty": 1.5, "putty_drying": 0.25, "putty_prep": 3.67, "primary_drying": 0.5, "primary_prep": 1.59, "mixing": 1.25, "painting": 2, "bake": 0.5, "paint_drying": 4, "assembly": 3, "polish": 2.25, "washing": 1, "final_check": 0.42, "total_system_hr": 1.5, "mechanic_work_hr": 27.360000000000003, "working_hr_income": 712.7375730994152, "mechanic_days": 3.908571428571429, "parking_days": 4.694285714285714}, {"wage_from": 20001, "wage_to": 21000, "range": "20001-21000", "remove": 2.92, "body_repair": 4.5, "frame_repair": 2.59, "putty": 1.59, "putty_drying": 0.25, "putty_prep": 3.92, "primary_drying": 0.5, "primary_prep": 1.67, "mixing": 1.25, "painting": 2.09, "bake": 0.5, "paint_drying": 4, "assembly": 3.17, "polish": 2.34, "washing": 1, "final_check": 0.42, "total_system_hr": 2, "mechanic_work_hr": 28.709999999999997, "working_hr_income": 714.0543364681297, "mechanic_days": 4.101428571428571, "parking_days": 4.958571428571427}, {"wage_from": 21001, "wage_to": 22000, "range": "21001-22000", "remove": 3, "body_repair": 4.75, "frame_repair": 2.84, "putty": 1.67, "putty_drying": 0.25, "putty_prep": 4.09, "primary_drying": 0.5, "primary_prep": 1.67, "mixing": 1.25, "painting": 2.09, "bake": 0.5, "paint_drying": 4, "assembly": 3.34, "polish": 2.42, "washing": 1, "final_check": 0.42, "total_system_hr": 2, "mechanic_work_hr": 29.790000000000006, "working_hr_income": 721.7354817052701, "mechanic_days": 4.255714285714286, "parking_days": 5.112857142857144}, {"wage_from": 22001, "wage_to": 23000, "range": "22001-23000", "remove": 3.09, "body_repair": 5, "frame_repair": 3.09, "putty": 1.75, "putty_drying": 0.25, "putty_prep": 4.25, "primary_drying": 0.5, "primary_prep": 1.67, "mixing": 1.25, "painting": 2.09, "bake": 0.5, "paint_drying": 4, "assembly": 3.5, "polish": 2.5, "washing": 1, "final_check": 0.42, "total_system_hr": 2, "mechanic_work_hr": 30.860000000000003, "working_hr_income": 729.1153596889176, "mechanic_days": 4.408571428571429, "parking_days": 5.265714285714286}, {"wage_from": 23001, "wage_to": 24000, "range": "23001-24000", "remove": 3.17, "body_repair": 5.25, "frame_repair": 3.34, "putty": 1.84, "putty_drying": 0.25, "putty_prep": 4.42, "primary_drying": 0.5, "primary_prep": 1.67, "mixing": 1.25, "painting": 2.09, "bake": 0.5, "paint_drying": 4, "assembly": 3.67, "polish": 2.59, "washing": 1, "final_check": 0.42, "total_system_hr": 2, "mechanic_work_hr": 31.959999999999997, "working_hr_income": 735.3097622027535, "mechanic_days": 4.565714285714285, "parking_days": 5.422857142857142}, {"wage_from": 24001, "wage_to": 25000, "range": "24001-25000", "remove": 3.25, "body_repair": 5.5, "frame_repair": 3.59, "putty": 1.92, "putty_drying": 0.25, "putty_prep": 4.59, "primary_drying": 0.5, "primary_prep": 1.67, "mixing": 1.25, "painting": 2.09, "bake": 0.5, "paint_drying": 4, "assembly": 3.84, "polish": 2.67, "washing": 1, "final_check": 0.42, "total_system_hr": 2, "mechanic_work_hr": 33.040000000000006, "working_hr_income": 741.5405569007263, "mechanic_days": 4.720000000000001, "parking_days": 5.577142857142858}, {"wage_from": 25001, "wage_to": 26000, "range": "25001-26000", "remove": 3.34, "body_repair": 5.75, "frame_repair": 3.84, "putty": 2, "putty_drying": 0.25, "putty_prep": 4.84, "primary_drying": 0.5, "primary_prep": 1.75, "mixing": 1.25, "painting": 2.17, "bake": 0.5, "paint_drying": 4, "assembly": 4, "polish": 2.75, "washing": 1, "final_check": 0.42, "total_system_hr": 2, "mechanic_work_hr": 34.36, "working_hr_income": 742.1565774155996, "mechanic_days": 4.908571428571428, "parking_days": 5.765714285714286}, {"wage_from": 26001, "wage_to": 27000, "range": "26001-27000", "remove": 3.42, "body_repair": 6, "frame_repair": 4.09, "putty": 2.09, "putty_drying": 0.25, "putty_prep": 5, "primary_drying": 0.5, "primary_prep": 1.75, "mixing": 1.25, "painting": 2.17, "bake": 0.5, "paint_drying": 4, "assembly": 4.17, "polish": 2.84, "washing": 1, "final_check": 0.42, "total_system_hr": 2, "mechanic_work_hr": 35.45, "working_hr_income": 747.5458392101551, "mechanic_days": 5.064285714285715, "parking_days": 5.921428571428572}, {"wage_from": 27001, "wage_to": 28000, "range": "27001-28000", "remove": 3.5, "body_repair": 6.25, "frame_repair": 4.34, "putty": 2.17, "putty_drying": 0.25, "putty_prep": 5.17, "primary_drying": 0.5, "primary_prep": 1.75, "mixing": 1.25, "painting": 2.17, "bake": 0.5, "paint_drying": 4, "assembly": 4.34, "polish": 2.92, "washing": 1, "final_check": 0.42, "total_system_hr": 2, "mechanic_work_hr": 36.53, "working_hr_income": 752.8196003284971, "mechanic_days": 5.218571428571429, "parking_days": 6.075714285714286}, {"wage_from": 28001, "wage_to": 29000, "range": "28001-29000", "remove": 3.59, "body_repair": 6.5, "frame_repair": 4.59, "putty": 2.25, "putty_drying": 0.25, "putty_prep": 5.34, "primary_drying": 0.5, "primary_prep": 1.75, "mixing": 1.25, "painting": 2.17, "bake": 0.5, "paint_drying": 4, "assembly": 4.5, "polish": 3, "washing": 1, "final_check": 0.42, "total_system_hr": 2, "mechanic_work_hr": 37.61, "working_hr_income": 757.7904812549854, "mechanic_days": 5.372857142857143, "parking_days": 6.2299999999999995}, {"wage_from": 29001, "wage_to": 30000, "range": "29001-30000", "remove": 3.67, "body_repair": 6.75, "frame_repair": 4.84, "putty": 2.34, "putty_drying": 0.25, "putty_prep": 5.5, "primary_drying": 0.5, "primary_prep": 1.75, "mixing": 1.25, "painting": 2.17, "bake": 0.5, "paint_drying": 4, "assembly": 4.67, "polish": 3.09, "washing": 1, "final_check": 0.42, "total_system_hr": 2, "mechanic_work_hr": 38.7, "working_hr_income": 762.2868217054263, "mechanic_days": 5.528571428571429, "parking_days": 6.385714285714286}, {"wage_from": 30001, "wage_to": 31000, "range": "30001-31000", "remove": 3.75, "body_repair": 7, "frame_repair": 5, "putty": 2.42, "putty_drying": 0.25, "putty_prep": 5.67, "primary_drying": 0.5, "primary_prep": 1.84, "mixing": 1.25, "painting": 2.25, "bake": 0.5, "paint_drying": 4, "assembly": 4.84, "polish": 3.17, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 39.86000000000001, "working_hr_income": 765.1906673356748, "mechanic_days": 5.694285714285715, "parking_days": 6.6228571428571446}, {"wage_from": 31001, "wage_to": 32000, "range": "31001-32000", "remove": 3.84, "body_repair": 7.25, "frame_repair": 5.17, "putty": 2.5, "putty_drying": 0.25, "putty_prep": 5.75, "primary_drying": 0.5, "primary_prep": 1.84, "mixing": 1.25, "painting": 2.25, "bake": 0.5, "paint_drying": 4, "assembly": 5, "polish": 3.25, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 40.769999999999996, "working_hr_income": 772.6391954868777, "mechanic_days": 5.824285714285714, "parking_days": 6.752857142857143}, {"wage_from": 32001, "wage_to": 33000, "range": "32001-33000", "remove": 3.92, "body_repair": 7.5, "frame_repair": 5.34, "putty": 2.5, "putty_drying": 0.25, "putty_prep": 5.84, "primary_drying": 0.5, "primary_prep": 1.84, "mixing": 1.25, "painting": 2.25, "bake": 0.5, "paint_drying": 4, "assembly": 5.17, "polish": 3.34, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 41.620000000000005, "working_hr_income": 780.8865929841421, "mechanic_days": 5.945714285714287, "parking_days": 6.8742857142857146}, {"wage_from": 33001, "wage_to": 34000, "range": "33001-34000", "remove": 4, "body_repair": 7.75, "frame_repair": 5.5, "putty": 2.5, "putty_drying": 0.25, "putty_prep": 5.92, "primary_drying": 0.5, "primary_prep": 1.84, "mixing": 1.25, "painting": 2.25, "bake": 0.5, "paint_drying": 4, "assembly": 5.34, "polish": 3.42, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 42.44000000000001, "working_hr_income": 789.3614514608857, "mechanic_days": 6.062857142857145, "parking_days": 6.991428571428573}, {"wage_from": 34001, "wage_to": 35000, "range": "34001-35000", "remove": 4.09, "body_repair": 8, "frame_repair": 5.67, "putty": 2.5, "putty_drying": 0.25, "putty_prep": 6, "primary_drying": 0.5, "primary_prep": 1.84, "mixing": 1.25, "painting": 2.25, "bake": 0.5, "paint_drying": 4, "assembly": 5.5, "polish": 3.5, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 43.269999999999996, "working_hr_income": 797.3307141206379, "mechanic_days": 6.181428571428571, "parking_days": 7.109999999999999}, {"wage_from": 35001, "wage_to": 36000, "range": "35001-36000", "remove": 4.17, "body_repair": 8.25, "frame_repair": 5.84, "putty": 2.59, "putty_drying": 0.25, "putty_prep": 6.17, "primary_drying": 0.5, "primary_prep": 1.92, "mixing": 1.25, "painting": 2.34, "bake": 0.5, "paint_drying": 4, "assembly": 5.67, "polish": 3.59, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 44.46000000000001, "working_hr_income": 798.481781376518, "mechanic_days": 6.351428571428572, "parking_days": 7.280000000000001}, {"wage_from": 36001, "wage_to": 37000, "range": "36001-37000", "remove": 4.25, "body_repair": 8.5, "frame_repair": 6, "putty": 2.59, "putty_drying": 0.25, "putty_prep": 6.25, "primary_drying": 0.5, "primary_prep": 1.92, "mixing": 1.25, "painting": 2.34, "bake": 0.5, "paint_drying": 4, "assembly": 5.84, "polish": 3.67, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 45.28, "working_hr_income": 806.1064487632509, "mechanic_days": 6.468571428571429, "parking_days": 7.397142857142858}, {"wage_from": 37001, "wage_to": 38000, "range": "37001-38000", "remove": 4.34, "body_repair": 8.75, "frame_repair": 6.17, "putty": 2.59, "putty_drying": 0.25, "putty_prep": 6.34, "primary_drying": 0.5, "primary_prep": 1.92, "mixing": 1.25, "painting": 2.34, "bake": 0.5, "paint_drying": 4, "assembly": 6, "polish": 3.75, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 46.120000000000005, "working_hr_income": 813.1071118820468, "mechanic_days": 6.588571428571429, "parking_days": 7.517142857142858}, {"wage_from": 38001, "wage_to": 39000, "range": "38001-39000", "remove": 4.42, "body_repair": 9, "frame_repair": 6.34, "putty": 2.59, "putty_drying": 0.25, "putty_prep": 6.42, "primary_drying": 0.5, "primary_prep": 1.92, "mixing": 1.25, "painting": 2.34, "bake": 0.5, "paint_drying": 4, "assembly": 6.17, "polish": 3.84, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 46.96000000000001, "working_hr_income": 819.8573253833048, "mechanic_days": 6.70857142857143, "parking_days": 7.637142857142858}, {"wage_from": 39001, "wage_to": 40000, "range": "39001-40000", "remove": 4.5, "body_repair": 9.25, "frame_repair": 6.5, "putty": 2.59, "putty_drying": 0.25, "putty_prep": 6.5, "primary_drying": 0.5, "primary_prep": 1.92, "mixing": 1.25, "painting": 2.34, "bake": 0.5, "paint_drying": 4, "assembly": 6.34, "polish": 3.92, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 47.78, "working_hr_income": 826.7161992465467, "mechanic_days": 6.825714285714286, "parking_days": 7.7542857142857144}, {"wage_from": 40001, "wage_to": 41000, "range": "40001-41000", "remove": 4.59, "body_repair": 9.5, "frame_repair": 6.67, "putty": 2.67, "putty_drying": 0.25, "putty_prep": 6.67, "primary_drying": 0.5, "primary_prep": 1.92, "mixing": 1.25, "painting": 2.59, "bake": 0.5, "paint_drying": 4, "assembly": 6.5, "polish": 4, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 49.03, "working_hr_income": 826.0350805629206, "mechanic_days": 7.0042857142857144, "parking_days": 7.932857142857143}, {"wage_from": 41001, "wage_to": 42000, "range": "41001-42000", "remove": 4.67, "body_repair": 9.67, "frame_repair": 6.84, "putty": 2.67, "putty_drying": 0.25, "putty_prep": 6.75, "primary_drying": 0.5, "primary_prep": 1.92, "mixing": 1.25, "painting": 2.59, "bake": 0.5, "paint_drying": 4, "assembly": 6.67, "polish": 4.09, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 49.790000000000006, "working_hr_income": 833.510745129544, "mechanic_days": 7.112857142857144, "parking_days": 8.041428571428572}, {"wage_from": 42001, "wage_to": 43000, "range": "42001-43000", "remove": 4.75, "body_repair": 9.84, "frame_repair": 7, "putty": 2.67, "putty_drying": 0.25, "putty_prep": 6.84, "primary_drying": 0.5, "primary_prep": 1.92, "mixing": 1.25, "painting": 2.59, "bake": 0.5, "paint_drying": 4, "assembly": 6.84, "polish": 4.17, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 50.540000000000006, "working_hr_income": 840.9279778393351, "mechanic_days": 7.220000000000001, "parking_days": 8.14857142857143}, {"wage_from": 43001, "wage_to": 44000, "range": "43001-44000", "remove": 4.84, "body_repair": 10, "frame_repair": 7.17, "putty": 2.67, "putty_drying": 0.25, "putty_prep": 6.92, "primary_drying": 0.5, "primary_prep": 1.92, "mixing": 1.25, "painting": 2.59, "bake": 0.5, "paint_drying": 4, "assembly": 7, "polish": 4.25, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 51.28, "working_hr_income": 848.2936817472698, "mechanic_days": 7.325714285714286, "parking_days": 8.254285714285714}, {"wage_from": 44001, "wage_to": 45000, "range": "44001-45000", "remove": 4.92, "body_repair": 10.17, "frame_repair": 7.34, "putty": 2.67, "putty_drying": 0.25, "putty_prep": 7, "primary_drying": 0.5, "primary_prep": 1.92, "mixing": 1.25, "painting": 2.59, "bake": 0.5, "paint_drying": 4, "assembly": 7.17, "polish": 4.34, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 52.040000000000006, "working_hr_income": 855.1210607225211, "mechanic_days": 7.434285714285715, "parking_days": 8.362857142857143}, {"wage_from": 45001, "wage_to": 46000, "range": "45001-46000", "remove": 5, "body_repair": 10.34, "frame_repair": 7.5, "putty": 2.75, "putty_drying": 0.25, "putty_prep": 7.17, "primary_drying": 0.5, "primary_prep": 2, "mixing": 1.25, "painting": 2.67, "bake": 0.5, "paint_drying": 4, "assembly": 7.34, "polish": 4.42, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 53.11, "working_hr_income": 856.7218979476559, "mechanic_days": 7.587142857142857, "parking_days": 8.515714285714285}, {"wage_from": 46001, "wage_to": 47000, "range": "46001-47000", "remove": 5.09, "body_repair": 10.5, "frame_repair": 7.67, "putty": 2.75, "putty_drying": 0.25, "putty_prep": 7.25, "primary_drying": 0.5, "primary_prep": 2, "mixing": 1.25, "painting": 2.67, "bake": 0.5, "paint_drying": 4, "assembly": 7.5, "polish": 4.5, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 53.85, "working_hr_income": 863.519034354689, "mechanic_days": 7.692857142857143, "parking_days": 8.621428571428572}, {"wage_from": 47001, "wage_to": 48000, "range": "47001-48000", "remove": 5.17, "body_repair": 10.67, "frame_repair": 7.84, "putty": 2.75, "putty_drying": 0.25, "putty_prep": 7.34, "primary_drying": 0.5, "primary_prep": 2, "mixing": 1.25, "painting": 2.67, "bake": 0.5, "paint_drying": 4, "assembly": 7.67, "polish": 4.59, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 54.620000000000005, "working_hr_income": 869.6539729036982, "mechanic_days": 7.802857142857143, "parking_days": 8.731428571428571}, {"wage_from": 48001, "wage_to": 49000, "range": "48001-49000", "remove": 5.25, "body_repair": 10.84, "frame_repair": 8, "putty": 2.75, "putty_drying": 0.25, "putty_prep": 7.42, "primary_drying": 0.5, "primary_prep": 2, "mixing": 1.25, "painting": 2.67, "bake": 0.5, "paint_drying": 4, "assembly": 7.84, "polish": 4.67, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 55.36, "working_hr_income": 876.0928468208093, "mechanic_days": 7.908571428571428, "parking_days": 8.837142857142856}, {"wage_from": 49001, "wage_to": 50000, "range": "49001-50000", "remove": 5.34, "body_repair": 11, "frame_repair": 8.17, "putty": 2.75, "putty_drying": 0.25, "putty_prep": 7.5, "primary_drying": 0.5, "primary_prep": 2, "mixing": 1.25, "painting": 2.67, "bake": 0.5, "paint_drying": 4, "assembly": 8, "polish": 4.75, "washing": 1, "final_check": 0.42, "total_system_hr": 2.5, "mechanic_work_hr": 56.1, "working_hr_income": 882.3618538324421, "mechanic_days": 8.014285714285714, "parking_days": 8.942857142857143}, {"wage_from": 50001, "wage_to": 51000, "range": "50001-51000", "remove": 5.42, "body_repair": 11.17, "frame_repair": 8.34, "putty": 2.84, "putty_drying": 0.25, "putty_prep": 7.67, "primary_drying": 0.5, "primary_prep": 2, "mixing": 1.25, "painting": 2.75, "bake": 0.5, "paint_drying": 4, "assembly": 8.17, "polish": 4.84, "washing": 1, "final_check": 0.42, "total_system_hr": 3, "mechanic_work_hr": 57.120000000000005, "working_hr_income": 884.1123949579832, "mechanic_days": 8.16, "parking_days": 9.16}, {"wage_from": 51001, "wage_to": 52000, "range": "51001-52000", "remove": 5.5, "body_repair": 11.34, "frame_repair": 8.5, "putty": 2.84, "putty_drying": 0.25, "putty_prep": 7.75, "primary_drying": 0.5, "primary_prep": 2, "mixing": 1.25, "painting": 2.75, "bake": 0.5, "paint_drying": 4, "assembly": 8.34, "polish": 4.92, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3, "mechanic_work_hr": 58.36, "working_hr_income": 882.4623029472241, "mechanic_days": 8.337142857142856, "parking_days": 9.337142857142856}, {"wage_from": 52001, "wage_to": 53000, "range": "52001-53000", "remove": 5.59, "body_repair": 11.5, "frame_repair": 8.67, "putty": 2.84, "putty_drying": 0.25, "putty_prep": 7.84, "primary_drying": 0.5, "primary_prep": 2, "mixing": 1.25, "painting": 2.75, "bake": 0.5, "paint_drying": 4, "assembly": 8.5, "polish": 5, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3, "mechanic_work_hr": 59.11, "working_hr_income": 888.1830485535443, "mechanic_days": 8.444285714285714, "parking_days": 9.444285714285714}, {"wage_from": 53001, "wage_to": 54000, "range": "53001-54000", "remove": 5.67, "body_repair": 11.67, "frame_repair": 8.84, "putty": 2.84, "putty_drying": 0.25, "putty_prep": 7.92, "primary_drying": 0.5, "primary_prep": 2, "mixing": 1.25, "painting": 2.75, "bake": 0.5, "paint_drying": 4, "assembly": 8.67, "polish": 5.09, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3, "mechanic_work_hr": 59.870000000000005, "working_hr_income": 893.6111575079337, "mechanic_days": 8.552857142857144, "parking_days": 9.552857142857144}, {"wage_from": 54001, "wage_to": 55000, "range": "54001-55000", "remove": 5.75, "body_repair": 11.84, "frame_repair": 9, "putty": 2.84, "putty_drying": 0.25, "putty_prep": 8, "primary_drying": 0.5, "primary_prep": 2, "mixing": 1.25, "painting": 2.75, "bake": 0.5, "paint_drying": 4, "assembly": 8.84, "polish": 5.17, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3, "mechanic_work_hr": 60.61, "working_hr_income": 899.1998020128692, "mechanic_days": 8.65857142857143, "parking_days": 9.65857142857143}, {"wage_from": 55001, "wage_to": 56000, "range": "55001-56000", "remove": 5.84, "body_repair": 12, "frame_repair": 9.17, "putty": 2.92, "putty_drying": 0.25, "putty_prep": 8.17, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 2.84, "bake": 0.5, "paint_drying": 4, "assembly": 9, "polish": 5.25, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3, "mechanic_work_hr": 61.7, "working_hr_income": 899.5218800648298, "mechanic_days": 8.814285714285715, "parking_days": 9.814285714285715}, {"wage_from": 56001, "wage_to": 57000, "range": "56001-57000", "remove": 5.92, "body_repair": 12.17, "frame_repair": 9.34, "putty": 2.92, "putty_drying": 0.25, "putty_prep": 8.25, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 2.84, "bake": 0.5, "paint_drying": 4, "assembly": 9.17, "polish": 5.34, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3, "mechanic_work_hr": 62.46000000000001, "working_hr_income": 904.5869356388088, "mechanic_days": 8.922857142857143, "parking_days": 9.922857142857143}, {"wage_from": 57001, "wage_to": 58000, "range": "57001-58000", "remove": 6, "body_repair": 12.34, "frame_repair": 9.5, "putty": 2.92, "putty_drying": 0.25, "putty_prep": 8.34, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 2.84, "bake": 0.5, "paint_drying": 4, "assembly": 9.34, "polish": 5.42, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3, "mechanic_work_hr": 63.21000000000001, "working_hr_income": 909.674102199019, "mechanic_days": 9.030000000000001, "parking_days": 10.030000000000001}, {"wage_from": 58001, "wage_to": 59000, "range": "58001-59000", "remove": 6.09, "body_repair": 12.5, "frame_repair": 9.67, "putty": 2.92, "putty_drying": 0.25, "putty_prep": 8.42, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 2.84, "bake": 0.5, "paint_drying": 4, "assembly": 9.5, "polish": 5.5, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3, "mechanic_work_hr": 63.95, "working_hr_income": 914.7849882720875, "mechanic_days": 9.135714285714286, "parking_days": 10.135714285714286}, {"wage_from": 59001, "wage_to": 60000, "range": "59001-60000", "remove": 6.17, "body_repair": 12.67, "frame_repair": 9.84, "putty": 2.92, "putty_drying": 0.25, "putty_prep": 8.5, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 2.84, "bake": 0.5, "paint_drying": 4, "assembly": 9.67, "polish": 5.59, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3, "mechanic_work_hr": 64.71000000000001, "working_hr_income": 919.494668521094, "mechanic_days": 9.244285714285715, "parking_days": 10.244285714285715}, {"wage_from": 60001, "wage_to": 61000, "range": "60001-61000", "remove": 6.25, "body_repair": 12.84, "frame_repair": 10, "putty": 3, "putty_drying": 0.25, "putty_prep": 8.67, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 2.92, "bake": 0.5, "paint_drying": 4, "assembly": 9.84, "polish": 5.67, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3.5, "mechanic_work_hr": 65.70000000000002, "working_hr_income": 920.8599695585995, "mechanic_days": 9.385714285714288, "parking_days": 10.457142857142859}, {"wage_from": 61001, "wage_to": 62000, "range": "61001-62000", "remove": 6.34, "body_repair": 13, "frame_repair": 10.17, "putty": 3, "putty_drying": 0.25, "putty_prep": 8.75, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 2.92, "bake": 0.5, "paint_drying": 4, "assembly": 10, "polish": 5.75, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3.5, "mechanic_work_hr": 66.44, "working_hr_income": 925.6547260686334, "mechanic_days": 9.491428571428571, "parking_days": 10.562857142857142}, {"wage_from": 62001, "wage_to": 63000, "range": "62001-63000", "remove": 6.42, "body_repair": 13.17, "frame_repair": 10.34, "putty": 3, "putty_drying": 0.25, "putty_prep": 8.84, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 2.92, "bake": 0.5, "paint_drying": 4, "assembly": 10.17, "polish": 5.84, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3.5, "mechanic_work_hr": 67.21000000000001, "working_hr_income": 929.9285820562416, "mechanic_days": 9.601428571428572, "parking_days": 10.672857142857143}, {"wage_from": 63001, "wage_to": 64000, "range": "63001-64000", "remove": 6.5, "body_repair": 13.34, "frame_repair": 10.5, "putty": 3, "putty_drying": 0.25, "putty_prep": 8.92, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 2.92, "bake": 0.5, "paint_drying": 4, "assembly": 10.34, "polish": 5.92, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3.5, "mechanic_work_hr": 67.95000000000002, "working_hr_income": 934.5180279617364, "mechanic_days": 9.707142857142859, "parking_days": 10.77857142857143}, {"wage_from": 64001, "wage_to": 65000, "range": "64001-65000", "remove": 6.59, "body_repair": 13.5, "frame_repair": 10.67, "putty": 3, "putty_drying": 0.25, "putty_prep": 9, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 2.92, "bake": 0.5, "paint_drying": 4, "assembly": 10.5, "polish": 6, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3.5, "mechanic_work_hr": 68.69, "working_hr_income": 939.0085893143107, "mechanic_days": 9.812857142857142, "parking_days": 10.884285714285713}, {"wage_from": 65001, "wage_to": 66000, "range": "65001-66000", "remove": 6.67, "body_repair": 13.67, "frame_repair": 10.84, "putty": 3.09, "putty_drying": 0.25, "putty_prep": 9.17, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 3, "bake": 0.5, "paint_drying": 4, "assembly": 10.67, "polish": 6.09, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3.5, "mechanic_work_hr": 69.71000000000001, "working_hr_income": 939.6141156218619, "mechanic_days": 9.95857142857143, "parking_days": 11.030000000000001}, {"wage_from": 66001, "wage_to": 67000, "range": "66001-67000", "remove": 6.75, "body_repair": 13.84, "frame_repair": 11, "putty": 3.09, "putty_drying": 0.25, "putty_prep": 9.25, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 3, "bake": 0.5, "paint_drying": 4, "assembly": 10.84, "polish": 6.17, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3.5, "mechanic_work_hr": 70.45, "working_hr_income": 943.9389638041164, "mechanic_days": 10.064285714285715, "parking_days": 11.135714285714286}, {"wage_from": 67001, "wage_to": 68000, "range": "67001-68000", "remove": 6.84, "body_repair": 14, "frame_repair": 11.17, "putty": 3.09, "putty_drying": 0.25, "putty_prep": 9.34, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 3, "bake": 0.5, "paint_drying": 4, "assembly": 11, "polish": 6.25, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3.5, "mechanic_work_hr": 71.2, "working_hr_income": 948.0407303370786, "mechanic_days": 10.171428571428573, "parking_days": 11.242857142857144}, {"wage_from": 68001, "wage_to": 69000, "range": "68001-69000", "remove": 6.92, "body_repair": 14.17, "frame_repair": 11.34, "putty": 3.09, "putty_drying": 0.25, "putty_prep": 9.42, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 3, "bake": 0.5, "paint_drying": 4, "assembly": 11.17, "polish": 6.34, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3.5, "mechanic_work_hr": 71.96000000000001, "working_hr_income": 951.9246803779877, "mechanic_days": 10.280000000000001, "parking_days": 11.351428571428572}, {"wage_from": 69001, "wage_to": 70000, "range": "69001-70000", "remove": 7, "body_repair": 14.34, "frame_repair": 11.5, "putty": 3.09, "putty_drying": 0.25, "putty_prep": 9.5, "primary_drying": 0.5, "primary_prep": 2.09, "mixing": 1.25, "painting": 3, "bake": 0.5, "paint_drying": 4, "assembly": 11.34, "polish": 6.42, "washing": 1.5, "final_check": 0.42, "total_system_hr": 3.5, "mechanic_work_hr": 72.70000000000002, "working_hr_income": 955.9903713892708, "mechanic_days": 10.385714285714288, "parking_days": 11.457142857142859}, {"wage_from": 70001, "wage_to": 71000, "range": "70001-71000", "remove": 7.09, "body_repair": 14.5, "frame_repair": 11.67, "putty": 3.17, "putty_drying": 0.25, "putty_prep": 9.67, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.09, "bake": 0.5, "paint_drying": 4, "assembly": 11.5, "polish": 6.5, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4, "mechanic_work_hr": 73.78, "working_hr_income": 955.550284629981, "mechanic_days": 10.540000000000001, "parking_days": 11.682857142857143}, {"wage_from": 71001, "wage_to": 72000, "range": "71001-72000", "remove": 7.17, "body_repair": 14.67, "frame_repair": 11.84, "putty": 3.17, "putty_drying": 0.25, "putty_prep": 9.75, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.09, "bake": 0.5, "paint_drying": 4, "assembly": 11.67, "polish": 6.59, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4, "mechanic_work_hr": 74.54, "working_hr_income": 959.2232358465253, "mechanic_days": 10.64857142857143, "parking_days": 11.791428571428572}, {"wage_from": 72001, "wage_to": 73000, "range": "72001-73000", "remove": 7.25, "body_repair": 14.84, "frame_repair": 12, "putty": 3.17, "putty_drying": 0.25, "putty_prep": 9.84, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.09, "bake": 0.5, "paint_drying": 4, "assembly": 11.84, "polish": 6.67, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4, "mechanic_work_hr": 75.29000000000002, "working_hr_income": 962.9499269491298, "mechanic_days": 10.755714285714289, "parking_days": 11.898571428571431}, {"wage_from": 73001, "wage_to": 74000, "range": "73001-74000", "remove": 7.34, "body_repair": 15, "frame_repair": 12.17, "putty": 3.17, "putty_drying": 0.25, "putty_prep": 9.92, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.09, "bake": 0.5, "paint_drying": 4, "assembly": 12, "polish": 6.75, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4, "mechanic_work_hr": 76.03, "working_hr_income": 966.7302380639221, "mechanic_days": 10.861428571428572, "parking_days": 12.004285714285714}, {"wage_from": 74001, "wage_to": 75000, "range": "74001-75000", "remove": 7.42, "body_repair": 15.17, "frame_repair": 12.34, "putty": 3.17, "putty_drying": 0.25, "putty_prep": 10, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.09, "bake": 0.5, "paint_drying": 4, "assembly": 12.17, "polish": 6.84, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4, "mechanic_work_hr": 76.79, "working_hr_income": 970.1849199114467, "mechanic_days": 10.97, "parking_days": 12.112857142857143}, {"wage_from": 75001, "wage_to": 76000, "range": "75001-76000", "remove": 7.5, "body_repair": 15.34, "frame_repair": 12.5, "putty": 3.25, "putty_drying": 0.25, "putty_prep": 10.17, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.17, "bake": 0.5, "paint_drying": 4, "assembly": 12.34, "polish": 6.92, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4, "mechanic_work_hr": 77.78000000000002, "working_hr_income": 970.6929802005656, "mechanic_days": 11.111428571428574, "parking_days": 12.254285714285716}, {"wage_from": 76001, "wage_to": 77000, "range": "76001-77000", "remove": 7.59, "body_repair": 15.5, "frame_repair": 12.67, "putty": 3.25, "putty_drying": 0.25, "putty_prep": 10.25, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.17, "bake": 0.5, "paint_drying": 4, "assembly": 12.5, "polish": 7, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4, "mechanic_work_hr": 78.52, "working_hr_income": 974.2804381049415, "mechanic_days": 11.217142857142857, "parking_days": 12.36}, {"wage_from": 77001, "wage_to": 78000, "range": "77001-78000", "remove": 7.67, "body_repair": 15.67, "frame_repair": 12.84, "putty": 3.25, "putty_drying": 0.25, "putty_prep": 10.34, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.17, "bake": 0.5, "paint_drying": 4, "assembly": 12.67, "polish": 7.09, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4, "mechanic_work_hr": 79.29, "working_hr_income": 977.4309496783957, "mechanic_days": 11.327142857142858, "parking_days": 12.47}, {"wage_from": 78001, "wage_to": 79000, "range": "78001-79000", "remove": 7.75, "body_repair": 15.84, "frame_repair": 13, "putty": 3.25, "putty_drying": 0.25, "putty_prep": 10.42, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.17, "bake": 0.5, "paint_drying": 4, "assembly": 12.84, "polish": 7.17, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4, "mechanic_work_hr": 80.03000000000002, "working_hr_income": 980.8884168436834, "mechanic_days": 11.432857142857145, "parking_days": 12.575714285714287}, {"wage_from": 79001, "wage_to": 80000, "range": "79001-80000", "remove": 7.84, "body_repair": 16, "frame_repair": 13.17, "putty": 3.25, "putty_drying": 0.25, "putty_prep": 10.5, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.17, "bake": 0.5, "paint_drying": 4, "assembly": 13, "polish": 7.25, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4, "mechanic_work_hr": 80.77, "working_hr_income": 984.2825306425653, "mechanic_days": 11.538571428571428, "parking_days": 12.68142857142857}, {"wage_from": 80001, "wage_to": 81000, "range": "80001-81000", "remove": 7.92, "body_repair": 16.17, "frame_repair": 13.34, "putty": 3.34, "putty_drying": 0.25, "putty_prep": 10.67, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.25, "bake": 0.5, "paint_drying": 4, "assembly": 13.17, "polish": 7.34, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4.5, "mechanic_work_hr": 81.79000000000002, "working_hr_income": 984.234013938134, "mechanic_days": 11.684285714285718, "parking_days": 12.898571428571431}, {"wage_from": 81001, "wage_to": 82000, "range": "81001-82000", "remove": 8, "body_repair": 16.34, "frame_repair": 13.5, "putty": 3.34, "putty_drying": 0.25, "putty_prep": 10.75, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.25, "bake": 0.5, "paint_drying": 4, "assembly": 13.34, "polish": 7.42, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4.5, "mechanic_work_hr": 82.53000000000002, "working_hr_income": 987.525748212771, "mechanic_days": 11.790000000000003, "parking_days": 13.004285714285716}, {"wage_from": 82001, "wage_to": 83000, "range": "82001-83000", "remove": 8.09, "body_repair": 16.5, "frame_repair": 13.67, "putty": 3.34, "putty_drying": 0.25, "putty_prep": 10.84, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.25, "bake": 0.5, "paint_drying": 4, "assembly": 13.5, "polish": 7.5, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4.5, "mechanic_work_hr": 83.28, "working_hr_income": 990.6400096061479, "mechanic_days": 11.897142857142857, "parking_days": 13.111428571428572}, {"wage_from": 83001, "wage_to": 84000, "range": "83001-84000", "remove": 8.17, "body_repair": 16.67, "frame_repair": 13.84, "putty": 3.34, "putty_drying": 0.25, "putty_prep": 10.92, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.25, "bake": 0.5, "paint_drying": 4, "assembly": 13.67, "polish": 7.59, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4.5, "mechanic_work_hr": 84.04000000000002, "working_hr_income": 993.5804378867203, "mechanic_days": 12.005714285714289, "parking_days": 13.220000000000002}, {"wage_from": 84001, "wage_to": 85000, "range": "84001-85000", "remove": 8.25, "body_repair": 16.84, "frame_repair": 14, "putty": 3.34, "putty_drying": 0.25, "putty_prep": 11, "primary_drying": 0.5, "primary_prep": 2.17, "mixing": 1.25, "painting": 3.25, "bake": 0.5, "paint_drying": 4, "assembly": 13.84, "polish": 7.67, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4.5, "mechanic_work_hr": 84.78000000000002, "working_hr_income": 996.7032318943145, "mechanic_days": 12.111428571428574, "parking_days": 13.325714285714287}, {"wage_from": 85001, "wage_to": 86000, "range": "85001-86000", "remove": 8.34, "body_repair": 17, "frame_repair": 14.17, "putty": 3.42, "putty_drying": 0.25, "putty_prep": 11.17, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.34, "bake": 0.5, "paint_drying": 4, "assembly": 14, "polish": 7.75, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4.5, "mechanic_work_hr": 85.86, "working_hr_income": 995.812951316096, "mechanic_days": 12.265714285714285, "parking_days": 13.48}, {"wage_from": 86001, "wage_to": 87000, "range": "86001-87000", "remove": 8.42, "body_repair": 17.17, "frame_repair": 14.34, "putty": 3.42, "putty_drying": 0.25, "putty_prep": 11.25, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.34, "bake": 0.5, "paint_drying": 4, "assembly": 14.17, "polish": 7.84, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4.5, "mechanic_work_hr": 86.62000000000002, "working_hr_income": 998.6204109905332, "mechanic_days": 12.374285714285717, "parking_days": 13.58857142857143}, {"wage_from": 87001, "wage_to": 88000, "range": "87001-88000", "remove": 8.5, "body_repair": 17.34, "frame_repair": 14.5, "putty": 3.42, "putty_drying": 0.25, "putty_prep": 11.34, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.34, "bake": 0.5, "paint_drying": 4, "assembly": 14.34, "polish": 7.92, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4.5, "mechanic_work_hr": 87.37000000000002, "working_hr_income": 1001.4936477051617, "mechanic_days": 12.481428571428575, "parking_days": 13.695714285714288}, {"wage_from": 88001, "wage_to": 89000, "range": "88001-89000", "remove": 8.59, "body_repair": 17.5, "frame_repair": 14.67, "putty": 3.42, "putty_drying": 0.25, "putty_prep": 11.42, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.34, "bake": 0.5, "paint_drying": 4, "assembly": 14.5, "polish": 8, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4.5, "mechanic_work_hr": 88.11, "working_hr_income": 1004.4319600499376, "mechanic_days": 12.587142857142856, "parking_days": 13.801428571428572}, {"wage_from": 89001, "wage_to": 90000, "range": "89001-90000", "remove": 8.67, "body_repair": 17.67, "frame_repair": 14.84, "putty": 3.42, "putty_drying": 0.25, "putty_prep": 11.5, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.34, "bake": 0.5, "paint_drying": 4, "assembly": 14.67, "polish": 8.09, "washing": 1.5, "final_check": 0.42, "total_system_hr": 4.5, "mechanic_work_hr": 88.87000000000002, "working_hr_income": 1007.0946326094293, "mechanic_days": 12.695714285714288, "parking_days": 13.910000000000002}, {"wage_from": 90001, "wage_to": 91000, "range": "90001-91000", "remove": 8.75, "body_repair": 17.84, "frame_repair": 15, "putty": 3.5, "putty_drying": 0.25, "putty_prep": 11.67, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.42, "bake": 0.5, "paint_drying": 4, "assembly": 14.84, "polish": 8.17, "washing": 1.5, "final_check": 0.42, "total_system_hr": 5, "mechanic_work_hr": 89.86000000000001, "working_hr_income": 1007.1277542844423, "mechanic_days": 12.83714285714286, "parking_days": 14.122857142857145}, {"wage_from": 91001, "wage_to": 92000, "range": "91001-92000", "remove": 8.84, "body_repair": 18, "frame_repair": 15.17, "putty": 3.5, "putty_drying": 0.25, "putty_prep": 11.75, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.42, "bake": 0.5, "paint_drying": 4, "assembly": 15, "polish": 8.25, "washing": 1.5, "final_check": 0.42, "total_system_hr": 5, "mechanic_work_hr": 90.6, "working_hr_income": 1009.939293598234, "mechanic_days": 12.942857142857141, "parking_days": 14.228571428571428}, {"wage_from": 92001, "wage_to": 93000, "range": "92001-93000", "remove": 8.92, "body_repair": 18.17, "frame_repair": 15.34, "putty": 3.5, "putty_drying": 0.25, "putty_prep": 11.84, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.42, "bake": 0.5, "paint_drying": 4, "assembly": 15.17, "polish": 8.34, "washing": 1.5, "final_check": 0.42, "total_system_hr": 5, "mechanic_work_hr": 91.37000000000002, "working_hr_income": 1012.3727700558168, "mechanic_days": 13.052857142857146, "parking_days": 14.33857142857143}, {"wage_from": 93001, "wage_to": 94000, "range": "93001-94000", "remove": 9, "body_repair": 18.34, "frame_repair": 15.5, "putty": 3.5, "putty_drying": 0.25, "putty_prep": 11.92, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.42, "bake": 0.5, "paint_drying": 4, "assembly": 15.34, "polish": 8.42, "washing": 1.5, "final_check": 0.42, "total_system_hr": 5, "mechanic_work_hr": 92.11000000000001, "working_hr_income": 1015.0960807729887, "mechanic_days": 13.158571428571431, "parking_days": 14.444285714285716}, {"wage_from": 94001, "wage_to": 95000, "range": "94001-95000", "remove": 9.09, "body_repair": 18.5, "frame_repair": 15.67, "putty": 3.5, "putty_drying": 0.25, "putty_prep": 12, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.42, "bake": 0.5, "paint_drying": 4, "assembly": 15.5, "polish": 8.5, "washing": 1.5, "final_check": 0.42, "total_system_hr": 5, "mechanic_work_hr": 92.85, "working_hr_income": 1017.7759827679052, "mechanic_days": 13.264285714285714, "parking_days": 14.549999999999999}, {"wage_from": 95001, "wage_to": 96000, "range": "95001-96000", "remove": 9.17, "body_repair": 18.67, "frame_repair": 15.84, "putty": 3.59, "putty_drying": 0.25, "putty_prep": 12.17, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.5, "bake": 0.5, "paint_drying": 4, "assembly": 15.67, "polish": 8.59, "washing": 1.5, "final_check": 0.42, "total_system_hr": 5, "mechanic_work_hr": 93.87000000000002, "working_hr_income": 1017.3697666986255, "mechanic_days": 13.410000000000002, "parking_days": 14.695714285714288}, {"wage_from": 96001, "wage_to": 97000, "range": "96001-97000", "remove": 9.25, "body_repair": 18.84, "frame_repair": 16, "putty": 3.59, "putty_drying": 0.25, "putty_prep": 12.25, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.5, "bake": 0.5, "paint_drying": 4, "assembly": 15.84, "polish": 8.67, "washing": 1.5, "final_check": 0.42, "total_system_hr": 5, "mechanic_work_hr": 94.61000000000001, "working_hr_income": 1019.9820314977273, "mechanic_days": 13.515714285714287, "parking_days": 14.801428571428573}, {"wage_from": 97001, "wage_to": 98000, "range": "97001-98000", "remove": 9.34, "body_repair": 19, "frame_repair": 16.17, "putty": 3.59, "putty_drying": 0.25, "putty_prep": 12.34, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.5, "bake": 0.5, "paint_drying": 4, "assembly": 16, "polish": 8.75, "washing": 1.5, "final_check": 0.42, "total_system_hr": 5, "mechanic_work_hr": 95.36000000000001, "working_hr_income": 1022.4465184563757, "mechanic_days": 13.622857142857145, "parking_days": 14.908571428571431}, {"wage_from": 98001, "wage_to": 99000, "range": "98001-99000", "remove": 9.42, "body_repair": 19.17, "frame_repair": 16.34, "putty": 3.59, "putty_drying": 0.25, "putty_prep": 12.42, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.5, "bake": 0.5, "paint_drying": 4, "assembly": 16.17, "polish": 8.84, "washing": 1.5, "final_check": 0.42, "total_system_hr": 5, "mechanic_work_hr": 96.12000000000002, "working_hr_income": 1024.765917602996, "mechanic_days": 13.731428571428575, "parking_days": 15.01714285714286}, {"wage_from": 99001, "wage_to": 100000, "range": "99001-100000", "remove": 9.5, "body_repair": 19.34, "frame_repair": 16.5, "putty": 3.59, "putty_drying": 0.25, "putty_prep": 12.5, "primary_drying": 0.5, "primary_prep": 2.25, "mixing": 1.25, "painting": 3.5, "bake": 0.5, "paint_drying": 4, "assembly": 16.34, "polish": 8.92, "washing": 1.5, "final_check": 0.42, "total_system_hr": 5, "mechanic_work_hr": 96.86000000000001, "working_hr_income": 1027.2609952508774, "mechanic_days": 13.83714285714286, "parking_days": 15.122857142857145}];
+
+// ═══ Station Mapping ═══
+const STATIONS = [
+  {key:'remove',name:'ถอดชิ้นส่วน',icon:'🔧',order:1},
+  {key:'body_repair',name:'เคาะ',icon:'🔨',order:2},
+  {key:'frame_repair',name:'ดัดแชสซี',icon:'⚙️',order:3},
+  {key:'putty',name:'โป๊ว',icon:'🧴',order:4},
+  {key:'putty_drying',name:'รอสีโป๊วเช็ดตัว',icon:'⏳',order:5,isWait:true},
+  {key:'putty_prep',name:'ขัดโป๊ว/พ่นสีพื้น',icon:'📋',order:6},
+  {key:'primary_drying',name:'รอสีพื้นเช็ดตัว',icon:'⏳',order:7,isWait:true},
+  {key:'primary_prep',name:'ขัดสีพื้น/ติดกระดาษ',icon:'📋',order:8},
+  {key:'mixing',name:'ผสมสี',icon:'🎨',order:9},
+  {key:'painting',name:'พ่น',icon:'🖌️',order:10},
+  {key:'bake',name:'อบสี',icon:'🔥',order:11},
+  {key:'paint_drying',name:'รอสีเช็ดตัว',icon:'⏳',order:12,isWait:true},
+  {key:'assembly',name:'ประกอบ',icon:'🔩',order:13},
+  {key:'polish',name:'ขัดสี',icon:'✨',order:14},
+  {key:'washing',name:'ล้าง',icon:'🚿',order:15},
+  {key:'final_check',name:'เก็บงานตรวจขั้นสุดท้าย',icon:'✅',order:16},
+];
+
+// Mapping from Movement tab station keys to Standard Time station keys
+// 'squirt' (พ่น) maps to the ENTIRE paint group — distribute across sub-stations
+const MVMT_TO_STD = { 
+  knock: 'body_repair', 
+  patch: 'putty', 
+  squirt: '__paint_group__',  // Special: distribute across all paint sub-stations
+  assemble: 'assembly', 
+  polish: 'polish', 
+  wash: 'washing' 
+};
+
+// Paint group sub-stations that share 'squirt' movement data
+const PAINT_SUB_STATIONS = [
+  'putty_drying',   // รอสีโป๊วเซ็ตตัว
+  'putty_prep',     // ขัดโป๊ว/พ่นสีพื้น
+  'primary_drying', // รอสีพื้นเซ็ดตัว
+  'primary_prep',   // ขัดสีพื้น/ติดกระดาษ
+  'mixing',         // ผสมสี
+  'painting',       // พ่น
+  'bake',           // อบสี
+  'paint_drying'    // รอสีเช็ดตัว
+];
+
+// ═══ QC Checklists per station ═══
+const QC_CHECKLISTS = {
+  'remove': ['ความครบถ้วนงานประเมินรายการเพิ่มเติม','ความครบถ้วนครอบคลุมชิ้นส่วนงานซ่อม','ตรวจเช็กชิ้นส่วนอะไหล่ถอดครบถ้วน','ตรวจเช็กอะไหล่ใหม่ ไม่ผิดรุ่น','ตรวจเช็กอะไหล่ใหม่ ไม่ติด Back Order','ตรวจเช็กอะไหล่ใหม่ ไม่ล่าช้า','ตรวจเช็กความพร้อมของอะไหล่ใหม่','ตรวจเช็กอะไหล่ใหม่ ไม่เป็นรอย'],
+  'body_repair': ['ตรวจเช็กไม่มีผิวงานเคาะสูงกว่าผิวเดิม','ตรวจเช็กไม่มีผิวงานเคาะต่ำกว่าผิวเดิม','ตรวจเช็กไม่มีผิวงานเคาะเป็นคลื่น','ตรวจเช็กรอยเชื่อม CO2 มีสภาพปกติ','ตรวจเช็กรอยสปอตมีขนาดและระยะปกติ','ตรวจเช็กรอยเชื่อมกระตุกมีสภาพปกติ','ตรวจเช็กมีการป้องกันสนิมภายใน','ตรวจเช็กมีการเซ็ทงานและติดตั้งชิ้นส่วนทดลอง'],
+  'putty': ['ตรวจเช็กไม่มีรอยกระดาษทรายจากบล็อกขัด','ตรวจเช็กไม่มีรอยกระดาษทรายจากเครื่องขัด','ตรวจเช็กไม่มีรอยเส้นจากสก๊อตไบร์ท','ตรวจเช็กไม่มีรอยตามด','ตรวจเช็กไม่มีผิวคลื่นสูง','ตรวจเช็กไม่มีผิวคลื่นต่ำ','ตรวจเช็กไม่มีผิวเป็นหลุม','ตรวจเช็กไม่มีคราบสีพื้นติดชิ้นส่วนที่ไม่เกี่ยวข้อง'],
+  'painting': ['ตรวจเช็กแผ่นพ่นเทียบสีกับตัวรถเหมือนสีเดิม','ตรวจเช็กไม่มีเม็ดฝุ่นจากสิ่งสกปรก','ตรวจเช็กไม่มีเม็ดฝุ่นจากละอองสี','ตรวจเช็กไม่มีสีไหล','ตรวจเช็กไม่มีคราบแวกซ์','ตรวจเช็กสภาพผิวไม่เป็นคลื่น','ตรวจเช็กไม่มีรอยเส้นกระดาษทราย','ตรวจเช็กไม่มีผิวส้มทั้งชั้นสีและเคลียร์','ตรวจเช็กไม่มีผิวโตทั้งชั้นสีและเคลียร์','ตรวจเช็กสภาพซ่อมสีเหมือนกับสีเดิม'],
+  'assembly': ['ตรวจเช็กระยะห่างชิ้นส่วนตามค่ามาตรฐาน','ตรวจเช็กไม่เกิดรอยจากการประกอบชิ้นส่วน','ตรวจเช็กประกอบอะไหล่ตรงรุ่น','ตรวจเช็กความครบถ้วนของชิ้นส่วนประกอบ','ตรวจเช็กมีการพ่นสีหัวน็อต','ตรวจเช็กไม่มีการรอชิ้นส่วนงานพ่นสี','ตรวจเช็กการทำงานของระบบไฟและอุปกรณ์'],
+  'polish': ['ตรวจเช็กสภาพผิวสีเงางามหลังจากขัด','ตรวจเช็กไม่มีรอยขนเกาะ','ตรวจเช็กไม่มีรอยขัดแตก','ตรวจเช็กไม่มีรอยสก๊อตไบร์ท','ตรวจเช็กไม่มีรอยขัดหนักเกินไป','ตรวจเช็กไม่มีรอยขัดบางเกินไป'],
+  'washing': ['ตรวจเช็กความสะอาดภายนอก','ตรวจเช็กความสะอาดภายในห้องโดยสาร','ตรวจเช็กความสะอาดชิ้นส่วนที่ซ่อม','ตรวจเช็กไม่มีคราบเปื้อน'],
+  'final_check': ['ตรวจเช็กความครบถ้วนของงานซ่อมทั้งหมด','ตรวจเช็กสีที่ซ่อนตรงกับสีเดิม','ตรวจเช็กระยะห่างชิ้นส่วนได้มาตรฐาน','ตรวจเช็กชิ้นส่วนทำงานได้ปกติ','ตรวจเช็กไม่มีชิ้นส่วนหลุดร่วม','ตรวจเช็กการทำงานของระบบไฟ'],
+};
+
+const SCRIPT_URL = location.href.split('?')[0];
+let currentData = null; // Holds the fetched repair order data + stdTime
+/*[[AUTO_PARAMS]]*/
+
+// ═══ Tab Switch ═══
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+// ═══ Lookup Standard Time ═══
+function lookupStdTime(totalWage) {
+  const wage = Math.round(totalWage);
+  for (let i = STD_TIME_DATA.length - 1; i >= 0; i--) {
+    if (wage >= STD_TIME_DATA[i].wage_from && wage <= STD_TIME_DATA[i].wage_to) {
+      return STD_TIME_DATA[i];
+    }
+  }
+  // If above max range, use the last entry
+  if (wage > STD_TIME_DATA[STD_TIME_DATA.length-1].wage_to) {
+    return STD_TIME_DATA[STD_TIME_DATA.length-1];
+  }
+  return STD_TIME_DATA[0];
+}
+
+// ═══ Fetch Repair Order ═══
+function fetchRepairOrder() {
+  const url = document.getElementById('repairUrl').value.trim();
+  if (!url) { alert('กรุณาใส่ลิงก์ใบสั่งซ่อม'); return; }
+
+  const infoDiv = document.getElementById('repairInfo');
+  infoDiv.style.display = 'block';
+  infoDiv.innerHTML = '<span class="spinner"></span> กำลังดึงข้อมูลจากระบบประกัน...';
+
+  // Use google.script.run for GAS sandbox compatibility
+  google.script.run
+    .withSuccessHandler(function(data) {
+      if (data.error) {
+        infoDiv.innerHTML = '<p class="badge badge-red">❌ ' + data.error + '</p>';
+        return;
+      }
+      currentData = data;
+      renderRepairInfo(data);
+      calcStdTime(data);
+      // Auto-switch to work order tab after data loads
+      switchTab('workorder', document.querySelectorAll('.tab-btn')[1]);
+    })
+    .withFailureHandler(function(err) {
+      infoDiv.innerHTML = '<p style="color:var(--orange)">⚠️ ไม่สามารถดึงข้อมูลอัตโนมัติได้ กรุณาใส่ข้อมูลด้วยตนเอง</p>' +
+        renderManualEntry();
+    })
+    .fetchRepairOrderProxy(url);
+}
+
+function renderRepairInfo(data) {
+  const infoDiv = document.getElementById('repairInfo');
+  let html = '<div class="card2"><h3>📋 ข้อมูลใบสั่งซ่อม</h3>';
+  html += '<table class="std"><tr><th>ทะเบียน</th><td>' + (data.plate||'-') + '</td><th>ยี่ห้อ</th><td>' + (data.brand||'-') + '</td></tr>';
+  html += '<tr><th>รุ่นรถ</th><td>' + (data.model||'-') + '</td><th>สีรถ</th><td>' + (data.color||'-') + '</td></tr>';
+  html += '<tr><th>ประกันภัย</th><td>' + (data.insurance||'-') + '</td><th>ระดับ</th><td>' + (data.insuranceLevel||'-') + '</td></tr>';
+  html += '<tr><th>SA</th><td>' + (data.sa||'-') + '</td><th>เลขคลม</th><td>' + (data.claimNo||'-') + '</td></tr>';
+  html += '<tr><th>วันที่ใบสั่งซ่อม</th><td>' + (data.repairDate ? fmtDateThai(new Date(data.repairDate)) : '-') + '</td><th>เลข JOB</th><td>' + (data.jobId||'-') + '</td></tr>';
+  html += '<tr><th>รวมค่าแรง (ก่อนลด)</th><td colspan="3" style="font-size:1.1rem;font-weight:700;color:var(--accent)">' + fmtMoney(data.totalWage||0) + ' ฿</td></tr></table>';
+
+  if (data.items && data.items.length) {
+    html += '<h3 style="margin-top:8px">รายการค่าแรง</h3><table class="std"><tr><th>รายการ</th><th>จำนวนเต็ม</th><th>ส่วนลด</th><th>หลังลด</th></tr>';
+    data.items.forEach(it => {
+      html += '<tr><td>' + it.desc + '</td><td>' + fmtMoney(it.amount) + '</td><td>' + (it.discount||0) + '%</td><td>' + fmtMoney(it.net) + '</td></tr>';
+    });
+    html += '</table>';
+  }
+  html += '</div>';
+  infoDiv.innerHTML = html;
+}
+
+function renderManualEntry() {
+  return '<div class="card2"><h3>📝 ใส่ข้อมูลด้วยตนเอง</h3>' +
+    '<div class="input-group"><label>ทะเบียน:</label><input id="mPlate" placeholder="กร-7124"></div>' +
+    '<div class="input-group"><label>ยี่ห้อ:</label><input id="mBrand" placeholder="ISUZU"></div>' +
+    '<div class="input-group"><label>รุ่นรถ:</label><input id="mModel" placeholder="P/L CAB 4 Z"></div>' +
+    '<div class="input-group"><label>รวมค่าแรง (฿):</label><input id="mWage" type="number" placeholder="12760"></div>' +
+    '<div class="input-group"><label>ประกันภัย:</label><input id="mInsurance" placeholder="วิริยะ"></div>' +
+    '<div class="input-group"><label>ระดับ:</label><select id="mLevel"><option>เบา</option><option>กลาง</option><option>หนัก</option></select></div>' +
+    '<button class="btn btn-primary" onclick="manualCalc()">⏱️ คำนวณเวลามาตรฐาน</button></div>';
+}
+
+function manualCalc() {
+  const wage = parseFloat(document.getElementById('mWage').value)||0;
+  if (!wage) { alert('กรุณาใส่ค่าแรง'); return; }
+  currentData = {
+    plate: document.getElementById('mPlate').value||'-',
+    brand: document.getElementById('mBrand').value||'-',
+    model: document.getElementById('mModel').value||'-',
+    insurance: document.getElementById('mInsurance').value||'-',
+    insuranceLevel: document.getElementById('mLevel').value||'-',
+    totalWage: wage,
+    items: []
+  };
+  calcStdTime(currentData);
+}
+
+// ═══ Working Day Calculator ═══
+function addWorkingDays(baseDate, workingDays) {
+  // Add N working days to baseDate, skipping ONLY Sunday (Thai auto workshop standard — Saturday is a working day)
+  let d = new Date(baseDate);
+  let added = 0;
+  while (added < workingDays) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0) added++; // Skip only Sunday
+  }
+  return d;
+}
+
+function calcWorkingDaysStart(baseDate, workingDayNo) {
+  // Given a working day number (1-based), return the calendar date
+  // Working day 1 = baseDate itself, day 2 = next working day after baseDate, etc.
+  if (workingDayNo <= 1) return new Date(baseDate);
+  return addWorkingDays(baseDate, workingDayNo - 1);
+}
+
+// ═══ Calculate & Display Standard Time ═══
+function calcStdTime(data) {
+  const std = lookupStdTime(data.totalWage);
+  data.stdTime = std;
+
+  // Determine base date: วันเริ่มซ่อม = วันที่ใบสั่งซ่อม + 1 วันทำงาน
+  // เช่น ใบสั่งซ่อม 20/5/69 → เริ่มซ่อม 21/5/69
+  let orderDate;
+  if (data.repairDate) {
+    orderDate = new Date(data.repairDate);
+  } else {
+    const startInput = document.getElementById('startDate');
+    if (startInput && startInput.value) {
+      orderDate = new Date(startInput.value);
+    } else {
+      orderDate = new Date();
+    }
+  }
+  data.orderDate = orderDate;
+  // วันเริ่มซ่อม = วันที่ใบสั่งซ่อม + 1 วันทำงาน (ข้ามเสาร์-อาทิตย์)
+  let baseDate = addWorkingDays(orderDate, 1);
+  data.baseDate = baseDate;
+
+  const div = document.getElementById('stdTimeResult');
+  div.style.display = 'block';
+
+  let html = '<div class="card2"><p>ช่วงค่าแรง: <strong>' + std.range + ' ฿</strong> | รวมค่าแรง: <strong>' + fmtMoney(data.totalWage) + ' ฿</strong></p>';
+  html += '<table class="std"><tr><th>สถานี</th><th>เวลามาตรฐาน (ชม.)</th><th>เวลามาตรฐาน (นาที)</th><th>กำหนดวันเสร็จ</th><th>วันที่กำหนดเสร็จ</th></tr>';
+
+  let cumDays = 0;
+  const workHrPerDay = 7;
+  STATIONS.forEach(st => {
+    const hrs = std[st.key] || 0;
+    const mins = Math.round(hrs * 60);
+    cumDays += hrs;
+    const dayNo = Math.ceil(cumDays / workHrPerDay);
+    const dueDate = calcWorkingDaysStart(baseDate, dayNo);
+    const isWait = st.isWait;
+    html += '<tr' + (isWait?' style="background:#fffbeb"':'') + '><td>' + st.icon + ' ' + st.name + (isWait?' <span class="badge badge-orange">รอ</span>':'') + '</td>';
+    html += '<td>' + hrs.toFixed(2) + '</td><td>' + mins + '</td>';
+    html += '<td>วันที่ ' + dayNo + '</td>';
+    html += '<td style="white-space:nowrap">' + fmtDateThai(dueDate) + '</td></tr>';
+  });
+
+  html += '</table>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:10px">';
+  html += '<div class="card2" style="text-align:center"><small style="color:var(--text2)">ชม.งานช่างจริง</small><br><strong style="font-size:1.3rem;color:var(--accent)">' + std.mechanic_work_hr.toFixed(1) + '</strong> ชม.</div>';
+  html += '<div class="card2" style="text-align:center"><small style="color:var(--text2)">วันทำงานช่าง</small><br><strong style="font-size:1.3rem;color:var(--green)">' + std.mechanic_days.toFixed(1) + '</strong> วัน</div>';
+  html += '<div class="card2" style="text-align:center"><small style="color:var(--text2)">วันจอดรถซ่อม</small><br><strong style="font-size:1.3rem;color:var(--orange)">' + std.parking_days.toFixed(1) + '</strong> วัน</div>';
+  html += '<div class="card2" style="text-align:center"><small style="color:var(--text2)">เวลาระบบทั้งหมด</small><br><strong style="font-size:1.3rem;color:var(--purple)">' + std.total_system_hr.toFixed(1) + '</strong> ชม.</div>';
+  html += '</div></div>';
+
+  div.innerHTML = html;
+  renderWorkOrder(data);
+  renderGantt();
+  // Fill actual movement data after render
+  fillActualMovement(data);
+}
+
+// ═══ Work Order ═══
+function renderWorkOrder(data) {
+  if (!data || !data.stdTime) return;
+  const std = data.stdTime;
+  const d = new Date();
+  const months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+  let html = '<div class="work-order">';
+  html += '<h2>ใบควบคุมเวลาและตรวจสอบคุณภาพงานซ่อม</h2>';
+
+  // Header
+  html += '<div class="wo-header">';
+  html += '<div class="field"><label>เดือน/ปี:</label> ' + months[d.getMonth()] + ' ' + (d.getFullYear()+543) + '</div>';
+  html += '<div class="field"><label>ทะเบียน:</label> ' + (data.plate||'-') + '</div>';
+  html += '<div class="field"><label>วันที่ใบสั่งซ่อม:</label> ' + (data.orderDate ? fmtDateThai(data.orderDate) : fmtDateThai(d)) + '</div>';
+  html += '<div class="field"><label>วันเริ่มงาน:</label> ' + (data.baseDate ? fmtDateThai(data.baseDate) : fmtDateThai(d)) + '</div>';
+  // Calculate actual completion due date
+  const parkingDayNo = Math.ceil(std.parking_days);
+  const woBaseDate = data.baseDate || d;
+  const completionDueDate = calcWorkingDaysStart(woBaseDate, parkingDayNo);
+  html += '<div class="field"><label>กำหนดเสร็จ:</label> วันที่ ' + parkingDayNo + ' (' + fmtDateThai(completionDueDate) + ')</div>';
+  html += '<div class="field"><label>ระดับ:</label> ' + (data.insuranceLevel||'-') + '</div>';
+  html += '<div class="field"><label>ประกันภัย:</label> ' + (data.insurance||'-') + '</div>';
+  html += '<div class="field"><label>ยี่ห้อ/รุ่น:</label> ' + (data.brand||'-') + ' ' + (data.model||'-') + '</div>';
+  html += '<div class="field"><label>รวมค่าแรง:</label> ' + fmtMoney(data.totalWage) + ' ฿</div>';
+  html += '</div>';
+
+  // Station rows
+  html += '<table class="std" style="margin:8px 0">';
+  html += '<tr><th>ขั้นตอน</th><th>เวลามาตรฐาน (ชม.)</th><th>กำหนดวันเสร็จ</th><th>วันที่กำหนดเสร็จ</th><th>วันเริ่ม</th><th>วันเสร็จ</th><th>เวลาจริง</th><th>วันที่จริง</th><th>ถ่ายรูป</th></tr>';
+
+  let cumHrs = 0;
+  const workHrPerDay = 7;
+  let stationIdx = 0;
+  STATIONS.forEach(st => {
+    const hrs = std[st.key] || 0;
+    cumHrs += hrs;
+    const dayNo = Math.ceil(cumHrs / workHrPerDay);
+    const dueDate = calcWorkingDaysStart(woBaseDate, dayNo);
+    const checklist = QC_CHECKLISTS[st.key] || [];
+    const sid = 'wo_'+st.key;
+    html += '<tr' + (st.isWait?' style="background:#fffbeb"':'') + '>';
+    html += '<td>' + st.icon + ' ' + st.name + '</td>';
+    html += '<td style="text-align:center;font-weight:700">' + hrs.toFixed(2) + '</td>';
+    html += '<td style="text-align:center">วันที่ ' + dayNo + '</td>';
+    html += '<td style="text-align:center;white-space:nowrap">' + fmtDateThai(dueDate) + '</td>';
+    html += '<td><input type="date" id="'+sid+'_start" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:2px 4px"></td>';
+    html += '<td><input type="date" id="'+sid+'_end" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:2px 4px"></td>';
+    html += '<td><input type="number" step="0.01" id="'+sid+'_hrs" style="width:70px;border:1px solid #ccc;border-radius:4px;padding:2px 4px"> ชม.</td>';
+    html += '<td><input type="date" id="'+sid+'_actual" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:2px 4px"></td>';
+    html += '<td style="text-align:center"><input type="checkbox"></td>';
+    html += '</tr>';
+
+    // Show QC checklist inline for key stations
+    if (checklist.length && !st.isWait) {
+      html += '<tr><td colspan="9" style="background:#fafbfc;padding:4px 12px"><ol class="wo-checklist">';
+      checklist.forEach(c => { html += '<li>' + c + '</li>'; });
+      html += '</ol></td></tr>';
+    }
+  });
+
+  html += '</table>';
+
+  // Summary
+  html += '<div class="wo-summary">';
+  html += '<div><label>ชม.งานมาตรฐาน:</label><br><strong>' + std.mechanic_work_hr.toFixed(1) + '</strong> ชม.</div>';
+  html += '<div><label>วันทำงานช่าง:</label><br><strong>' + std.mechanic_days.toFixed(1) + '</strong> วัน</div>';
+  html += '<div><label>วันจอดรถ:</label><br><strong>' + std.parking_days.toFixed(1) + '</strong> วัน</div>';
+  html += '<div><label>ประสิทธิภาพ:</label><br><input placeholder="%" style="width:60px"> %</div>';
+  html += '</div>';
+
+  html += '<div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">';
+  html += '<div><label>☐ ไม่ต้องทดสอบรถ</label> <label>☐ ต้องทดสอบรถ</label> ผู้ทดสอบ: ______________</div>';
+  html += '<div>ผู้จัดการโรงซ่อม: ______________ (ลงชื่อปิดงาน)</div>';
+  html += '</div>';
+
+  html += '</div>';
+
+  html += '<div style="margin-top:12px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">';
+  // Print button: direct link to server-side print page (opens in new tab, no JS needed)
+  var printBaseUrl = 'https://script.google.com/macros/s/AKfycbyjop6dXrouf8yW-cpabPpElcfuDhVPqoqqBmHBeqyFqsEivCKxgkRXdy7z6l_TqPT7/exec?stdtime=1&print=1';
+  var printHref = printBaseUrl;
+  var repairUrlVal = document.getElementById('repairUrl') ? document.getElementById('repairUrl').value.trim() : '';
+  if (repairUrlVal) printHref += '&url=' + encodeURIComponent(repairUrlVal);
+  else if (data && data.plate) printHref += '&plate=' + encodeURIComponent(data.plate);
+  html += '<a href="' + printHref + '" target="_blank" style="display:inline-block;padding:8px 16px;font-size:15px;font-weight:600;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;cursor:pointer">🖨️ พิมพ์ใบสั่งงาน</a>';
+  html += '<a href="' + printHref + '" target="_blank" onclick="setTimeout(function(){showCopyToast(\'📸 ใช้ปุ่มพิมพ์ → Save as PDF หรือ Screenshot บนมือถือ\')},500)" style="display:inline-block;padding:8px 16px;font-size:15px;font-weight:600;background:#059669;color:#fff;border-radius:6px;text-decoration:none;cursor:pointer">📸 บันทึกเป็นรูปภาพ</a>';
+  html += '<button class="btn btn-secondary" onclick="copyWorkOrderLink()" style="background:#6366f1;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">📋 Copy Link ใบงาน</button>';
+  html += '</div>';
+  document.getElementById('workOrderContent').innerHTML = html;
+}
+
+// ═══ Fill Actual Movement Data from Spreadsheet ═══
+function fillActualMovement(data) {
+  if (!data || !data.plate) {
+    console.log('[MVMT] No plate data available');
+    return;
+  }
+  var plate = data.plate.replace(/\s/g,'');
+  console.log('[MVMT] Fetching movement data for plate:', plate);
+  // Call server to get movement data for this plate
+  google.script.run.withSuccessHandler(function(mvmt) {
+    console.log('[MVMT] Server response:', JSON.stringify(mvmt));
+    if (!mvmt || mvmt.error) {
+      console.log('[MVMT] Error:', mvmt ? mvmt.error : 'No data');
+      var woDiv = document.getElementById('workOrderContent');
+      if (woDiv) {
+        var errHtml = '<div style="margin-top:8px;padding:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px">';
+        errHtml += '<strong>⚠️ ไม่พบข้อมูล Movement</strong> (ทะเบียน: ' + plate + ')';
+        if (mvmt && mvmt.error) errHtml += '<br><small style="color:#991b1b">' + mvmt.error + '</small>';
+        errHtml += '</div>';
+        woDiv.insertAdjacentHTML('afterbegin', errHtml);
+      }
+      return;
+    }
+    if (!mvmt.rows || !mvmt.rows.length) {
+      console.log('[MVMT] No rows found for plate:', plate);
+      var woDiv = document.getElementById('workOrderContent');
+      if (woDiv) {
+        var noHtml = '<div style="margin-top:8px;padding:8px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px">';
+        noHtml += '<strong>⏳ ทะเบียน ' + plate + ' ยังไม่มีข้อมูล Movement</strong> — อาจยังไม่ได้ลงในระบบ';
+        noHtml += '</div>';
+        woDiv.insertAdjacentHTML('afterbegin', noHtml);
+      }
+      return;
+    }
+    // Map: stationKey from Code.gs → STD key via MVMT_TO_STD
+    var mvmtMap = {};
+    var paintGroup = null; // Special: squirt → paint group
+    mvmt.rows.forEach(function(r) {
+      var stdKey = MVMT_TO_STD[r.stationKey];
+      console.log('[MVMT] Row:', r.stationKey, '→', stdKey, '| start:', r.startDate, '| end:', r.endDate);
+      if (!stdKey) return;
+      if (stdKey === '__paint_group__') {
+        paintGroup = { start: r.startDate, end: r.endDate, stationName: r.station };
+      } else {
+        if (!mvmtMap[stdKey]) mvmtMap[stdKey] = {};
+        if (r.startDate) mvmtMap[stdKey].start = r.startDate;
+        if (r.endDate) mvmtMap[stdKey].end = r.endDate;
+      }
+    });
+    
+    // Distribute paint group dates across sub-stations proportionally
+    if (paintGroup && paintGroup.start && paintGroup.end && data.stdTime) {
+      var pStart = new Date(paintGroup.start);
+      var pEnd = new Date(paintGroup.end);
+      var totalPaintMs = pEnd.getTime() - pStart.getTime();
+      if (totalPaintMs > 0) {
+        var totalPaintHrs = 0;
+        var subHrs = {};
+        PAINT_SUB_STATIONS.forEach(function(sk) {
+          var hrs = data.stdTime[sk] || 0;
+          subHrs[sk] = hrs;
+          totalPaintHrs += hrs;
+        });
+        var cumHrs = 0;
+        PAINT_SUB_STATIONS.forEach(function(sk) {
+          var hrs = subHrs[sk];
+          cumHrs += hrs;
+          var fraction = totalPaintHrs > 0 ? cumHrs / totalPaintHrs : 0;
+          var subEndDate = new Date(pStart.getTime() + totalPaintMs * fraction);
+          mvmtMap[sk] = {
+            start: paintGroup.start,
+            end: fmtDateThai(subEndDate),
+            isPaintSub: true
+          };
+        });
+        if (mvmtMap[PAINT_SUB_STATIONS[0]]) {
+          mvmtMap[PAINT_SUB_STATIONS[0]].start = paintGroup.start;
+        }
+        if (mvmtMap[PAINT_SUB_STATIONS[PAINT_SUB_STATIONS.length - 1]]) {
+          mvmtMap[PAINT_SUB_STATIONS[PAINT_SUB_STATIONS.length - 1]].end = paintGroup.end;
+        }
+      }
+    }
+    
+    console.log('[MVMT] Mapped:', JSON.stringify(mvmtMap));
+    
+    // ═══ Fill in implied dates: if a later station has start date,
+    // the previous station's end date = that start date (station handoff) ═══
+    var stationOrder = STATIONS.filter(function(st) { return !st.isWait; }).map(function(st) { return st.key; });
+    for (var si = stationOrder.length - 1; si >= 1; si--) {
+      var curKey = stationOrder[si];
+      var prevKey = stationOrder[si - 1];
+      if (mvmtMap[curKey] && mvmtMap[curKey].start) {
+        // Current station has start → previous station's end = current station's start
+        if (!mvmtMap[prevKey]) mvmtMap[prevKey] = {};
+        if (!mvmtMap[prevKey].end) {
+          mvmtMap[prevKey].end = mvmtMap[curKey].start;
+          mvmtMap[prevKey].implied = true; // Mark as implied from handoff
+        }
+      }
+    }
+    // Fill forward: if previous has end, current might have been waiting → current start = previous end
+    for (var si = 1; si < stationOrder.length; si++) {
+      var curKey = stationOrder[si];
+      var prevKey = stationOrder[si - 1];
+      if (mvmtMap[prevKey] && mvmtMap[prevKey].end) {
+        if (!mvmtMap[curKey]) mvmtMap[curKey] = {};
+        if (!mvmtMap[curKey].start) {
+          mvmtMap[curKey].start = mvmtMap[prevKey].end;
+          mvmtMap[curKey].implied = true;
+        }
+      }
+    }
+    
+    // Fill inputs and show status
+    var statusHtml = '<div style="margin-top:8px;padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px">';
+    statusHtml += '<strong>🔗 ข้อมูลจริงจาก Movement</strong> (ทะเบียน: ' + plate + ')';
+    if (paintGroup) {
+      statusHtml += '<br>🎨 <strong>กลุ่มงานสี</strong> (' + (paintGroup.stationName||'พ่น') + '): ' + (paintGroup.start||'-') + ' → ' + (paintGroup.end||'-') + ' — กระจายลง 8 ขั้นตอนย่อย';
+    }
+    var filled = 0;
+    STATIONS.forEach(function(st) {
+      var m = mvmtMap[st.key];
+      if (!m) return;
+      filled++;
+      var startEl = document.getElementById('wo_'+st.key+'_start');
+      var endEl = document.getElementById('wo_'+st.key+'_end');
+      var hrsEl = document.getElementById('wo_'+st.key+'_hrs');
+      var actualEl = document.getElementById('wo_'+st.key+'_actual');
+      // Fill start date
+      if (startEl && m.start) {
+        startEl.value = toISODate(m.start);
+        startEl.style.background = '#dcfce7'; // green bg for filled
+      }
+      // Fill end date (both planned end and actual)
+      if (endEl && m.end) {
+        endEl.value = toISODate(m.end);
+        endEl.style.background = (m.implied ? '#fef9c3' : '#dcfce7'); // yellow if implied
+      }
+      if (actualEl && m.end) {
+        actualEl.value = toISODate(m.end);
+        actualEl.style.background = '#dcfce7';
+      }
+      // Color completed rows + show in status
+      var isPaintSub = m.isPaintSub ? ' (สัดส่วน)' : '';
+      var isImplied = m.implied ? ' ⏎' : '';
+      var statusBadge = m.end ? ' ✅ เสร็จ' : ' 🔵 กำลังทำ';
+      statusHtml += '<br>' + st.icon + ' ' + st.name + ': เริ่ม ' + (m.start || '-') + ' → เสร็จ ' + (m.end || '-') + statusBadge + isPaintSub + isImplied;
+      if (m.end) {
+        var row = startEl ? startEl.closest('tr') : null;
+        if (row) row.style.background = '#f0fdf4';
+      } else if (m.start) {
+        var row = startEl ? startEl.closest('tr') : null;
+        if (row) row.style.background = '#fef9c3'; // yellow for in-progress
+      }
+    });
+    
+    // ═══ Efficiency measurement: actual days vs standard hours ═══
+    if (filled > 0 && data.stdTime) {
+      var actualStart = null, actualEnd = null;
+      var workDays = 0, parkingDays = 0;
+      STATIONS.forEach(function(st) {
+        var m = mvmtMap[st.key];
+        if (!m) return;
+        if (m.start && (!actualStart || new Date(m.start) < actualStart)) actualStart = new Date(m.start);
+        if (m.end && (!actualEnd || new Date(m.end) > actualEnd)) actualEnd = new Date(m.end);
+      });
+      if (actualStart && actualEnd) {
+        // Calculate working days between start and end (Thai auto workshop: Sat is working day, only Sunday excluded)
+        var d = new Date(actualStart);
+        var workDayCount = 0;
+        while (d <= actualEnd) {
+          if (d.getDay() !== 0) workDayCount++; // Count Saturday as working day
+          d.setDate(d.getDate() + 1);
+        }
+        var totalMs = actualEnd.getTime() - actualStart.getTime();
+        var totalDays = Math.ceil(totalMs / (1000 * 60 * 60 * 24));
+        var stdWorkHrs = data.stdTime.mechanic_work_hr || 0;
+        var stdWorkDays = data.stdTime.mechanic_days || 0;
+        var stdParkingDays = data.stdTime.parking_days || 0;
+        var efficiency = stdWorkHrs > 0 ? Math.round((stdWorkHrs / (workDayCount * 7)) * 100) : 0;
+        
+        statusHtml += '<br><br>📊 <strong>วัดประสิทธิภาพ</strong>';
+        statusHtml += '<br>วันเริ่มจริง: ' + fmtDateThai(actualStart) + ' → วันเสร็จจริง: ' + fmtDateThai(actualEnd);
+        statusHtml += '<br>วันทำงานจริง (ไม่นับอาทิตย์): <strong>' + workDayCount + '</strong> วัน | รวมวันจอด: <strong>' + totalDays + '</strong> วัน';
+        statusHtml += '<br>ชม.งานมาตรฐาน: <strong>' + stdWorkHrs.toFixed(1) + '</strong> ชม. | วันทำงานช่างมาตรฐาน: <strong>' + stdWorkDays.toFixed(1) + '</strong> วัน | วันจอดมาตรฐาน: <strong>' + stdParkingDays.toFixed(1) + '</strong> วัน';
+        if (stdWorkDays > 0) {
+          var dayDiff = workDayCount - stdWorkDays;
+          var dayDiffStr = dayDiff > 0 ? 'ช้ากว่าแผน ' + dayDiff + ' วัน 🔴' : dayDiff < 0 ? 'เร็วกว่าแผน ' + Math.abs(dayDiff) + ' วัน 🟢' : 'ตรงตามแผน 🟢';
+          statusHtml += '<br>เปรียบเทียบ: ' + dayDiffStr;
+        }
+        if (efficiency > 0) {
+          statusHtml += '<br>ประสิทธิภาพการทำงาน: <strong>' + efficiency + '%</strong>';
+        }
+      }
+    }
+    
+    statusHtml += '</div>';
+    if (filled > 0) {
+      var woDiv = document.getElementById('workOrderContent');
+      if (woDiv) woDiv.insertAdjacentHTML('afterbegin', statusHtml);
+    }
+  }).withFailureHandler(function(err) {
+    console.log('[MVMT] Failure:', err);
+    var woDiv = document.getElementById('workOrderContent');
+    if (woDiv) {
+      var errHtml = '<div style="margin-top:8px;padding:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px">';
+      errHtml += '<strong>❌ ข้อผิดพลาด</strong> ไม่สามารถดึงข้อมูล Movement ได้: ' + (err.message || err);
+      errHtml += '</div>';
+      woDiv.insertAdjacentHTML('afterbegin', errHtml);
+    }
+  }).fetchWorkshopApi('movement', plate);
+}
+
+// ═══ Print Work Order ═══
+function printWorkOrder() {
+  // In GAS sandbox, window.open() doesn't work — use window.print() directly
+  window.print();
+}
+
+function copyWorkOrderLink() {
+  // Copy Link: generates a print-ready page URL that opens directly (no iframe)
+  var plate = currentData && currentData.plate ? currentData.plate : '';
+  var repairUrl = document.getElementById('repairUrl') ? document.getElementById('repairUrl').value.trim() : '';
+  if (!plate && !repairUrl) { alert('กรุณาคำนวณเวลามาตรฐานก่อน'); return; }
+  
+  // Use print=1 for a direct printable page (no iframe, opens anywhere)
+  var baseUrl = 'https://script.google.com/macros/s/AKfycbyjop6dXrouf8yW-cpabPpElcfuDhVPqoqqBmHBeqyFqsEivCKxgkRXdy7z6l_TqPT7/exec';
+  var link = baseUrl + '?stdtime=1&print=1';
+  if (repairUrl) {
+    link += '&url=' + encodeURIComponent(repairUrl);
+  } else if (plate) {
+    link += '&plate=' + encodeURIComponent(plate);
+  }
+  
+  // Copy to clipboard
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(function() {
+      showCopyToast('📋 คัดลอก Link ใบงานแล้ว! เปิดได้ทุกที่');
+    }).catch(function() {
+      fallbackCopy(link);
+    });
+  } else {
+    fallbackCopy(link);
+  }
+}
+
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showCopyToast('📋 คัดลอก Link ใบงานแล้ว!');
+  } catch(e) {
+    prompt('คัดลอก Link นี้:', text);
+  }
+  document.body.removeChild(ta);
+}
+
+function showCopyToast(msg) {
+  var toast = document.createElement('div');
+  toast.textContent = msg;
+  toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2563eb;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,.3)';
+  document.body.appendChild(toast);
+  setTimeout(function() { toast.remove(); }, 3000);
+}
+
+function openPrintView() {
+  // GAS sandbox blocks window.open, Blob URLs, etc.
+  // Only reliable method: use google.script.run to open a new page via server-side redirect
+  var woDiv = document.getElementById('workOrderContent');
+  if (!woDiv || !currentData) { alert('กรุณาคำนวณเวลามาตรฐานก่อน'); return; }
+  
+  // Try window.open first (works outside GAS iframe)
+  try {
+    var w = window.open('', '_blank');
+    if (w && !w.closed) {
+      _writePrintWindow(w, woDiv.innerHTML);
+      return;
+    }
+  } catch(e) {}
+  
+  // GAS iframe fallback: use google.script.run to generate a printable page
+  var plate = currentData.plate || '';
+  var repairUrl = document.getElementById('repairUrl') ? document.getElementById('repairUrl').value.trim() : '';
+  // Open the same app with print=1 parameter — server will render a printable page
+  var printUrl = 'https://script.google.com/macros/s/AKfycbyjop6dXrouf8yW-cpabPpElcfuDhVPqoqqBmHBeqyFqsEivCKxgkRXdy7z6l_TqPT7/exec?stdtime=1&print=1';
+  if (repairUrl) printUrl += '&url=' + encodeURIComponent(repairUrl);
+  else if (plate) printUrl += '&plate=' + encodeURIComponent(plate);
+  window.top.location.href = printUrl;
+}
+
+function _writePrintWindow(w, content) {
+  var css = 'body{font-family:"Sarabun",sans-serif;font-size:14px;margin:20px;padding:10px}';
+  css += 'table.std{width:100%;border-collapse:collapse;margin:8px 0}table.std th,table.std td{padding:6px 10px;border:1px solid #333;font-size:.85rem}table.std th{background:#e8f0fe;font-weight:600}table.std td{background:#fff}';
+  css += '.work-order{background:#fff;border:2px solid #333;padding:16px;font-size:.85rem;max-width:210mm;margin:0 auto}';
+  css += '.wo-header{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.wo-header .field{padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#fafafa}.wo-header .field label{font-weight:700;color:#475569}';
+  css += '.wo-summary{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:12px;padding:12px;background:#eff6ff;border-radius:8px}';
+  css += '.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.8rem;font-weight:600;margin:1px 2px}.badge-green{background:#dcfce7;color:#166534}.badge-yellow{background:#fef9c3;color:#854d0e}.badge-red{background:#fef2f2;color:#991b1b}.badge-blue{background:#dbeafe;color:#1e40af}.badge-orange{background:#ffedd5;color:#9a3412}';
+  css += 'input[type="date"],input[type="number"]{border:1px solid #999;padding:2px 4px;border-radius:3px;background:#fff}';
+  css += '@media print{.no-print{display:none!important}}';
+  w.document.write('<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>ใบควบคุมเวลาฯ</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet"><style>' + css + '</style></head><body>');
+  w.document.write(content);
+  w.document.write('<div class="no-print" style="text-align:center;margin-top:16px"><button onclick="window.print()" style="padding:10px 32px;font-size:18px;cursor:pointer;background:#2563eb;color:#fff;border:none;border-radius:8px">🖨️ พิมพ์</button> <button onclick="window.close()" style="padding:10px 24px;font-size:18px;cursor:pointer;background:#64748b;color:#fff;border:none;border-radius:8px">ปิด</button></div>');
+  w.document.write('</body></html>');
+  w.document.close();
+}
+
+function saveWorkOrderImage() {
+  // In GAS iframe, html2canvas may not work due to CORS restrictions
+  // Fallback: open print view and instruct user to screenshot or save as PDF
+  var woDiv = document.getElementById('workOrderContent');
+  if (!woDiv || !woDiv.innerHTML || woDiv.innerHTML.length < 50) {
+    alert('กรุณาคำนวณเวลามาตรฐานก่อน');
+    return;
+  }
+  // Try html2canvas if available
+  if (typeof html2canvas !== 'undefined') {
+    var savingDiv = document.createElement('div');
+    savingDiv.textContent = '📸 กำลังบันทึกรูปภาพ...';
+    savingDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e293b;color:#fff;padding:16px 32px;border-radius:12px;font-size:16px;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,.3)';
+    document.body.appendChild(savingDiv);
+    html2canvas(woDiv, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false }).then(function(canvas) {
+      savingDiv.remove();
+      var link = document.createElement('a');
+      link.download = 'ใบสั่งงาน_' + (currentData && currentData.plate ? currentData.plate.replace(/\s/g,'') : 'workorder') + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showCopyToast('📸 บันทึกรูปภาพสำเร็จ!');
+    }).catch(function(err) {
+      savingDiv.remove();
+      openPrintView();
+      showCopyToast('⚠️ บันทึกรูปไม่ได้ — เปิดหน้าพิมพ์แล้ว ใช้ Save as PDF หรือ Screenshot แทน');
+    });
+    return;
+  }
+  // html2canvas not loaded — try loading it
+  var script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+  script.onload = function() { setTimeout(function() { saveWorkOrderImage(); }, 500); };
+  script.onerror = function() {
+    // Final fallback: open print view
+    openPrintView();
+    showCopyToast('⚠️ บันทึกรูปไม่ได้ — เปิดหน้าพิมพ์แล้ว ใช้ Save as PDF หรือ Screenshot แทน');
+  };
+  document.head.appendChild(script);
+}
+
+// Helper: any date to ISO date string (YYYY-MM-DD)
+function toISODate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (isNaN(dt)) return '';
+  return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+}
+
+// ═══ Gantt Chart ═══
+function renderGantt() {
+  if (!currentData || !currentData.stdTime) return;
+  const std = currentData.stdTime;
+
+  const startDateInput = document.getElementById('startDate');
+  if (!startDateInput.value) {
+    startDateInput.value = new Date().toISOString().split('T')[0];
+  }
+  const start = new Date(startDateInput.value);
+  const totalParkingDays = Math.ceil(std.parking_days) + 2;
+  const ganttDiv = document.getElementById('ganttChart');
+
+  let html = '<div class="gantt" style="border:1px solid var(--border);border-radius:8px;overflow:hidden">';
+
+  // Header row - dates
+  html += '<div class="gantt-row" style="background:#eff6ff">';
+  html += '<div class="gantt-label" style="font-weight:700;color:var(--accent)">สถานี / วัน</div>';
+  html += '<div class="gantt-cells">';
+  for (let d = 0; d < totalParkingDays; d++) {
+    const dt = new Date(start);
+    dt.setDate(dt.getDate() + d);
+    const isWeekend = dt.getDay() === 0; // Thai auto workshop: Saturday is working day
+    html += '<div class="gantt-cell' + (isWeekend?' weekend':'') + '" style="font-size:.75rem;text-align:center;padding-top:4px;color:var(--text2)">' + (d+1) + '<br>' + (dt.getMonth()+1) + '/' + dt.getDate() + '</div>';
+  }
+  html += '</div></div>';
+
+  // Station rows
+  let cumHrs = 0;
+  const workHrPerDay = 7;
+  let prevEndDay = 0;
+  STATIONS.forEach(st => {
+    const hrs = std[st.key] || 0;
+    const startHr = cumHrs;
+    cumHrs += hrs;
+    const endHr = cumHrs;
+    const startDay = startHr / workHrPerDay;
+    const endDay = endHr / workHrPerDay;
+    const barLeft = startDay;
+    const barWidth = endDay - startDay;
+
+    const isWait = st.isWait;
+    html += '<div class="gantt-row">';
+    html += '<div class="gantt-label">' + st.icon + ' ' + st.name + (isWait?' ⏳':'') + '</div>';
+    html += '<div class="gantt-cells">';
+    for (let d = 0; d < totalParkingDays; d++) {
+      const dt = new Date(start);
+      dt.setDate(dt.getDate() + d);
+      const isWeekend = dt.getDay() === 0; // Thai auto workshop: Saturday is working day
+      html += '<div class="gantt-cell' + (isWeekend?' weekend':'') + '"></div>';
+    }
+    // Planned bar overlay
+    if (hrs > 0) {
+      const barColor = isWait ? '#fbbf24' : 'var(--accent)';
+      html += '<div class="gantt-bar planned" style="left:' + (barLeft * 36) + 'px;width:' + Math.max(barWidth * 36, 18) + 'px;background:' + barColor + '">' + hrs.toFixed(1) + 'h</div>';
+    }
+    html += '</div></div>';
+  });
+
+  html += '</div>';
+
+  // Legend
+  html += '<div style="display:flex;gap:12px;margin-top:8px;font-size:.85rem;color:var(--text2)">';
+  html += '<span><span style="display:inline-block;width:16px;height:10px;background:var(--accent);border-radius:2px;margin-right:4px"></span>แผนเวลามาตรฐาน</span>';
+  html += '<span><span style="display:inline-block;width:16px;height:10px;background:#fbbf24;border-radius:2px;margin-right:4px"></span>เวลารอ (Setting/Drying)</span>';
+  html += '<span><span style="display:inline-block;width:16px;height:10px;background:#fef9c3;border-radius:2px;margin-right:4px"></span>วันหยุด</span>';
+  html += '<span><span style="display:inline-block;width:16px;height:10px;background:var(--green);border-radius:2px;margin-right:4px"></span>จริง (ตรงเวลา)</span>';
+  html += '<span><span style="display:inline-block;width:16px;height:10px;background:var(--red);border-radius:2px;margin-right:4px"></span>จริง (ล่าช้า)</span>';
+  html += '</div>';
+
+  ganttDiv.innerHTML = html;
+
+  // Fetch actual data and render plan vs actual comparison
+  renderPlanActualCompare();
+}
+
+// ═══ Plan vs Actual Comparison ═══
+function renderPlanActualCompare() {
+  const compareDiv = document.getElementById('planActualCompare');
+  if (!currentData || !currentData.stdTime) { compareDiv.innerHTML = ''; return; }
+  const std = currentData.stdTime;
+  const baseDate = currentData.baseDate || new Date();
+  const workHrPerDay = 7;
+
+  // Build plan data
+  let cumHrs = 0;
+  const planRows = [];
+  STATIONS.forEach(st => {
+    const hrs = std[st.key] || 0;
+    const startCumHrs = cumHrs;
+    cumHrs += hrs;
+    const startDayNo = startCumHrs > 0 ? Math.floor(startCumHrs / workHrPerDay) + 1 : 1;
+    const endDayNo = Math.ceil(cumHrs / workHrPerDay);
+    const plannedStart = calcWorkingDaysStart(baseDate, startDayNo);
+    const plannedEnd = calcWorkingDaysStart(baseDate, endDayNo);
+    planRows.push({
+      key: st.key,
+      name: st.icon + ' ' + st.name,
+      hrs: hrs,
+      plannedStart: plannedStart,
+      plannedEnd: plannedEnd,
+      isWait: st.isWait || false
+    });
+  });
+
+  // Try to fetch movement data for current plate (has start/end dates per station)
+  const plate = currentData.plate || '';
+  if (!plate) {
+    renderPlanActualTable(planRows, null);
+    return;
+  }
+
+  compareDiv.innerHTML = '<span class="spinner"></span> กำลังโหลดข้อมูลจริงจากระบบ...';
+
+  // Use movement data which has start/end dates per station
+  google.script.run
+    .withSuccessHandler(function(mvmtData) {
+      if (mvmtData && mvmtData.success !== false && mvmtData.rows && mvmtData.rows.length) {
+        // Convert movement rows to a map keyed by MVMT_TO_STD
+        var actualMap = {};
+        mvmtData.rows.forEach(function(r) {
+          var stdKey = MVMT_TO_STD[r.stationKey];
+          if (!stdKey) return;
+          if (stdKey === '__paint_group__') {
+            // Distribute paint group across sub-stations proportionally
+            if (r.startDate && r.endDate) {
+              var pStart = new Date(r.startDate);
+              var pEnd = new Date(r.endDate);
+              var totalMs = pEnd.getTime() - pStart.getTime();
+              if (totalMs > 0) {
+                var totalHrs = 0;
+                PAINT_SUB_STATIONS.forEach(function(sk) { totalHrs += (std[sk] || 0); });
+                var cumH = 0;
+                PAINT_SUB_STATIONS.forEach(function(sk) {
+                  var h = std[sk] || 0;
+                  cumH += h;
+                  var frac = totalHrs > 0 ? cumH / totalHrs : 0;
+                  var subEnd = new Date(pStart.getTime() + totalMs * frac);
+                  actualMap[sk] = { start: r.startDate, end: fmtDateThai(subEnd), hours: h };
+                });
+                if (actualMap[PAINT_SUB_STATIONS[0]]) actualMap[PAINT_SUB_STATIONS[0]].start = r.startDate;
+                if (actualMap[PAINT_SUB_STATIONS[PAINT_SUB_STATIONS.length-1]]) actualMap[PAINT_SUB_STATIONS[PAINT_SUB_STATIONS.length-1]].end = r.endDate;
+              }
+            }
+          } else {
+            if (!actualMap[stdKey]) actualMap[stdKey] = {};
+            if (r.startDate) actualMap[stdKey].start = r.startDate;
+            if (r.endDate) actualMap[stdKey].end = r.endDate;
+          }
+        });
+        renderPlanActualTable(planRows, actualMap);
+      } else {
+        // Fallback: try status data
+        google.script.run
+          .withSuccessHandler(function(statusData) {
+            if (statusData && statusData.success !== false) {
+              renderPlanActualTable(planRows, statusData);
+            } else {
+              renderPlanActualTable(planRows, null);
+            }
+          })
+          .withFailureHandler(function(err2) {
+            renderPlanActualTable(planRows, null);
+          })
+          .fetchWorkshopApi('status', plate);
+      }
+    })
+    .withFailureHandler(function(err) {
+      // Movement failed, try status as fallback
+      google.script.run
+        .withSuccessHandler(function(statusData) {
+          if (statusData && statusData.success !== false) {
+            renderPlanActualTable(planRows, statusData);
+          } else {
+            renderPlanActualTable(planRows, null);
+          }
+        })
+        .withFailureHandler(function(err2) {
+          renderPlanActualTable(planRows, null);
+        })
+        .fetchWorkshopApi('status', plate);
+    })
+    .fetchWorkshopApi('movement', plate);
+}
+
+function renderPlanActualTable(planRows, actualData) {
+  const compareDiv = document.getElementById('planActualCompare');
+  let html = '<h3 style="margin-top:8px">📊 เปรียบเทียบ แผน vs จริง</h3>';
+  html += '<table class="std"><tr><th>สถานี</th><th>ชม.มาตรฐาน</th><th>แผนเริ่ม</th><th>แผนเสร็จ</th><th>จริงเริ่ม</th><th>จริงเสร็จ</th><th>วันทำงาน</th><th>วันจอด</th><th>สถานะ</th></tr>';
+
+  var totalWorkDays = 0, totalParkingDays = 0, totalStdHrs = 0;
+  var overallStart = null, overallEnd = null;
+
+  planRows.forEach(row => {
+    if (row.isWait) return; // Skip wait stations in comparison
+    let actualStart = null, actualEnd = null, actualHrs = null;
+    let statusIcon = '⚪', statusLabel = 'รอดำเนินการ';
+
+    // Try to find actual data from the status response
+    if (actualData) {
+      const stInfo = findActualStationData(actualData, row.key);
+      if (stInfo) {
+        if (stInfo.start) actualStart = new Date(stInfo.start);
+        if (stInfo.end) actualEnd = new Date(stInfo.end);
+        if (stInfo.hours) actualHrs = stInfo.hours;
+      }
+    }
+
+    // Calculate actual working days and parking days for this station
+    var workDays = '-', parkingDays = '-';
+    if (actualStart && actualEnd) {
+      if (!overallStart || actualStart < overallStart) overallStart = actualStart;
+      if (!overallEnd || actualEnd > overallEnd) overallEnd = actualEnd;
+      
+      var wd = 0;
+      var d = new Date(actualStart);
+      while (d <= actualEnd) {
+        if (d.getDay() !== 0) wd++; // Thai auto workshop: Saturday is working day
+        d.setDate(d.getDate() + 1);
+      }
+      workDays = wd;
+      totalWorkDays += wd;
+      var pd = Math.ceil((actualEnd.getTime() - actualStart.getTime()) / (1000 * 60 * 60 * 24));
+      parkingDays = pd;
+      totalParkingDays += pd;
+    }
+
+    totalStdHrs += row.hrs;
+
+    if (actualEnd && row.plannedEnd) {
+      const diffMs = actualEnd.getTime() - row.plannedEnd.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays <= 0) { statusIcon = '🟢'; statusLabel = 'ตรงเวลา'; }
+      else if (diffDays <= 2) { statusIcon = '🟡'; statusLabel = 'ล่าช้า ' + diffDays + ' วัน'; }
+      else { statusIcon = '🔴'; statusLabel = 'ล่าช้า ' + diffDays + ' วัน'; }
+    } else if (actualStart && !actualEnd) {
+      statusIcon = '🔵'; statusLabel = 'กำลังดำเนินการ';
+    }
+
+    html += '<tr><td>' + row.name + '</td>';
+    html += '<td style="text-align:center">' + row.hrs.toFixed(2) + '</td>';
+    html += '<td style="text-align:center;white-space:nowrap">' + fmtDateThai(row.plannedStart) + '</td>';
+    html += '<td style="text-align:center;white-space:nowrap">' + fmtDateThai(row.plannedEnd) + '</td>';
+    html += '<td style="text-align:center;white-space:nowrap">' + (actualStart ? fmtDateThai(actualStart) : '-') + '</td>';
+    html += '<td style="text-align:center;white-space:nowrap">' + (actualEnd ? fmtDateThai(actualEnd) : '-') + '</td>';
+    html += '<td style="text-align:center">' + workDays + '</td>';
+    html += '<td style="text-align:center">' + parkingDays + '</td>';
+    html += '<td style="text-align:center">' + statusIcon + ' ' + statusLabel + '</td></tr>';
+  });
+
+  html += '</table>';
+  html += '<div style="margin-top:6px;font-size:.85rem;color:var(--text2)">🟢 ตรงเวลา &nbsp; 🟡 ล่าช้า 1-2 วัน &nbsp; 🔴 ล่าช้า >2 วัน &nbsp; 🔵 กำลังดำเนินการ &nbsp; ⚪ รอดำเนินการ</div>';
+
+  if (!actualData) {
+    html += '<p style="margin-top:8px;color:var(--orange)">⚠️ ไม่สามารถดึงข้อมูลจริงได้ — แสดงเฉพาะแผนเวลามาตรฐาน</p>';
+  }
+
+  // ═══ Efficiency Summary Box ═══
+  if (actualData && (overallStart || totalWorkDays > 0)) {
+    var std = currentData ? currentData.stdTime : null;
+    var stdWorkHrs = std ? (std.mechanic_work_hr || 0) : totalStdHrs;
+    var stdWorkDays = std ? (std.mechanic_days || 0) : 0;
+    var stdParkingDays = std ? (std.parking_days || 0) : 0;
+    
+    html += '<div style="margin-top:12px;padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px">';
+    html += '<h3 style="margin:0 0 8px">📊 วัดประสิทธิภาพการซ่อม (เรียลไทม์)</h3>';
+    html += '<table class="std" style="font-size:.9rem">';
+    html += '<tr><th>ตัวชี้วัด</th><th>มาตรฐาน</th><th>จริง</th><th>ผลต่าง</th><th>สถานะ</th></tr>';
+    
+    // Working hours vs actual days
+    var actualTotalDays = overallStart && overallEnd ? Math.ceil((overallEnd.getTime() - overallStart.getTime()) / (1000*60*60*24)) : '-';
+    var actualWorkDays = totalWorkDays || '-';
+    
+    // Row: ชม.งานมาตรฐาน vs วันทำงานจริง
+    html += '<tr><td>ชม.งานมาตรฐาน / วันทำงาน</td>';
+    html += '<td>' + stdWorkHrs.toFixed(1) + ' ชม. / ' + stdWorkDays.toFixed(1) + ' วัน</td>';
+    html += '<td>' + (typeof actualWorkDays === 'number' ? actualWorkDays + ' วัน' : '-') + '</td>';
+    if (typeof actualWorkDays === 'number' && stdWorkDays > 0) {
+      var diff = actualWorkDays - stdWorkDays;
+      var diffIcon = diff > 0 ? '🔴' : diff < 0 ? '🟢' : '🟢';
+      html += '<td>' + (diff > 0 ? '+' : '') + diff.toFixed(1) + ' วัน</td>';
+      html += '<td>' + diffIcon + ' ' + (diff > 0 ? 'ช้ากว่าแผน' : diff < 0 ? 'เร็วกว่าแผน' : 'ตรงตามแผน') + '</td>';
+    } else {
+      html += '<td>-</td><td>-</td>';
+    }
+    html += '</tr>';
+    
+    // Row: วันจอดมาตรฐาน vs จริง
+    html += '<tr><td>วันจอดรถ (รวมวันหยุด)</td>';
+    html += '<td>' + stdParkingDays.toFixed(1) + ' วัน</td>';
+    html += '<td>' + (typeof actualTotalDays === 'number' ? actualTotalDays + ' วัน' : '-') + '</td>';
+    if (typeof actualTotalDays === 'number' && stdParkingDays > 0) {
+      var pDiff = actualTotalDays - stdParkingDays;
+      var pIcon = pDiff > 0 ? '🔴' : pDiff < 0 ? '🟢' : '🟢';
+      html += '<td>' + (pDiff > 0 ? '+' : '') + pDiff.toFixed(1) + ' วัน</td>';
+      html += '<td>' + pIcon + ' ' + (pDiff > 0 ? 'ช้ากว่าแผน' : pDiff < 0 ? 'เร็วกว่าแผน' : 'ตรงตามแผน') + '</td>';
+    } else {
+      html += '<td>-</td><td>-</td>';
+    }
+    html += '</tr>';
+    
+    // Row: ประสิทธิภาพ (ผลผลิตต่อวัน)
+    if (typeof actualWorkDays === 'number' && actualWorkDays > 0) {
+      var efficiency = (stdWorkHrs / (actualWorkDays * 7)) * 100;
+      var effColor = efficiency >= 90 ? '#16a34a' : efficiency >= 70 ? '#d97706' : '#dc2626';
+      html += '<tr><td>ประสิทธิภาพ (ชม.มาตรฐาน / วันทำงานจริง×7ชม.)</td>';
+      html += '<td>100%</td>';
+      html += '<td><strong style="color:' + effColor + '">' + efficiency.toFixed(1) + '%</strong></td>';
+      html += '<td>' + (efficiency - 100).toFixed(1) + '%</td>';
+      html += '<td>' + (efficiency >= 100 ? '🟢 เกินเป้า' : efficiency >= 80 ? '🟡 ใกล้เป้า' : '🔴 ต่ำกว่าเป้า') + '</td>';
+      html += '</tr>';
+    }
+    
+    html += '</table></div>';
+  }
+
+  compareDiv.innerHTML = html;
+}
+
+function findActualStationData(actualData, stationKey) {
+  // Try to match from actualData using MVMT mapping or direct key
+  // The status API may return movement-style keys
+  if (!actualData) return null;
+
+  // Try direct match first
+  if (actualData[stationKey]) return actualData[stationKey];
+
+  // Try via movement mapping (inverse: find which movement key maps to this std key)
+  for (const mvKey in MVMT_TO_STD) {
+    if (MVMT_TO_STD[mvKey] === stationKey && actualData[mvKey]) {
+      return actualData[mvKey];
+    }
+  }
+
+  // Try to find in a vehicles/stations array structure
+  if (actualData.vehicles) {
+    for (const v of actualData.vehicles) {
+      if (v.stations) {
+        // Try direct key
+        if (v.stations[stationKey]) return v.stations[stationKey];
+        // Try movement mapping
+        for (const mvKey in MVMT_TO_STD) {
+          if (MVMT_TO_STD[mvKey] === stationKey && v.stations[mvKey]) {
+            return v.stations[mvKey];
+          }
+        }
+      }
+    }
+  }
+
+  // Try stations array in the data
+  if (actualData.stations) {
+    if (actualData.stations[stationKey]) return actualData.stations[stationKey];
+    for (const mvKey in MVMT_TO_STD) {
+      if (MVMT_TO_STD[mvKey] === stationKey && actualData.stations[mvKey]) {
+        return actualData.stations[mvKey];
+      }
+    }
+  }
+
+  return null;
+}
+
+// ═══ Monthly Plan View ═══
+let currentViewMonth = new Date().getMonth();
+let currentViewYear = new Date().getFullYear();
+const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+function changeMonth(delta) {
+  currentViewMonth += delta;
+  if (currentViewMonth > 11) { currentViewMonth = 0; currentViewYear++; }
+  if (currentViewMonth < 0) { currentViewMonth = 11; currentViewYear--; }
+  loadMonthlyPlan();
+}
+
+function goCurrentMonth() {
+  currentViewMonth = new Date().getMonth();
+  currentViewYear = new Date().getFullYear();
+  loadMonthlyPlan();
+}
+
+function updateMonthLabel() {
+  const label = document.getElementById('monthLabel');
+  if (label) label.textContent = THAI_MONTHS[currentViewMonth] + ' ' + (currentViewYear + 543);
+}
+
+function loadMonthlyPlan() {
+  updateMonthLabel();
+  const tableDiv = document.getElementById('monthlyPlanTable');
+  tableDiv.innerHTML = '<span class="spinner"></span> กำลังโหลดข้อมูลเดือน...';
+
+  // Use google.script.run to fetch monthly overview (GAS sandbox)
+  google.script.run
+    .withSuccessHandler(function(data) {
+      renderMonthlyTable(data);
+    })
+    .withFailureHandler(function(err) {
+      tableDiv.innerHTML = '<p style="color:var(--orange)">⚠️ ไม่สามารถโหลดข้อมูลได้: ' + (err.message || err) + '</p>';
+    })
+    .fetchWorkshopApi('overview', '', currentViewYear, currentViewMonth);
+}
+
+function renderMonthlyTable(data) {
+  const tableDiv = document.getElementById('monthlyPlanTable');
+  if (!data || (Array.isArray(data) && data.length === 0) || (!data.vehicles && !Array.isArray(data))) {
+    tableDiv.innerHTML = '<p style="color:var(--text2)">ไม่มีข้อมูลรถในเดือนนี้</p>';
+    return;
+  }
+
+  const vehicles = data.vehicles || (Array.isArray(data) ? data : []);
+
+  if (vehicles.length === 0) {
+    tableDiv.innerHTML = '<p style="color:var(--text2)">ไม่มีข้อมูลรถในเดือนนี้</p>';
+    return;
+  }
+
+  let html = '<div style="overflow-x:auto"><table class="std">';
+  html += '<tr><th>ทะเบียน</th><th>ยี่ห้อ</th><th>ประกันภัย</th><th>วันที่ซ่อม</th><th>กำหนดเสร็จ (แผน)</th><th>เสร็จจริง</th><th>สถานะ</th></tr>';
+
+  vehicles.forEach(v => {
+    const plate = v.plate || v.license_plate || '-';
+    const brand = v.brand || '-';
+    const insurance = v.insurance || '-';
+    const repairDate = v.repair_date || v.date || v.createdAt || null;
+    const plannedCompletion = v.planned_completion || v.planned_end || null;
+    const actualCompletion = v.actual_completion || v.actual_end || v.completed_at || null;
+    const vehicleStatus = v.status || v.state || '';
+
+    // Determine status badge
+    let badge = '', badgeClass = 'badge-blue';
+    if (vehicleStatus === 'completed' || vehicleStatus === 'done' || vehicleStatus === 'เสร็จ') {
+      if (actualCompletion && plannedCompletion) {
+        const actual = new Date(actualCompletion);
+        const planned = new Date(plannedCompletion);
+        const diffDays = Math.round((actual - planned) / (1000*60*60*24));
+        if (diffDays <= 0) { badge = '🟢 เสร็จตรงเวลา'; badgeClass = 'badge-green'; }
+        else if (diffDays <= 2) { badge = '🟡 ล่าช้า ' + diffDays + ' วัน'; badgeClass = 'badge-orange'; }
+        else { badge = '🔴 ล่าช้า ' + diffDays + ' วัน'; badgeClass = 'badge-red'; }
+      } else {
+        badge = '✅ เสร็จ'; badgeClass = 'badge-green';
+      }
+    } else if (vehicleStatus === 'in_progress' || vehicleStatus === 'กำลังซ่อม') {
+      badge = '🔵 กำลังซ่อม'; badgeClass = 'badge-blue';
+    } else if (vehicleStatus === 'waiting' || vehicleStatus === 'รอ') {
+      badge = '⚪ รอดำเนินการ'; badgeClass = 'badge-purple';
+    } else {
+      badge = vehicleStatus || '—';
+      badgeClass = 'badge-blue';
+    }
+
+    html += '<tr>';
+    html += '<td style="font-weight:600">' + plate + '</td>';
+    html += '<td>' + brand + '</td>';
+    html += '<td>' + insurance + '</td>';
+    html += '<td style="white-space:nowrap">' + (repairDate ? fmtDateThai(new Date(repairDate)) : '-') + '</td>';
+    html += '<td style="white-space:nowrap">' + (plannedCompletion ? fmtDateThai(new Date(plannedCompletion)) : '-') + '</td>';
+    html += '<td style="white-space:nowrap">' + (actualCompletion ? fmtDateThai(new Date(actualCompletion)) : '-') + '</td>';
+    html += '<td><span class="badge ' + badgeClass + '">' + badge + '</span></td>';
+    html += '</tr>';
+  });
+
+  html += '</table></div>';
+  html += '<p style="margin-top:8px;font-size:.85rem;color:var(--text2)">รวม ' + vehicles.length + ' คัน</p>';
+  tableDiv.innerHTML = html;
+}
+
+// ═══ Lookup Table ═══
+function renderLookupTable() {
+  let html = '<div style="overflow-x:auto"><table class="std"><tr><th>ช่วงค่าแรง (฿)</th>';
+  const showStations = STATIONS.filter(s => !s.isWait);
+  showStations.forEach(st => { html += '<th>' + st.icon + ' ' + st.name + '</th>'; });
+  html += '<th>ชม.งานช่าง</th><th>วันทำงาน</th><th>วันจอด</th></tr>';
+
+  STD_TIME_DATA.forEach(row => {
+    html += '<tr><td style="font-weight:600">' + row.range + '</td>';
+    showStations.forEach(st => {
+      const v = row[st.key] || 0;
+      html += '<td' + (v===0?' style="color:#cbd5e1"':'') + '>' + v.toFixed(2) + '</td>';
+    });
+    html += '<td style="font-weight:600">' + row.mechanic_work_hr.toFixed(1) + '</td>';
+    html += '<td>' + row.mechanic_days.toFixed(1) + '</td>';
+    html += '<td>' + row.parking_days.toFixed(1) + '</td>';
+    html += '</tr>';
+  });
+
+  html += '</table></div>';
+  document.getElementById('lookupTable').innerHTML = html;
+}
+
+// ═══ Utilities ═══
+function fmtMoney(n) { return Number(n).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtDateThai(d) { return d.getDate() + '/' + (d.getMonth()+1) + '/' + (d.getFullYear()+543); }
+
+// ═══ Init ═══
+renderLookupTable();
+updateMonthLabel();
+loadMonthlyPlan();
+
+// ═══ Auto-load from URL parameters (GAS injects AUTO_URL/AUTO_PLATE via doGet) ═══
+(function() {
+  // AUTO_URL and AUTO_PLATE are injected by doGet() from URL parameters
+  // Inside GAS iframe, window.location.search is empty — must use server-injected params
+  var urlToLoad = (typeof AUTO_URL !== 'undefined' && AUTO_URL) ? AUTO_URL : '';
+  var plateToLoad = (typeof AUTO_PLATE !== 'undefined' && AUTO_PLATE) ? AUTO_PLATE : '';
+  
+  // Fallback: try URLSearchParams (works outside GAS iframe)
+  if (!urlToLoad && !plateToLoad) {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      urlToLoad = params.get('url') || '';
+      plateToLoad = params.get('plate') || '';
+    } catch(e) {}
+  }
+  
+  if (urlToLoad) {
+    // Hide other tabs, show work order tab immediately
+    switchTab('workorder', document.querySelectorAll('.tab-btn')[1]);
+    document.getElementById('repairUrl').value = urlToLoad;
+    document.getElementById('repairInfo').style.display = 'block';
+    document.getElementById('repairInfo').innerHTML = '<span class="spinner"></span> กำลังโหลดข้อมูลใบสำนึกซ่อม...';
+    setTimeout(function() { fetchRepairOrder(); }, 500);
+  } else if (plateToLoad) {
+    // Load directly by plate number using status API then fill data
+    var infoDiv = document.getElementById('repairInfo');
+    if (infoDiv) {
+      infoDiv.style.display = 'block';
+      infoDiv.innerHTML = '<span class="spinner"></span> กำลังโหลดข้อมูลทะเบียน ' + plateToLoad + '...';
+    }
+    google.script.run
+      .withSuccessHandler(function(statusData) {
+        if (statusData && statusData.vehicles && statusData.vehicles.length > 0) {
+          var v = statusData.vehicles[0];
+          // Convert status data to repair order format
+          var data = {
+            plate: v.plate || plateToLoad,
+            brand: v.brand || '',
+            model: v.model || '',
+            insurance: v.insurance || '',
+            sa: v.sa || '',
+            repairDate: v.repairDate || v.dateIn || '',
+            totalWage: 0,
+            orderId: v.orderId || ''
+          };
+          // Calculate std time and render
+          currentData = data;
+          calcStdTime(data);
+          fillActualMovement(data);
+          if (infoDiv) {
+            infoDiv.innerHTML = '<div class="badge badge-green">✅ โหลดข้อมูลทะเบียน ' + plateToLoad + ' สำเร็จ</div>';
+          }
+          var woEl = document.getElementById('workOrderContent');
+          if (woEl) woEl.scrollIntoView({behavior:'smooth'});
+        } else {
+          if (infoDiv) {
+            infoDiv.innerHTML = '<div class="badge badge-red">❌ ไม่พบข้อมูลทะเบียน ' + plateToLoad + '</div>';
+          }
+        }
+      })
+      .withFailureHandler(function(err) {
+        var infoDiv = document.getElementById('repairInfo');
+        if (infoDiv) {
+          infoDiv.innerHTML = '<div class="badge badge-red">❌ ข้อผิดพลาด: ' + (err.message || err) + '</div>';
+        }
+      })
+      .fetchWorkshopApi('status', plateToLoad);
+  }
+  
+  // Auto-scroll to work order section if #workOrder hash
+  if (window.location.hash === '#workOrder' || (urlToLoad || plateToLoad)) {
+    setTimeout(function() {
+      var woEl = document.getElementById('workOrderContent');
+      if (woEl) woEl.scrollIntoView({behavior:'smooth'});
+    }, 2000);
+  }
+})();
+</script>
+</body>
+</html>
