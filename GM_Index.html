@@ -77,6 +77,7 @@
     .chart-box canvas { width: 100% !important; max-height: 320px; }
     .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     @media(max-width: 900px) { .chart-row { grid-template-columns: 1fr; } }
+    @media(max-width: 700px) { .ratio-section > div:first-child { grid-template-columns: 1fr !important; } }
     
     /* Table */
     .table-wrap { overflow-x: auto; }
@@ -214,6 +215,22 @@ function shouldIncludeMonth(year, monthIdx, value) {
   }
   // Past years: include all months with data (0 could be real)
   return true;
+}
+
+// Helper: calculate average monthly value for a given section + year (matches "รายเดือน" tab)
+function calcMonthlyAvg(sectionKey, year) {
+  var items = (D.monthly && D.monthly[sectionKey]) || [];
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].year === year && items[i].monthly) {
+      var m = items[i].monthly;
+      var sum = 0, count = 0;
+      for (var mi = 0; mi < m.length; mi++) {
+        if (shouldIncludeMonth(year, mi, m[mi])) { sum += m[mi]; count++; }
+      }
+      return { avg: count > 0 ? sum / count : 0, count: count, total: sum };
+    }
+  }
+  return { avg: 0, count: 0, total: 0 };
 }
 
 // Anti-leak: disable right-click
@@ -375,28 +392,31 @@ function renderOverview() {
   var prev = prevYear(currentYear);
   if (!cur) return;
   
-  // Use annualized values for current (partial) year if available
-  var isPartial = cur.monthsWithData && cur.monthsWithData < 12;
-  var gmSales = isPartial ? (cur.gmSalesAnnualized || cur.gmSales || 0) : (cur.gmSales || 0);
-  var gmAS = isPartial ? (cur.gmAfterSalesAnnualized || cur.gmAfterSales || 0) : (cur.gmAfterSales || 0);
-  var gmTotal = isPartial ? (cur.gmTotalAnnualized || cur.gmTotal || 0) : (cur.gmTotal || 0);
-  var sRatio = cur.salesRatio || (gmTotal > 0 ? gmSales / gmTotal : 0);
-  var asRatio = cur.afterSalesRatio || (gmTotal > 0 ? gmAS / gmTotal : 0);
+  // ── Calculate average monthly revenue from raw monthly data (matches "รายเดือน" tab) ──
+  var salesAvg = calcMonthlyAvg('gmSalesMonthly', currentYear);
+  var asAvg = calcMonthlyAvg('afterSalesTotal', currentYear);
+  var gmSales = salesAvg.avg;
+  var gmAS = asAvg.avg;
+  var gmTotal = gmSales + gmAS;
+  var sRatio = gmTotal > 0 ? gmSales / gmTotal : 0;
+  var asRatio = gmTotal > 0 ? gmAS / gmTotal : 0;
+  var isPartial = (salesAvg.count > 0 && salesAvg.count < 12) || (asAvg.count > 0 && asAvg.count < 12);
+  var gmSalesMonths = salesAvg.count;
   
-  var prevGmTotal = prev ? (prev.gmTotal || 0) : 0;
-  var prevGmSales = prev ? (prev.gmSales || 0) : 0;
-  var prevGmAS = prev ? (prev.gmAfterSales || 0) : 0;
-  // For YoY comparison with partial year, also annualize the previous year if needed
-  if (prev && prev.monthsWithData && prev.monthsWithData < 12) {
-    prevGmTotal = prev.gmTotalAnnualized || prevGmTotal;
-    prevGmSales = prev.gmSalesAnnualized || prevGmSales;
-    prevGmAS = prev.gmAfterSalesAnnualized || prevGmAS;
+  // For previous year, also use monthly average
+  var prevGmSales = 0, prevGmAS = 0, prevGmTotal = 0;
+  if (prev) {
+    var prevSalesAvg = calcMonthlyAvg('gmSalesMonthly', prev.year);
+    var prevAsAvg = calcMonthlyAvg('afterSalesTotal', prev.year);
+    prevGmSales = prevSalesAvg.avg;
+    prevGmAS = prevAsAvg.avg;
+    prevGmTotal = prevGmSales + prevGmAS;
   }
   
   var h = '';
   
   // KPI Cards
-  var partialNote = isPartial ? ' <span style="font-size:10px;color:var(--orange)">(ประมาณณ์ ×12/' + cur.monthsWithData + ')</span>' : '';
+  var partialNote = isPartial ? ' <span style="font-size:10px;color:var(--orange)">(เฉลี่ย ' + (gmSalesMonths || gmASMonths) + ' เดือน)</span>' : '';
   h += '<div class="kpi-row">';
   h += kpiCard('🚗 กำไรขั้นต้น - ขาย' + partialNote, fmt(gmSales), fmtFull(gmSales), 'sales', yoyPct(gmSales, prevGmSales));
   h += kpiCard('🔧 กำไรขั้นต้น - หลังการขาย' + partialNote, fmt(gmAS), fmtFull(gmAS), 'aftersales', yoyPct(gmAS, prevGmAS));
@@ -405,16 +425,39 @@ function renderOverview() {
   h += kpiCard('🛠️ สัดส่วนหลังการขาย', fmtPct2(asRatio * 100) + '%', '', 'aftersales', null);
   h += '</div>';
   
-  // Ratio Bar
+  // Ratio Bar + Doughnut chart
   h += '<div class="ratio-section">';
-  h += '<h3>📊 สัดส่วนกำไรขั้นต้น — ขาย vs หลังการขาย (ปี ' + currentYear + ')</h3>';
-  h += '<div class="ratio-bar-container">';
+  h += '<h3>📊 สัดส่วนกำไรขั้นต้น — ขาย vs หลังการขาย (ปี ' + currentYear + (isPartial ? ' · เฉลี่ย ' + gmSalesMonths + ' เดือน' : '') + ')</h3>';
+  h += '<div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:center;">';
+  // Left: ratio bar + labels
+  h += '<div>';
+  h += '<div class="ratio-bar-container" style="height:48px;border-radius:12px;overflow:hidden;margin-bottom:12px;box-shadow:0 2px 4px rgba(0,0,0,.1);">';
   var salesPct = (sRatio * 100).toFixed(1);
   var asPct = (asRatio * 100).toFixed(1);
-  h += '<div class="ratio-bar-sales" style="width:' + salesPct + '%">🚗 ขาย ' + salesPct + '%</div>';
-  h += '<div class="ratio-bar-aftersales" style="width:' + asPct + '%">🔧 หลังการขาย ' + asPct + '%</div>';
+  h += '<div class="ratio-bar-sales" style="width:' + salesPct + '%;font-size:14px;">🚗 ขาย ' + salesPct + '%</div>';
+  h += '<div class="ratio-bar-aftersales" style="width:' + asPct + '%;font-size:14px;">🔧 หลังการขาย ' + asPct + '%</div>';
   h += '</div>';
-  h += '<div class="ratio-labels"><span class="sales-label">🚗 ธุรกิจขาย ' + fmtFull(gmSales) + ' บาท</span><span class="aftersales-label">🔧 ธุรกิจหลังการขาย ' + fmtFull(gmAS) + ' บาท</span></div>';
+  h += '<div class="ratio-labels" style="font-size:13px;font-weight:600;">';
+  h += '<span class="sales-label">🚗 ธุรกิจขาย ' + fmtFull(gmSales) + ' บาท/เดือน</span>';
+  h += '<span class="aftersales-label">🔧 ธุรกิจหลังการขาย ' + fmtFull(gmAS) + ' บาท/เดือน</span>';
+  h += '</div>';
+  // Summary numbers below
+  h += '<div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
+  h += '<div style="padding:12px 16px;background:rgba(37,99,235,.06);border-radius:10px;border-left:3px solid var(--sales);">';
+  h += '<div style="font-size:11px;color:var(--text3);font-weight:600;">🚗 สัดส่วนขาย</div>';
+  h += '<div style="font-size:28px;font-weight:700;color:var(--sales);">' + salesPct + '%</div>';
+  h += '<div style="font-size:12px;color:var(--text2);">' + fmtFull(gmSales) + ' บาท</div>';
+  h += '</div>';
+  h += '<div style="padding:12px 16px;background:rgba(5,150,105,.06);border-radius:10px;border-left:3px solid var(--aftersales);">';
+  h += '<div style="font-size:11px;color:var(--text3);font-weight:600;">🔧 สัดส่วนหลังการขาย</div>';
+  h += '<div style="font-size:28px;font-weight:700;color:var(--aftersales);">' + asPct + '%</div>';
+  h += '<div style="font-size:12px;color:var(--text2);">' + fmtFull(gmAS) + ' บาท</div>';
+  h += '</div>';
+  h += '</div>';
+  h += '</div>';
+  // Right: doughnut chart
+  h += '<div style="position:relative;height:260px;"><canvas id="chartRatioDoughnut"></canvas></div>';
+  h += '</div>';
   h += '</div>';
   
   // Charts row
@@ -429,15 +472,35 @@ function renderOverview() {
   h += '<tbody>';
   D.summary.slice().reverse().forEach(function(s) {
     var py = prevYear(s.year);
-    // Use annualized values for partial years in the table
-    var sSales = (s.monthsWithData && s.monthsWithData < 12) ? (s.gmSalesAnnualized || s.gmSales) : s.gmSales;
-    var sAS = (s.monthsWithData && s.monthsWithData < 12) ? (s.gmAfterSalesAnnualized || s.gmAfterSales) : s.gmAfterSales;
-    var sTotal = (s.monthsWithData && s.monthsWithData < 12) ? (s.gmTotalAnnualized || s.gmTotal) : s.gmTotal;
-    var pyTotal = py ? ((py.monthsWithData && py.monthsWithData < 12) ? (py.gmTotalAnnualized || py.gmTotal) : (py.gmTotal || 0)) : 0;
+    // For the current year, use monthly average (matches "รายเดือน" tab)
+    var sSales, sAS, sTotal, partialFlag;
+    if (s.year === currentYear) {
+      var salesAvg = calcMonthlyAvg('gmSalesMonthly', s.year);
+      var asAvg = calcMonthlyAvg('afterSalesTotal', s.year);
+      sSales = salesAvg.avg;
+      sAS = asAvg.avg;
+      sTotal = sSales + sAS;
+      partialFlag = (salesAvg.count > 0 && salesAvg.count < 12) ? ' ⭐' + salesAvg.count + 'เดือน' : '';
+    } else {
+      sSales = s.gmSales || 0;
+      sAS = s.gmAfterSales || 0;
+      sTotal = s.gmTotal || 0;
+      partialFlag = '';
+    }
+    // For previous year YoY, also use monthly average if it's the year before current
+    var pyTotal = 0;
+    if (py) {
+      if (py.year === currentYear - 1) {
+        var pySalesAvg = calcMonthlyAvg('gmSalesMonthly', py.year);
+        var pyAsAvg = calcMonthlyAvg('afterSalesTotal', py.year);
+        pyTotal = pySalesAvg.avg + pyAsAvg.avg;
+      } else {
+        pyTotal = py.gmTotal || 0;
+      }
+    }
     var sRatio2 = sTotal > 0 ? sSales / sTotal : (s.salesRatio || 0);
     var asRatio2 = sTotal > 0 ? sAS / sTotal : (s.afterSalesRatio || 0);
     var yoyVal = pyTotal > 0 ? ((sTotal - pyTotal) / Math.abs(pyTotal) * 100).toFixed(1) : '-';
-    var partialFlag = (s.monthsWithData && s.monthsWithData < 12) ? ' ⭐' + s.monthsWithData + 'เดือน' : '';
     h += '<tr' + (s.year === currentYear ? ' style="background:#eff6ff;font-weight:600"' : '') + '>';
     h += '<td>' + s.year + partialFlag + '</td>';
     h += '<td class="num ' + cls(sSales) + '">' + fmtFull(sSales) + '</td>';
@@ -453,6 +516,72 @@ function renderOverview() {
   document.getElementById('mainContent').innerHTML = h;
   drawGmSplitChart();
   drawRatioChart();
+  drawRatioDoughnut(gmSales, gmAS);
+}
+
+function drawRatioDoughnut(salesVal, asVal) {
+  var ctx = document.getElementById('chartRatioDoughnut');
+  if (!ctx) return;
+  if (charts.ratioDoughnut) charts.ratioDoughnut.destroy();
+  charts.ratioDoughnut = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['🚗 ธุรกิจขาย', '🔧 ธุรกิจหลังการขาย'],
+      datasets: [{
+        data: [salesVal, asVal],
+        backgroundColor: ['#2563eb', '#059669'],
+        borderWidth: 3,
+        borderColor: '#fff',
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { family: 'Sarabun', size: 12 }, padding: 10 }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(c) {
+              var total = c.dataset.data.reduce(function(a,b){return a+b;},0);
+              var pct = total > 0 ? (c.parsed / total * 100).toFixed(1) : 0;
+              return c.label + ': ' + fmtFull(c.parsed) + ' บาท (' + pct + '%)';
+            }
+          },
+          titleFont: { family: 'Sarabun', size: 13, weight: 'bold' },
+          bodyFont: { family: 'Sarabun', size: 12 },
+          padding: 10, cornerRadius: 8, backgroundColor: 'rgba(30,41,59,.92)'
+        }
+      }
+    }
+  });
+  // Add center text
+  var total = salesVal + asVal;
+  var centerText = fmtFull(total) + ' บาท';
+  // Use Chart.js plugin to draw center text
+  var origDraw = ctx.draw;
+  ctx.draw = function() {
+    origDraw.apply(this, arguments);
+    var ctx2 = this.ctx;
+    ctx2.save();
+    var centerX = (this.chartArea.left + this.chartArea.right) / 2;
+    var centerY = (this.chartArea.top + this.chartArea.bottom) / 2;
+    ctx2.font = '600 13px Sarabun';
+    ctx2.fillStyle = '#94a3b8';
+    ctx2.textAlign = 'center';
+    ctx2.fillText('รวม/เดือน', centerX, centerY - 14);
+    ctx2.font = '700 18px Sarabun';
+    ctx2.fillStyle = '#1e293b';
+    ctx2.fillText(fmtFull(total), centerX, centerY + 6);
+    ctx2.font = '500 10px Sarabun';
+    ctx2.fillStyle = '#94a3b8';
+    ctx2.fillText('บาท', centerX, centerY + 22);
+    ctx2.restore();
+  };
 }
 
 function kpiCard(icon, title, sub, type, yoy) {
@@ -472,9 +601,15 @@ function kpiCard(icon, title, sub, type, yoy) {
 function drawGmSplitChart() {
   var ctx = document.getElementById('chartGmSplit');
   if (!ctx) return;
-  var years = D.summary.map(function(s) { return s.year + ((s.monthsWithData && s.monthsWithData < 12) ? '⭐' : ''); });
-  var salesData = D.summary.map(function(s) { return (s.monthsWithData && s.monthsWithData < 12) ? (s.gmSalesAnnualized || s.gmSales || 0) : (s.gmSales || 0); });
-  var asData = D.summary.map(function(s) { return (s.monthsWithData && s.monthsWithData < 12) ? (s.gmAfterSalesAnnualized || s.gmAfterSales || 0) : (s.gmAfterSales || 0); });
+  var years = D.summary.map(function(s) { return s.year + ((s.year === currentYear) ? '⭐' : ''); });
+  var salesData = D.summary.map(function(s) {
+    if (s.year === currentYear) return calcMonthlyAvg('gmSalesMonthly', s.year).avg;
+    return s.gmSales || 0;
+  });
+  var asData = D.summary.map(function(s) {
+    if (s.year === currentYear) return calcMonthlyAvg('afterSalesTotal', s.year).avg;
+    return s.gmAfterSales || 0;
+  });
   charts.gmSplit = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -499,8 +634,22 @@ function drawRatioChart() {
   var ctx = document.getElementById('chartRatio');
   if (!ctx) return;
   var years = D.summary.map(function(s) { return s.year; });
-  var salesR = D.summary.map(function(s) { return ((s.salesRatio || 0) * 100).toFixed(1); });
-  var asR = D.summary.map(function(s) { return ((s.afterSalesRatio || 0) * 100).toFixed(1); });
+  var salesR = D.summary.map(function(s) {
+    if (s.year === currentYear) {
+      var sa = calcMonthlyAvg('gmSalesMonthly', s.year).avg;
+      var as = calcMonthlyAvg('afterSalesTotal', s.year).avg;
+      return ((sa + as) > 0 ? (sa / (sa + as) * 100) : 0).toFixed(1);
+    }
+    return ((s.salesRatio || 0) * 100).toFixed(1);
+  });
+  var asR = D.summary.map(function(s) {
+    if (s.year === currentYear) {
+      var sa = calcMonthlyAvg('gmSalesMonthly', s.year).avg;
+      var as = calcMonthlyAvg('afterSalesTotal', s.year).avg;
+      return ((sa + as) > 0 ? (as / (sa + as) * 100) : 0).toFixed(1);
+    }
+    return ((s.afterSalesRatio || 0) * 100).toFixed(1);
+  });
   charts.ratio = new Chart(ctx, {
     type: 'line',
     data: {
@@ -915,10 +1064,19 @@ function renderTrend() {
 }
 
 function drawTrendCharts() {
-  var years = D.summary.map(function(s) { return s.year + ((s.monthsWithData && s.monthsWithData < 12) ? '⭐' : ''); });
-  var salesData = D.summary.map(function(s) { return (s.monthsWithData && s.monthsWithData < 12) ? (s.gmSalesAnnualized || s.gmSales || 0) : (s.gmSales || 0); });
-  var asData = D.summary.map(function(s) { return (s.monthsWithData && s.monthsWithData < 12) ? (s.gmAfterSalesAnnualized || s.gmAfterSales || 0) : (s.gmAfterSales || 0); });
-  var totalData = D.summary.map(function(s) { return (s.monthsWithData && s.monthsWithData < 12) ? (s.gmTotalAnnualized || s.gmTotal || 0) : (s.gmTotal || 0); });
+  var years = D.summary.map(function(s) { return s.year + ((s.year === currentYear) ? '⭐' : ''); });
+  var salesData = D.summary.map(function(s) {
+    if (s.year === currentYear) return calcMonthlyAvg('gmSalesMonthly', s.year).avg;
+    return s.gmSales || 0;
+  });
+  var asData = D.summary.map(function(s) {
+    if (s.year === currentYear) return calcMonthlyAvg('afterSalesTotal', s.year).avg;
+    return s.gmAfterSales || 0;
+  });
+  var totalData = D.summary.map(function(s) {
+    if (s.year === currentYear) return calcMonthlyAvg('gmSalesMonthly', s.year).avg + calcMonthlyAvg('afterSalesTotal', s.year).avg;
+    return s.gmTotal || 0;
+  });
   
   var ctx1 = document.getElementById('chartTrendGM');
   if (ctx1) {
