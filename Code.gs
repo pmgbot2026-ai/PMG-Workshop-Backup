@@ -38,57 +38,362 @@ var FINANCE_SS_IDS = {
   "2565": "1-fVKmarpbx5x0pPKP8_QtoFivYWidnguQEqO23AXtQA"
 };
 
+// ═══ PDPA Security System — Password + 2FA + Intrusion Detection ═══
+var PDPA_CONFIG = {
+  PASSWORD: 'pmsg2026',           // รหัสผ่าน (เปลี่ยนได้จากเมนู)
+  TWO_FA_CODE: '2580',            // รหัส 2FA (เปลี่ยนได้จากเมนู)
+  MAX_ATTEMPTS: 5,                // พยายามผิดได้สูงสุด 5 ครั้ง
+  LOCKOUT_MINUTES: 30,            // ล็อค 30 นาทีหลังพยายามผิดเกินกำหนด
+  SECURITY_LOG_KEY: 'PDPA_SEC_LOG',  // CacheService key สำหรับ log
+  PASSWORD_KEY: 'PDPA_PWD',       // CacheService key สำหรับรหัสผ่าน
+  TWOFA_KEY: 'PDPA_2FA'           // CacheService key สำหรับ 2FA
+};
+
+// ── อ่านรหัสผ่านและ 2FA จาก Cache (ถ้ามี) หรือใช้ค่า default ──
+function getPdpaPassword() {
+  var cached = CacheService.getScriptCache().get(PDPA_CONFIG.PASSWORD_KEY);
+  return cached || PDPA_CONFIG.PASSWORD;
+}
+function getPdpaTwoFa() {
+  var cached = CacheService.getScriptCache().get(PDPA_CONFIG.TWOFA_KEY);
+  return cached || PDPA_CONFIG.TWO_FA_CODE;
+}
+
+// ── เปลี่ยนรหัสผ่าน / 2FA ──
+function pdpaChangePassword(oldPass, newPass) {
+  var current = getPdpaPassword();
+  if (oldPass !== current) return {success:false, error:'รหัสผ่านเดิมไม่ถูกต้อง'};
+  if (!newPass || newPass.length < 6) return {success:false, error:'รหัสใหม่ต้องมีอย่างน้อย 6 ตัวอักษร'};
+  CacheService.getScriptCache().put(PDPA_CONFIG.PASSWORD_KEY, newPass, 21600); // 6 ชม.
+  pdpaLogSecurity('PASSWORD_CHANGED', 'เปลี่ยนรหัสผ่านสำเร็จ');
+  return {success:true, message:'เปลี่ยนรหัสผ่านสำเร็จ'};
+}
+function pdpaChange2FA(old2fa, new2fa) {
+  var current = getPdpaTwoFa();
+  if (old2fa !== current) return {success:false, error:'รหัส 2FA เดิมไม่ถูกต้อง'};
+  if (!new2fa || new2fa.length !== 4) return {success:false, error:'รหัส 2FA ต้องเป็นตัวเลข 4 หลัก'};
+  CacheService.getScriptCache().put(PDPA_CONFIG.TWOFA_KEY, new2fa, 21600);
+  pdpaLogSecurity('2FA_CHANGED', 'เปลี่ยนรหัส 2FA สำเร็จ');
+  return {success:true, message:'เปลี่ยนรหัส 2FA สำเร็จ'};
+}
+
+// ── ตรวจจับบุกรุก — บันทึกการพยายามเข้าถึง ──
+function pdpaLogSecurity(eventType, detail) {
+  var log = [];
+  var cached = CacheService.getScriptCache().get(PDPA_CONFIG.SECURITY_LOG_KEY);
+  if (cached) { try { log = JSON.parse(cached); } catch(e) {} }
+  log.push({
+    type: eventType,
+    detail: detail,
+    timestamp: new Date().toISOString(),
+    timeThai: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss')
+  });
+  // เก็บสูงสุด 100 รายการ
+  if (log.length > 100) log = log.slice(-100);
+  CacheService.getScriptCache().put(PDPA_CONFIG.SECURITY_LOG_KEY, JSON.stringify(log), 21600);
+}
+
+// ── ตรวจสอบการล็อค (พยายามผิดเกินกำหนด) ──
+function pdpaCheckLockout() {
+  var lockKey = 'PDPA_LOCKOUT';
+  var lockData = CacheService.getScriptCache().get(lockKey);
+  if (lockData) {
+    var lock = JSON.parse(lockData);
+    var lockTime = new Date(lock.time).getTime();
+    var now = new Date().getTime();
+    var elapsed = (now - lockTime) / 60000; // นาที
+    if (elapsed < PDPA_CONFIG.LOCKOUT_MINUTES) {
+      var remaining = Math.ceil(PDPA_CONFIG.LOCKOUT_MINUTES - elapsed);
+      return {locked:true, remaining:remaining, attempts:lock.attempts};
+    }
+  }
+  return {locked:false};
+}
+
+// ── บันทึกการพยายามผิด ──
+function pdpaRecordFailedAttempt() {
+  var attemptKey = 'PDPA_ATTEMPTS';
+  var count = parseInt(CacheService.getScriptCache().get(attemptKey) || '0') + 1;
+  CacheService.getScriptCache().put(attemptKey, String(count), 3600); // 1 ชม.
+  
+  pdpaLogSecurity('FAILED_ATTEMPT', 'พยายามเข้าถึงผิดรหัสครั้งที่ ' + count);
+  
+  if (count >= PDPA_CONFIG.MAX_ATTEMPTS) {
+    // ล็อคระบบ
+    var lockData = JSON.stringify({time:new Date().toISOString(), attempts:count});
+    CacheService.getScriptCache().put('PDPA_LOCKOUT', lockData, PDPA_CONFIG.LOCKOUT_MINUTES * 60);
+    pdpaLogSecurity('SYSTEM_LOCKED', 'ระบบถูกล็อค — พยายามผิดเกินกำหนด (' + count + ' ครั้ง)');
+    // รีเซ็ตตัวนับ
+    CacheService.getScriptCache().remove(attemptKey);
+  }
+  return count;
+}
+
+// ─– รีเซ็ตตัวนับเมื่อ login สำเร็จ ──
+function pdpaResetAttempts() {
+  CacheService.getScriptCache().remove('PDPA_ATTEMPTS');
+}
+
+// ── อ่าน security log ──
+function pdpaGetSecurityLog() {
+  var cached = CacheService.getScriptCache().get(PDPA_CONFIG.SECURITY_LOG_KEY);
+  if (!cached) return [];
+  try { return JSON.parse(cached); } catch(e) { return []; }
+}
+
+// ── ตรวจสอบ login ผ่าน google.script.run (ไม่ redirect) ──
+function pdpaVerifyLogin(pwd, otp, rquery) {
+  var lockStatus = pdpaCheckLockout();
+  if (lockStatus.locked) {
+    return {success:false, error:'ระบบถูกล็อค กรุณารอ ' + lockStatus.remaining + ' นาที'};
+  }
+  
+  var correctPwd = getPdpaPassword();
+  var correctOtp = getPdpaTwoFa();
+  
+  if (pwd === correctPwd && otp === correctOtp) {
+    // Login สำเร็จ
+    pdpaResetAttempts();
+    pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (2FA via google.script.run)');
+    
+    // สร้าง URL สำหรับ redirect
+    var baseUrl = ScriptApp.getService().getUrl();
+    var url = baseUrl + '?authed=1';
+    if (rquery) {
+      url += '&' + rquery;
+    }
+    return {success:true, url:url};
+  } else {
+    // Login ผิด
+    var count = pdpaRecordFailedAttempt();
+    pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + count);
+    return {success:false, error:'รหัสผ่านหรือ 2FA ไม่ถูกต้อง (พยายาม ' + count + '/' + PDPA_CONFIG.MAX_ATTEMPTS + ')'};
+  }
+}
+
 // ═══ PDPA Login Page ═══
-function servePdpaLogin(redirectQuery, errorMsg) {
+function servePdpaLogin(redirectQuery, errorMsg, step) {
   var baseUrl = ScriptApp.getService().getUrl();
-  var redirectUrl = redirectQuery ? baseUrl + '?' + redirectQuery : baseUrl;
+  var lockStatus = pdpaCheckLockout();
+  
+  // ถ้าระบบถูกล็อค
+  if (lockStatus.locked) {
+    return HtmlService.createHtmlOutput(
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+      '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:linear-gradient(135deg,#7f1d1d,#dc2626);min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff}</style>'+
+      '</head><body><div style="text-align:center;padding:40px;max-width:420px">'+
+      '<div style="font-size:56px;margin-bottom:16px">🚫</div>'+
+      '<div style="font-size:22px;font-weight:800;margin-bottom:8px">ระบบถูกล็อค</div>'+
+      '<div style="font-size:14px;opacity:.9;margin-bottom:16px">ตรวจพบการพยายามเข้าถึงโดยไม่ได้รับอนุญาต '+lockStatus.attempts+' ครั้ง</div>'+
+      '<div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:16px;margin-bottom:16px">'+
+      '<div style="font-size:13px;font-weight:700;margin-bottom:6px">⚠️ บุกรุก / โจมตี (Intrusion Detected)</div>'+
+      '<div style="font-size:12px;opacity:.85">ระบบล็อคอัตโนมัติเพื่อป้องกันการเข้าถึงข้อมูล PDPA</div>'+
+      '<div style="font-size:12px;opacity:.85;margin-top:8px">กรุณารอ <strong>'+lockStatus.remaining+' นาที</strong> แล้วลองใหม่</div>'+
+      '</div>'+
+      '<div style="font-size:11px;opacity:.6">🔒 PDPA Security System — PMSG · 2026</div>'+
+      '</div></body></html>'
+    ).setTitle('🚫 ระบบล็อค — PDPA').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+  
+  // อ่าน intrusion log (5 รายการล่าสุด)
+  var secLog = pdpaGetSecurityLog();
+  var recentAlerts = secLog.filter(function(l){ return l.type==='FAILED_ATTEMPT' || l.type==='SYSTEM_LOCKED'; }).slice(-5);
+  var alertHtml = '';
+  if (recentAlerts.length > 0) {
+    var alertItems = recentAlerts.map(function(a){
+      return '<div style="font-size:10px;color:#dc2626;padding:3px 0;border-bottom:1px solid #fee2e2">'+
+        '<span style="font-weight:600">'+a.timeThai+'</span> — '+a.detail+'</div>';
+    }).join('');
+    alertHtml = '<div style="margin-top:16px;padding:10px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px">'+
+      '<div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:6px">🚨 บันทึกการบุกรุกล่าสุด (Recent Intrusions):</div>'+
+      alertItems+
+      '</div>';
+  }
   
   var errorHtml = errorMsg ? 
     '<div style="background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:10px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;text-align:center">'+errorMsg+'</div>' : '';
   
+  // ═══ หน้าเดียว กรอกพร้อมกัน — Password + 2FA ═══
   return HtmlService.createHtmlOutput(
     '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">'+
     '<meta name="viewport" content="width=device-width,initial-scale=1">'+
-    '<title>🔒 PDPA — เข้าสู่ระบบ</title>'+
+    '<title>🔒 PDPA — เข้าสู่ระบบ (2FA)</title>'+
     '<style>'+
     '*{margin:0;padding:0;box-sizing:border-box}'+
     'body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#2563eb 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;color:#1e293b}'+
-    '.login-card{background:#fff;border-radius:16px;padding:40px 36px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)}'+
-    '.lock-icon{font-size:48px;text-align:center;margin-bottom:16px}'+
-    '.login-title{font-size:20px;font-weight:800;text-align:center;color:#1e293b;margin-bottom:6px}'+
-    '.login-sub{font-size:13px;text-align:center;color:#64748b;margin-bottom:24px;line-height:1.6}'+
-    '.pdpa-badge{display:inline-block;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:16px}'+
-    '.input-group{margin-bottom:20px}'+
+    '.login-card{background:#fff;border-radius:16px;padding:36px 32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)}'+
+    '.lock-icon{font-size:44px;text-align:center;margin-bottom:12px}'+
+    '.login-title{font-size:19px;font-weight:800;text-align:center;margin-bottom:4px}'+
+    '.login-sub{font-size:12px;text-align:center;color:#64748b;margin-bottom:20px}'+
+    '.pdpa-badge{display:inline-block;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:14px}'+
+    '.input-group{margin-bottom:16px}'+
     '.input-label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px}'+
-    '.input-field{width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;font-family:inherit;transition:border-color 0.2s}'+
-    '.input-field:focus{outline:none;border-color:#3b82f6}'+
-    '.login-btn{width:100%;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;border:none;padding:14px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s}'+
-    '.login-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(59,130,246,0.4)}'+
-    '.login-btn:active{transform:translateY(0)}'+
-    '.pdpa-notice{margin-top:20px;padding:12px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;font-size:11px;color:#1e40af;line-height:1.6}'+
-    '.pdpa-footer{text-align:center;margin-top:16px;font-size:11px;color:#94a3b8}'+
+    '.input-field{width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;font-family:inherit}'+
+    '.input-field:focus{outline:none;border-color:#2563eb}'+
+    '.otp-field{text-align:center;letter-spacing:6px;font-size:20px}'+
+    '.login-btn{width:100%;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;border:none;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer}'+
+    '.login-btn:hover{opacity:.9}'+
+    '.pdpa-notice{margin-top:16px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;font-size:11px;color:#1e40af;line-height:1.6}'+
+    '.pdpa-footer{text-align:center;margin-top:12px;font-size:11px;color:#94a3b8}'+
+    '.admin-link{text-align:center;margin-top:12px}'+
+    '.admin-link a{font-size:11px;color:#64748b;text-decoration:none}'+
+    '.twofa-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}'+
     '</style></head><body>'+
     '<div class="login-card">'+
-      '<div class="lock-icon">🔒</div>'+
+      '<div class="lock-icon">🔐</div>'+
       '<div class="login-title">PMSG Dashboard</div>'+
-      '<div class="login-sub">ระบบจำกัดการเข้าถึง — ข้อมูลลับ PDPA</div>'+
+      '<div class="login-sub">ระบบจำกัดการเข้าถึง — 2FA (Password + OTP)</div>'+
       '<div style="text-align:center"><span class="pdpa-badge">⛔ ห้ามเผยแพร่โดยไม่ได้รับอนุญาต</span></div>'+
       errorHtml+
-      '<form method="get" action="'+baseUrl+'">'+
-        '<input type="hidden" name="redirect" value="'+redirectUrl+'">'+
-        '<div class="input-group">'+
-          '<label class="input-label">🔑 รหัสผ่าน (Password)</label>'+
-          '<input type="password" name="pass" class="input-field" placeholder="กรุณาใส่รหัสผ่าน" autofocus required>'+
-        '</div>'+
-        '<button type="submit" class="login-btn">เข้าสู่ระบบ →</button>'+
-      '</form>'+
-      '<div class="pdpa-notice">'+
-        '<strong>📋 ข้อกำหนด PDPA:</strong> ข้อมูลในระบบนี้เป็นข้อมูลส่วนบุคคลภายใต้พรบ. คุ้มครองข้อมูลส่วนบุคคล (PDPA) — ห้ามส่งออก เผยแพร่ หรือเข้าถึงโดยไม่ได้รับอนุญาตจากผู้ดูแล'+
+        alertHtml+
+        '<form id="loginForm" method="post" action="'+baseUrl+'" target="_top">'+
+          '<input type="hidden" name="pwdok" value="1">'+
+          '<input type="hidden" name="rquery" value="'+(redirectQuery||'')+'">'+
+          '<div class="input-group">'+
+            '<label class="input-label">🔑 รหัสผ่าน (Password)</label>'+
+            '<input type="password" name="pass" class="input-field" placeholder="กรุณาใส่รหัสผ่าน" autofocus required>'+
+          '</div>'+
+          '<div class="input-group">'+
+            '<label class="input-label">📱 รหัส 2FA (4 หลัก)</label>'+
+            '<input type="text" name="otp" class="input-field otp-field" placeholder="••••" maxlength="4" pattern="[0-9]{4}" required>'+
+          '</div>'+
+          '<button type="submit" class="login-btn">เข้าสู่ระบบ →</button>'+
+        '</form>'+
+        '<div class="pdpa-notice"><strong>📋 PDPA:</strong> ข้อมูลส่วนบุคคล — ห้ามส่งออก เผยแพร่ หรือเข้าถึงโดยไม่ได้รับอนุญาต</div>'+
+        '<div class="pdpa-footer">PMSG · 2026 · 🔒 2FA Enabled</div>'+
       '</div>'+
-      '<div class="pdpa-footer">PMSG · 2026 · All Rights Reserved</div>'+
+      '</body></html>'
+  ).setTitle('🔒 PDPA — เข้าสู่ระบบ 2FA').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// ═══ PDPA Admin Page — เมนูเปลี่ยนรหัสผ่าน + 2FA + Security Log ═══
+function servePdpaAdmin(redirectQuery) {
+  var secLog = pdpaGetSecurityLog();
+  var lockStatus = pdpaCheckLockout();
+  
+  // แสดง security log (20 รายการล่าสุด)
+  var logItems = secLog.slice(-20).reverse().map(function(l){
+    var icon = l.type === 'LOGIN_SUCCESS' ? '✅' : 
+               l.type === 'FAILED_ATTEMPT' ? '⚠️' :
+               l.type === 'SYSTEM_LOCKED' ? '🚫' :
+               l.type === 'PASSWORD_CHANGED' ? '🔑' :
+               l.type === '2FA_CHANGED' ? '🔐' :
+               l.type === 'PASSWORD_FAILED' ? '❌' :
+               l.type === '2FA_FAILED' ? '❌' : '📝';
+    var color = l.type === 'LOGIN_SUCCESS' ? '#10b981' : 
+                l.type === 'PASSWORD_CHANGED' || l.type === '2FA_CHANGED' ? '#2563eb' : '#dc2626';
+    return '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:11px">'+icon+'</td>'+
+      '<td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:11px;color:'+color+';font-weight:600">'+l.type+'</td>'+
+      '<td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:11px">'+l.detail+'</td>'+
+      '<td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#64748b">'+l.timeThai+'</td></tr>';
+  }).join('');
+  
+  var logHtml = logItems ? 
+    '<div style="margin-top:20px"><div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:10px">🚨 Security Log (บันทึกการเข้าถึง — 20 รายการล่าสุด)</div>'+
+    '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f1f5f9">'+
+    '<th style="padding:8px;text-align:left;font-size:11px;border-bottom:2px solid #cbd5e1"></th>'+
+    '<th style="padding:8px;text-align:left;font-size:11px;border-bottom:2px solid #cbd5e1">Event</th>'+
+    '<th style="padding:8px;text-align:left;font-size:11px;border-bottom:2px solid #cbd5e1">Detail</th>'+
+    '<th style="padding:8px;text-align:left;font-size:11px;border-bottom:2px solid #cbd5e1">Time (ICT)</th>'+
+    '</tr></thead><tbody>'+logItems+'</tbody></table></div>' : 
+    '<div style="margin-top:20px;padding:16px;background:#f8fafc;border-radius:10px;text-align:center;color:#64748b;font-size:13px">ยังไม่มีบันทึก</div>';
+  
+  var lockWarning = lockStatus.locked ? 
+    '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;margin-bottom:16px">'+
+    '<div style="font-size:13px;font-weight:700;color:#dc2626">🚫 ระบบถูกล็อค — เหลือ '+lockStatus.remaining+' นาที</div></div>' : '';
+  
+  return HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>⚙️ PDPA Admin — เมนูผู้ดูแล</title>'+
+    '<style>'+
+    '*{margin:0;padding:0;box-sizing:border-box}'+
+    'body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#1e293b 100%);min-height:100vh;padding:20px;color:#1e293b}'+
+    '.admin-card{background:#fff;border-radius:16px;padding:32px;max-width:800px;margin:20px auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)}'+
+    '.admin-title{font-size:22px;font-weight:800;margin-bottom:4px}'+
+    '.admin-sub{font-size:13px;color:#64748b;margin-bottom:24px}'+
+    '.section-title{font-size:15px;font-weight:700;color:#1e293b;margin:20px 0 12px;padding-bottom:8px;border-bottom:2px solid #e2e8f0}'+
+    '.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}'+
+    '.input-label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px}'+
+    '.input-field{width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit}'+
+    '.input-field:focus{outline:none;border-color:#2563eb}'+
+    '.btn{padding:10px 20px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}'+
+    '.btn-primary{background:#2563eb;color:#fff}'+
+    '.btn-success{background:#10b981;color:#fff}'+
+    '.btn:hover{opacity:.9}'+
+    '.stat-box{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 16px;text-align:center}'+
+    '.stat-num{font-size:24px;font-weight:800;color:#2563eb}'+
+    '.stat-label{font-size:11px;color:#475569}'+
+    '.back-link{text-align:center;margin-top:20px}'+
+    '.back-link a{color:#2563eb;text-decoration:none;font-size:13px;font-weight:600}'+
+    '</style></head><body>'+
+    '<div class="admin-card">'+
+      '<div style="font-size:36px;margin-bottom:8px">⚙️</div>'+
+      '<div class="admin-title">PDPA Admin Panel</div>'+
+      '<div class="admin-sub">เมนูผู้ดูแลระบบ — เปลี่ยนรหัสผ่าน, 2FA และดู Security Log</div>'+
+      
+      lockWarning+
+      
+      // Stats
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">'+
+        '<div class="stat-box"><div class="stat-num">'+secLog.length+'</div><div class="stat-label">Total Events</div></div>'+
+        '<div class="stat-box"><div class="stat-num">'+secLog.filter(function(l){return l.type.indexOf('FAILED')>=0;}).length+'</div><div class="stat-label">Failed Attempts</div></div>'+
+        '<div class="stat-box"><div class="stat-num">'+secLog.filter(function(l){return l.type==='LOGIN_SUCCESS';}).length+'</div><div class="stat-label">Successful Logins</div></div>'+
+      '</div>'+
+      
+      // Change Password
+      '<div class="section-title">🔑 เปลี่ยนรหัสผ่าน (Change Password)</div>'+
+      '<form id="pwdForm" onsubmit="return changePwd(event)">'+
+        '<div class="form-row">'+
+          '<div><label class="input-label">รหัสผ่านเดิม (Old Password)</label><input type="password" id="oldPwd" class="input-field" required></div>'+
+          '<div><label class="input-label">รหัสผ่านใหม่ (New Password — อย่างน้อย 6 ตัว)</label><input type="password" id="newPwd" class="input-field" minlength="6" required></div>'+
+        '</div>'+
+        '<button type="submit" class="btn btn-primary">เปลี่ยนรหัสผ่าน</button>'+
+        '<span id="pwdResult" style="margin-left:12px;font-size:13px"></span>'+
+      '</form>'+
+      
+      // Change 2FA
+      '<div class="section-title">🔐 เปลี่ยนรหัส 2FA (Change 2FA Code — 4 หลัก)</div>'+
+      '<form id="otpForm" onsubmit="return change2fa(event)">'+
+        '<div class="form-row">'+
+          '<div><label class="input-label">รหัส 2FA เดิม (Old 2FA)</label><input type="password" id="old2fa" class="input-field" maxlength="4" required></div>'+
+          '<div><label class="input-label">รหัส 2FA ใหม่ (New 2FA — 4 หลัก)</label><input type="password" id="new2fa" class="input-field" maxlength="4" pattern="[0-9]{4}" required></div>'+
+        '</div>'+
+        '<button type="submit" class="btn btn-success">เปลี่ยนรหัส 2FA</button>'+
+        '<span id="otpResult" style="margin-left:12px;font-size:13px"></span>'+
+      '</form>'+
+      
+      // Security Log
+      logHtml+
+      
+      '<div class="back-link"><a href="'+ScriptApp.getService().getUrl()+'">← กลับหน้า Login</a></div>'+
     '</div>'+
+    '<script>'+
+    'function changePwd(e){'+
+      'e.preventDefault();'+
+      'var oldP=document.getElementById("oldPwd").value;'+
+      'var newP=document.getElementById("newPwd").value;'+
+      'google.script.run.withSuccessHandler(function(r){'+
+        'var el=document.getElementById("pwdResult");'+
+        'if(r.success){el.innerHTML="✅ "+r.message;el.style.color="#10b981";}'+
+        'else{el.innerHTML="❌ "+r.error;el.style.color="#dc2626";}'+
+      '}).pdpaChangePassword(oldP,newP);'+
+      'return false;'+
+    '}'+
+    'function change2fa(e){'+
+      'e.preventDefault();'+
+      'var oldO=document.getElementById("old2fa").value;'+
+      'var newO=document.getElementById("new2fa").value;'+
+      'google.script.run.withSuccessHandler(function(r){'+
+        'var el=document.getElementById("otpResult");'+
+        'if(r.success){el.innerHTML="✅ "+r.message;el.style.color="#10b981";}'+
+        'else{el.innerHTML="❌ "+r.error;el.style.color="#dc2626";}'+
+      '}).pdpaChange2FA(oldO,newO);'+
+      'return false;'+
+    '}'+
+    '</script>'+
     '</body></html>'
-  ).setTitle('🔒 PDPA — เข้าสู่ระบบ').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  ).setTitle('⚙️ PDPA Admin').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 // Temp: read any sheet from any SS
@@ -115,50 +420,83 @@ function doGet(e) {
   if (!e) e = { parameter: {} };
   var p = e.parameter || {};
   
-  // ═══ PDPA Access Control — รหัสผ่านเข้าใช้ทุกหน้า ═══
-  var PDPA_PASSWORD = 'pmsg2026';  // เปลี่ยนรหัสได้ที่นี่
-  var PDPA_SESSION_KEY = 'PDPA_AUTH_OK';
+  // ═══ PDPA Access Control — Session Token + 2FA ═══
   
-  // ถ้ามีพารามิเตอร์ pass= ให้ตรวจสอบรหัส
-  if (p.pass !== undefined) {
-    if (p.pass === PDPA_PASSWORD) {
-      // รหัสถูกต้อง — parse redirect param แล้วทำงานต่อทันที (ไม่ redirect)
-      // ถ้ามี redirect param ให้ parse query string กลับเป็น params
-      if (p.redirect) {
+  // ── ตรวจสอบ session token (st) ──
+  var hasSession = false;
+  if (p.st) {
+    var sessionData = CacheService.getScriptCache().get('PDPA_SESSION_' + p.st);
+    if (sessionData === 'valid') {
+      hasSession = true;
+    }
+  }
+  
+  // ── Admin page — ต้อง login ก่อน (มี session token) ──
+  if (p.admin === '1') {
+    if (!hasSession) {
+      return servePdpaLogin('admin=1', '🔒 กรุณา login ก่อนเข้าหน้า Admin');
+    }
+    var adminQuery = '';
+    for (var ak in p) { if (ak !== 'admin' && ak !== 'st' && p[ak]) adminQuery += (adminQuery ? '&' : '') + ak + '=' + encodeURIComponent(p[ak]); }
+    return servePdpaAdmin(adminQuery);
+  }
+  
+  // ── ตรวจสอบการล็อคระบบ ──
+  var lockStatus = pdpaCheckLockout();
+  if (lockStatus.locked && !hasSession) {
+    return servePdpaLogin('', '', 1); // จะแสดงหน้าล็อค
+  }
+  
+  // ── GET login (backward compatible) — ถ้าส่ง pwdok=1 + pass + otp มาทาง GET ──
+  if (!hasSession && p.pwdok === '1' && p.pass && p.otp) {
+    var correctPwd = getPdpaPassword();
+    var correctOtp = getPdpaTwoFa();
+    if (p.pass === correctPwd && p.otp === correctOtp) {
+      pdpaResetAttempts();
+      pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (GET backward compat)');
+      // Create session token
+      var getToken = Utilities.getUuid() + '_' + new Date().getTime();
+      CacheService.getScriptCache().put('PDPA_SESSION_' + getToken, 'valid', 28800);
+      // Parse rquery if present
+      if (p.rquery) {
         try {
-          var redirectUrl = p.redirect;
-          var qIdx = redirectUrl.indexOf('?');
-          if (qIdx >= 0) {
-            var queryString = redirectUrl.substring(qIdx + 1);
-            var pairs = queryString.split('&');
-            for (var pi = 0; pi < pairs.length; pi++) {
-              var eqIdx = pairs[pi].indexOf('=');
-              if (eqIdx >= 0) {
-                var rKey = decodeURIComponent(pairs[pi].substring(0, eqIdx));
-                var rVal = decodeURIComponent(pairs[pi].substring(eqIdx + 1));
-                if (rKey !== 'pass' && rKey !== 'authed') {
-                  p[rKey] = rVal;
-                }
+          var getPairs = p.rquery.split('&');
+          for (var gpi = 0; gpi < getPairs.length; gpi++) {
+            var geq = getPairs[gpi].indexOf('=');
+            if (geq >= 0) {
+              var gK = decodeURIComponent(getPairs[gpi].substring(0, geq));
+              var gV = decodeURIComponent(getPairs[gpi].substring(geq + 1));
+              if (gK !== 'pass' && gK !== 'authed' && gK !== 'otp' && gK !== 'pwdok' && gK !== 'rquery' && gK !== 'st' && gK !== 'admin') {
+                p[gK] = gV;
               }
             }
           }
         } catch(e) {}
       }
-      // ตั้งค่า authed และทำงานต่อ (fall through ไปที่โค้ดด้านล่าง)
-      p.authed = '1';
+      p.st = getToken;
+      hasSession = true;
+      // fall through ไปทำงานต่อ
     } else {
-      // รหัสผิด — แสดงหน้า login ใหม่
-      return servePdpaLogin(p.redirect || '', '❌ รหัสผ่านไม่ถูกต้อง กรุณาลองอีกครั้ง');
+      var getCount = pdpaRecordFailedAttempt();
+      pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + getCount);
+      return servePdpaLogin(p.rquery || '', '❌ รหัสผ่านหรือ 2FA ไม่ถูกต้อง (พยายาม ' + getCount + '/' + PDPA_CONFIG.MAX_ATTEMPTS + ')');
     }
   }
   
-  // ถ้าไม่ได้ส่ง authed=1 และไม่ใช่ API endpoint — แสดงหน้า login
-  if (p.authed !== '1' && p.api !== '1' && p.debug !== 'readsheet' && !p.fileid && p.action !== 'uploadEval360') {
-    // สร้าง redirect query สำหรับหน้าที่ต้องการ
+  // ── ถ้ามี session token → ผ่านเข้าใช้งานได้ ──
+  if (hasSession) {
+    // fall through ไปทำงานต่อ
+  }
+  // ── API endpoints ไม่ต้อง login ──
+  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action))) {
+    // fall through — API bypass
+  }
+  // ── ถ้าไม่มี session และไม่ใช่ API — แสดงหน้า login ──
+  else {
     var backQp = [];
-    for (var bk in p) { if (p[bk]) backQp.push(bk + '=' + encodeURIComponent(p[bk])); }
+    for (var bk in p) { if (p[bk] && bk !== 'st' && bk !== 'pass' && bk !== 'authed' && bk !== 'admin' && bk !== 'step' && bk !== 'otp' && bk !== 'pwdok' && bk !== 'rquery') backQp.push(bk + '=' + encodeURIComponent(p[bk])); }
     var backQs = backQp.length ? backQp.join('&') : '';
-    return servePdpaLogin(backQs, '');
+    return servePdpaLogin(backQs, '', 1);
   }
   
   // Force-trigger external_request scope authorization on first run
@@ -944,7 +1282,7 @@ function doGet(e) {
     }
     if (p.view === 'refresh') {
       // Force refresh cache
-      var cacheKey = 'okrall_data_v7';
+      var cacheKey = 'okrall_data_v8';
       CacheService.getScriptCache().remove(cacheKey);
       CacheService.getScriptCache().remove(cacheKey + '_meta');
       // Also remove chunked cache
@@ -1097,6 +1435,40 @@ function doPost(e) {
     optionsOutput.setMimeType(ContentService.MimeType.JSON);
     return optionsOutput;
   }
+  
+  // ═══ PDPA Login via form POST — session token + render directly ═══
+  if (e.parameter && e.parameter.pwdok === '1' && e.parameter.pass && e.parameter.otp) {
+    var p = e.parameter;
+    var lockStatus = pdpaCheckLockout();
+    if (lockStatus.locked) {
+      return servePdpaLogin(p.rquery || '', '🚫 ระบบถูกล็อค กรุณารอ ' + lockStatus.remaining + ' นาที');
+    }
+    var correctPwd = getPdpaPassword();
+    var correctOtp = getPdpaTwoFa();
+    if (p.pass === correctPwd && p.otp === correctOtp) {
+      pdpaResetAttempts();
+      pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (form POST)');
+      // Create session token (valid 8 hours)
+      var sessionToken = Utilities.getUuid() + '_' + new Date().getTime();
+      CacheService.getScriptCache().put('PDPA_SESSION_' + sessionToken, 'valid', 28800); // 8 ชม.
+      // Build redirect URL with token + rquery
+      var baseUrl = ScriptApp.getService().getUrl();
+      var redirectUrl = baseUrl + '?st=' + sessionToken;
+      if (p.rquery) redirectUrl += '&' + p.rquery;
+      return HtmlService.createHtmlOutput(
+        '<!DOCTYPE html><html><head><meta charset="UTF-8">'+
+        '<meta http-equiv="refresh" content="0;url='+redirectUrl+'">'+
+        '<title>กำลังเข้าสู่ระบบ...</title></head><body style="font-family:system-ui;text-align:center;padding:40px">'+
+        '<div style="font-size:48px">✅</div><div style="font-size:18px;font-weight:700;color:#10b981;margin-top:8px">เข้าสู่ระบบสำเร็จ</div>'+
+        '<div style="font-size:13px;color:#64748b;margin-top:4px">กำลังโหลด Dashboard...</div></body></html>'
+      ).setTitle('กำลังเข้าสู่ระบบ...').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    } else {
+      var count = pdpaRecordFailedAttempt();
+      pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + count);
+      return servePdpaLogin(p.rquery || '', '❌ รหัสผ่านหรือ 2FA ไม่ถูกต้อง (พยายาม ' + count + '/' + PDPA_CONFIG.MAX_ATTEMPTS + ')');
+    }
+  }
+  
   try {
     var p = JSON.parse(e.postData.contents);
     var action = p.action;
@@ -10181,8 +10553,8 @@ function getDashboardConfig_(dashId) {
    Multi-Department OKR Data — reads from 5 spreadsheets
    ═══════════════════════════════════════════════════ */
 function getMultiOKRData_() {
-   // Check cache first — cache for 10 minutes (600 seconds)
-  var cacheKey = 'okrall_data_v7';
+   // Check cache first — cache for 2 minutes (120 seconds) for faster updates
+  var cacheKey = 'okrall_data_v8';
   // Try single-key cache
   var cached = CacheService.getScriptCache().get(cacheKey);
   if (cached) {
@@ -10286,16 +10658,16 @@ function getMultiOKRData_() {
   try {
     var jsonStr = JSON.stringify(result);
     if (jsonStr.length < 100000) {
-      CacheService.getScriptCache().put(cacheKey, jsonStr, 21600);
+      CacheService.getScriptCache().put(cacheKey, jsonStr, 120);
     } else {
       // Too large for single cache key — split into chunks
       var chunkSize = 90000; // ~90KB per chunk
       var numChunks = Math.ceil(jsonStr.length / chunkSize);
       for (var ci = 0; ci < numChunks; ci++) {
         var chunk = jsonStr.substring(ci * chunkSize, (ci + 1) * chunkSize);
-        CacheService.getScriptCache().put(cacheKey + '_chunk_' + ci, chunk, 21600);
+        CacheService.getScriptCache().put(cacheKey + '_chunk_' + ci, chunk, 120);
       }
-      CacheService.getScriptCache().put(cacheKey + '_meta', String(numChunks), 21600);
+      CacheService.getScriptCache().put(cacheKey + '_meta', String(numChunks), 120);
     }
   } catch(e) {}
   return result;
@@ -11006,12 +11378,12 @@ function setupOKRAutoRefreshTrigger() {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
-  // Create new trigger — every 2 hours
+  // Create new trigger — every 15 minutes for near real-time updates
   ScriptApp.newTrigger('okrAutoRefresh')
     .timeBased()
-    .everyHours(2)
+    .everyMinutes(15)
     .create();
-  return { success: true, message: 'OKR auto-refresh trigger created (every 2 hours)' };
+  return { success: true, message: 'OKR auto-refresh trigger created (every 15 minutes)' };
 }
 
 // Auto-refresh: reads all OKR sheets, detects new tabs/data, updates cache, logs changes
