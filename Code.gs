@@ -510,21 +510,8 @@ function doGet(e) {
 
     // Dashboard UI
     if (!p.api && !p.fileid && !p.action) {
-      // Use template to inject data directly — avoids sandbox/XHR/CORS issues
-      try {
-        var evalData = getEval360Data();
-        if (evalData && !evalData.error) {
-          var template = HtmlService.createTemplateFromFile('Eval360Dash');
-          template.eval360DataJson = JSON.stringify(evalData);
-          var evaluated = template.evaluate();
-          return evaluated
-            .setTitle('360° Evaluation Dashboard')
-            .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-            .addMetaTag('viewport', 'width=device-width, initial-scale=1');
-        }
-      } catch(templateErr) {
-        // Fall back to plain file output if template fails
-      }
+      // No template injection — data loaded via google.script.run in stages
+      // This keeps HTML small (~82KB) and prevents white screen
       var evalHtml = HtmlService.createHtmlOutputFromFile('Eval360Dash');
       return evalHtml
         .setTitle('360° Evaluation Dashboard')
@@ -1375,17 +1362,8 @@ function doGet(e) {
     // Use replaceAll in case placeholder appears multiple times after escaping
     allContent = allContent.split('SCRIPT_URL_PLACEHOLDER').join(allUrl);
     
-    // Embed cached OKR data directly in the page so browser doesn't need to fetch
-    // This eliminates the 5-minute wait when cache is cold
-    try {
-      var okrData = getMultiOKRData_();
-      var dataJson = JSON.stringify(okrData);
-      if (dataJson.length < 1500000) { // Only embed if under 1.5MB
-        allContent = allContent.split('EMBEDDED_DATA = null').join('EMBEDDED_DATA = ' + dataJson);
-      }
-    } catch(e) {
-      // If data fetch fails, page will fall back to fetch via JS
-    }
+    // NOTE: Do NOT embed OKR data in the HTML — it's 1.5MB+ and causes blank page
+    // The client-side JS will load data via google.script.run or fetch after page renders
     
     return HtmlService.createHtmlOutput(allContent)
       .setTitle('PMS/PMG OKR Dashboard — 5 แผนก')
@@ -10849,20 +10827,20 @@ function getMultiOKRData_() {
     }
     result.departments.push(deptData);
   }
-  // Save to cache for 6 hours (21600 seconds) — keeps cache warm between cron pings
+  // Save to cache for 5 minutes (300 seconds)
   try {
     var jsonStr = JSON.stringify(result);
     if (jsonStr.length < 100000) {
-      CacheService.getScriptCache().put(cacheKey, jsonStr, 120);
+      CacheService.getScriptCache().put(cacheKey, jsonStr, 300);
     } else {
       // Too large for single cache key — split into chunks
       var chunkSize = 90000; // ~90KB per chunk
       var numChunks = Math.ceil(jsonStr.length / chunkSize);
       for (var ci = 0; ci < numChunks; ci++) {
         var chunk = jsonStr.substring(ci * chunkSize, (ci + 1) * chunkSize);
-        CacheService.getScriptCache().put(cacheKey + '_chunk_' + ci, chunk, 120);
+        CacheService.getScriptCache().put(cacheKey + '_chunk_' + ci, chunk, 300);
       }
-      CacheService.getScriptCache().put(cacheKey + '_meta', String(numChunks), 120);
+      CacheService.getScriptCache().put(cacheKey + '_meta', String(numChunks), 300);
     }
   } catch(e) {}
   return result;
@@ -11551,13 +11529,28 @@ function saveAddKR_(p) {
 
 function clearOKRCache_() {
   var cache = CacheService.getScriptCache();
-  var cacheKey = 'okrall_data_v7';
+  // Clear shared cache (v8) — used by getMultiOKRData_()
+  var cacheKey = 'okrall_data_v8';
   cache.remove(cacheKey);
   cache.remove(cacheKey + '_meta');
-  // Also remove chunk keys
-  for (var i = 0; i < 5; i++) {
-    cache.remove(cacheKey + '_chunk' + i);
+  var oldMeta = cache.get(cacheKey + '_meta');
+  if (oldMeta) {
+    var oldChunks = parseInt(oldMeta);
+    for (var i = 0; i < oldChunks; i++) {
+      cache.remove(cacheKey + '_chunk_' + i);
+    }
   }
+  // Also clear old v7 keys
+  var v7Key = 'okrall_data_v7';
+  cache.remove(v7Key);
+  cache.remove(v7Key + '_meta');
+  for (var j = 0; j < 5; j++) {
+    cache.remove(v7Key + '_chunk' + j);
+  }
+  // NOTE: Do NOT clear per-department cache (okrdept_X_v1) here —
+  // it will be refreshed by okrAutoRefresh after getMultiOKRData_() completes.
+  // This way, if a user loads the dashboard while refresh is running,
+  // they still get cached data (slightly stale but fast).
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -11573,10 +11566,10 @@ function setupOKRAutoRefreshTrigger() {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
-  // Create time-based trigger — every 15 minutes for near real-time cache refresh
+  // Create time-based trigger — every 5 minutes for near real-time cache refresh
   ScriptApp.newTrigger('okrAutoRefresh')
     .timeBased()
-    .everyMinutes(15)
+    .everyMinutes(5)
     .create();
   
   // Also set up onChange triggers for each OKR sheet (installable triggers)
@@ -11739,8 +11732,16 @@ function okrAutoRefresh() {
 
   // Clear OKR data cache so next read gets fresh data
   clearOKRCache_();
-  // Force read fresh data
-  getMultiOKRData_();
+  // Force read fresh data — this populates the shared cache
+  var freshData = getMultiOKRData_();
+  
+  // Pre-warm per-department cache from the fresh data
+  if (freshData && freshData.departments) {
+    for (var wdIdx = 0; wdIdx < freshData.departments.length; wdIdx++) {
+      var wdKey = 'okrdept_' + wdIdx + '_v1';
+      cacheDeptData_(wdKey, freshData.departments[wdIdx]);
+    }
+  }
 
   // Write log entries to ChangeLog in each department's sheet
   for (var li = 0; li < logEntries.length; li++) {
@@ -12918,6 +12919,224 @@ function getEval360Data() {
     return { error: "No data in cache or Drive: " + driveErr.toString() };
   }
   return { error: "No data uploaded yet" };
+}
+
+// Lightweight version for google.script.run — returns persons + stats + company_stats only (no summary)
+function getEval360Summary() {
+  var data = getEval360Data();
+  if (data.error) return data;
+  return {
+    stats: data.stats,
+    company_stats: data.company_stats,
+    persons: data.persons
+  };
+}
+
+// Get summary records in batches (for Person Detail tab)
+function getEval360SummaryBatch(startIdx, batchSize) {
+  var data = getEval360Data();
+  if (data.error) return data;
+  if (!data.summary) return { records: [], total: 0 };
+  var start = startIdx || 0;
+  var batch = batchSize || 200;
+  var records = data.summary.slice(start, start + batch);
+  return { records: records, total: data.summary.length, start: start, batch: records.length };
+}
+
+// Stage A: Get stats + company_stats only (tiny payload, ~2KB)
+function getEval360Stats() {
+  var data = getEval360Data();
+  if (data.error) return data;
+  return {
+    stats: data.stats || {},
+    company_stats: data.company_stats || {}
+  };
+}
+
+// Stage B: Get persons in batches (~150 per batch, ~100KB each)
+function getEval360PersonsBatch(startIdx, batchSize) {
+  var data = getEval360Data();
+  if (data.error) return data;
+  if (!data.persons) return { records: [], total: 0 };
+  var start = startIdx || 0;
+  var batch = batchSize || 150;
+  var records = data.persons.slice(start, start + batch);
+  return { records: records, total: data.persons.length, start: start, batch: records.length };
+}
+
+// Public wrapper for google.script.run — returns OKR data for all departments
+// Returns department metadata + names only (small ~5KB) — NO sheet reads, just key names
+function gsGetOKRData() {
+  var deptNames = Object.keys(OKR_SS_IDS);
+  var light = {
+    departments: [],
+    lastUpdate: new Date().toISOString()
+  };
+  deptNames.forEach(function(dn) {
+    light.departments.push({
+      name: dn,
+      ssid: OKR_SS_IDS[dn],
+      teams: [],
+      sheetNames: [],
+      peopleCount: 0,
+      people: []
+    });
+  });
+  return light;
+}
+
+// Get full department data by index (for google.script.run — one dept at a time, ~300KB each)
+// Reads only the requested department's sheet — does NOT call getMultiOKRData_() (which reads all 5)
+// BUT: if getMultiOKRData_() cache is warm, use that instead (instant)
+function gsGetOKRDeptData(deptIndex) {
+  var deptNames = Object.keys(OKR_SS_IDS);
+  if (deptIndex < 0 || deptIndex >= deptNames.length) {
+    return { error: 'Invalid department index: ' + deptIndex };
+  }
+  var deptName = deptNames[deptIndex];
+  var ssid = OKR_SS_IDS[deptName];
+  
+  // Check per-department cache first (2 minute TTL)
+  var deptCacheKey = 'okrdept_' + deptIndex + '_v1';
+  var deptCached = CacheService.getScriptCache().get(deptCacheKey);
+  if (deptCached) {
+    try { return JSON.parse(deptCached); } catch(e) {}
+  }
+  // Try chunked per-dept cache
+  var deptChunkMeta = CacheService.getScriptCache().get(deptCacheKey + '_meta');
+  if (deptChunkMeta) {
+    try {
+      var dNumChunks = parseInt(deptChunkMeta);
+      var dCombined = '';
+      for (var dci2 = 0; dci2 < dNumChunks; dci2++) {
+        dCombined += CacheService.getScriptCache().get(deptCacheKey + '_chunk_' + dci2) || '';
+      }
+      if (dCombined) return JSON.parse(dCombined);
+    } catch(e2) {}
+  }
+  
+  // Try shared cache (getMultiOKRData_ cache) — if warm, slice from it (instant, no sheet reads)
+  var sharedCacheKey = 'okrall_data_v8';
+  var sharedCached = CacheService.getScriptCache().get(sharedCacheKey);
+  if (sharedCached) {
+    try {
+      var sharedData = JSON.parse(sharedCached);
+      if (sharedData.departments && sharedData.departments[deptIndex]) {
+        var deptFromShared = sharedData.departments[deptIndex];
+        // Cache it per-department for next time
+        cacheDeptData_(deptCacheKey, deptFromShared);
+        return deptFromShared;
+      }
+    } catch(e3) {}
+  }
+  // Try chunked shared cache
+  var sharedMeta = CacheService.getScriptCache().get(sharedCacheKey + '_meta');
+  if (sharedMeta) {
+    try {
+      var sNumChunks = parseInt(sharedMeta);
+      var sCombined = '';
+      for (var sci = 0; sci < sNumChunks; sci++) {
+        sCombined += CacheService.getScriptCache().get(sharedCacheKey + '_chunk_' + sci) || '';
+      }
+      if (sCombined) {
+        var sData = JSON.parse(sCombined);
+        if (sData.departments && sData.departments[deptIndex]) {
+          var deptFromChunked = sData.departments[deptIndex];
+          cacheDeptData_(deptCacheKey, deptFromChunked);
+          return deptFromChunked;
+        }
+      }
+    } catch(e4) {}
+  }
+  
+  // Cold cache — read this department's sheet directly
+  var deptData = { name: deptName, ssid: ssid, people: [], kpiSummary: [], summary: [], teams: [], sheetNames: [] };
+  try {
+    var ss = SpreadsheetApp.openById(ssid);
+    var sheets = ss.getSheets();
+    var skipSheets = ['KPI สรุป', 'CEO สรุป', 'สรุป CEO', 'README', 'Instructions', 'Template',
+      'นิยาม CEOและขั้นตอนการทำ', ' CEO แบบฟอร์ม (อธิบาย)', 'CEO แบบฟอร์ม',
+      'อธิบายCEO แบบฟอร์ม', '5 กลยุทธ์', 'Checklist ตรวจ OKR', 'Piyawat',
+      'ชีต29', 'ชีท29'];
+    var personSheets = [];
+    for (var si = 0; si < sheets.length; si++) {
+      var sName = sheets[si].getName();
+      deptData.sheetNames.push(sName);
+      if (skipSheets.indexOf(sName) >= 0) continue;
+      if (sName.trim() !== sName) continue;
+      personSheets.push(sName);
+    }
+    
+    var teamSet = {};
+    for (var pi = 0; pi < personSheets.length; pi++) {
+      var sheet = ss.getSheetByName(personSheets[pi]);
+      if (!sheet) continue;
+      var data = sheet.getDataRange().getValues();
+      var person = parsePersonSheet_(personSheets[pi], data, deptName);
+      deptData.people.push(person);
+      if (person.team) teamSet[person.team] = (teamSet[person.team] || 0) + 1;
+    }
+    for (var tName in teamSet) {
+      deptData.teams.push({name: tName, count: teamSet[tName]});
+    }
+    
+    // Read CEO summary sheet
+    var ceoSheetNames = ['CEO สรุป', 'สรุป CEO'];
+    for (var csi = 0; csi < ceoSheetNames.length; csi++) {
+      var ceoSheet = ss.getSheetByName(ceoSheetNames[csi]);
+      if (ceoSheet && deptData.summary.length === 0) {
+        var ceoData = ceoSheet.getDataRange().getValues();
+        var headerRow = -1;
+        for (var hi = 0; hi < Math.min(ceoData.length, 5); hi++) {
+          var rowText = ceoData[hi].map(function(c){ return String(c||'').trim(); }).join(' ');
+          if (rowText.indexOf('ทีม') >= 0 || rowText.indexOf('สมาชิก') >= 0) {
+            headerRow = hi;
+            break;
+          }
+        }
+        if (headerRow >= 0) {
+          for (var ri = headerRow + 1; ri < ceoData.length; ri++) {
+            var row = ceoData[ri];
+            if (!row[0] && !row[1] && !row[2]) continue;
+            var entry = {};
+            for (var ci = 0; ci < ceoData[headerRow].length; ci++) {
+              var hKey = String(ceoData[headerRow][ci] || '').trim();
+              if (hKey) entry[hKey] = row[ci];
+            }
+            if (Object.keys(entry).length > 0) deptData.summary.push(entry);
+          }
+        }
+      }
+    }
+  } catch(err) {
+    deptData.error = err.toString();
+  }
+  // Cache the result
+  cacheDeptData_(deptCacheKey, deptData);
+  return deptData;
+}
+
+// Helper: cache department data (handles chunking)
+function cacheDeptData_(cacheKey, deptData) {
+  try {
+    var deptJson = JSON.stringify(deptData);
+    if (deptJson.length <= 90000) {
+      CacheService.getScriptCache().put(cacheKey, deptJson, 300);
+    } else {
+      var dChunks = Math.ceil(deptJson.length / 90000);
+      CacheService.getScriptCache().put(cacheKey + '_meta', String(dChunks), 300);
+      for (var dci = 0; dci < dChunks; dci++) {
+        var dChunk = deptJson.substring(dci * 90000, (dci + 1) * 90000);
+        CacheService.getScriptCache().put(cacheKey + '_chunk_' + dci, dChunk, 300);
+      }
+    }
+  } catch(cacheErr) {}
+}
+
+// Get number of departments (fast — just counts OKR_SS_IDS keys, no sheet reads)
+function gsGetOKRDeptCount() {
+  var deptNames = Object.keys(OKR_SS_IDS);
+  return { count: deptNames.length, names: deptNames, lastUpdate: new Date().toISOString() };
 }
 
 function gsGetCEOData(personName, deptName) {

@@ -698,10 +698,9 @@
 </div>
 
 <script>
-// Server-side injected data (via HtmlService template)
-<? if (eval360DataJson) { ?>
-window.__EVAL360_DATA__ = <?!= eval360DataJson ?>;
-<? } ?>
+// Server-side injected data (via HtmlService template) — kept for backward compat
+// Primary loading is now via google.script.run in loadData()
+window.__EVAL360_DATA__ = null;
 </script>
 
 <script>
@@ -815,30 +814,25 @@ function avg(arr, key) {
 function loadData() {
   document.getElementById('lastUpdate').textContent = '⏳ กำลังโหลด...';
   
-  // Method 1: Check if data was injected via template (preferred — no sandbox issues)
+  // Method 1: Check if data was injected via template (persons + stats + company_stats only)
   if (typeof window.__EVAL360_DATA__ !== 'undefined' && window.__EVAL360_DATA__) {
     try {
       onDataLoaded(window.__EVAL360_DATA__);
+      // Load summary separately via google.script.run
+      loadSummaryData();
       return;
     } catch(e) {
-      console.warn('Injected data parse failed, trying other methods', e);
+      console.warn('Injected data parse failed', e);
     }
   }
   
-  // Method 2: google.script.run (works for smaller data)
+  // Method 2: Load via google.script.run in stages
+  // Stage A: stats + company_stats (small, ~2KB)
+  // Stage B: persons in batches (510 people, ~328KB total, split into ~100KB chunks)
+  // Stage C: summary in batches (1528 records, ~956KB total, split into 200-record batches)
   if (typeof google !== 'undefined' && google.script && google.script.run) {
     try {
-      google.script.run.withSuccessHandler(function(data) {
-        if (data && !data.error) {
-          onDataLoaded(data);
-        } else {
-          onDataError(data && data.error ? data.error : 'No data');
-        }
-      })
-      .withFailureHandler(function(err) {
-        onDataError(String(err));
-      })
-      .getEval360Data();
+      loadEval360Staged();
       return;
     } catch (e) {
       console.warn('google.script.run failed', e);
@@ -846,6 +840,114 @@ function loadData() {
   }
   
   onDataError('ไม่สามารถโหลดข้อมูลได้ — กรุณารีเฟรชหน้านี้อีกครั้ง');
+}
+
+// Staged loading: stats first, then persons in batches, then summary in batches
+function loadEval360Staged() {
+  var stageData = { stats: null, company_stats: null, persons: [] };
+  
+  // Stage A: Get stats + company_stats (tiny, ~2KB)
+  google.script.run
+    .withSuccessHandler(function(statsData) {
+      if (statsData && !statsData.error) {
+        stageData.stats = statsData.stats || {};
+        stageData.company_stats = statsData.company_stats || {};
+        // Stage B: Load persons in batches
+        loadPersonsBatched(stageData);
+      } else {
+        onDataError(statsData && statsData.error ? statsData.error : 'No stats data');
+      }
+    })
+    .withFailureHandler(function(err) {
+      onDataError('Stage A failed: ' + String(err));
+    })
+    .getEval360Stats();
+}
+
+function loadPersonsBatched(stageData) {
+  var BATCH_SIZE = 150;
+  var allPersons = [];
+  var total = 0;
+  
+  function fetchPersonsBatch(start) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.records) {
+          allPersons = allPersons.concat(res.records);
+          total = res.total || allPersons.length;
+          if (start + BATCH_SIZE < total) {
+            // Update loading progress
+            document.getElementById('lastUpdate').textContent = 
+              '⏳ โหลดข้อมูลสมาชิก... (' + allPersons.length + '/' + total + ')';
+            fetchPersonsBatch(start + BATCH_SIZE);
+          } else {
+            // All persons loaded — now call onDataLoaded
+            stageData.persons = allPersons;
+            document.getElementById('lastUpdate').textContent = 
+              '⏳ กำลังเรนเดอร์...';
+            onDataLoaded(stageData);
+            // Stage C: Load summary in background
+            loadSummaryData();
+          }
+        } else {
+          // Fallback: if batch fails, try full load
+          onDataLoaded({ stats: stageData.stats, company_stats: stageData.company_stats, persons: allPersons });
+          loadSummaryData();
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.warn('Persons batch failed at ' + start, err);
+        // Use what we have
+        onDataLoaded({ stats: stageData.stats, company_stats: stageData.company_stats, persons: allPersons });
+        loadSummaryData();
+      })
+      .getEval360PersonsBatch(start, BATCH_SIZE);
+  }
+  fetchPersonsBatch(0);
+}
+
+// Load summary records in batches via google.script.run
+function loadSummaryData() {
+  if (typeof google === 'undefined' || !google.script || !google.script.run) return;
+  STATE.allSummary = [];
+  var BATCH = 200;
+  var loaded = 0;
+  
+  function fetchBatch(start) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (res && res.records) {
+        // Map summary fields to short keys
+        res.records.forEach(function(s) {
+          if (s.company !== undefined && s.c === undefined) s.c = s.company;
+          if (s.name !== undefined && s.n === undefined) s.n = s.name;
+          if (s.surname !== undefined && s.s === undefined) s.s = s.surname;
+          if (s.full_name !== undefined && s.fn === undefined) s.fn = s.full_name;
+          if (s.team !== undefined && s.t === undefined) s.t = s.team;
+          if (s.group_eval !== undefined && s.g === undefined) s.g = s.group_eval;
+          if (s.domain !== undefined && s.d === undefined) s.d = s.domain;
+          if (s.avg_score !== undefined && s.a === undefined) s.a = s.avg_score;
+          if (s.total_score !== undefined && s.ts === undefined) s.ts = s.total_score;
+          if (s.question_count !== undefined && s.q === undefined) s.q = s.question_count;
+          if (s.round !== undefined && s.r === undefined) s.r = s.round;
+          if (s.year !== undefined && s.y === undefined) s.y = s.year;
+        });
+        STATE.allSummary = STATE.allSummary.concat(res.records);
+        loaded += res.records.length;
+        if (start + BATCH < res.total) {
+          fetchBatch(start + BATCH);
+        } else {
+          // All summary loaded — re-render if on person detail
+          STATE.summaryLoaded = true;
+          if (STATE.currentTab === 'person') renderPersonTab();
+        }
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.warn('Summary batch failed at ' + start, err);
+    })
+    .getEval360SummaryBatch(start, BATCH);
+  }
+  fetchBatch(0);
 }
 
 function reloadData() { loadData(); }

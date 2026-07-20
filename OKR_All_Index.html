@@ -893,6 +893,15 @@ if (SCRIPT_URL === 'SCRIPT_URL_PLACEHOLDER' || !SCRIPT_URL) {
   SCRIPT_URL = window.location.origin + window.location.pathname;
 }
 
+// Department sheet IDs (for source sheet links)
+var OKR_SS_IDS_CLIENT = {
+  'PMG/PMGI': '1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s',
+  'PMS ช่าง 4 สาขา': '1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g',
+  'PMS ขาย': '1ojfAYoWXI-InWFV0tE2q4QM_8GYz6erjmGie1LMwpE8',
+  'PMS ศูนย์บริการ': '15zM39IFLOpczwP_ZnBG3ScRKPl4lgSCi66HQAgwoXoQ',
+  'PMS/PMG Backoffice': '1f9DtFbss0jDW5Of6pw5yEDh5mciIk4oVvwrAgPPpKJE'
+};
+
 var D = null;             // Full data object { departments, lastUpdate }
 var EMBEDDED_DATA = null; // Server can inject cached data here for instant load
 var currentDept = 0;       // Selected department index for กลุ่มงาน tab
@@ -966,10 +975,7 @@ function loadData() {
     onLoaded();
     return;
   }
-  var url = SCRIPT_URL;
-  if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
-  else url += '?okrall=1&view=data';
-
+  
   // Show loading with progress message — user sees the page immediately
   var ls = document.getElementById('loadingScreen');
   if (ls) {
@@ -980,7 +986,7 @@ function loadData() {
       '</div>';
   }
 
-  // Progress timer: update message every 10 seconds so user knows it's working
+  // Progress timer
   var elapsed = 0;
   var progressTimer = setInterval(function() {
     elapsed += 10;
@@ -993,19 +999,100 @@ function loadData() {
     }
   }, 10000);
 
-  // Use 5-minute timeout (cold cache can take 3 min)
+  // Use google.script.run — load all departments in PARALLEL for speed
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    // Step 1: Get department count (instant — no sheet reads)
+    google.script.run
+      .withSuccessHandler(function(meta) {
+        if (meta && meta.count && meta.names) {
+          // Build skeleton from dept names
+          D = {
+            departments: meta.names.map(function(nm) {
+              return {
+                name: nm,
+                ssid: OKR_SS_IDS_CLIENT[nm] || '',
+                teams: [],
+                sheetNames: [],
+                people: [],
+                kpiSummary: [],
+                summary: [],
+                _loaded: false
+              };
+            }),
+            lastUpdate: meta.lastUpdate || new Date().toISOString()
+          };
+          // Step 2: Load ALL departments in parallel (each google.script.run is independent)
+          var loadedCount = 0;
+          var totalDepts = meta.count;
+          for (var di = 0; di < totalDepts; di++) {
+            (function(idx) {
+              google.script.run
+                .withSuccessHandler(function(deptData) {
+                  if (deptData && !deptData.error && D.departments[idx]) {
+                    D.departments[idx].people = deptData.people || [];
+                    D.departments[idx].kpiSummary = deptData.kpiSummary || [];
+                    D.departments[idx].summary = deptData.summary || [];
+                    D.departments[idx].teams = deptData.teams || [];
+                    D.departments[idx].sheetNames = deptData.sheetNames || [];
+                    D.departments[idx]._loaded = true;
+                  }
+                  loadedCount++;
+                  var pe = document.getElementById('loadProgress');
+                  if (pe) {
+                    pe.textContent = 'โหลดแล้ว ' + loadedCount + '/' + totalDepts + ' กลุ่มงาน';
+                  }
+                  // When all loaded, render
+                  if (loadedCount >= totalDepts) {
+                    clearInterval(progressTimer);
+                    onLoaded();
+                  }
+                })
+                .withFailureHandler(function(err) {
+                  console.warn('Dept ' + idx + ' failed', err);
+                  loadedCount++;
+                  if (loadedCount >= totalDepts) {
+                    clearInterval(progressTimer);
+                    onLoaded();
+                  }
+                })
+                .gsGetOKRDeptData(idx);
+            })(di);
+          }
+        } else {
+          clearInterval(progressTimer);
+          onLoadError('No departments found');
+        }
+      })
+      .withFailureHandler(function(err) {
+        clearInterval(progressTimer);
+        // Try fetch as fallback
+        loadDataViaFetch(progressTimer);
+      })
+      .gsGetOKRDeptCount();
+    return;
+  }
+
+  // Fallback: fetch (for non-sandbox environments)
+  loadDataViaFetch(progressTimer);
+}
+
+function loadDataViaFetch(progressTimer) {
+  var url = SCRIPT_URL;
+  if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
+  else url += '?okrall=1&view=data';
+  
   var controller = new AbortController();
   var timeoutId = setTimeout(function() { controller.abort(); }, 300000);
 
   fetch(url, { signal: controller.signal, cache: 'no-store' })
-    .then(function(r) { clearTimeout(timeoutId); clearInterval(progressTimer); return r.json(); })
+    .then(function(r) { clearTimeout(timeoutId); if (progressTimer) clearInterval(progressTimer); return r.json(); })
     .then(function(data) {
       D = data;
       onLoaded();
     })
     .catch(function(err) {
       clearTimeout(timeoutId);
-      clearInterval(progressTimer);
+      if (progressTimer) clearInterval(progressTimer);
       var msg = err.message;
       if (err.name === 'AbortError') msg = 'หมดเวลารอ (5 นาที) — กรุณาลองใหม่อีกครั้ง';
       document.getElementById('loadingScreen').innerHTML =
@@ -1019,6 +1106,16 @@ function refreshUrl() {
   if (url.indexOf('?') > -1) url += '&okrall=1&view=data&' + t;
   else url += '?okrall=1&view=data&' + t;
   return url;
+}
+
+function onLoadError(msg) {
+  var ls = document.getElementById('loadingScreen');
+  if (ls) {
+    ls.innerHTML = '<div style="text-align:center;padding:40px">' +
+      '<div class="error-msg">❌ ไม่สามารถโหลดข้อมูลได้<br>' + esc(msg) + '<br><br>' +
+      '<button onclick="loadData()" style="padding:8px 20px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;cursor:pointer">🔄 ลองใหม่</button></div>' +
+      '</div>';
+  }
 }
 
 function onLoaded() {
