@@ -361,6 +361,7 @@ body{font-family:'Sarabun','Segoe UI',system-ui,-apple-system,sans-serif;backgro
 </style>
 </head>
 <body>
+<div style="position:fixed;top:8px;right:8px;z-index:99999;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(220,38,38,0.3);cursor:default;font-family:system-ui,sans-serif;letter-spacing:0.3px" title="ข้อมูลส่วนบุคคล PDPA — ห้ามส่งออกหรือเผยแพร่โดยไม่ได้รับอนุญาต">🔒 ข้อมูลลับ PDPA</div>
 <div class="app">
 
 <!-- ════════ SIDEBAR ════════ -->
@@ -3479,6 +3480,61 @@ function renderSolution(sol){
   '</div>';
 }
 
+// ═══════════════════════════════════════════════════
+// PROJECT SHOWCASE — All PMSG dashboards in one grid
+// ═══════════════════════════════════════════════════
+function renderProjectShowcase(){
+  var V5 = 'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec';
+  var V4 = 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec';
+  var WR = 'https://script.google.com/macros/s/AKfycbyqPhGrk9706lZ5H0rOlNDDR1xPvW9aiIFpDILEZAQZB_7uzRAhE5JcJTaLeZ93SG-EAA/exec';
+
+  var projects = [
+    {icon:'🧭', name:'CEO KPI Dashboard', desc:'Health Score 78/100 · Smart Insights · 4 KPI มิติ · auto Telegram 09:15', url:V4+'?ceokpi=1', color:'#2563eb', tag:'V4'},
+    {icon:'📊', name:'OKR Dashboard', desc:'5 กลุ่มงาน · 7 แท็บ (ภาพรวม, CEO, KPI, Mentor, ตรวจสอบ, แผนธุรกิจ) · 225 คน', url:V5+'?okrall=1', color:'#8b5cf6', tag:'V5'},
+    {icon:'📋', name:'แผนธุรกิจ PMSG', desc:'Business Model Canvas · S-Objectives 4 ข้อ · ทุนองค์กร 4 ด้าน · Action Plan', url:V5+'?okrall=1', color:'#f59e0b', tag:'ใหม่'},
+    {icon:'💰', name:'GM Dashboard', desc:'GM รายเดือน 12 เดือน · YoY · สัดส่วน ขาย/หลังการขาย · doughnut chart', url:V5+'?gm=1', color:'#10b981', tag:'V5'},
+    {icon:'🔧', name:'Repair Flow Dashboard', desc:'103 คันในระบบ · 1,447 ส่งมอบ · 8 สถานี · CNB 31 + CSK 72', url:V5+'?rf=1&view=index', color:'#3b82f6', tag:'V5'},
+    {icon:'📅', name:'BCT Calendar', desc:'ปฏิทินนัดรับบริการ · Form→LINE Notify · QC 90.8% (4,206/4,632)', url:V5+'?bct=ui', color:'#06b6d4', tag:'V5'},
+    {icon:'🪟', name:'เคลือบแก้ว (Supplement)', desc:'เคลือบแก้ว 58 คัน/เดือน (116%) · GM ผลิตภัณฑ์เสริม · เป้า 50/เดือน', url:V5+'?supplement=1', color:'#0ea5e9', tag:'V5'},
+    {icon:'🎯', name:'PR Dashboard', desc:'เป้าขายผลิตภัณฑ์เสริม · 5 แท็บ · 12 SA · Top 10 Products · เปรียบเทียบ', url:V5+'?pr=1', color:'#ec4899', tag:'V5'},
+    {icon:'🧪', name:'PMGI Parts', desc:'อะไหล่ทางเลือก · 5 แท็บ · margin 226,549 บาท · Top 10 · 3 suppliers', url:V5+'?pmgi=1', color:'#84cc16', tag:'V5'},
+    {icon:'📈', name:'Finance P&L', desc:'งบการเงิน 5 ปี · รายได้/ต้นทุน/กำไร · bar chart เปรียบเทียบงวด', url:V5+'?finance=1', color:'#6366f1', tag:'V5'},
+    {icon:'👥', name:'Eval360 Dashboard', desc:'360° ประเมิน 510 คน · 5 บริษัท · Ranking · Team Analysis · Radar', url:V5+'?eval360=1', color:'#f97316', tag:'V5'},
+    {icon:'🛡️', name:'War Room', desc:'16 tabs · real-time API · Monitor 6 cards · OKR · Service Mix · YoY', url:WR, color:'#ef4444', tag:'V3'},
+    {icon:'🔍', name:'Parts Checker', desc:'ตรวจสอบอะไหล่ · สต็อก · Top 10 ใกล้หมด · ฟิลเตอร์หมวด/สาขา', url:V5+'?parts=1', color:'#14b8a6', tag:'V5'},
+    {icon:'⏱️', name:'Standard Time', desc:'เวลามาตรฐาน · สถานีซ่อม · รอบหมุน · ประสิทธิภาพ', url:V5+'?stdtime=1', color:'#a855f7', tag:'V5'},
+    {icon:'📚', name:'Course (หลักสูตรนี้)', desc:'16 โมดูล · 13 ตัวอย่าง Dashboard · Google Form M16 · Best Practice', url:V5+'?course=1', color:'#f59e0b', tag:'V5'},
+  ];
+
+  var cards = projects.map(function(p, i){
+    return '<a href="'+p.url+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">'+
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;transition:all 0.2s;cursor:pointer;height:100%;border-top:3px solid '+p.color+'"'+
+      ' onmouseover="this.style.transform=\'translateY(-3px)\';this.style.boxShadow=\'0 8px 20px rgba(0,0,0,0.1)\'"'+
+      ' onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+          '<span style="font-size:22px">'+p.icon+'</span>'+
+          '<span style="font-size:13px;font-weight:700;color:var(--text);flex:1">'+p.name+'</span>'+
+          '<span style="font-size:10px;font-weight:700;color:#fff;background:'+p.color+';padding:2px 8px;border-radius:10px">'+p.tag+'</span>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--text2);line-height:1.6">'+p.desc+'</div>'+
+        '<div style="margin-top:8px;font-size:11px;color:'+p.color+';font-weight:600">เปิด Dashboard ↗</div>'+
+      '</div>'+
+    '</a>';
+  }).join('');
+
+  return ''+
+  '<div class="block">'+
+    '<h3><span class="b-icon">🏆</span> โปรเจ็คตัวอย่างทั้งหมด (All Project Showcase)</h3>'+
+    '<div class="tip-callout" style="margin-bottom:14px"><b>15 โปรเจ็คจริง</b> ที่ทีม PMSG สร้างด้วย AI — คลิกที่การ์ดเพื่อเปิด Dashboard จริง และใช้เป็นตัวอย่างอ้างอิงในการสร้าง Dashboard ของคุณ</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">'+
+      cards+
+    '</div>'+
+    '<div style="margin-top:14px;padding:12px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;font-size:12px;color:#1e40af;line-height:1.6">'+
+      '<strong>💡 วิธีใช้:</strong> คลิกที่การ์ดเพื่อเปิด Dashboard จริง → ศึกษา layout สี และการจัดวาง → นำ URL ใส่ในช่อง "3e. ลิงก์โปรเจ็คตัวอย่าง" ด้านบน → AI จะเรียนรู้รูปแบบและนำมาปรับใช้กับ Dashboard ของคุณ'+
+    '</div>'+
+  '</div>';
+}
+
 function renderModule(id){
   var m = MODULES[id];
   if(!m) return;
@@ -3531,6 +3587,11 @@ function renderModule(id){
   // Add capstone section to last module
   if(id==='m15'){
     html += renderCapstone();
+  }
+
+  // Add project showcase to M16
+  if(id==='m16'){
+    html += renderProjectShowcase();
   }
 
   container.innerHTML = html;

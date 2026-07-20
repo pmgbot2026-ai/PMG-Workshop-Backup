@@ -38,6 +38,59 @@ var FINANCE_SS_IDS = {
   "2565": "1-fVKmarpbx5x0pPKP8_QtoFivYWidnguQEqO23AXtQA"
 };
 
+// ═══ PDPA Login Page ═══
+function servePdpaLogin(redirectQuery, errorMsg) {
+  var baseUrl = ScriptApp.getService().getUrl();
+  var redirectUrl = redirectQuery ? baseUrl + '?' + redirectQuery : baseUrl;
+  
+  var errorHtml = errorMsg ? 
+    '<div style="background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:10px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;text-align:center">'+errorMsg+'</div>' : '';
+  
+  return HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>🔒 PDPA — เข้าสู่ระบบ</title>'+
+    '<style>'+
+    '*{margin:0;padding:0;box-sizing:border-box}'+
+    'body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#2563eb 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;color:#1e293b}'+
+    '.login-card{background:#fff;border-radius:16px;padding:40px 36px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)}'+
+    '.lock-icon{font-size:48px;text-align:center;margin-bottom:16px}'+
+    '.login-title{font-size:20px;font-weight:800;text-align:center;color:#1e293b;margin-bottom:6px}'+
+    '.login-sub{font-size:13px;text-align:center;color:#64748b;margin-bottom:24px;line-height:1.6}'+
+    '.pdpa-badge{display:inline-block;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:16px}'+
+    '.input-group{margin-bottom:20px}'+
+    '.input-label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px}'+
+    '.input-field{width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;font-family:inherit;transition:border-color 0.2s}'+
+    '.input-field:focus{outline:none;border-color:#3b82f6}'+
+    '.login-btn{width:100%;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;border:none;padding:14px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s}'+
+    '.login-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(59,130,246,0.4)}'+
+    '.login-btn:active{transform:translateY(0)}'+
+    '.pdpa-notice{margin-top:20px;padding:12px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;font-size:11px;color:#1e40af;line-height:1.6}'+
+    '.pdpa-footer{text-align:center;margin-top:16px;font-size:11px;color:#94a3b8}'+
+    '</style></head><body>'+
+    '<div class="login-card">'+
+      '<div class="lock-icon">🔒</div>'+
+      '<div class="login-title">PMSG Dashboard</div>'+
+      '<div class="login-sub">ระบบจำกัดการเข้าถึง — ข้อมูลลับ PDPA</div>'+
+      '<div style="text-align:center"><span class="pdpa-badge">⛔ ห้ามเผยแพร่โดยไม่ได้รับอนุญาต</span></div>'+
+      errorHtml+
+      '<form method="get" action="'+baseUrl+'">'+
+        '<input type="hidden" name="redirect" value="'+redirectUrl+'">'+
+        '<div class="input-group">'+
+          '<label class="input-label">🔑 รหัสผ่าน (Password)</label>'+
+          '<input type="password" name="pass" class="input-field" placeholder="กรุณาใส่รหัสผ่าน" autofocus required>'+
+        '</div>'+
+        '<button type="submit" class="login-btn">เข้าสู่ระบบ →</button>'+
+      '</form>'+
+      '<div class="pdpa-notice">'+
+        '<strong>📋 ข้อกำหนด PDPA:</strong> ข้อมูลในระบบนี้เป็นข้อมูลส่วนบุคคลภายใต้พรบ. คุ้มครองข้อมูลส่วนบุคคล (PDPA) — ห้ามส่งออก เผยแพร่ หรือเข้าถึงโดยไม่ได้รับอนุญาตจากผู้ดูแล'+
+      '</div>'+
+      '<div class="pdpa-footer">PMSG · 2026 · All Rights Reserved</div>'+
+    '</div>'+
+    '</body></html>'
+  ).setTitle('🔒 PDPA — เข้าสู่ระบบ').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
 // Temp: read any sheet from any SS
 function readForeignSheet_(ssid, sheetName, maxRows) {
   var ss = SpreadsheetApp.openById(ssid);
@@ -61,6 +114,52 @@ function readForeignSheet_(ssid, sheetName, maxRows) {
 function doGet(e) {
   if (!e) e = { parameter: {} };
   var p = e.parameter || {};
+  
+  // ═══ PDPA Access Control — รหัสผ่านเข้าใช้ทุกหน้า ═══
+  var PDPA_PASSWORD = 'pmsg2026';  // เปลี่ยนรหัสได้ที่นี่
+  var PDPA_SESSION_KEY = 'PDPA_AUTH_OK';
+  
+  // ถ้ามีพารามิเตอร์ pass= ให้ตรวจสอบรหัส
+  if (p.pass !== undefined) {
+    if (p.pass === PDPA_PASSWORD) {
+      // รหัสถูกต้อง — parse redirect param แล้วทำงานต่อทันที (ไม่ redirect)
+      // ถ้ามี redirect param ให้ parse query string กลับเป็น params
+      if (p.redirect) {
+        try {
+          var redirectUrl = p.redirect;
+          var qIdx = redirectUrl.indexOf('?');
+          if (qIdx >= 0) {
+            var queryString = redirectUrl.substring(qIdx + 1);
+            var pairs = queryString.split('&');
+            for (var pi = 0; pi < pairs.length; pi++) {
+              var eqIdx = pairs[pi].indexOf('=');
+              if (eqIdx >= 0) {
+                var rKey = decodeURIComponent(pairs[pi].substring(0, eqIdx));
+                var rVal = decodeURIComponent(pairs[pi].substring(eqIdx + 1));
+                if (rKey !== 'pass' && rKey !== 'authed') {
+                  p[rKey] = rVal;
+                }
+              }
+            }
+          }
+        } catch(e) {}
+      }
+      // ตั้งค่า authed และทำงานต่อ (fall through ไปที่โค้ดด้านล่าง)
+      p.authed = '1';
+    } else {
+      // รหัสผิด — แสดงหน้า login ใหม่
+      return servePdpaLogin(p.redirect || '', '❌ รหัสผ่านไม่ถูกต้อง กรุณาลองอีกครั้ง');
+    }
+  }
+  
+  // ถ้าไม่ได้ส่ง authed=1 และไม่ใช่ API endpoint — แสดงหน้า login
+  if (p.authed !== '1' && p.api !== '1' && p.debug !== 'readsheet' && !p.fileid && p.action !== 'uploadEval360') {
+    // สร้าง redirect query สำหรับหน้าที่ต้องการ
+    var backQp = [];
+    for (var bk in p) { if (p[bk]) backQp.push(bk + '=' + encodeURIComponent(p[bk])); }
+    var backQs = backQp.length ? backQp.join('&') : '';
+    return servePdpaLogin(backQs, '');
+  }
   
   // Force-trigger external_request scope authorization on first run
   try { UrlFetchApp.fetch('https://www.google.com', {muteHttpExceptions: true}); } catch(err) {}

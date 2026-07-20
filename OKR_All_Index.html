@@ -831,6 +831,7 @@
   </style>
 </head>
 <body>
+<div style="position:fixed;top:8px;right:8px;z-index:99999;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(220,38,38,0.3);cursor:default;font-family:system-ui,sans-serif;letter-spacing:0.3px" title="ข้อมูลส่วนบุคคล PDPA — ห้ามส่งออกหรือเผยแพร่โดยไม่ได้รับอนุญาต">🔒 ข้อมูลลับ PDPA</div>
 
   <!-- ═════════ Header ═════════ -->
   <div class="header">
@@ -868,6 +869,7 @@
     <div id="section-linkage" class="section" style="display:none"></div>
     <div id="section-mentors" class="section" style="display:none"></div>
     <div id="section-audit" class="section" style="display:none"></div>
+    <div id="section-businessplan" class="section" style="display:none"></div>
   </div>
 
   <!-- ═════════ Person Modal ═════════ -->
@@ -911,7 +913,8 @@ var TAB_CONFIG = [
   { id: 'departments', icon: '👤', label: 'CEO รายบุคคล' },
   { id: 'kpi',         icon: '🎯', label: 'KPI & ตัววัดผล' },
   { id: 'mentors',     icon: '👥', label: 'Mentor' },
-  { id: 'audit',       icon: '🔍', label: 'ตรวจสอบ' }
+  { id: 'audit',       icon: '🔍', label: 'ตรวจสอบ' },
+  { id: 'businessplan', icon: '📋', label: 'แผนธุรกิจ' }
 ];
 
 function renderTabs() {
@@ -1109,6 +1112,435 @@ function switchTab(tabId, btn) {
   if (tabId === 'linkage' && !section.dataset.rendered) { renderLinkage(); section.dataset.rendered = '1'; }
   if (tabId === 'mentors') renderMentors();
   if (tabId === 'audit') renderAudit();
+  if (tabId === 'businessplan' && !section.dataset.rendered) { renderBusinessPlan(); section.dataset.rendered = '1'; }
+}
+
+/* ═══════════════════════════════════════════════════
+   Business Plan Tab (แผนธุรกิจ) — CPDG-style layout
+   ═══════════════════════════════════════════════════ */
+function renderBusinessPlan() {
+  var html = '';
+
+  // ── Hero ──
+  html += '<div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 50%,#3b82f6 100%);color:#fff;padding:24px 28px;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 20px rgba(59,130,246,0.2)">'+
+    '<div style="font-size:24px;font-weight:800;margin-bottom:6px">📋 แผนธุรกิจ PMSG (Business Plan)</div>'+
+    '<div style="font-size:14px;opacity:.9;line-height:1.6">แผนธุรกิจกลยุทธ์ PMSG — Purpose → Vision → Strategy → OKR → KPI · 5 กลุ่มงาน 225 คน</div>'+
+    '<div style="font-size:12px;opacity:.7;margin-top:8px">ที่มา: เอกสารแผนธุรกิจ PMSG (Canva → PDF 33 หน้า) · อัปเดต: ม.ค. 2569</div>'+
+  '</div>';
+
+  // ═══════════════════════════════════════════════════
+  // SECTION A: Purpose & Vision & Driving Force
+  // ═══════════════════════════════════════════════════
+  html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
+    '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">🎯 จุดมุ่งหมาย & ภาพความสำเร็จ (Purpose & Vision)</h2>'+
+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'+
+      '<div style="background:#eff6ff;border-left:4px solid #3b82f6;border-radius:8px;padding:16px">'+
+        '<div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:8px">🎯 จุดมุ่งหมาย (Purpose)</div>'+
+        '<div style="font-size:14px;line-height:1.8;color:var(--text)">ทุ่มเท รับใช้ผู้ใช้รถยนต์ อย่างใกล้ชิด ให้ประสบความสำเร็จ</div>'+
+      '</div>'+
+      '<div style="background:#f0fdf4;border-left:4px solid #10b981;border-radius:8px;padding:16px">'+
+        '<div style="font-size:13px;font-weight:700;color:#059669;margin-bottom:8px">👁️ ภาพความสำเร็จ (Vision)</div>'+
+        '<div style="font-size:14px;line-height:1.8;color:var(--text)">ธุรกิจบริการผู้ใช้รถยนต์ มีสัดส่วน Gross Margin <strong>70%</strong><br>(งานบริการผู้ใช้รถยนต์ <strong>70 : ขาย 30</strong>)</div>'+
+      '</div>'+
+    '</div>'+
+
+    '<div style="background:#fef3c7;border-left:4px solid #f59e0b;border-radius:8px;padding:14px 16px">'+
+      '<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:6px">🚀 จุดยืนเชิงกลยุทธ์ (Driving Force)</div>'+
+      '<div style="font-size:14px;line-height:1.7;color:var(--text)"><strong style="color:#92400e">USER CLASS DRIVEN</strong> — "รับใช้ผู้ใช้รถยนต์"</div>'+
+    '</div>'+
+  '</div>';
+
+  // ═══════════════════════════════════════════════════
+  // SECTION B: Business Model Canvas (CPDG-style grid)
+  //   Row 0: Purpose (full width)
+  //   Row 1: Key Resources | Value Propositions + UIA | Customer Segments
+  //   Row 2: Key Partners | Key Activity | Relationships
+  //   Row 3: Channels | Cost Structure | Revenue Streams
+  // ═══════════════════════════════════════════════════
+  html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
+    '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">🗺️ Business Model Canvas (PMSG)</h2>'+
+
+    // Row 0: Purpose (full width banner)
+    '<div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:12px;text-align:center">'+
+      '<div style="font-size:12px;font-weight:700;opacity:.85;margin-bottom:4px">PURPOSE</div>'+
+      '<div style="font-size:15px;font-weight:700">ทุ่มเท รับใช้ผู้ใช้รถยนต์ อย่างใกล้ชิด ให้ประสบความสำเร็จ</div>'+
+    '</div>'+
+
+    // Canvas grid 3 columns
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'+
+
+      // ── Row 1 ──
+      // Key Resources
+      '<div style="background:#f0fdf4;border:1px solid #6ee7b7;border-radius:10px;padding:14px">'+
+        '<div style="font-size:12px;font-weight:700;color:#059669;margin-bottom:10px">📦 Key Resources</div>'+
+        '<ul style="font-size:11px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
+          '<li><strong>F:</strong> เพิ่ม GM ต่อราย ต่อคน</li>'+
+          '<li><strong>C:</strong> มุ่งเน้นความสำเร็จของลูกค้า สัมพันธ์แบบใกล้ชิดเป็นส่วนตัว</li>'+
+          '<li><strong>I:</strong> ระบบงานออนไลน์ 100%</li>'+
+          '<li><strong>L:</strong> สมาชิกทำงานด้วยแรงจูงใจ สำเร็จด้วยแรงจูงใจ</li>'+
+        '</ul>'+
+      '</div>'+
+
+      // Value Propositions + UIA
+      '<div style="background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:14px">'+
+        '<div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:10px">💎 Value Propositions</div>'+
+        '<div style="font-size:11px;line-height:1.7;color:#1e293b;margin-bottom:8px"><strong>รับใช้ทุกเรื่องราว รับผิดชอบ รับประกัน</strong> ในทุกงานบริการและผลิตภัณฑ์ ครบวงจร ตลอดเวลา</div>'+
+        '<div style="font-size:10px;color:#475569;font-style:italic;margin-bottom:8px">5 ดึง 4 ไม่ + มาตรฐาน 9 CVP</div>'+
+        '<div style="font-size:11px;font-weight:700;color:#1e40af;margin-bottom:6px">UIA:</div>'+
+        '<ul style="font-size:11px;line-height:1.6;color:#475569;list-style:none;padding:0">'+
+          '<li>1. กลุ่มรับใช้ one to one</li>'+
+          '<li>2. SPS 2.0</li>'+
+          '<li>3. LifeTime Incentive</li>'+
+          '<li>4. ศูนย์บริการในบ้าน</li>'+
+          '<li>5. Relationship as a Service (Navway)</li>'+
+          '<li>6. SGM</li>'+
+        '</ul>'+
+      '</div>'+
+
+      // Customer Segments
+      '<div style="background:#fce7f3;border:1px solid #f9a8d4;border-radius:10px;padding:14px">'+
+        '<div style="font-size:12px;font-weight:700;color:#9d174d;margin-bottom:10px">👥 Customer Segments</div>'+
+        '<div style="font-size:12px;line-height:1.8;color:#475569">ผู้ใช้รถยนต์ในภาคตะวันออก</div>'+
+      '</div>'+
+
+      // ── Row 2 ──
+      // Key Partners
+      '<div style="background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:14px">'+
+        '<div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:10px">🤝 Key Partners</div>'+
+        '<ul style="font-size:11px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
+          '<li>1. บริษัทตรีเพชรอีซูซุเซลส์</li>'+
+          '<li>2. Marketing Representative (MR)</li>'+
+          '<li>3. Relationship as a Service (MA)</li>'+
+          '<li>4. คู่ค้า (อะไหล่-ประดับยนต์)</li>'+
+        '</ul>'+
+      '</div>'+
+
+      // Key Activity
+      '<div style="background:#e0e7ff;border:1px solid #a5b4fc;border-radius:10px;padding:14px">'+
+        '<div style="font-size:12px;font-weight:700;color:#3730a3;margin-bottom:10px">⚙️ Key Activity</div>'+
+        '<ul style="font-size:11px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
+          '<li>• การบริหารลูกค้า</li>'+
+          '<li>• การบริหารการปฏิบัติงาน (CD)</li>'+
+          '<li>• การสร้างภาพลักษณ์องค์กร</li>'+
+        '</ul>'+
+      '</div>'+
+
+      // Customer Relationships
+      '<div style="background:#fce7f3;border:1px solid #f9a8d4;border-radius:10px;padding:14px">'+
+        '<div style="font-size:12px;font-weight:700;color:#9d174d;margin-bottom:10px">🤝 Customer Relationships</div>'+
+        '<ul style="font-size:11px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
+          '<li>1. งานขายรถ</li>'+
+          '<li>2. งานบริการผู้ใช้รถยนต์</li>'+
+          '<li>3. การรับใช้ทุกเรื่องราว</li>'+
+          '<li>4. SPS 2.0</li>'+
+          '<li>5. การตลาดแบบใหม่ SGM+Navway</li>'+
+        '</ul>'+
+        '<div style="margin-top:8px;font-size:10px;color:#475569;font-style:italic">สร้างความสัมพันธ์แบบส่วนตัว ทีละราย ด้วยเทคโนโลยีใกล้ชิดกับลูกค้าตลอดชีพ</div>'+
+      '</div>'+
+
+      // ── Row 3 ──
+      // Channels
+      '<div style="background:#e0e7ff;border:1px solid #a5b4fc;border-radius:10px;padding:14px">'+
+        '<div style="font-size:12px;font-weight:700;color:#3730a3;margin-bottom:10px">📡 Channels</div>'+
+        '<ul style="font-size:11px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
+          '<li>• โชว์รูมและศูนย์บริการ 4 สาขา</li>'+
+          '<li>• ศูนย์บริการในบ้านและชุมชน</li>'+
+          '<li>• TYP@ (MR/MA)</li>'+
+          '<li>• SPS 2.0</li>'+
+          '<li>• MApp (หน้าร้านออนไลน์)</li>'+
+          '<li>• Line@ · Tiktok · FB</li>'+
+          '<li>• SGM</li>'+
+        '</ul>'+
+      '</div>'+
+
+      // Cost Structure
+      '<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:14px">'+
+        '<div style="font-size:12px;font-weight:700;color:#991b1b;margin-bottom:10px">💸 Cost Structure</div>'+
+        '<div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:6px">ส่วนแบ่งผลกำไร:</div>'+
+        '<ul style="font-size:11px;line-height:1.6;color:#475569;list-style:none;padding:0;margin-bottom:8px">'+
+          '<li>• ทีมขาย 7+1=8% ของ GM</li>'+
+          '<li>• ทีมศูนย์บริการ=12% ของ GM</li>'+
+          '<li>• ทีมศูนย์สี=5% ของ GM</li>'+
+        '</ul>'+
+        '<div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:4px">ต้นทุน:</div>'+
+        '<ul style="font-size:11px;line-height:1.6;color:#475569;list-style:none;padding:0">'+
+          '<li>PMS: รถ 95% ค่าแรง 60% อะไหล่ 70%</li>'+
+          '<li>ประกัน 82% ค่าแรง 50%</li>'+
+          '<li>PMG: อะไหล่ 95%</li>'+
+        '</ul>'+
+      '</div>'+
+
+      // Revenue Streams
+      '<div style="background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:14px">'+
+        '<div style="font-size:12px;font-weight:700;color:#854d0e;margin-bottom:10px">💰 Revenue Streams</div>'+
+        '<div style="font-size:11px;font-weight:700;color:#854d0e;margin-bottom:6px">งานบริการ:</div>'+
+        '<ul style="font-size:11px;line-height:1.6;color:#475569;list-style:none;padding:0;margin-bottom:8px">'+
+          '<li>• GM งานซ่อมศูนย์บริการ</li>'+
+          '<li>• GM ผลิตภัณฑ์เสริม</li>'+
+          '<li>• GM PMSG (PMG+PMGI)</li>'+
+          '<li>• GM ประกันภัยต่ออายุ</li>'+
+          '<li>• GM พันกันสนิม</li>'+
+          '<li>• GM เชนโมเดล</li>'+
+          '<li>• GM ประดับยนต์</li>'+
+        '</ul>'+
+        '<div style="font-size:11px;font-weight:700;color:#854d0e;margin-bottom:4px">งานขาย:</div>'+
+        '<div style="font-size:11px;color:#475569">• GM จากการขายรถ</div>'+
+      '</div>'+
+
+    '</div>'+
+
+    // AOE ribbon (full width below canvas)
+    '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:14px;margin-top:12px">'+
+      '<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:10px">🏆 Area of Excellence (AOE)</div>'+
+      '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px">'+
+        '<li>1. เก่งวิจัยลูกค้า — รู้จักพฤติกรรมลูกค้าทีละราย</li>'+
+        '<li>2. สร้างประสบการณ์ที่ยอดเยี่ยมในทุกโอกาส</li>'+
+        '<li>3. ทักษะสร้างและรักษาความใกล้ชิดตลอดชีพ</li>'+
+        '<li>4. เก่งทักษะการขาย & งานศูนย์บริการ</li>'+
+        '<li>5. ทักษะการตลาดออนไลน์ + ออฟไลน์</li>'+
+      '</ul>'+
+    '</div>'+
+  '</div>';
+
+  // ═══════════════════════════════════════════════════
+  // SECTION C: S-Objectives (CPDG-style) — numbered, colored border, tag badge, KR list
+  // ═══════════════════════════════════════════════════
+  html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
+    '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">🎯 S-Objectives (Strategic Objectives)</h2>'+
+
+    // S-Objective 1 — COC (blue)
+    '<div style="background:#eff6ff;border-left:5px solid #3b82f6;border-radius:10px;padding:16px;margin-bottom:14px">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+        '<div style="background:#3b82f6;color:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">1</div>'+
+        '<div style="font-size:14px;font-weight:700;color:#1e40af;flex:1">ยกระดับสมาชิกในองค์กรให้ทำงานร่วมกับ AI และมีทักษะใหม่ในอนาคต</div>'+
+        '<span style="background:#3b82f6;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;flex-shrink:0">COC</span>'+
+      '</div>'+
+      '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0;padding-left:40px">'+
+        '<li style="margin-bottom:4px"><strong style="color:#3b82f6">KR-1:</strong> 3 ผ่านทักษะ + Digital Skill สมาชิก 100%</li>'+
+        '<li style="margin-bottom:4px"><strong style="color:#3b82f6">KR-2:</strong> สมาชิกใช้ AI เป็นผู้ช่วยในการทำงาน > 90% ภายในปี 2026</li>'+
+        '<li><strong style="color:#3b82f6">KR-3:</strong> พัฒนาสมาชิกทุกระดับแสวงหาความรู้ใหม่ตลอดเวลา</li>'+
+      '</ul>'+
+    '</div>'+
+
+    // S-Objective 2 — DIN (violet)
+    '<div style="background:#f5f3ff;border-left:5px solid #8b5cf6;border-radius:10px;padding:16px;margin-bottom:14px">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+        '<div style="background:#8b5cf6;color:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">2</div>'+
+        '<div style="font-size:14px;font-weight:700;color:#6d28d9;flex:1">พา PMSG สู่ Automation Organization</div>'+
+        '<span style="background:#8b5cf6;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;flex-shrink:0">DIN</span>'+
+      '</div>'+
+      '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0;padding-left:40px">'+
+        '<li style="margin-bottom:4px"><strong style="color:#8b5cf6">KR-1:</strong> BCT และระบบงานออนไลน์ 100% ภายในปี 2026</li>'+
+        '<li style="margin-bottom:4px"><strong style="color:#8b5cf6">KR-2:</strong> MApp เป็นหน้าร้านออนไลน์ + AI วิเคราะห์พฤติกรรมลูกค้า</li>'+
+        '<li><strong style="color:#8b5cf6">KR-3:</strong> ระบบโครงสร้างและฐานข้อมูลสำหรับ AIOS แล้วเสร็จ 100% ในปี 2026</li>'+
+      '</ul>'+
+    '</div>'+
+
+    // S-Objective 3 — OPM (amber)
+    '<div style="background:#fffbeb;border-left:5px solid #f59e0b;border-radius:10px;padding:16px;margin-bottom:14px">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+        '<div style="background:#f59e0b;color:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">3</div>'+
+        '<div style="font-size:14px;font-weight:700;color:#92400e;flex:1">เพิ่ม GM หลังการขายให้ได้สัดส่วน 70:30</div>'+
+        '<span style="background:#f59e0b;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;flex-shrink:0">OPM</span>'+
+      '</div>'+
+      '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0;padding-left:40px">'+
+        '<li style="margin-bottom:4px"><strong style="color:#f59e0b">KR-1:</strong> GM หลังการขาย ≥ 10 ล้านบาท/เดือน</li>'+
+        '<li style="margin-bottom:4px"><strong style="color:#f59e0b">KR-2:</strong> GM ผลิตภัณฑ์เสริมเพิ่ม 600 บาท/คัน</li>'+
+        '<li><strong style="color:#f59e0b">KR-3:</strong> เพิ่มรถนอกระยะรับประกันเข้าศูนย์บริการ</li>'+
+      '</ul>'+
+    '</div>'+
+
+    // S-Objective 4 — OBM (emerald)
+    '<div style="background:#ecfdf5;border-left:5px solid #10b981;border-radius:10px;padding:16px">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+        '<div style="background:#10b981;color:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">4</div>'+
+        '<div style="font-size:14px;font-weight:700;color:#059669;flex:1">สร้างธุรกิจบริการผู้ใช้รถยนต์ครบวงจร</div>'+
+        '<span style="background:#10b981;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;flex-shrink:0">OBM</span>'+
+      '</div>'+
+      '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0;padding-left:40px">'+
+        '<li style="margin-bottom:4px"><strong style="color:#10b981">KR-1:</strong> ศึกษาเพิ่มธุรกิจศูนย์สีใน กทม. และภาคตะวันออก</li>'+
+        '<li style="margin-bottom:4px"><strong style="color:#10b981">KR-2:</strong> ประดับยนต์ใหม่ๆ + ผลิตภัณฑ์เสริมใหม่</li>'+
+        '<li><strong style="color:#10b981">KR-3:</strong> SGM + NavWay PMSG ขยายการตลาดเครือข่าย</li>'+
+      '</ul>'+
+    '</div>'+
+  '</div>';
+
+  // ═══════════════════════════════════════════════════
+  // SECTION D: ทุนองค์กร 4 ด้าน
+  // ═══════════════════════════════════════════════════
+  html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
+    '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">🏛️ ทุนองค์กร 4 ด้าน (Organizational Capital)</h2>'+
+    '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">'+
+
+      '<div style="background:#eff6ff;border-radius:10px;padding:16px;border-left:4px solid #3b82f6">'+
+        '<div style="font-size:14px;font-weight:700;color:#1e40af;margin-bottom:10px">OC — ทุนองค์กร (Organizational Capital)</div>'+
+        '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
+          '<li>• โครงสร้างองค์กร, ภาวะผู้รับใช้, ท่าทีเพื่อสื่อสาร, บรรยากาศ</li>'+
+          '<li>• วัฒนธรรมองค์กร 20 ข้อ</li>'+
+          '<li>• ค่านิยม 6 รับ</li>'+
+          '<li>• นโยบายสนับสนุนสมาชิก 10 ประการ</li>'+
+          '<li>• อุปนิสัย 8 ประการ</li>'+
+          '<li>• ผู้นำผู้รับใช้ 5 บทบาท</li>'+
+        '</ul>'+
+      '</div>'+
+
+      '<div style="background:#f0fdf4;border-radius:10px;padding:16px;border-left:4px solid #10b981">'+
+        '<div style="font-size:14px;font-weight:700;color:#059669;margin-bottom:10px">HC — ทุนมนุษย์ (Human Capital)</div>'+
+        '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
+          '<li>• เพิ่มทักษะงานขายเพิ่ม GM</li>'+
+          '<li>• พัฒนาทักษะด้วย AI</li>'+
+          '<li>• เก่งเครื่องมืออัตโนมัติ</li>'+
+          '<li>• บ่มเพาะ AOE 3 ผ่าน</li>'+
+          '<li>• สมาชิก 3 ผ่าน ทักษะและทุนองค์กร 100%</li>'+
+        '</ul>'+
+      '</div>'+
+
+      '<div style="background:#fef3c7;border-radius:10px;padding:16px;border-left:4px solid #f59e0b">'+
+        '<div style="font-size:14px;font-weight:700;color:#92400e;margin-bottom:10px">IC — ทุนสารสนเทศ (Information Capital)</div>'+
+        '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
+          '<li>• BCT Dashboard</li>'+
+          '<li>• MApp หน้าร้านออนไลน์</li>'+
+          '<li>• MS24 · TG</li>'+
+          '<li>• AI วิเคราะห์พฤติกรรมลูกค้า</li>'+
+          '<li>• ฐานข้อมูลภายใน/ภายนอก</li>'+
+          '<li>• BCT ออนไลน์ 100%</li>'+
+        '</ul>'+
+      '</div>'+
+
+      '<div style="background:#fce7f3;border-radius:10px;padding:16px;border-left:4px solid #ec4899">'+
+        '<div style="font-size:14px;font-weight:700;color:#9d174d;margin-bottom:10px">DINC — Data & Intelligence Capital</div>'+
+        '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
+          '<li>• AIOS + AI Agent</li>'+
+          '<li>• Software Architecture + Cybersecurity</li>'+
+          '<li>• Data Warehouse</li>'+
+          '<li>• AI Model Training + Fine-tuning</li>'+
+          '<li>• AI Agent (Digital Twin)</li>'+
+          '<li>• Data Privacy + Access Control</li>'+
+        '</ul>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+
+  // ═══════════════════════════════════════════════════
+  // SECTION E: Action Plan (ผู้รับผิดชอบ)
+  // ═══════════════════════════════════════════════════
+  html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
+    '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">📅 Action Plan (แผนปฏิบัติการ)</h2>'+
+
+    // Timeline cards
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">'+
+      '<div style="background:#dbeafe;border-radius:10px;padding:14px;text-align:center">'+
+        '<div style="font-size:24px;font-weight:800;color:#1e40af">0-12</div>'+
+        '<div style="font-size:13px;font-weight:600;color:#1e40af">เดือน</div>'+
+        '<div style="font-size:12px;color:#475569;margin-top:4px">แผนงานระยะสั้น</div>'+
+      '</div>'+
+      '<div style="background:#dcfce7;border-radius:10px;padding:14px;text-align:center">'+
+        '<div style="font-size:24px;font-weight:800;color:#166534">1-3</div>'+
+        '<div style="font-size:13px;font-weight:600;color:#166534">ปี</div>'+
+        '<div style="font-size:12px;color:#475569;margin-top:4px">แผนกลยุทธ์ระยะกลาง</div>'+
+      '</div>'+
+      '<div style="background:#fef3c7;border-radius:10px;padding:14px;text-align:center">'+
+        '<div style="font-size:24px;font-weight:800;color:#92400e">3-5</div>'+
+        '<div style="font-size:13px;font-weight:600;color:#92400e">ปี</div>'+
+        '<div style="font-size:12px;color:#475569;margin-top:4px">แผนกลยุทธ์ระยะยาว</div>'+
+      '</div>'+
+    '</div>'+
+
+    // Responsibility table
+    '<div style="background:#f8fafc;border-radius:10px;padding:14px">'+
+      '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🎯 แผนงาน (ผู้รับผิดชอบ):</div>'+
+      '<table style="width:100%;font-size:12px;border-collapse:collapse">'+
+        '<thead><tr style="background:#e2e8f0"><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">แผนงาน</th><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">ผู้รับผิดชอบ</th></tr></thead>'+
+        '<tbody>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">เพิ่ม GM ต่อคันบริการ</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">พี่แหม่ม</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">แสวงหาลูกค้า TYP@</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">ปุ๋ย+บิว</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">นัดหมายตลอดชีพ PMSg</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">ตั๊ก</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">GM ผลิตภัณฑ์เสริม 600 บาท/คัน</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">ฟัก</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">IMC</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">เอิ่น</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">NavWay PMSG</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">พี่นก+เอ+น้องแซน</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">SGM</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">เบ๊นท์+ไอซ์</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">เรียกลูกค้ารถขาดหาย</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">ตั๊ก</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">รถนอกระยะ</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">แหม่ม</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">3 ผ่านทักษะ</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">มัญชีระ</td></tr>'+
+          '<tr><td style="padding:6px 8px">3 ผ่านกลยุทธ์</td><td style="padding:6px 8px">ศรอนงค์/มัญชีระ</td></tr>'+
+        '</tbody>'+
+      '</table>'+
+    '</div>'+
+
+    // AI in Action Plan
+    '<div style="background:#eff6ff;border-radius:10px;padding:14px;margin-top:12px">'+
+      '<div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:8px">🤖 AI ใน Action Plan:</div>'+
+      '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
+        '<li>• AI เรียนรู้ช่างซ่อมรถ</li>'+
+        '<li>• ซ่อมรถ EV/ไฮบริด</li>'+
+        '<li>• AI วิจัยพฤติกรรมลูกค้า</li>'+
+      '</ul>'+
+    '</div>'+
+  '</div>';
+
+  // ═══════════════════════════════════════════════════
+  // SECTION F: Cascade — Purpose → Vision → Strategy → OKR → KPI
+  // ═══════════════════════════════════════════════════
+  html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
+    '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">🔄 กระบวนการบริหารแผนธุรกิจ (Cascade)</h2>'+
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:16px">'+
+
+      '<div style="background:#3b82f6;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;min-width:120px">'+
+        '🎯 Purpose<br><span style="font-size:11px;opacity:.9">ทุ่มเท รับใช้ผู้ใช้รถยนต์</span>'+
+      '</div>'+
+      '<div style="font-size:20px;color:#94a3b8">→</div>'+
+      '<div style="background:#10b981;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;min-width:120px">'+
+        '👁️ Vision<br><span style="font-size:11px;opacity:.9">GM 70:30</span>'+
+      '</div>'+
+      '<div style="font-size:20px;color:#94a3b8">→</div>'+
+      '<div style="background:#f59e0b;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;min-width:120px">'+
+        '🗺️ Strategy<br><span style="font-size:11px;opacity:.9">BMC+AOE+4 ทุน</span>'+
+      '</div>'+
+      '<div style="font-size:20px;color:#94a3b8">→</div>'+
+      '<div style="background:#8b5cf6;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;min-width:120px">'+
+        '🎯 OKR<br><span style="font-size:11px;opacity:.9">5 กลุ่มงาน 4 Objectives</span>'+
+      '</div>'+
+      '<div style="font-size:20px;color:#94a3b8">→</div>'+
+      '<div style="background:#ec4899;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;min-width:120px">'+
+        '📊 KPI<br><span style="font-size:11px;opacity:.9">ตัววัดผล+Dashboard</span>'+
+      '</div>'+
+    '</div>'+
+
+    // Cascade alignment table
+    '<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-top:10px">'+
+      '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔗 ความเชื่อมโยงแผนธุรกิจ ↔ OKR Dashboard:</div>'+
+      '<table style="width:100%;font-size:12px;border-collapse:collapse">'+
+        '<thead><tr style="background:#e2e8f0">'+
+          '<th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">แผนธุรกิจ</th>'+
+          '<th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">OKR Dashboard</th>'+
+          '<th style="padding:8px;text-align:center;border-bottom:2px solid #cbd5e1">สถานะ</th>'+
+        '</tr></thead>'+
+        '<tbody>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">Vision:GM 70:30</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">GM Dashboard</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">AOE:วิจัยลูกค้า</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">OKR Business Growth</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">IC:BCT</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">BCT+War Room</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">DINC:AI+Data</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">CEO KPI+AI Course</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">HC:3 ผ่าน</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">OKR Team Growth+Eval360</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">Action:GM 600 บาท</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">PR Dashboard</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
+          '<tr><td style="padding:6px 8px">OC:วัฒนธรรม</td><td style="padding:6px 8px">OKR Community+Mentor</td><td style="padding:6px 8px;text-align:center">✅</td></tr>'+
+        '</tbody>'+
+      '</table>'+
+    '</div>'+
+  '</div>';
+
+  // ═══════════════════════════════════════════════════
+  // SECTION G: NCASS-PMSG Summary
+  // ═══════════════════════════════════════════════════
+  html += '<div class="section-block" style="background:linear-gradient(135deg,#eff6ff 0%,#f0f9ff 100%);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);border:1px solid #dbeafe">'+
+    '<h2 style="font-size:18px;font-weight:700;color:#1e40af;margin-bottom:16px;display:flex;align-items:center;gap:8px">🏅 NCASS-PMSG</h2>'+
+    '<div style="text-align:center;margin-bottom:16px">'+
+      '<div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:8px">ทุ่มเท รับใช้ผู้ใช้รถยนต์ อย่างใกล้ชิด ให้ประสบความสำเร็จ</div>'+
+      '<div style="font-size:14px;color:#475569">Vision: ธุรกิจบริการผู้ใช้รถยนต์ มีสัดส่วน GM 70% (บริการ 70 : ขาย 30)</div>'+
+    '</div>'+
+  '</div>';
+
+  document.getElementById('section-businessplan').innerHTML = html;
 }
 
 /* ═══════════════════════════════════════════════════
