@@ -698,6 +698,13 @@
 </div>
 
 <script>
+// Server-side injected data (via HtmlService template)
+<? if (eval360DataJson) { ?>
+window.__EVAL360_DATA__ = <?!= eval360DataJson ?>;
+<? } ?>
+</script>
+
+<script>
 'use strict';
 
 /* ============================================================
@@ -807,33 +814,38 @@ function avg(arr, key) {
 /* ==================== Data Loading ==================== */
 function loadData() {
   document.getElementById('lastUpdate').textContent = '⏳ กำลังโหลด...';
-  if (typeof google !== 'undefined' && google.script && google.script.run) {
+  
+  // Method 1: Check if data was injected via template (preferred — no sandbox issues)
+  if (typeof window.__EVAL360_DATA__ !== 'undefined' && window.__EVAL360_DATA__) {
     try {
-      google.script.run.withSuccessHandler(onDataLoaded)
-        .withFailureHandler(onDataError)
-        .getEval360Data();
+      onDataLoaded(window.__EVAL360_DATA__);
       return;
-    } catch (e) {
-      console.warn('google.script.run failed, fallback to XHR', e);
+    } catch(e) {
+      console.warn('Injected data parse failed, trying other methods', e);
     }
   }
-  // Fallback: ?eval360=1&api=1 (dev mode)
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', '?eval360=1&api=1', true);
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState !== 4) return;
-    if (xhr.status >= 200 && xhr.status < 300) {
-      try {
-        onDataLoaded(JSON.parse(xhr.responseText));
-      } catch (err) {
-        onDataError('JSON parse error: ' + err.message);
-      }
-    } else {
-      onDataError('HTTP ' + xhr.status);
+  
+  // Method 2: google.script.run (works for smaller data)
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    try {
+      google.script.run.withSuccessHandler(function(data) {
+        if (data && !data.error) {
+          onDataLoaded(data);
+        } else {
+          onDataError(data && data.error ? data.error : 'No data');
+        }
+      })
+      .withFailureHandler(function(err) {
+        onDataError(String(err));
+      })
+      .getEval360Data();
+      return;
+    } catch (e) {
+      console.warn('google.script.run failed', e);
     }
-  };
-  xhr.onerror = function() { onDataError('Network error'); };
-  xhr.send();
+  }
+  
+  onDataError('ไม่สามารถโหลดข้อมูลได้ — กรุณารีเฟรชหน้านี้อีกครั้ง');
 }
 
 function reloadData() { loadData(); }
@@ -843,6 +855,28 @@ function onDataLoaded(data) {
   if (data.persons) STATE.allPersons = data.persons;
   if (data.stats) STATE.stats = data.stats;
   if (data.company_stats) STATE.companyStats = data.company_stats;
+
+  // ═══ Field mapping: normalize person keys to short form used by UI ═══
+  // Source data uses: company, name, team, group_eval, member_id, behavior_avg, capital_avg, leadership_avg, overall_avg, behavior_total, capital_total, leadership_total, overall_total, total_questions
+  // UI code uses: c, n, t, g, m, b, ca, l, o, bt, ct, lt, ot, q
+  STATE.allPersons.forEach(function(p) {
+    if (p.company !== undefined && p.c === undefined) p.c = p.company;
+    if (p.name !== undefined && p.n === undefined) p.n = p.name;
+    if (p.team !== undefined && p.t === undefined) p.t = p.team;
+    if (p.group_eval !== undefined && p.g === undefined) p.g = p.group_eval;
+    if (p.member_id !== undefined && p.m === undefined) p.m = p.member_id;
+    if (p.behavior_avg !== undefined && p.b === undefined) p.b = p.behavior_avg;
+    if (p.capital_avg !== undefined && p.ca === undefined) p.ca = p.capital_avg;
+    if (p.leadership_avg !== undefined && p.l === undefined) p.l = p.leadership_avg;
+    if (p.overall_avg !== undefined && p.o === undefined) p.o = p.overall_avg;
+    if (p.behavior_total !== undefined && p.bt === undefined) p.bt = p.behavior_total;
+    if (p.capital_total !== undefined && p.ct === undefined) p.ct = p.capital_total;
+    if (p.leadership_total !== undefined && p.lt === undefined) p.lt = p.leadership_total;
+    if (p.overall_total !== undefined && p.ot === undefined) p.ot = p.overall_total;
+    if (p.total_questions !== undefined && p.q === undefined) p.q = p.total_questions;
+    if (p.round !== undefined && p.r === undefined) p.r = p.round;
+    if (p.year !== undefined && p.y === undefined) p.y = p.year;
+  });
 
   // Determine companies & domains
   STATE.companies = (STATE.stats.companies && STATE.stats.companies.length)

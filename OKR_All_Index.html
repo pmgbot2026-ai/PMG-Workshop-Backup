@@ -870,6 +870,7 @@
     <div id="section-mentors" class="section" style="display:none"></div>
     <div id="section-audit" class="section" style="display:none"></div>
     <div id="section-businessplan" class="section" style="display:none"></div>
+    <div id="section-changelog" class="section" style="display:none"></div>
   </div>
 
   <!-- ═════════ Person Modal ═════════ -->
@@ -914,7 +915,8 @@ var TAB_CONFIG = [
   { id: 'kpi',         icon: '🎯', label: 'KPI & ตัววัดผล' },
   { id: 'mentors',     icon: '👥', label: 'Mentor' },
   { id: 'audit',       icon: '🔍', label: 'ตรวจสอบ' },
-  { id: 'businessplan', icon: '📋', label: 'แผนธุรกิจ' }
+  { id: 'businessplan', icon: '📋', label: 'แผนธุรกิจ' },
+  { id: 'changelog',   icon: '📝', label: 'ประวัติการแก้ไข' }
 ];
 
 function renderTabs() {
@@ -1113,6 +1115,7 @@ function switchTab(tabId, btn) {
   if (tabId === 'mentors') renderMentors();
   if (tabId === 'audit') renderAudit();
   if (tabId === 'businessplan' && !section.dataset.rendered) { renderBusinessPlan(); section.dataset.rendered = '1'; }
+  if (tabId === 'changelog') renderChangeLogTab();
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2318,6 +2321,11 @@ function renderDeptContent(idx) {
     html += '<div style="font-size:0.8rem;color:var(--red);margin-top:6px">⚠️ โหลดข้อมูลไม่ได้: ' + esc(dept.error) + '</div>';
   } else {
     html += '<div style="font-size:0.82rem;color:var(--text2);margin-top:4px">' + s.peopleCount + ' บุคลากร • KR ' + s.krFilled + '/' + s.krTotal + ' • KPI ' + s.kpiCount + '</div>';
+  }
+  // Source sheet link
+  var sheetUrl = DEPT_SHEET_LINKS ? DEPT_SHEET_LINKS[dept.name] : null;
+  if (sheetUrl) {
+    html += '<div style="margin-top:6px"><a href="' + sheetUrl + '" target="_blank" style="font-size:11px;padding:4px 10px;border-radius:6px;background:#eff6ff;color:#1e40af;text-decoration:none;border:1px solid #bfdbfe;display:inline-block" onmouseover="this.style.background=\'#dbeafe\'" onmouseout="this.style.background=\'#eff6ff\'">📊 เปิดชีทต้นทาง</a></div>';
   }
   html += '</div>';
   html += '<div style="text-align:right">';
@@ -4221,6 +4229,175 @@ function renderChangeLogModal(entries) {
 
   document.body.appendChild(modal);
 }
+
+/* ═══════════════════════════════════════════════════
+   Change Log Tab (ประวัติการแก้ไข) — Full tab view
+   ═══════════════════════════════════════════════════ */
+var CHANGELOG_DEPT_SHEETS = {
+  'PMG/PMGI': { ssid: '1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s', label: 'PMG/PMGI' },
+  'PMS ช่าง 4 สาขา': { ssid: '1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g', label: 'PMS ช่าง 4 สาขา' },
+  'PMS ขาย': { ssid: '1ojfAYoWXI-InWFV0tE2q4QM_8GYz6erjmGie1LMwpE8', label: 'PMS ขาย' },
+  'PMS ศูนย์บริการ': { ssid: '15zM39IFLOpczwP_ZnBG3ScRKPl4lgSCi66HQAgwoXoQ', label: 'PMS ศูนย์บริการ' },
+  'PMS/PMG Backoffice': { ssid: '1f9DtFbss0jDW5Of6pw5yEDh5mciIk4oVvwrAgPPpKJE', label: 'PMS/PMG Backoffice' }
+};
+
+function renderChangeLogTab() {
+  var section = document.getElementById('section-changelog');
+  if (!section) return;
+  
+  section.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:14px">' +
+    '<div style="font-size:32px;margin-bottom:8px">📝</div>' +
+    '<div>กำลังโหลดประวัติการแก้ไข...</div></div>';
+  
+  var deptNames = Object.keys(CHANGELOG_DEPT_SHEETS);
+  var pending = deptNames.length;
+  var allEntries = [];
+  
+  deptNames.forEach(function(dn) {
+    if (google && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.success && res.entries) {
+            res.entries.forEach(function(e) {
+              allEntries.push({ dept: dn, when: e.when, who: e.who, what: e.what, where: e.where, why: e.why, how: e.how });
+            });
+          }
+          pending--;
+          if (pending === 0) renderChangeLogContent(allEntries);
+        })
+        .withFailureHandler(function(err) {
+          pending--;
+          if (pending === 0) renderChangeLogContent(allEntries);
+        })
+        .gsGetOKRChangeLog(dn);
+    } else {
+      pending--;
+      if (pending === 0) renderChangeLogContent(allEntries);
+    }
+  });
+}
+
+function renderChangeLogContent(entries) {
+  var section = document.getElementById('section-changelog');
+  if (!section) return;
+  
+  entries.sort(function(a, b) {
+    var da = new Date(a.when).getTime() || 0;
+    var db = new Date(b.when).getTime() || 0;
+    return db - da;
+  });
+  
+  // Build department filter dropdown
+  var depts = ['ทุกกลุ่มงาน'].concat(Object.keys(CHANGELOG_DEPT_SHEETS));
+  var filterHtml = '<select id="clFilter" onchange="filterChangeLog()" style="padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;background:#fff;color:#1e293b;cursor:pointer">' +
+    depts.map(function(d) { return '<option value="' + esc(d) + '">' + esc(d) + '</option>'; }).join('') +
+    '</select>';
+  
+  // Build source sheet links
+  var sheetLinksHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">' +
+    '<span style="font-size:12px;color:#64748b;align-self:center">🔗 ชีทต้นทาง: </span>';
+  Object.keys(CHANGELOG_DEPT_SHEETS).forEach(function(dn) {
+    var info = CHANGELOG_DEPT_SHEETS[dn];
+    sheetLinksHtml += '<a href="https://docs.google.com/spreadsheets/d/' + info.ssid + '/edit" target="_blank" ' +
+      'style="font-size:11px;padding:4px 10px;border-radius:6px;background:#eff6ff;color:#1e40af;text-decoration:none;border:1px solid #bfdbfe" ' +
+      'onmouseover="this.style.background=\'#dbeafe\'" onmouseout="this.style.background=\'#eff6ff\'">' +
+      '📊 ' + esc(info.label) + '</a>';
+  });
+  sheetLinksHtml += '</div>';
+  
+  var rowsHtml = '';
+  if (entries.length === 0) {
+    rowsHtml = '<div style="padding:40px;text-align:center;color:#94a3b8;font-size:14px">' +
+      '<div style="font-size:40px;margin-bottom:12px">📋</div>' +
+      '<div style="font-weight:600;color:#64748b;margin-bottom:4px">ยังไม่มีบันทึกการเปลี่ยนแปลง</div>' +
+      '<div>เมื่อมีการแก้ไขข้อมูลในชีทต้นทาง ระบบจะบันทึกอัตโนมัติที่นี่ (Real-time)</div></div>';
+  } else {
+    entries.forEach(function(e, idx) {
+      var d = e.when ? new Date(e.when) : null;
+      var dateStr = d ? d.toLocaleString('th-TH') : String(e.when || '');
+      var whatColor = e.what && e.what.indexOf('เพิ่ม') >= 0 ? '#10b981' : 
+                      e.what && e.what.indexOf('ลบ') >= 0 ? '#ef4444' : 
+                      e.what && e.what.indexOf('Error') >= 0 ? '#dc2626' : 
+                      e.what && e.what.indexOf('แก้ไข') >= 0 ? '#3b82f6' : '#f59e0b';
+      var whatIcon = e.what && e.what.indexOf('เพิ่ม') >= 0 ? '➕' : 
+                     e.what && e.what.indexOf('ลบ') >= 0 ? '🗑️' : 
+                     e.what && e.what.indexOf('แก้ไข') >= 0 ? '✏️' : 
+                     e.what && e.what.indexOf('แท็บ') >= 0 ? '📑' : 'ℹ️';
+      rowsHtml += '<tr class="cl-row" data-dept="' + esc(e.dept || '') + '" style="border-bottom:1px solid #e2e8f0">' +
+        '<td style="padding:10px 12px;font-size:12px;color:#64748b;white-space:nowrap">' + esc(dateStr) + '</td>' +
+        '<td style="padding:10px 12px;font-size:12px;font-weight:600;color:#1e293b">' + esc(e.dept || '') + '</td>' +
+        '<td style="padding:10px 12px;font-size:12px;color:' + whatColor + ';font-weight:700">' + whatIcon + ' ' + esc(e.what || '') + '</td>' +
+        '<td style="padding:10px 12px;font-size:12px;color:#475569;font-family:monospace">' + esc(e.where || '') + '</td>' +
+        '<td style="padding:10px 12px;font-size:12px;color:#475569;font-weight:600">' + esc(e.who || '') + '</td>' +
+        '<td style="padding:10px 12px;font-size:12px;color:#94a3b8;max-width:350px">' + esc(e.why || '') + '</td>' +
+        '<td style="padding:10px 12px;font-size:11px;color:#94a3b8;max-width:200px">' + esc(e.how || '') + '</td>' +
+      '</tr>';
+    });
+  }
+  
+  var html = '';
+  
+  // Hero banner
+  html += '<div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#2563eb 100%);color:#fff;padding:24px 28px;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 20px rgba(59,130,246,0.2)">' +
+    '<div style="font-size:24px;font-weight:800;margin-bottom:6px">📝 ประวัติการแก้ไข (Change Log — 5W1H)</div>' +
+    '<div style="font-size:14px;opacity:.9;line-height:1.6">บันทึกการเปลี่ยนแปลงทุกครั้งที่มีการแก้ไขชีทต้นทาง — Real-time + Auto-refresh ทุก 15 นาที</div>' +
+    '<div style="font-size:12px;opacity:.7;margin-top:8px">รวม ' + entries.length + ' รายการ · เรียงจากใหม่ล่าสุด</div>' +
+  '</div>';
+  
+  // Filter + source links
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">' +
+    '<div>' + filterHtml + '</div>' +
+    '<button onclick="renderChangeLogTab()" style="padding:8px 16px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;background:#fff;color:#1e293b;cursor:pointer">🔄 รีเฟรช</button>' +
+  '</div>';
+  
+  // Source sheet links
+  html += sheetLinksHtml;
+  
+  // Table
+  html += '<div class="table-wrap" style="background:var(--card);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)">' +
+    '<table style="width:100%;border-collapse:collapse">' +
+      '<thead style="position:sticky;top:0;background:#f8fafc;z-index:1">' +
+        '<tr>' +
+          '<th style="padding:12px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">When (เมื่อไหร่)</th>' +
+          '<th style="padding:12px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">Dept (กลุ่มงาน)</th>' +
+          '<th style="padding:12px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">What (อะไร)</th>' +
+          '<th style="padding:12px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">Where (ที่ไหน)</th>' +
+          '<th style="padding:12px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">Who (ใคร)</th>' +
+          '<th style="padding:12px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">Why (ทำไม)</th>' +
+          '<th style="padding:12px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0">How (อย่างไร)</th>' +
+        '</tr>' +
+      '</thead>' +
+      '<tbody id="clTbody">' + rowsHtml + '</tbody>' +
+    '</table>' +
+  '</div>';
+  
+  section.innerHTML = html;
+}
+
+function filterChangeLog() {
+  var filter = document.getElementById('clFilter');
+  if (!filter) return;
+  var val = filter.value;
+  var rows = document.querySelectorAll('.cl-row');
+  rows.forEach(function(r) {
+    if (val === 'ทุกกลุ่มงาน' || r.getAttribute('data-dept') === val) {
+      r.style.display = '';
+    } else {
+      r.style.display = 'none';
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   CEO รายบุคคล — Source Sheet Links for 5 departments
+   ═══════════════════════════════════════════════════ */
+var DEPT_SHEET_LINKS = {
+  'PMG/PMGI': 'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit',
+  'PMS ช่าง 4 สาขา': 'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit',
+  'PMS ขาย': 'https://docs.google.com/spreadsheets/d/1ojfAYoWXI-InWFV0tE2q4QM_8GYz6erjmGie1LMwpE8/edit',
+  'PMS ศูนย์บริการ': 'https://docs.google.com/spreadsheets/d/15zM39IFLOpczwP_ZnBG3ScRKPl4lgSCi66HQAgwoXoQ/edit',
+  'PMS/PMG Backoffice': 'https://docs.google.com/spreadsheets/d/1f9DtFbss0jDW5Of6pw5yEDh5mciIk4oVvwrAgPPpKJE/edit'
+};
 
 /* ── Start ── */
 init();

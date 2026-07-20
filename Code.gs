@@ -488,8 +488,8 @@ function doGet(e) {
     // fall through ไปทำงานต่อ
   }
   // ── API endpoints ไม่ต้อง login ──
-  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action))) {
-    // fall through — API bypass
+  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action)) || p.pmwi === '1' || p.stdtime === '1') {
+    // fall through — API/embed bypass
   }
   // ── ถ้าไม่มี session และไม่ใช่ API — แสดงหน้า login ──
   else {
@@ -510,6 +510,21 @@ function doGet(e) {
 
     // Dashboard UI
     if (!p.api && !p.fileid && !p.action) {
+      // Use template to inject data directly — avoids sandbox/XHR/CORS issues
+      try {
+        var evalData = getEval360Data();
+        if (evalData && !evalData.error) {
+          var template = HtmlService.createTemplateFromFile('Eval360Dash');
+          template.eval360DataJson = JSON.stringify(evalData);
+          var evaluated = template.evaluate();
+          return evaluated
+            .setTitle('360° Evaluation Dashboard')
+            .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+            .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+        }
+      } catch(templateErr) {
+        // Fall back to plain file output if template fails
+      }
       var evalHtml = HtmlService.createHtmlOutputFromFile('Eval360Dash');
       return evalHtml
         .setTitle('360° Evaluation Dashboard')
@@ -687,6 +702,64 @@ function doGet(e) {
           }
         }
         actionResult = { status: 'ok', records: evalData.stats ? evalData.stats.total_people : 0, size: evalStr.length };
+      } else if (p.action === 'uploadEval360Meta') {
+        // Upload metadata (stats, company_stats, persons) — should be < 90KB combined or split
+        var metaStr = JSON.stringify(actionData);
+        CacheService.getScriptCache().put('EVAL360_META', metaStr, 21600);
+        actionResult = { status: 'ok', size: metaStr.length };
+      } else if (p.action === 'uploadEval360SummaryBatch') {
+        // Upload one batch of summary records
+        var batchIdx = String(actionData.batchIdx !== undefined ? actionData.batchIdx : 0);
+        var batchData = actionData.records || [];
+        CacheService.getScriptCache().put('EVAL360_BATCH_' + batchIdx, JSON.stringify(batchData), 21600);
+        // Track how many batches we've received
+        var totalBatches = actionData.totalBatches || 0;
+        if (totalBatches) {
+          CacheService.getScriptCache().put('EVAL360_BATCHES_TOTAL', String(totalBatches), 21600);
+        }
+        actionResult = { status: 'ok', batch: batchIdx, count: batchData.length };
+      } else if (p.action === 'finalizeEval360') {
+        // Combine meta + all batches into the EVAL360_DATA cache (chunked)
+        var metaStr2 = CacheService.getScriptCache().get('EVAL360_META');
+        if (!metaStr2) { actionResult = { error: 'No meta uploaded' }; }
+        else {
+          var meta2 = JSON.parse(metaStr2);
+          var allSummary = [];
+          var totalB = parseInt(CacheService.getScriptCache().get('EVAL360_BATCHES_TOTAL') || '0');
+          for (var bi = 0; bi < totalB; bi++) {
+            var batchStr = CacheService.getScriptCache().get('EVAL360_BATCH_' + bi);
+            if (batchStr) {
+              var batchArr = JSON.parse(batchStr);
+              allSummary = allSummary.concat(batchArr);
+              CacheService.getScriptCache().remove('EVAL360_BATCH_' + bi);
+            }
+          }
+          meta2.summary = allSummary;
+          var fullStr = JSON.stringify(meta2);
+          // Clear old cache
+          var oldChunks2 = CacheService.getScriptCache().get('EVAL360_CHUNKS');
+          if (oldChunks2) {
+            for (var oci2 = 0; oci2 < parseInt(oldChunks2); oci2++) {
+              CacheService.getScriptCache().remove('EVAL360_CHUNK_' + oci2);
+            }
+            CacheService.getScriptCache().remove('EVAL360_CHUNKS');
+          }
+          CacheService.getScriptCache().remove('EVAL360_DATA');
+          // Store in chunks
+          if (fullStr.length <= 90000) {
+            CacheService.getScriptCache().put('EVAL360_DATA', fullStr, 21600);
+          } else {
+            var numChunks = Math.ceil(fullStr.length / 90000);
+            CacheService.getScriptCache().put('EVAL360_CHUNKS', String(numChunks), 21600);
+            for (var ci2 = 0; ci2 < numChunks; ci2++) {
+              var chunk2 = fullStr.substring(ci2 * 90000, (ci2 + 1) * 90000);
+              CacheService.getScriptCache().put('EVAL360_CHUNK_' + ci2, chunk2, 21600);
+            }
+          }
+          CacheService.getScriptCache().remove('EVAL360_META');
+          CacheService.getScriptCache().remove('EVAL360_BATCHES_TOTAL');
+          actionResult = { status: 'ok', totalRecords: allSummary.length, totalPeople: meta2.stats ? meta2.stats.total_people : 0, size: fullStr.length };
+        }
       } else {
         actionResult = { success: false, error: 'Unknown action: ' + p.action };
       }
@@ -1416,14 +1489,13 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  var html = HtmlService.createHtmlOutputFromFile('Index');
-  var scriptUrl = ScriptApp.getService().getUrl();
-  var content = html.getContent();
-  content = content.replaceAll('SCRIPT_URL_PLACEHOLDER', scriptUrl);
-  return HtmlService.createHtmlOutput(content)
-    .setTitle('PMG Workshop | บริหารงานซ่อม')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  // ═══ Default: redirect to OKR Dashboard (main dashboard users expect) ═══
+  var defaultHtml = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><meta charset="UTF-8">'+
+    '<meta http-equiv="refresh" content="0;url=' + ScriptApp.getService().getUrl() + '?okrall=1' + (p.st ? '&st=' + p.st : '') + (p.pwdok === '1' && p.pass && p.otp ? '&pwdok=1&pass=' + encodeURIComponent(p.pass) + '&otp=' + encodeURIComponent(p.otp) : '') + '">'+
+    '<title>กำลังโหลด OKR Dashboard...</title></head><body></body></html>'
+  ).setTitle('กำลังโหลด...').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  return defaultHtml;
 }
 
 /* ═══ POST handler — write-back API ═══ */
@@ -1494,8 +1566,131 @@ function doPost(e) {
       // Store eval360 data in cache (max 100KB per key, so we split)
       var data = p.data;
       var dataStr = JSON.stringify(data);
-      CacheService.getScriptCache().put('EVAL360_DATA', dataStr, 21600); // 6 hours TTL
+      // Clear old chunks first
+      var oldChunks = CacheService.getScriptCache().get('EVAL360_CHUNKS');
+      if (oldChunks) {
+        for (var oci = 0; oci < parseInt(oldChunks); oci++) {
+          CacheService.getScriptCache().remove('EVAL360_CHUNK_' + oci);
+        }
+        CacheService.getScriptCache().remove('EVAL360_CHUNKS');
+      }
+      CacheService.getScriptCache().remove('EVAL360_DATA');
+      if (dataStr.length <= 90000) {
+        CacheService.getScriptCache().put('EVAL360_DATA', dataStr, 21600);
+      } else {
+        var chunks = Math.ceil(dataStr.length / 90000);
+        CacheService.getScriptCache().put('EVAL360_CHUNKS', String(chunks), 21600);
+        for (var ci = 0; ci < chunks; ci++) {
+          var chunk = dataStr.substring(ci * 90000, (ci + 1) * 90000);
+          CacheService.getScriptCache().put('EVAL360_CHUNK_' + ci, chunk, 21600);
+        }
+      }
       result = { status: 'ok', records: data.stats ? data.stats.total_people : 0, size: dataStr.length };
+    } else if (action === 'uploadEval360Meta') {
+      var metaStr = JSON.stringify(p.data);
+      CacheService.getScriptCache().put('EVAL360_META', metaStr, 21600);
+      result = { status: 'ok', size: metaStr.length };
+    } else if (action === 'uploadEval360Batch') {
+      var batchIdx = String(p.data.batchIdx !== undefined ? p.data.batchIdx : 0);
+      var batchData = p.data.records || [];
+      var batchKey = 'EVAL360_BATCH_' + batchIdx;
+      CacheService.getScriptCache().put(batchKey, JSON.stringify(batchData), 21600);
+      if (p.data.totalBatches) {
+        CacheService.getScriptCache().put('EVAL360_BATCHES_TOTAL', String(p.data.totalBatches), 21600);
+      }
+      result = { status: 'ok', batch: batchIdx, count: batchData.length };
+    } else if (action === 'uploadEval360PersonsBatch') {
+      var pBatchIdx = String(p.data.batchIdx !== undefined ? p.data.batchIdx : 0);
+      var pBatchData = p.data.records || [];
+      CacheService.getScriptCache().put('EVAL360_PBATCH_' + pBatchIdx, JSON.stringify(pBatchData), 21600);
+      if (p.data.totalBatches) {
+        CacheService.getScriptCache().put('EVAL360_PBATCHES_TOTAL', String(p.data.totalBatches), 21600);
+      }
+      result = { status: 'ok', batch: pBatchIdx, count: pBatchData.length };
+    } else if (action === 'finalizeEval360') {
+      var metaStr3 = CacheService.getScriptCache().get('EVAL360_META');
+      if (!metaStr3) { result = { error: 'No meta uploaded' }; }
+      else {
+        var meta3 = JSON.parse(metaStr3);
+        // Collect summary batches
+        var allSummary3 = [];
+        var totalSB = parseInt(CacheService.getScriptCache().get('EVAL360_BATCHES_TOTAL') || '0');
+        for (var sbi = 0; sbi < totalSB; sbi++) {
+          var sbStr = CacheService.getScriptCache().get('EVAL360_BATCH_' + sbi);
+          if (sbStr) { allSummary3 = allSummary3.concat(JSON.parse(sbStr)); CacheService.getScriptCache().remove('EVAL360_BATCH_' + sbi); }
+        }
+        // Collect persons batches
+        var allPersons3 = [];
+        var totalPB = parseInt(CacheService.getScriptCache().get('EVAL360_PBATCHES_TOTAL') || '0');
+        for (var pbi = 0; pbi < totalPB; pbi++) {
+          var pbStr = CacheService.getScriptCache().get('EVAL360_PBATCH_' + pbi);
+          if (pbStr) { allPersons3 = allPersons3.concat(JSON.parse(pbStr)); CacheService.getScriptCache().remove('EVAL360_PBATCH_' + pbi); }
+        }
+        meta3.summary = allSummary3;
+        meta3.persons = allPersons3;
+        var fullStr3 = JSON.stringify(meta3);
+        // Clear old cache
+        var oldChunks3 = CacheService.getScriptCache().get('EVAL360_CHUNKS');
+        if (oldChunks3) {
+          for (var oci3 = 0; oci3 < parseInt(oldChunks3); oci3++) {
+            CacheService.getScriptCache().remove('EVAL360_CHUNK_' + oci3);
+          }
+          CacheService.getScriptCache().remove('EVAL360_CHUNKS');
+        }
+        CacheService.getScriptCache().remove('EVAL360_DATA');
+        if (fullStr3.length <= 90000) {
+          CacheService.getScriptCache().put('EVAL360_DATA', fullStr3, 21600);
+        } else {
+          var numChunks3 = Math.ceil(fullStr3.length / 90000);
+          CacheService.getScriptCache().put('EVAL360_CHUNKS', String(numChunks3), 21600);
+          for (var ci3 = 0; ci3 < numChunks3; ci3++) {
+            var chunk3 = fullStr3.substring(ci3 * 90000, (ci3 + 1) * 90000);
+            CacheService.getScriptCache().put('EVAL360_CHUNK_' + ci3, chunk3, 21600);
+          }
+        }
+        CacheService.getScriptCache().remove('EVAL360_META');
+        CacheService.getScriptCache().remove('EVAL360_BATCHES_TOTAL');
+        CacheService.getScriptCache().remove('EVAL360_PBATCHES_TOTAL');
+        result = { status: 'ok', totalRecords: allSummary3.length, totalPeople: allPersons3.length, size: fullStr3.length };
+      }
+    } else if (action === 'saveEval360ToDrive') {
+      // Save eval360 data from cache to Google Drive for persistent storage
+      var evalDataStr = null;
+      var cached2 = CacheService.getScriptCache().get('EVAL360_DATA');
+      if (cached2) {
+        evalDataStr = cached2;
+      } else {
+        var cc2 = CacheService.getScriptCache().get('EVAL360_CHUNKS');
+        if (cc2) {
+          var comb2 = '';
+          for (var cci = 0; cci < parseInt(cc2); cci++) {
+            comb2 += CacheService.getScriptCache().get('EVAL360_CHUNK_' + cci) || '';
+          }
+          evalDataStr = comb2;
+        }
+      }
+      if (!evalDataStr) {
+        result = { error: 'No eval360 data in cache to save' };
+      } else {
+        try {
+          var evalFolder2 = DriveApp.getFolderById('1J9barfa-_DBwJEgZzDFuVS5uqT95WGXZ');
+          // Delete old file if exists
+          var existing = evalFolder2.getFiles();
+          while (existing.hasNext()) {
+            var ef = existing.next();
+            if (ef.getName() === 'eval360_embedded.json') {
+              evalFolder2.removeFile(ef);
+              break;
+            }
+          }
+          // Create new file
+          var blob = Utilities.newBlob(evalDataStr, 'application/json', 'eval360_embedded.json');
+          evalFolder2.createFile(blob);
+          result = { status: 'ok', fileName: 'eval360_embedded.json', size: evalDataStr.length };
+        } catch(driveErr2) {
+          result = { error: 'Drive save failed: ' + driveErr2.toString() };
+        }
+      }
     } else if (action === 'updateDashboard') {
       result = updateDashboard(p.id || p.dashId, p.command || p.msg || '');
     } else if (action === 'getDashboardData') {
@@ -11369,21 +11564,95 @@ function clearOKRCache_() {
    OKR Auto-Refresh + Change Log (5W1H)
    ═══════════════════════════════════════════════════════════════ */
 
-// Setup time-driven trigger for OKR auto-refresh (every 2 hours)
+// Setup time-driven trigger for OKR auto-refresh (every 15 minutes for near real-time)
 function setupOKRAutoRefreshTrigger() {
   // Remove existing triggers first
   var triggers = ScriptApp.getProjectTriggers();
   for (var i = 0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() === 'okrAutoRefresh') {
+    if (triggers[i].getHandlerFunction() === 'okrAutoRefresh' || triggers[i].getHandlerFunction() === 'okrOnEditTrigger') {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
-  // Create new trigger — every 15 minutes for near real-time updates
+  // Create time-based trigger — every 15 minutes for near real-time cache refresh
   ScriptApp.newTrigger('okrAutoRefresh')
     .timeBased()
     .everyMinutes(15)
     .create();
-  return { success: true, message: 'OKR auto-refresh trigger created (every 15 minutes)' };
+  
+  // Also set up onChange triggers for each OKR sheet (installable triggers)
+  // These fire when someone edits the source sheet directly
+  for (var deptName in OKR_SS_IDS) {
+    try {
+      var ssid = OKR_SS_IDS[deptName];
+      var ss = SpreadsheetApp.openById(ssid);
+      // Installable onEdit trigger — fires when anyone edits the sheet
+      // Note: This creates a trigger owned by the script user
+      var existingTriggers = ScriptApp.getProjectTriggers();
+      var hasTrigger = false;
+      for (var ei = 0; ei < existingTriggers.length; ei++) {
+        if (existingTriggers[ei].getHandlerFunction() === 'okrOnEditTrigger' && 
+            existingTriggers[ei].getTriggerSourceId() === ssid) {
+          hasTrigger = true;
+          break;
+        }
+      }
+      if (!hasTrigger) {
+        ScriptApp.newTrigger('okrOnEditTrigger')
+          .forSpreadsheet(ss)
+          .onEdit()
+          .create();
+      }
+    } catch(e) {
+      // Some sheets may not allow trigger creation
+    }
+  }
+  
+  return { success: true, message: 'OKR auto-refresh trigger created (every 15 min) + onEdit triggers for all sheets' };
+}
+
+// Real-time onEdit trigger — fires immediately when someone edits an OKR sheet
+function okrOnEditTrigger(e) {
+  try {
+    var ss = e.source;
+    var ssid = ss.getId();
+    var sheet = e.range.getSheet();
+    var sheetName = sheet.getName();
+    var row = e.range.getRow();
+    var col = e.range.getColumn();
+    var oldValue = e.oldValue !== undefined ? String(e.oldValue) : '(ว่าง)';
+    var newValue = e.value !== undefined ? String(e.value) : '(ว่าง)';
+    var user = e.user && e.user.getEmail ? e.user.getEmail() : (Session.getActiveUser().getEmail() || 'ผู้ใช้ไม่ระบุตัวตน');
+    
+    // Find which department this sheet belongs to
+    var deptName = 'Unknown';
+    for (var dn in OKR_SS_IDS) {
+      if (OKR_SS_IDS[dn] === ssid) { deptName = dn; break; }
+    }
+    
+    // Skip ChangeLog sheet edits to avoid loops
+    if (sheetName === 'ChangeLog') return;
+    
+    // Get cell address (A1 notation)
+    var cellAddr = sheetName + '!' + e.range.getA1Notation();
+    
+    // Log the change
+    var entry = {
+      when: new Date().toISOString(),
+      who: user,
+      what: 'แก้ไขข้อมูล',
+      where: deptName + ' → ' + cellAddr,
+      why: 'เปลี่ยนจาก "' + oldValue.substring(0, 50) + '" เป็น "' + newValue.substring(0, 50) + '"',
+      how: 'Real-time onEdit trigger'
+    };
+    
+    writeOKRChangeLog_(ssid, entry);
+    
+    // Clear OKR cache so next dashboard load gets fresh data
+    clearOKRCache_();
+    
+  } catch(err) {
+    // Silent fail — don't disrupt user editing
+  }
 }
 
 // Auto-refresh: reads all OKR sheets, detects new tabs/data, updates cache, logs changes
@@ -12611,7 +12880,7 @@ function gsGetPersonKpiStatus(personName, deptName) {
 function getEval360Data() {
   var cached = CacheService.getScriptCache().get("EVAL360_DATA");
   if (cached) {
-    try { return JSON.parse(cached); } catch(e) { return { error: e.toString() }; }
+    try { return JSON.parse(cached); } catch(e) {}
   }
   var chunkCount = CacheService.getScriptCache().get("EVAL360_CHUNKS");
   if (chunkCount) {
@@ -12619,7 +12888,34 @@ function getEval360Data() {
     for (var ci = 0; ci < parseInt(chunkCount); ci++) {
       combined += CacheService.getScriptCache().get("EVAL360_CHUNK_" + ci) || "";
     }
-    try { return JSON.parse(combined); } catch(e) { return { error: e.toString() }; }
+    try { return JSON.parse(combined); } catch(e) {}
+  }
+  // Fallback: read from Google Drive file (persistent storage)
+  try {
+    var evalFolder = DriveApp.getFolderById('1J9barfa-_DBwJEgZzDFuVS5uqT95WGXZ');
+    var files = evalFolder.getFiles();
+    while (files.hasNext()) {
+      var f = files.next();
+      if (f.getName() === 'eval360_embedded.json') {
+        var content = f.getBlob().getDataAsString();
+        var data = JSON.parse(content);
+        // Re-populate cache for next time
+        var dataStr = JSON.stringify(data);
+        if (dataStr.length <= 90000) {
+          CacheService.getScriptCache().put('EVAL360_DATA', dataStr, 21600);
+        } else {
+          var numChunks = Math.ceil(dataStr.length / 90000);
+          CacheService.getScriptCache().put('EVAL360_CHUNKS', String(numChunks), 21600);
+          for (var ci2 = 0; ci2 < numChunks; ci2++) {
+            var chunk2 = dataStr.substring(ci2 * 90000, (ci2 + 1) * 90000);
+            CacheService.getScriptCache().put('EVAL360_CHUNK_' + ci2, chunk2, 21600);
+          }
+        }
+        return data;
+      }
+    }
+  } catch(driveErr) {
+    return { error: "No data in cache or Drive: " + driveErr.toString() };
   }
   return { error: "No data uploaded yet" };
 }
