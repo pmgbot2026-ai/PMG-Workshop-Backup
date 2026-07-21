@@ -521,6 +521,12 @@ function doGet(e) {
 
     // GET: serve data
     if (p.api === '1') {
+      // Warmup action: pre-populate separate caches
+      if (p.action === 'warmup') {
+        var warmupResult = warmupEval360Caches();
+        return ContentService.createTextOutput(JSON.stringify(warmupResult))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
       var cached = CacheService.getScriptCache().get('EVAL360_DATA');
       if (cached) {
         return ContentService.createTextOutput(cached)
@@ -676,6 +682,8 @@ function doGet(e) {
       } else if (p.action === 'uploadEval360') {
         var evalData = actionData;
         var evalStr = JSON.stringify(evalData);
+        // Pre-populate separate caches for fast google.script.run access
+        try { warmupEval360Caches_(evalData); } catch(e) {}
         // CacheService max 100KB per key — split if needed
         if (evalStr.length <= 90000) {
           CacheService.getScriptCache().put('EVAL360_DATA', evalStr, 21600);
@@ -745,6 +753,12 @@ function doGet(e) {
           }
           CacheService.getScriptCache().remove('EVAL360_META');
           CacheService.getScriptCache().remove('EVAL360_BATCHES_TOTAL');
+          
+          // Pre-populate separate stats/persons/summary caches for fast google.script.run access
+          try {
+            warmupEval360Caches_(meta2);
+          } catch(e) {}
+          
           actionResult = { status: 'ok', totalRecords: allSummary.length, totalPeople: meta2.stats ? meta2.stats.total_people : 0, size: fullStr.length };
         }
       } else {
@@ -12921,6 +12935,51 @@ function getEval360Data() {
   return { error: "No data uploaded yet" };
 }
 
+// Pre-populate separate cache keys for stats, persons, and summary
+// This allows google.script.run to read small chunks instead of 860KB each time
+function warmupEval360Caches_(data) {
+  if (!data || data.error) return;
+  var cache = CacheService.getScriptCache();
+  var ttl = 21600; // 6 hours
+  
+  // Cache stats (~2KB)
+  var statsObj = { stats: data.stats || {}, company_stats: data.company_stats || {} };
+  try { cache.put('EVAL360_STATS', JSON.stringify(statsObj), ttl); } catch(e) {}
+  
+  // Cache persons in chunks of 150 (each ~90KB)
+  if (data.persons && data.persons.length > 0) {
+    cache.put('EVAL360_PERSONS_COUNT', String(data.persons.length), ttl);
+    for (var i = 0; i < data.persons.length; i += 150) {
+      var chunkIdx = Math.floor(i / 150);
+      var chunkRecords = data.persons.slice(i, i + 150);
+      var chunkStr = JSON.stringify({ records: chunkRecords });
+      if (chunkStr.length <= 90000) {
+        try { cache.put('EVAL360_PERSONS_' + chunkIdx, chunkStr, ttl); } catch(e) {}
+      }
+    }
+  }
+  
+  // Cache summary in chunks of 200 (each ~90KB)
+  if (data.summary && data.summary.length > 0) {
+    cache.put('EVAL360_SUMMARY_COUNT', String(data.summary.length), ttl);
+    for (var j = 0; j < data.summary.length; j += 200) {
+      var sChunkIdx = Math.floor(j / 200);
+      var sChunkRecords = data.summary.slice(j, j + 200);
+      var sChunkStr = JSON.stringify({ records: sChunkRecords });
+      if (sChunkStr.length <= 90000) {
+        try { cache.put('EVAL360_SUMMARY_' + sChunkIdx, sChunkStr, ttl); } catch(e) {}
+      }
+    }
+  }
+}
+
+// Public function to warm up caches from stored data (can be called from client)
+function warmupEval360Caches() {
+  var data = getEval360Data();
+  warmupEval360Caches_(data);
+  return { success: true, persons: data.persons ? data.persons.length : 0, summary: data.summary ? data.summary.length : 0 };
+}
+
 // Lightweight version for google.script.run — returns persons + stats + company_stats only (no summary)
 function getEval360Summary() {
   var data = getEval360Data();
@@ -12933,34 +12992,114 @@ function getEval360Summary() {
 }
 
 // Get summary records in batches (for Person Detail tab)
+// Uses separate summary cache to avoid reading full 860KB data each time
 function getEval360SummaryBatch(startIdx, batchSize) {
+  var start = startIdx || 0;
+  var batch = batchSize || 200;
+  
+  // Try summary cache first (stored in chunks of 200 records each)
+  var summaryCountStr = CacheService.getScriptCache().get('EVAL360_SUMMARY_COUNT');
+  if (summaryCountStr) {
+    var total = parseInt(summaryCountStr);
+    var chunkIdx = Math.floor(start / 200);
+    var chunkKey = 'EVAL360_SUMMARY_' + chunkIdx;
+    var chunkCached = CacheService.getScriptCache().get(chunkKey);
+    if (chunkCached) {
+      try {
+        var chunkData = JSON.parse(chunkCached);
+        if (chunkData.records && chunkData.records.length > 0) {
+          var chunkStart = start - (chunkIdx * 200);
+          var records = chunkData.records.slice(chunkStart, chunkStart + batch);
+          return { records: records, total: total, start: start, batch: records.length };
+        }
+      } catch(e) {}
+    }
+  }
+  
+  // Fallback: read full data
   var data = getEval360Data();
   if (data.error) return data;
   if (!data.summary) return { records: [], total: 0 };
-  var start = startIdx || 0;
-  var batch = batchSize || 200;
   var records = data.summary.slice(start, start + batch);
+  
+  // Cache this batch separately (max 90KB per cache key)
+  try {
+    var batchStr = JSON.stringify({ records: data.summary.slice(start, start + 200) });
+    if (batchStr.length <= 90000) {
+      var chunkIdx2 = Math.floor(start / 200);
+      CacheService.getScriptCache().put('EVAL360_SUMMARY_' + chunkIdx2, batchStr, 21600);
+      CacheService.getScriptCache().put('EVAL360_SUMMARY_COUNT', String(data.summary.length), 21600);
+    }
+  } catch(e) {}
+  
   return { records: records, total: data.summary.length, start: start, batch: records.length };
 }
 
 // Stage A: Get stats + company_stats only (tiny payload, ~2KB)
+// Uses separate cache key to avoid reading full 860KB data each time
 function getEval360Stats() {
+  // Try small stats cache first
+  var statsCached = CacheService.getScriptCache().get('EVAL360_STATS');
+  if (statsCached) {
+    try { return JSON.parse(statsCached); } catch(e) {}
+  }
+  // Fallback: read full data and cache stats separately
   var data = getEval360Data();
   if (data.error) return data;
-  return {
+  var result = {
     stats: data.stats || {},
     company_stats: data.company_stats || {}
   };
+  // Cache stats separately (only ~2KB, fits in single cache key)
+  try {
+    CacheService.getScriptCache().put('EVAL360_STATS', JSON.stringify(result), 21600);
+  } catch(e) {}
+  return result;
 }
 
 // Stage B: Get persons in batches (~150 per batch, ~100KB each)
+// Uses separate persons cache to avoid reading full 860KB data each time
 function getEval360PersonsBatch(startIdx, batchSize) {
+  var start = startIdx || 0;
+  var batch = batchSize || 150;
+  
+  // Try persons cache first (stored in chunks of 90KB each)
+  var personsCountStr = CacheService.getScriptCache().get('EVAL360_PERSONS_COUNT');
+  if (personsCountStr) {
+    var total = parseInt(personsCountStr);
+    // Read only the chunk that contains our batch
+    var chunkIdx = Math.floor(start / 150);
+    var chunkKey = 'EVAL360_PERSONS_' + chunkIdx;
+    var chunkCached = CacheService.getScriptCache().get(chunkKey);
+    if (chunkCached) {
+      try {
+        var chunkData = JSON.parse(chunkCached);
+        if (chunkData.records && chunkData.records.length > 0) {
+          // Return slice from chunk
+          var chunkStart = start - (chunkIdx * 150);
+          var records = chunkData.records.slice(chunkStart, chunkStart + batch);
+          return { records: records, total: total, start: start, batch: records.length };
+        }
+      } catch(e) {}
+    }
+  }
+  
+  // Fallback: read full data
   var data = getEval360Data();
   if (data.error) return data;
   if (!data.persons) return { records: [], total: 0 };
-  var start = startIdx || 0;
-  var batch = batchSize || 150;
   var records = data.persons.slice(start, start + batch);
+  
+  // Cache this batch separately (max 90KB per cache key)
+  try {
+    var batchStr = JSON.stringify({ records: data.persons.slice(start, start + 150) });
+    if (batchStr.length <= 90000) {
+      var chunkIdx2 = Math.floor(start / 150);
+      CacheService.getScriptCache().put('EVAL360_PERSONS_' + chunkIdx2, batchStr, 21600);
+      CacheService.getScriptCache().put('EVAL360_PERSONS_COUNT', String(data.persons.length), 21600);
+    }
+  } catch(e) {}
+  
   return { records: records, total: data.persons.length, start: start, batch: records.length };
 }
 

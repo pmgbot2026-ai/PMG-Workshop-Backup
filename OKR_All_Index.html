@@ -1404,67 +1404,162 @@ function renderBusinessPlan() {
   '</div>';
 
   // ═══════════════════════════════════════════════════
-  // SECTION C: S-Objectives (CPDG-style) — numbered, colored border, tag badge, KR list
+  // SECTION C: S-Objectives (Strategic Objectives)
+  //   4 S-Objectives (COC, DIN, OPM, OBM) — each with:
+  //     - KR list + progress bar (computed from OKR Dashboard data in D)
+  //     - ทีมรับผิดชอบ (linked teams, 5 กลุ่มงาน)
+  //     - CEO/KPI linkage buttons
   // ═══════════════════════════════════════════════════
+
+  // ── Helper: compute % progress for an S-Objective by scanning OKR Dashboard (D) ──
+  // For each KR of the S-Objective, search across linked teams' people/objectives/keyResults
+  // for keyword matches. % = matched KRs / total KRs * 100 (KR-level adoption score).
+  // Falls back to 0 if D is not loaded yet.
+  function sobjProgress(keywords, teamNames) {
+    if (!D || !D.departments) return 0;
+    var total = keywords.length;
+    var matchedKRs = new Array(total).fill(false);
+    teamNames.forEach(function(tn) {
+      var dept = D.departments.find(function(d) { return d.name === tn; });
+      if (!dept || !dept.people) return;
+      dept.people.forEach(function(p) {
+        (p.objectives || []).forEach(function(o) {
+          var allKR = (o.keyResults || []).map(function(k){ return String(k||'').toLowerCase(); });
+          keywords.forEach(function(kw, idx) {
+            if (allKR.some(function(krtxt){ return krtxt.indexOf(kw) >= 0; })) {
+              matchedKRs[idx] = true;
+            }
+          });
+        });
+      });
+    });
+    var matchCount = matchedKRs.filter(Boolean).length;
+    return Math.round((matchCount / total) * 100);
+  }
+
+  // Helper: render a progress bar
+  function progressBar(pct, color) {
+    var c = color || '#3b82f6';
+    var w = Math.min(Math.max(pct, 0), 100);
+    return '<div style="display:flex;align-items:center;gap:8px;margin-top:4px">'+
+      '<div style="flex:1;height:8px;background:#e2e8f0;border-radius:9999px;overflow:hidden">'+
+        '<div style="width:'+w+'%;height:100%;background:'+c+';border-radius:9999px;transition:width .3s"></div>'+
+      '</div>'+
+      '<span style="font-size:11px;font-weight:700;color:'+c+';min-width:36px;text-align:right">'+w+'%</span>'+
+    '</div>';
+  }
+
+  // Helper: render team badge
+  function teamBadge(teamName) {
+    var meta = DEPT_COLORS[teamName] || { color:'#64748b', bg:'#f1f5f9', text:'#334155' };
+    return '<span style="display:inline-flex;align-items:center;gap:4px;background:'+meta.bg+';color:'+meta.text+';border:1px solid '+meta.color+'40;font-size:10px;font-weight:700;padding:3px 8px;border-radius:9999px;margin:2px 4px 2px 0">'+
+      '<span style="width:6px;height:6px;background:'+meta.color+';border-radius:50%"></span>'+
+      esc(teamName)+'</span>';
+  }
+
+  // Helper: CEO/KPI linkage buttons (switch tab via switchTab)
+  function linkageButtons() {
+    return '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">'+
+      '<button onclick="switchTab(\'linkage\',null)" style="background:#1e40af;color:#fff;border:none;font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px">🔗 CEO : PMSG</button>'+
+      '<button onclick="switchTab(\'kpi\',null)" style="background:#9d174d;color:#fff;border:none;font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px">🎯 KPI &amp; ตัววัดผล</button>'+
+    '</div>';
+  }
+
+  // Helper: KR row with progress
+  function krRow(num, color, text, pct) {
+    return '<li style="margin-bottom:8px;padding:8px 10px;background:#ffffff80;border-radius:8px;border:1px solid #e2e8f0">'+
+      '<div style="display:flex;align-items:flex-start;gap:6px">'+
+        '<strong style="color:'+color+';flex-shrink:0">KR-'+num+':</strong>'+
+        '<span style="flex:1;color:#475569">'+esc(text)+'</span>'+
+      '</div>'+
+      progressBar(pct, color)+
+    '</li>';
+  }
+
+  // ── S-Objective definitions ──
+  var SOBJS = [
+    {
+      n: 1, code: 'COC', color: '#3b82f6', bg: '#eff6ff', text: '#1e40af',
+      title: 'ยกระดับสมาชิกในองค์กรให้ทำงานร่วมกับ AI และมีทักษะใหม่ในอนาคต',
+      teams: ['PMG/PMGI', 'PMS/PMG Backoffice'],
+      krs: [
+        { kw: ['3 ผ่าน', 'digital skill', 'ทักษะ'], text: '3 ผ่านทักษะ + Digital Skill สมาชิก 100%' },
+        { kw: ['ai', 'ผู้ช่วย'], text: 'สมาชิกใช้ AI เป็นผู้ช่วยในการทำงาน > 90% ภายในปี 2026' },
+        { kw: ['พัฒนา', 'ความรู้', 'เรียนรู้'], text: 'พัฒนาสมาชิกทุกระดับแสวงหาความรู้ใหม่ตลอดเวลา' }
+      ]
+    },
+    {
+      n: 2, code: 'DIN', color: '#8b5cf6', bg: '#f5f3ff', text: '#6d28d9',
+      title: 'พา PMSG สู่ Automation Organization',
+      teams: ['PMS/PMG Backoffice', 'PMG/PMGI'],
+      krs: [
+        { kw: ['bct', 'ออนไลน์', 'online'], text: 'BCT และระบบงานออนไลน์ 100% ภายในปี 2026' },
+        { kw: ['mapp', 'หน้าร้าน', 'พฤติกรรม'], text: 'MApp เป็นหน้าร้านออนไลน์ + AI วิเคราะห์พฤติกรรมลูกค้า' },
+        { kw: ['aios', 'ฐานข้อมูล', 'โครงสร้าง'], text: 'ระบบโครงสร้างและฐานข้อมูลสำหรับ AIOS แล้วเสร็จ 100% ในปี 2026' }
+      ]
+    },
+    {
+      n: 3, code: 'OPM', color: '#f59e0b', bg: '#fffbeb', text: '#92400e',
+      title: 'เพิ่ม GM หลังการขายให้ได้สัดส่วน 70:30',
+      teams: ['PMS ขาย', 'PMS ศูนย์บริการ', 'PMG/PMGI'],
+      krs: [
+        { kw: ['gm', '10 ล้าน', 'หลังการขาย'], text: 'GM หลังการขาย ≥ 10 ล้านบาท/เดือน' },
+        { kw: ['ผลิตภัณฑ์เสริม', '600', 'คัน'], text: 'GM ผลิตภัณฑ์เสริมเพิ่ม 600 บาท/คัน' },
+        { kw: ['รถนอกระยะ', 'รับประกัน', 'ศูนย์บริการ'], text: 'เพิ่มรถนอกระยะรับประกันเข้าศูนย์บริการ' }
+      ]
+    },
+    {
+      n: 4, code: 'OBM', color: '#10b981', bg: '#ecfdf5', text: '#059669',
+      title: 'สร้างธุรกิจบริการผู้ใช้รถยนต์ครบวงจร',
+      teams: ['PMG/PMGI', 'PMS ช่าง 4 สาขา'],
+      krs: [
+        { kw: ['ศูนย์สี', 'กทม', 'ตะวันออก'], text: 'ศึกษาเพิ่มธุรกิจศูนย์สีใน กทม. และภาคตะวันออก' },
+        { kw: ['ประดับยนต์', 'ผลิตภัณฑ์เสริม'], text: 'ประดับยนต์ใหม่ๆ + ผลิตภัณฑ์เสริมใหม่' },
+        { kw: ['sgm', 'navway', 'เครือข่าย'], text: 'SGM + NavWay PMSG ขยายการตลาดเครือข่าย' }
+      ]
+    }
+  ];
+
   html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
-    '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">🎯 S-Objectives (Strategic Objectives)</h2>'+
+    '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:6px;display:flex;align-items:center;gap:8px">🎯 S-Objectives (Strategic Objectives)</h2>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:14px">4 ยุทธศาสตร์ (COC · DIN · OPM · OBM) · แต่ละข้อมี KR Progress + ทีมรับผิดชอบ + เชื่อมโยง CEO/KPI</div>';
 
-    // S-Objective 1 — COC (blue)
-    '<div style="background:#eff6ff;border-left:5px solid #3b82f6;border-radius:10px;padding:16px;margin-bottom:14px">'+
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
-        '<div style="background:#3b82f6;color:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">1</div>'+
-        '<div style="font-size:14px;font-weight:700;color:#1e40af;flex:1">ยกระดับสมาชิกในองค์กรให้ทำงานร่วมกับ AI และมีทักษะใหม่ในอนาคต</div>'+
-        '<span style="background:#3b82f6;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;flex-shrink:0">COC</span>'+
-      '</div>'+
-      '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0;padding-left:40px">'+
-        '<li style="margin-bottom:4px"><strong style="color:#3b82f6">KR-1:</strong> 3 ผ่านทักษะ + Digital Skill สมาชิก 100%</li>'+
-        '<li style="margin-bottom:4px"><strong style="color:#3b82f6">KR-2:</strong> สมาชิกใช้ AI เป็นผู้ช่วยในการทำงาน > 90% ภายในปี 2026</li>'+
-        '<li><strong style="color:#3b82f6">KR-3:</strong> พัฒนาสมาชิกทุกระดับแสวงหาความรู้ใหม่ตลอดเวลา</li>'+
-      '</ul>'+
-    '</div>'+
+  SOBJS.forEach(function(s) {
+    // Compute per-KR progress
+    var krPcts = s.krs.map(function(kr) {
+      var kwLower = kr.kw.map(function(k){ return k.toLowerCase(); });
+      return sobjProgress(kwLower, s.teams);
+    });
+    // Overall S-Objective progress = average of KR progresses
+    var overall = krPcts.length ? Math.round(krPcts.reduce(function(a,b){return a+b;},0) / krPcts.length) : 0;
 
-    // S-Objective 2 — DIN (violet)
-    '<div style="background:#f5f3ff;border-left:5px solid #8b5cf6;border-radius:10px;padding:16px;margin-bottom:14px">'+
+    html += '<div style="background:'+s.bg+';border-left:5px solid '+s.color+';border-radius:10px;padding:16px;margin-bottom:14px">'+
+      // Header row
       '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
-        '<div style="background:#8b5cf6;color:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">2</div>'+
-        '<div style="font-size:14px;font-weight:700;color:#6d28d9;flex:1">พา PMSG สู่ Automation Organization</div>'+
-        '<span style="background:#8b5cf6;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;flex-shrink:0">DIN</span>'+
+        '<div style="background:'+s.color+';color:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">'+s.n+'</div>'+
+        '<div style="font-size:14px;font-weight:700;color:'+s.text+';flex:1">'+esc(s.title)+'</div>'+
+        '<span style="background:'+s.color+';color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;flex-shrink:0">'+s.code+'</span>'+
       '</div>'+
-      '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0;padding-left:40px">'+
-        '<li style="margin-bottom:4px"><strong style="color:#8b5cf6">KR-1:</strong> BCT และระบบงานออนไลน์ 100% ภายในปี 2026</li>'+
-        '<li style="margin-bottom:4px"><strong style="color:#8b5cf6">KR-2:</strong> MApp เป็นหน้าร้านออนไลน์ + AI วิเคราะห์พฤติกรรมลูกค้า</li>'+
-        '<li><strong style="color:#8b5cf6">KR-3:</strong> ระบบโครงสร้างและฐานข้อมูลสำหรับ AIOS แล้วเสร็จ 100% ในปี 2026</li>'+
+      // Overall progress
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 12px;background:#ffffff80;border-radius:8px">'+
+        '<span style="font-size:11px;font-weight:700;color:'+s.text+'">ความคืบหน้ารวม:</span>'+
+        '<div style="flex:1">'+progressBar(overall, s.color)+'</div>'+
+      '</div>'+
+      // KR list with progress
+      '<ul style="font-size:12px;line-height:1.6;color:#475569;list-style:none;padding:0;margin:0;padding-left:8px">'+
+        s.krs.map(function(kr, i){ return krRow(i+1, s.color, kr.text, krPcts[i]); }).join('')+
       '</ul>'+
-    '</div>'+
+      // Teams responsible
+      '<div style="margin-top:12px;padding:10px 12px;background:#ffffff80;border-radius:8px">'+
+        '<div style="font-size:11px;font-weight:700;color:'+s.text+';margin-bottom:6px">👥 ทีมรับผิดชอบ:</div>'+
+        '<div>'+s.teams.map(teamBadge).join('')+'</div>'+
+      '</div>'+
+      // CEO/KPI linkage
+      linkageButtons()+
+    '</div>';
+  });
 
-    // S-Objective 3 — OPM (amber)
-    '<div style="background:#fffbeb;border-left:5px solid #f59e0b;border-radius:10px;padding:16px;margin-bottom:14px">'+
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
-        '<div style="background:#f59e0b;color:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">3</div>'+
-        '<div style="font-size:14px;font-weight:700;color:#92400e;flex:1">เพิ่ม GM หลังการขายให้ได้สัดส่วน 70:30</div>'+
-        '<span style="background:#f59e0b;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;flex-shrink:0">OPM</span>'+
-      '</div>'+
-      '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0;padding-left:40px">'+
-        '<li style="margin-bottom:4px"><strong style="color:#f59e0b">KR-1:</strong> GM หลังการขาย ≥ 10 ล้านบาท/เดือน</li>'+
-        '<li style="margin-bottom:4px"><strong style="color:#f59e0b">KR-2:</strong> GM ผลิตภัณฑ์เสริมเพิ่ม 600 บาท/คัน</li>'+
-        '<li><strong style="color:#f59e0b">KR-3:</strong> เพิ่มรถนอกระยะรับประกันเข้าศูนย์บริการ</li>'+
-      '</ul>'+
-    '</div>'+
-
-    // S-Objective 4 — OBM (emerald)
-    '<div style="background:#ecfdf5;border-left:5px solid #10b981;border-radius:10px;padding:16px">'+
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
-        '<div style="background:#10b981;color:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">4</div>'+
-        '<div style="font-size:14px;font-weight:700;color:#059669;flex:1">สร้างธุรกิจบริการผู้ใช้รถยนต์ครบวงจร</div>'+
-        '<span style="background:#10b981;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;flex-shrink:0">OBM</span>'+
-      '</div>'+
-      '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0;padding-left:40px">'+
-        '<li style="margin-bottom:4px"><strong style="color:#10b981">KR-1:</strong> ศึกษาเพิ่มธุรกิจศูนย์สีใน กทม. และภาคตะวันออก</li>'+
-        '<li style="margin-bottom:4px"><strong style="color:#10b981">KR-2:</strong> ประดับยนต์ใหม่ๆ + ผลิตภัณฑ์เสริมใหม่</li>'+
-        '<li><strong style="color:#10b981">KR-3:</strong> SGM + NavWay PMSG ขยายการตลาดเครือข่าย</li>'+
-      '</ul>'+
-    '</div>'+
-  '</div>';
+  html += '</div>';
 
   // ═══════════════════════════════════════════════════
   // SECTION D: ทุนองค์กร 4 ด้าน
@@ -1523,50 +1618,167 @@ function renderBusinessPlan() {
   '</div>';
 
   // ═══════════════════════════════════════════════════
-  // SECTION E: Action Plan (ผู้รับผิดชอบ)
+  // SECTION E: Action Plan (แผนปฏิบัติการ)
+  //   - แผนงานตามช่วงเวลา 3 ช่วง (0-12 เดือน / 1-3 ปี / 3-5 ปี)
+  //   - แผนงานระยะสั้นจัดเป็น 5 หมวดหมู่ (16+ รายการ)
+  //   - ตารางผู้รับผิดชอบ + AI ใน Action Plan
   // ═══════════════════════════════════════════════════
-  html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
-    '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">📅 Action Plan (แผนปฏิบัติการ)</h2>'+
 
-    // Timeline cards
+  // ── Plan items (ระยะสั้น 0-12 เดือน) จัดเป็น 5 หมวดหมู่ ──
+  var ACTION_CATEGORIES = [
+    {
+      name: 'การตลาด/ลูกค้า', icon: '📣', color: '#3b82f6', bg: '#eff6ff',
+      items: [
+        { plan: 'นัดหมายตลอดชีพ PMSG', owner: 'ตั๊ก' },
+        { plan: 'แสวงหาลูกค้า TYP@', owner: 'ปุ๋ย+บิว' },
+        { plan: 'เรียกลูกค้ารถขาดหาย', owner: 'ตั๊ก' },
+        { plan: 'รถนอกระยะ', owner: 'แหม่ม' }
+      ]
+    },
+    {
+      name: 'ผลิตภัณฑ์เสริม', icon: '💎', color: '#10b981', bg: '#ecfdf5',
+      items: [
+        { plan: 'GM ผลิตภัณฑ์เสริม 600 บาท/คัน', owner: 'ฟัก' },
+        { plan: 'IMC', owner: 'เอิ่น' },
+        { plan: 'NavWay PMSG', owner: 'พี่นก+เอ+น้องแซน' },
+        { plan: 'SGM', owner: 'เบ๊นท์+ไอซ์' }
+      ]
+    },
+    {
+      name: 'การพัฒนา', icon: '🎓', color: '#8b5cf6', bg: '#f5f3ff',
+      items: [
+        { plan: '3 ผ่านทักษะ', owner: 'มัญชีระ' },
+        { plan: '3 ผ่านกลยุทธ์', owner: 'ศรอนงค์/มัญชีระ' },
+        { plan: 'Role Play', owner: 'มัญชีระ+ทีม SA' }
+      ]
+    },
+    {
+      name: 'ระบบงาน', icon: '⚙️', color: '#f59e0b', bg: '#fffbeb',
+      items: [
+        { plan: 'BCT ออนไลน์ 100%', owner: 'PMS/PMG Backoffice' },
+        { plan: 'คีย์รับอะไหล่', owner: 'ทีมอะไหล่ PMG' },
+        { plan: 'Update อะไหล่คืน', owner: 'ทีมอะไหล่ PMG' }
+      ]
+    },
+    {
+      name: 'สมาชิก/ทีม', icon: '👥', color: '#ec4899', bg: '#fce7f3',
+      items: [
+        { plan: 'วางแผนจัดทีม', owner: 'ศรอนงค์' },
+        { plan: 'SA/SC Incentive', owner: 'พี่แหม่ม+มัญชีระ' },
+        { plan: 'เพิ่ม GM ต่อคันบริการ', owner: 'พี่แหม่ม' }
+      ]
+    }
+  ];
+
+  // ── แผนงานระยะกลาง (1-3 ปี) — แผนกลยุทธ์เชิงธุรกิจ ──
+  var MID_TERM_PLANS = [
+    { plan: 'ขยายเครือข่าย SGM + NavWay PMSG ทั่วภาคตะวันออก', focus: 'การตลาด' },
+    { plan: 'พัฒนา MApp เป็นหน้าร้านออนไลน์ครบวงจร + AI วิเคราะห์พฤติกรรม', focus: 'ระบบงาน' },
+    { plan: 'BCT Dashboard ครอบคลุม 5 กลุ่มงาน 100% + Real-time KPI', focus: 'ระบบงาน' },
+    { plan: 'สมาชิก 3 ผ่าน (ทักษะ+กลยุทธ์+ทุนองค์กร) 100%', focus: 'การพัฒนา' },
+    { plan: 'เพิ่ม GM ผลิตภัณฑ์เสริม 600 บาท/คัน ทุกสาขา', focus: 'ผลิตภัณฑ์เสริม' },
+    { plan: 'AI Agent ช่วยขาย/ช่วยซ่อม ทุกสาขา', focus: 'AI' }
+  ];
+
+  // ── แผนงานระยะยาว (3-5 ปี) — แผนกลยุทธ์องค์กรอนาคต ──
+  var LONG_TERM_PLANS = [
+    { plan: 'Automation Organization (DIN) สำเร็จ 100%', focus: 'องค์กร' },
+    { plan: 'AIOS + AI Agent (Digital Twin) ทุกกระบวนการ', focus: 'AI' },
+    { plan: 'ธุรกิจศูนย์สีใน กทม. และภาคตะวันออก', focus: 'ธุรกิจใหม่' },
+    { plan: 'GM หลังการขาย 70:30 (บริการ 70 : ขาย 30)', focus: 'Vision' },
+    { plan: 'สมาชิกทำงานร่วมกับ AI > 90% ทุกระดับ', focus: 'คน' },
+    { plan: 'ฐานข้อมูล + Data Warehouse + Cybersecurity ครบวงจร', focus: 'ระบบงาน' }
+  ];
+
+  html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
+    '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:6px;display:flex;align-items:center;gap:8px">📅 Action Plan (แผนปฏิบัติการ)</h2>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:14px">แผนงาน 3 ช่วงเวลา · ระยะสั้นจัดเป็น 5 หมวดหมู่ · เชื่อมโยงทีมรับผิดชอบ</div>'+
+
+    // Timeline cards (3 ช่วงเวลา)
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">'+
-      '<div style="background:#dbeafe;border-radius:10px;padding:14px;text-align:center">'+
+      '<div style="background:#dbeafe;border-radius:10px;padding:14px;text-align:center;border:1px solid #93c5fd">'+
         '<div style="font-size:24px;font-weight:800;color:#1e40af">0-12</div>'+
         '<div style="font-size:13px;font-weight:600;color:#1e40af">เดือน</div>'+
-        '<div style="font-size:12px;color:#475569;margin-top:4px">แผนงานระยะสั้น</div>'+
+        '<div style="font-size:12px;color:#475569;margin-top:4px">แผนงานระยะสั้น (16+ รายการ)</div>'+
       '</div>'+
-      '<div style="background:#dcfce7;border-radius:10px;padding:14px;text-align:center">'+
+      '<div style="background:#dcfce7;border-radius:10px;padding:14px;text-align:center;border:1px solid #86efac">'+
         '<div style="font-size:24px;font-weight:800;color:#166534">1-3</div>'+
         '<div style="font-size:13px;font-weight:600;color:#166534">ปี</div>'+
-        '<div style="font-size:12px;color:#475569;margin-top:4px">แผนกลยุทธ์ระยะกลาง</div>'+
+        '<div style="font-size:12px;color:#475569;margin-top:4px">แผนกลยุทธ์เชิงธุรกิจ</div>'+
       '</div>'+
-      '<div style="background:#fef3c7;border-radius:10px;padding:14px;text-align:center">'+
+      '<div style="background:#fef3c7;border-radius:10px;padding:14px;text-align:center;border:1px solid #fcd34d">'+
         '<div style="font-size:24px;font-weight:800;color:#92400e">3-5</div>'+
         '<div style="font-size:13px;font-weight:600;color:#92400e">ปี</div>'+
-        '<div style="font-size:12px;color:#475569;margin-top:4px">แผนกลยุทธ์ระยะยาว</div>'+
+        '<div style="font-size:12px;color:#475569;margin-top:4px">แผนกลยุทธ์องค์กรอนาคต</div>'+
       '</div>'+
     '</div>'+
 
-    // Responsibility table
-    '<div style="background:#f8fafc;border-radius:10px;padding:14px">'+
-      '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🎯 แผนงาน (ผู้รับผิดชอบ):</div>'+
-      '<table style="width:100%;font-size:12px;border-collapse:collapse">'+
-        '<thead><tr style="background:#e2e8f0"><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">แผนงาน</th><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">ผู้รับผิดชอบ</th></tr></thead>'+
+    // ── ระยะสั้น: แผนงานตามหมวดหมู่ ──
+    '<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:10px;display:flex;align-items:center;gap:6px">📆 ระยะสั้น (0-12 เดือน) — แผนงานตามหมวดหมู่</div>'+
+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">';
+
+  ACTION_CATEGORIES.forEach(function(cat) {
+    html += '<div style="background:'+cat.bg+';border-left:4px solid '+cat.color+';border-radius:8px;padding:12px">'+
+      '<div style="font-size:12px;font-weight:700;color:'+cat.color+';margin-bottom:8px;display:flex;align-items:center;gap:6px">'+cat.icon+' '+esc(cat.name)+' <span style="font-size:10px;font-weight:600;opacity:.7">('+cat.items.length+')</span></div>'+
+      '<table style="width:100%;font-size:11px;border-collapse:collapse">'+
         '<tbody>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">เพิ่ม GM ต่อคันบริการ</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">พี่แหม่ม</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">แสวงหาลูกค้า TYP@</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">ปุ๋ย+บิว</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">นัดหมายตลอดชีพ PMSg</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">ตั๊ก</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">GM ผลิตภัณฑ์เสริม 600 บาท/คัน</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">ฟัก</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">IMC</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">เอิ่น</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">NavWay PMSG</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">พี่นก+เอ+น้องแซน</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">SGM</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">เบ๊นท์+ไอซ์</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">เรียกลูกค้ารถขาดหาย</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">ตั๊ก</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">รถนอกระยะ</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">แหม่ม</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">3 ผ่านทักษะ</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">มัญชีระ</td></tr>'+
-          '<tr><td style="padding:6px 8px">3 ผ่านกลยุทธ์</td><td style="padding:6px 8px">ศรอนงค์/มัญชีระ</td></tr>'+
+          cat.items.map(function(it) {
+            return '<tr>'+
+              '<td style="padding:5px 6px;border-bottom:1px solid #e2e8f0;color:#475569">'+esc(it.plan)+'</td>'+
+              '<td style="padding:5px 6px;border-bottom:1px solid #e2e8f0;color:'+cat.color+';font-weight:600;text-align:right;white-space:nowrap">'+esc(it.owner)+'</td>'+
+            '</tr>';
+          }).join('')+
         '</tbody>'+
       '</table>'+
+    '</div>';
+  });
+
+  html += '</div></div>'+
+
+    // ── ระยะกลาง: แผนกลยุทธ์เชิงธุรกิจ ──
+    '<div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:12px;border-left:4px solid #10b981">'+
+      '<div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;display:flex;align-items:center;gap:6px">📈 ระยะกลาง (1-3 ปี) — แผนกลยุทธ์เชิงธุรกิจ</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">'+
+        MID_TERM_PLANS.map(function(p) {
+          return '<div style="background:#ffffff80;border:1px solid #86efac;border-radius:8px;padding:10px">'+
+            '<div style="font-size:12px;color:#1e293b;line-height:1.5;margin-bottom:4px">'+esc(p.plan)+'</div>'+
+            '<span style="font-size:10px;font-weight:700;color:#166534;background:#dcfce7;padding:2px 8px;border-radius:9999px">'+esc(p.focus)+'</span>'+
+          '</div>';
+        }).join('')+
+      '</div>'+
     '</div>'+
+
+    // ── ระยะยาว: แผนกลยุทธ์องค์กรอนาคต ──
+    '<div style="background:#fffbeb;border-radius:10px;padding:14px;margin-bottom:12px;border-left:4px solid #f59e0b">'+
+      '<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px;display:flex;align-items:center;gap:6px">🔭 ระยะยาว (3-5 ปี) — แผนกลยุทธ์องค์กรอนาคต</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">'+
+        LONG_TERM_PLANS.map(function(p) {
+          return '<div style="background:#ffffff80;border:1px solid #fcd34d;border-radius:8px;padding:10px">'+
+            '<div style="font-size:12px;color:#1e293b;line-height:1.5;margin-bottom:4px">'+esc(p.plan)+'</div>'+
+            '<span style="font-size:10px;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 8px;border-radius:9999px">'+esc(p.focus)+'</span>'+
+          '</div>';
+        }).join('')+
+      '</div>'+
+    </div>'+
+
+    // ── ตารางผู้รับผิดชอบ (รวมทั้งหมด) ──
+    '<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🎯 ตารางแผนงาน (ผู้รับผิดชอบ) — รวมทุกรายการ</div>'+
+      '<table style="width:100%;font-size:12px;border-collapse:collapse">'+
+        '<thead><tr style="background:#e2e8f0"><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">แผนงาน</th><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">ผู้รับผิดชอบ</th></tr></thead>'+
+        '<tbody>';
+
+  // Render all items from all categories into one consolidated table
+  ACTION_CATEGORIES.forEach(function(cat) {
+    cat.items.forEach(function(it, idx) {
+      var last = idx === cat.items.length - 1;
+      var border = last ? '' : 'border-bottom:1px solid #e2e8f0';
+      html += '<tr><td style="padding:6px 8px;'+border+'">'+esc(it.plan)+'</td><td style="padding:6px 8px;'+border+';color:'+cat.color+';font-weight:600">'+esc(it.owner)+'</td></tr>';
+    });
+  });
+  html += '</tbody></table></div>'+
 
     // AI in Action Plan
     '<div style="background:#eff6ff;border-radius:10px;padding:14px;margin-top:12px">'+
