@@ -1218,6 +1218,142 @@ function switchTab(tabId, btn) {
 /* ═══════════════════════════════════════════════════
    Business Plan Tab (แผนธุรกิจ) — CPDG-style layout
    ═══════════════════════════════════════════════════ */
+
+/* ── buildCascadeRow_: สร้าง <tr> สำหรับตาราง Cascade alignment
+   - ค้นหาสถานะจริงจาก CEO_KPI_ACTUALS โดยใช้ keyword matching
+   - ถ้าเจอ → แสดง "✅ ค่าปัจจุบัน / เป้าหมาย (progress%)"
+   - ถ้าไม่เจอ → แสดงช่อง input วาง link + ช่องกรอก "แท็บ/ช่วงข้อมูล" (บันทึก localStorage)
+   - localStorage key: "bp_cascade_<planKey>" = JSON {link, tabRange}
+── */
+function buildCascadeRow_(planLabel, dashboardLabel, keywords) {
+  // Sanitize planLabel → localStorage key
+  var keyBase = planLabel.replace(/[^a-zA-Z0-9ก-๛]/g, '_').substring(0, 30);
+  var lsKey = 'bp_cascade_' + keyBase;
+
+  // อ่านค่าที่เคยบันทึกจาก localStorage
+  var savedLink = '', savedTabRange = '';
+  try {
+    var raw = localStorage.getItem(lsKey);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      savedLink = parsed.link || '';
+      savedTabRange = parsed.tabRange || '';
+    }
+  } catch(e) {}
+
+  // ค้นหาสถานะจริงจาก CEO_KPI_ACTUALS (โหลด async แล้ว)
+  var matched = null;
+  if (typeof CEO_KPI_ACTUALS !== 'undefined' && CEO_KPI_ACTUALS && CEO_KPI_ACTUALS.length > 0) {
+    var bestScore = 0;
+    for (var ai = 0; ai < CEO_KPI_ACTUALS.length; ai++) {
+      var kpiItem = CEO_KPI_ACTUALS[ai];
+      if (kpiItem.status === 'no-data' || kpiItem.status === 'skip' || kpiItem.currentValue === null || kpiItem.currentValue === undefined) continue;
+      var kpiText = String(kpiItem.krText || '').toLowerCase();
+      var matchScore = 0;
+      for (var kwi = 0; kwi < keywords.length; kwi++) {
+        if (kpiText.indexOf(String(keywords[kwi]).toLowerCase()) >= 0) matchScore++;
+      }
+      if (matchScore > bestScore) {
+        bestScore = matchScore;
+        matched = kpiItem;
+      }
+    }
+  }
+
+  var borderStyle = 'padding:6px 8px;border-bottom:1px solid #e2e8f0;';
+  var lastRowStyle = 'padding:6px 8px;'; // แถวสุดท้ายไม่มี border-bottom
+
+  // สร้างเนื้อหา cell สถานะ
+  var statusCell = '';
+  if (matched && (matched.progressPct || matched.currentValue)) {
+    // ── มีข้อมูลจริง → แสดงสถานะพร้อม progress ──
+    var pct = matched.progressPct || 0;
+    var cur = formatKpiValue_(matched.currentValue);
+    var tgt = formatKpiValue_(matched.targetValue);
+    var badge = pct >= 100 ? '✅' : (pct >= 80 ? '⚠️' : '🔴');
+    var statusColor = pct >= 100 ? '#10b981' : (pct >= 80 ? '#f59e0b' : '#ef4444');
+    statusCell = '<div style="text-align:center;line-height:1.6">' +
+      '<div style="font-weight:700;color:' + statusColor + '">' + badge + ' ' + pct + '%</div>' +
+      '<div style="font-size:11px;color:#64748b">' + esc(cur) + ' / ' + esc(tgt) + '</div>' +
+      (matched.sourceUrl ? '<a href="' + esc(matched.sourceUrl) + '" target="_blank" style="font-size:10px;color:#3b82f6;text-decoration:none">' + esc(matched.source || 'แหล่งข้อมูล') + ' ↗</a>' : '') +
+    '</div>';
+  } else {
+    // ── ไม่มีข้อมูลจริง → ช่องวาง link + ช่องกรอก แท็บ/ช่วง ──
+    var linkId = 'casc_link_' + keyBase;
+    var tabId = 'casc_tab_' + keyBase;
+    statusCell = '<div style="display:flex;flex-direction:column;gap:4px;align-items:stretch">' +
+      '<input type="text" id="' + linkId + '" placeholder="วาง link Google Sheet..." value="' + esc(savedLink) + '" ' +
+        'onchange="saveCascadeLink_(\'' + keyBase + '\')" ' +
+        'onclick="event.stopPropagation()" ' +
+        'style="font-size:11px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;width:100%;min-width:180px;box-sizing:border-box" />' +
+      '<input type="text" id="' + tabId + '" placeholder="แท็บ: ___ ช่วง: ___" value="' + esc(savedTabRange) + '" ' +
+        'onchange="saveCascadeLink_(\'' + keyBase + '\')" ' +
+        'onclick="event.stopPropagation()" ' +
+        'style="font-size:11px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;width:100%;min-width:180px;box-sizing:border-box;color:#64748b" />' +
+      '<button onclick="event.stopPropagation();refreshCascadeStatus_(\'' + keyBase + '\',' + JSON.stringify(keywords).replace(/"/g, '&quot;') + ')" ' +
+        'style="font-size:10px;padding:3px 8px;border:1px solid #3b82f6;border-radius:5px;background:#eff6ff;color:#1e40af;cursor:pointer;margin-top:2px">🔄 วัดผลจาก link</button>' +
+    '</div>';
+  }
+
+  return '<tr>' +
+    '<td style="' + borderStyle + '">' + esc(planLabel) + '</td>' +
+    '<td style="' + borderStyle + '">' + esc(dashboardLabel) + '</td>' +
+    '<td style="' + borderStyle + 'text-align:center">' + statusCell + '</td>' +
+  '</tr>';
+}
+
+/* ── saveCascadeLink_: บันทึก link + แท็บ/ช่วง ลง localStorage ── */
+function saveCascadeLink_(keyBase) {
+  var lsKey = 'bp_cascade_' + keyBase;
+  var linkEl = document.getElementById('casc_link_' + keyBase);
+  var tabEl = document.getElementById('casc_tab_' + keyBase);
+  if (!linkEl && !tabEl) return;
+  var data = { link: linkEl ? linkEl.value.trim() : '', tabRange: tabEl ? tabEl.value.trim() : '' };
+  try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
+  // แสดง feedback สั้นๆ
+  if (linkEl) {
+    var orig = linkEl.style.borderColor;
+    linkEl.style.borderColor = '#10b981';
+    setTimeout(function() { linkEl.style.borderColor = orig; }, 800);
+  }
+}
+
+/* ── refreshCascadeStatus_: หลังวาง link ใหม่ → re-render business plan
+   เพื่อให้แสดง link เป็นจุดคลิกได้ (ระบบยังไม่ดึงค่าจาก Google Sheet API อัตโนมัติ
+   แต่ผู้ใช้สามารถคลิก link เพื่อดูข้อมูลต้นทางได้)
+── */
+function refreshCascadeStatus_(keyBase, keywords) {
+  saveCascadeLink_(keyBase);
+  // อ่านค่า link ที่บันทึกแล้ว
+  var lsKey = 'bp_cascade_' + keyBase;
+  var savedLink = '', savedTabRange = '';
+  try {
+    var raw = localStorage.getItem(lsKey);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      savedLink = parsed.link || '';
+      savedTabRange = parsed.tabRange || '';
+    }
+  } catch(e) {}
+
+  // ถ้ามี link → อัปเดต cell ให้แสดง link เป็นจุดคลิก + แท็บ/ช่วง
+  if (savedLink) {
+    // หา row ที่มี input นี้ → อัปเดต cell
+    var linkEl = document.getElementById('casc_link_' + keyBase);
+    if (linkEl) {
+      var td = linkEl.closest('td');
+      if (td) {
+        var tabInfo = savedTabRange ? '<div style="font-size:10px;color:#64748b;margin-top:2px">' + esc(savedTabRange) + '</div>' : '';
+        td.innerHTML = '<div style="text-align:center;line-height:1.6">' +
+          '<a href="' + esc(savedLink) + '" target="_blank" style="font-size:12px;color:#3b82f6;text-decoration:none;font-weight:600;display:inline-block;padding:4px 10px;border:1px solid #bfdbfe;border-radius:6px;background:#eff6ff">📊 ดูข้อมูลต้นทาง ↗</a>' +
+          tabInfo +
+          '<div style="font-size:10px;color:#94a3b8;margin-top:4px">บันทึกแล้ว — คลิกเพื่อวัดผลจาก Sheet</div>' +
+        '</div>';
+      }
+    }
+  }
+}
+
 function renderBusinessPlan() {
   var html = '';
 
@@ -1507,6 +1643,40 @@ function renderBusinessPlan() {
         esc(personName)+' · '+esc(deptName)+'</span>';
     }
 
+    // Helper: แสดงรายชื่อ CEO ที่รับผิดชอบแบบ compact list (กระชับ ไม่ใช้ badges เยอะๆ)
+    //   owners = array ของ { personName, deptName } → "สมศักดิ์ · PMG/PMGI, กาญจนา · PMS ขาย"
+    //   มี dedup ภายใน + เรียงลำดับตามลำดับ CEO มาตรฐาน (สมศักดิ์ → กาญจนา → ณัฐภัทร → ชุติมา)
+    function ceoOwnerList(owners) {
+      if (!owners || owners.length === 0) return '';
+      // dedup ตาม personName|deptName
+      var seen = {};
+      var uniq = [];
+      for (var i = 0; i < owners.length; i++) {
+        var key = (owners[i].personName || '') + '|' + (owners[i].deptName || '');
+        if (!seen[key]) { seen[key] = true; uniq.push(owners[i]); }
+      }
+      // เรียงลำดับตาม CEO มาตรฐาน
+      var ceoOrder = ['สมศักดิ์', 'สมศักด์', 'กาญจนา', 'ณัฐภัทร', 'กุลภัทร', 'ชุติมา'];
+      uniq.sort(function(a, b) {
+        var ai = 99, bi = 99;
+        for (var k = 0; k < ceoOrder.length; k++) {
+          if ((a.personName || '').indexOf(ceoOrder[k]) >= 0) ai = Math.min(ai, k);
+          if ((b.personName || '').indexOf(ceoOrder[k]) >= 0) bi = Math.min(bi, k);
+        }
+        return ai - bi;
+      });
+      // สร้าง compact list: "สมศักดิ์ · PMG/PMGI, กาญจนา · PMS ขาย"
+      var parts = uniq.map(function(o) {
+        // ใช้ชื่อย่อ (ชื่อตัว) แทนชื่อเต็มเพื่อกระชับ
+        var name = o.personName || '';
+        var dept = o.deptName || '';
+        return '<span style="color:#334155;font-weight:600">'+esc(name)+'</span>'+
+          '<span style="color:#94a3b8"> · </span>'+
+          '<span style="color:#64748b">'+esc(dept)+'</span>';
+      });
+      return parts.join('<span style="color:#cbd5e1;margin:0 4px">,</span>');
+    }
+
     // Helper: สร้าง KR row แบบมีเป้าหมายจาก CEO + ผลลัพธ์ + ผู้รับผิดชอบ + ปุ่มแก้ไข
     //   owners = array ของ { personName, deptName } — CEO ที่มี KR เกี่ยวข้อง (แสดงเป็น badges)
     function krResultRow(num, color, text, target, actual, statusStr, ceoSource, sObjIndex, krIndex, owners) {
@@ -1548,7 +1718,8 @@ function renderBusinessPlan() {
           '<span style="font-size:10px;color:#64748b">🎯 เป้า (CEO):</span>'+
           '<span style="font-size:11px;font-weight:700;color:'+color+';background:'+color+'15;padding:2px 8px;border-radius:6px">'+esc(target)+'</span>';
         if (ceoSource) {
-          html_ += '<span style="font-size:9px;color:#94a3b8">← '+esc(ceoSource)+'</span>';
+          // ceoSource เป็น HTML จาก ceoOwnerList() (มี esc ภายในแล้ว) — ใช้ตรงๆ ไม่ escape ซ้ำ
+          html_ += '<span style="font-size:9px;color:#94a3b8">← '+ceoSource+'</span>';
         }
         html_ += '</div>';
       }
@@ -1569,21 +1740,41 @@ function renderBusinessPlan() {
         '</div>';
       }
 
-      // แสดงผู้รับผิดชอบ KR นี้ (badges) — แสดงใครดูแล KR นี้บ้าง
+      // แสดงผู้รับผิดชอบ KR นี้แบบ compact list (ไม่ใช้ badges เยอะๆ)
+      //   "👤 ดูแล: สมศักดิ์ · PMG/PMGI, กาญจนา · PMS ขาย"
       if (owners && owners.length > 0) {
-        // deduplicate owners
-        var seen = {};
-        var uniqOwners = [];
-        for (var oi = 0; oi < owners.length; oi++) {
-          var key = owners[oi].personName + '|' + owners[oi].deptName;
-          if (!seen[key]) { seen[key] = true; uniqOwners.push(owners[oi]); }
+        var ownerListHtml = ceoOwnerList(owners);
+        if (ownerListHtml) {
+          html_ += '<div style="margin-top:6px;font-size:11px;line-height:1.5">'+
+            '<span style="color:#64748b;font-size:10px">👤 ดูแล: </span>'+
+            ownerListHtml+'</div>';
         }
-        html_ += '<div style="display:flex;align-items:center;gap:4px;margin-top:6px;flex-wrap:wrap">'+
-          '<span style="font-size:10px;color:#64748b">👤 ดูแล:</span>';
-        for (var oi2 = 0; oi2 < uniqOwners.length; oi2++) {
-          html_ += ceoBadge(uniqOwners[oi2].personName, uniqOwners[oi2].deptName);
+      }
+
+      // ── ช่องลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล (ทุก KR ใน S-Objectives) ──
+      //   localStorage key: bp_src_sobj_<sIdx>_<krIdx>
+      //   ถ้ามีข้อมูลจริง (actual + pct) → แสดงข้อมูลจริง + ลิงก์ที่วางไว้
+      //   ถ้าไม่มีข้อมูลจริง → แสดงช่องวางลิงก์ + แท็บ/ช่วง
+      if (typeof sObjIndex === 'number' && typeof krIndex === 'number') {
+        var srcKey = 'bp_src_sobj_' + sObjIndex + '_' + krIndex;
+        var srcData = loadSrcData(srcKey);
+        var hasActual = (actual && pct > 0);
+
+        if (hasActual) {
+          // มีข้อมูลจริง — แสดงลิงก์ต้นทางที่วางไว้ (ถ้ามี) + ช่องแก้ไข
+          var srcLinkHtml = '';
+          if (srcData.link) {
+            srcLinkHtml = '<div style="margin-top:4px;font-size:10px;color:#64748b">'+
+              '<span style="font-weight:700">📎 ลิงก์ต้นทาง: </span>'+
+              '<a href="' + esc(srcData.link) + '" target="_blank" style="color:#3b82f6;text-decoration:none;font-weight:600">' + esc(srcData.link.substring(0,45)) + (srcData.link.length > 45 ? '...' : '') + ' ↗</a>'+
+              (srcData.tabRange ? ' <span style="color:#94a3b8;margin-left:6px">📌 ' + esc(srcData.tabRange) + '</span>' : '')+
+            '</div>';
+          }
+          html_ += srcLinkHtml + buildSrcInputs(srcKey, { showLabel: !srcData.link, label: '📎 ลิงก์ต้นทาง / แท็บ / ช่วงข้อมูล (แก้ไขได้)' });
+        } else {
+          // ไม่มีข้อมูลจริง — แสดงช่องวางลิงก์ + แท็บ/ช่วง
+          html_ += buildSrcInputs(srcKey, { showLabel: true, label: '📎 วางลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล (ยังไม่มีผลลัพธ์)' });
         }
-        html_ += '</div>';
       }
 
       html_ += '</li>';
@@ -1678,7 +1869,7 @@ function renderBusinessPlan() {
             '<div style="font-size:11px;font-weight:700;color:'+s.text+';margin-bottom:4px">📊 ผลลัพธ์รวม (จาก CEO):</div>';
       if (overallHasData) {
         html += '<div style="font-size:11px;color:#475569;line-height:1.5">'+esc(overallTarget)+'</div>';
-        // แสดง CEO ที่รับผิดชอบเป้าหมายรวมเป็น badges (ไม่แสดง KR text ซ้ำ)
+        // แสดง CEO ที่รับผิดชอบเป้าหมายรวมเป็น compact list (ไม่ใช้ badges เยอะๆ)
         if (overallData.allKrs && overallData.allKrs.length > 0) {
           var overallOwners = [];
           var seenOverall = {};
@@ -1686,12 +1877,12 @@ function renderBusinessPlan() {
             var key2 = ckr.personName + '|' + ckr.deptName;
             if (!seenOverall[key2]) { seenOverall[key2] = true; overallOwners.push({ personName: ckr.personName, deptName: ckr.deptName }); }
           });
-          html += '<div style="display:flex;align-items:center;gap:4px;margin-top:6px;flex-wrap:wrap">'+
-            '<span style="font-size:10px;color:#64748b">👤 ดูแล:</span>';
-          overallOwners.forEach(function(o2) {
-            html += ceoBadge(o2.personName, o2.deptName);
-          });
-          html += '</div>';
+          var overallOwnerListHtml = ceoOwnerList(overallOwners);
+          if (overallOwnerListHtml) {
+            html += '<div style="margin-top:6px;font-size:11px;line-height:1.5">'+
+              '<span style="font-size:10px;color:#64748b">👤 ดูแล: </span>'+
+              overallOwnerListHtml+'</div>';
+          }
         }
       } else {
         html += '<div style="font-size:11px;color:#f59e0b;font-weight:600">⏳ รอข้อมูล CEO</div>';
@@ -1703,20 +1894,45 @@ function renderBusinessPlan() {
       // เก็บ CEO ทั้งหมดที่มี KR ใน S-Objective นี้ (สำหรับส่วน ผู้รับผิดชอบรวม)
       var allCeoOwners = [];
 
+      // ── Dedup KR ที่อาจซ้ำกันใน S-Objective (เช่น CBNP 39 ลบ ปรากฏหลาย KR) ──
+      //   รวม KR ที่มี keyword ซ้ำหรือ text ใกล้เคียงเป็น KR เดียว + รวม owners ของ KR ที่ซ้ำ
+      var seenKrKw = {};  // dedup ตาม keyword signature
+      var dedupedKrs = [];
       s.krs.forEach(function(kr, i) {
-        // โหลด KR จาก localStorage ถ้ามี (แก้ไขแล้ว)
+        // สร้าง signature จาก keyword ที่ sort แล้ว (ไม่สนใจลำดับ)
+        var sig = kr.kw.slice().sort().join('|').toLowerCase();
+        if (seenKrKw[sig]) {
+          // KR ซ้ำ → รวม owners ของ KR เดิม (จะถูกประมวลผอีกครั้งด้านล่าง)
+          // ไม่เพิ่มเป็น KR ใหม่
+        } else {
+          seenKrKw[sig] = true;
+          dedupedKrs.push({ kr: kr, origIndex: i });
+        }
+      });
+
+      dedupedKrs.forEach(function(item, di) {
+        var kr = item.kr;
+        var i = item.origIndex;
+        // โหลด KR จาก localStorage ถ้ามี (แก้ไขแล้ว) — ใช้ origIndex เพื่อความเข้ากันได้กับข้อมูลเดิม
         var lsKey = 'bp_sobj_' + sIdx + '_' + i;
         var krText = kr.text;
         try {
           var saved = localStorage.getItem(lsKey);
           if (saved) krText = saved;
         } catch(e) {}
-        // ดึง KR จาก CEO ทุกคนที่ match — แต่ใช้เฉพาะ owners (badges) ไม่แสดง KR text ซ้ำ
+        // ดึง KR จาก CEO ทุกคนที่ match — ใช้เฉพาะ owners (compact list) ไม่แสดง KR text ซ้ำ
         var allCeoKrs = ceoAllKrData(kr.kw);
         // ใช้ target แรกเป็นตัวแทน (ถ้ามี)
         var firstCeo = allCeoKrs.length > 0 ? allCeoKrs[0] : null;
         var target = firstCeo ? firstCeo.target : (kr.pdfTarget || null);
-        var ceoSource = firstCeo ? firstCeo.source : null;
+        // ceoSource แสดงเป็น compact list ของ CEO ทั้งหมดที่ match (ไม่ใช่แค่คนแรก)
+        var ceoSource = null;
+        if (allCeoKrs.length > 0) {
+          var srcOwners = allCeoKrs.map(function(ckr) {
+            return { personName: ckr.personName, deptName: ckr.deptName };
+          });
+          ceoSource = ceoOwnerList(srcOwners);
+        }
         // ดึงผลลัพธ์ปัจจุบันจาก CEO_KPI_ACTUALS (ถ้าโหลดแล้ว)
         var actual = kr.pdfActual || null;
         var statusStr = kr.pdfStatus || null;
@@ -1744,8 +1960,8 @@ function renderBusinessPlan() {
             target = bestMatch.targetValue != null ? String(bestMatch.targetValue) : target;
             actualPct = bestMatch.progressPct || 0;
             if (actualPct > 0) {
-              statusStr = actualPct >= 100 ? '✅ บรรลุเป้า ' + actualPct + '%' : 
-                         actualPct >= 80 ? '⚠️ ใกล้เป้า ' + actualPct + '%' : 
+              statusStr = actualPct >= 100 ? '✅ บรรลุเป้า ' + actualPct + '%' :
+                         actualPct >= 80 ? '⚠️ ใกล้เป้า ' + actualPct + '%' :
                          '🔴 ต่ำกว่าเป้า ' + actualPct + '%';
             }
           }
@@ -1761,8 +1977,9 @@ function renderBusinessPlan() {
             allCeoOwners.push({ key: key, personName: ckr.personName, deptName: ckr.deptName });
           }
         });
-        // เรนเดอร์ KR row เดียว — ส่ง owners ไปแสดงเป็น badges (ไม่มี sub-rows ยาวๆ แล้ว)
-        html += krResultRow(i+1, s.color, krText, target, actual, statusStr, ceoSource, sIdx, i, krOwners);
+        // เรนเดอร์ KR row เดียว — ส่ง owners ไปแสดงเป็น compact list (ไม่มี sub-rows ยาวๆ แล้ว)
+        //   ใช้ di+1 เป็นเลข KR ต่อเนื่อง (หลัง dedup)
+        html += krResultRow(di+1, s.color, krText, target, actual, statusStr, ceoSource, sIdx, i, krOwners);
       });
 
       html += '</ul>'+
@@ -1770,10 +1987,10 @@ function renderBusinessPlan() {
         '<div style="margin-top:12px;padding:10px 12px;background:#ffffff80;border-radius:8px">'+
           '<div style="font-size:11px;font-weight:700;color:'+s.text+';margin-bottom:6px">👥 ผู้รับผิดชอบ (CEO):</div>';
       if (allCeoOwners.length > 0) {
-        html += '<div>'+allCeoOwners.map(function(o) { return ceoBadge(o.personName, o.deptName); }).join('')+'</div>';
+        html += '<div style="font-size:11px;line-height:1.6">'+ceoOwnerList(allCeoOwners)+'</div>';
       } else {
         // fallback: แสดงกลุ่มงานจาก s.teams ถ้าไม่มี CEO match
-        html += '<div>'+s.teams.map(teamBadge).join('')+'</div>';
+        html += '<div style="font-size:11px;color:#64748b">'+s.teams.map(esc).join(' · ')+'</div>';
       }
       html += '</div>'+
         // CEO/KPI linkage
@@ -1951,16 +2168,18 @@ function renderBusinessPlan() {
 
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">';
 
-  ACTION_CATEGORIES.forEach(function(cat) {
+  ACTION_CATEGORIES.forEach(function(cat, catIdx) {
     html += '<div style="background:'+cat.bg+';border-left:4px solid '+cat.color+';border-radius:8px;padding:12px">'+
       '<div style="font-size:12px;font-weight:700;color:'+cat.color+';margin-bottom:8px;display:flex;align-items:center;gap:6px">'+cat.icon+' '+esc(cat.name)+' <span style="font-size:10px;font-weight:600;opacity:.7">('+cat.items.length+')</span></div>'+
       '<table style="width:100%;font-size:11px;border-collapse:collapse">'+
         '<tbody>'+
-          cat.items.map(function(it) {
+          cat.items.map(function(it, itemIdx) {
+            var catSrcKey = 'bp_src_action_' + catIdx + '_' + itemIdx;
             return '<tr>'+
               '<td style="padding:5px 6px;border-bottom:1px solid #e2e8f0;color:#475569">'+esc(it.plan)+'</td>'+
               '<td style="padding:5px 6px;border-bottom:1px solid #e2e8f0;color:'+cat.color+';font-weight:600;text-align:right;white-space:nowrap">'+esc(it.owner)+'</td>'+
-            '</tr>';
+            '</tr>'+
+            '<tr><td colspan="2" style="padding:2px 6px 4px;border-bottom:1px solid #e2e8f0">'+buildSrcInputs(catSrcKey, { showLabel: false })+'</td></tr>';
           }).join('')+
         '</tbody>'+
       '</table>'+
@@ -1971,13 +2190,15 @@ function renderBusinessPlan() {
 
     // ── ระยะกลาง: แผนกลยุทธ์ ──
     '<div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:12px;border-left:4px solid #10b981">'+
-      '<div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;display:flex;align-items:center;gap:6px">📈 ระยะกลาง (1-3 ปี) — แผนกลยุทธ์ (7 รายการ)</div>'+
+      '<div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;display:flex;align-items:center;gap:6px">📈 ระยะกลาง (1-3 ปี) — แผนกลยุทธ์ (7 รายการ) · พร้อมช่องลิงก์ต้นทาง</div>'+
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">'+
-        MID_TERM_PLANS.map(function(p) {
+        MID_TERM_PLANS.map(function(p, idx) {
           var ownerBadge = p.owner ? '<span style="font-size:10px;font-weight:700;color:#1e40af;background:#dbeafe;padding:2px 6px;border-radius:9999px;margin-left:6px">👤 '+esc(p.owner)+'</span>' : '';
+          var midSrcKey = 'bp_src_mid_' + idx;
           return '<div style="background:#ffffff80;border:1px solid #86efac;border-radius:8px;padding:10px">'+
             '<div style="font-size:12px;color:#1e293b;line-height:1.5;margin-bottom:4px">'+esc(p.plan)+ownerBadge+'</div>'+
             '<span style="font-size:10px;font-weight:700;color:#166534;background:#dcfce7;padding:2px 8px;border-radius:9999px">🎯 '+esc(p.focus)+'</span>'+
+            buildSrcInputs(midSrcKey, { showLabel: true, label: '📎 ลิงก์ต้นทาง + แท็บ/ช่วง' })+
           '</div>';
         }).join('')+
       '</div>'+
@@ -1985,12 +2206,14 @@ function renderBusinessPlan() {
 
     // ── ระยะยาว: แผนกลยุทธ์องค์กรอนาคต ──
     '<div style="background:#fffbeb;border-radius:10px;padding:14px;margin-bottom:12px;border-left:4px solid #f59e0b">'+
-      '<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px;display:flex;align-items:center;gap:6px">🔭 ระยะยาว (3-5 ปี) — แผนกลยุทธ์องค์กรอนาคต (6 รายการ)</div>'+
+      '<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px;display:flex;align-items:center;gap:6px">🔭 ระยะยาว (3-5 ปี) — แผนกลยุทธ์องค์กรอนาคต (6 รายการ) · พร้อมช่องลิงก์ต้นทาง</div>'+
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">'+
-        LONG_TERM_PLANS.map(function(p) {
+        LONG_TERM_PLANS.map(function(p, idx) {
+          var longSrcKey = 'bp_src_long_' + idx;
           return '<div style="background:#ffffff80;border:1px solid #fcd34d;border-radius:8px;padding:10px">'+
             '<div style="font-size:12px;color:#1e293b;line-height:1.5;margin-bottom:4px">'+esc(p.plan)+'</div>'+
             '<span style="font-size:10px;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 8px;border-radius:9999px">🎯 '+esc(p.focus)+'</span>'+
+            buildSrcInputs(longSrcKey, { showLabel: true, label: '📎 ลิงก์ต้นทาง + แท็บ/ช่วง' })+
           '</div>';
         }).join('')+
       '</div>'+
@@ -1998,17 +2221,20 @@ function renderBusinessPlan() {
 
     // ── ตารางผู้รับผิดชอบ (รวมทั้งหมด) ──
     '<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">'+
-      '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🎯 ตารางแผนงาน (ผู้รับผิดชอบ) — รวมทุกรายการ</div>'+
+      '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🎯 ตารางแผนงาน (ผู้รับผิดชอบ) — รวมทุกรายการ · พร้อมช่องลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล</div>'+
       '<table style="width:100%;font-size:12px;border-collapse:collapse">'+
-        '<thead><tr style="background:#e2e8f0"><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">แผนงาน</th><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">ผู้รับผิดชอบ</th></tr></thead>'+
+        '<thead><tr style="background:#e2e8f0"><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">แผนงาน</th><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">ผู้รับผิดชอบ</th><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">ลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล</th></tr></thead>'+
         '<tbody>';
 
   // Render all items from all categories into one consolidated table
-  ACTION_CATEGORIES.forEach(function(cat) {
+  ACTION_CATEGORIES.forEach(function(cat, catIdx) {
     cat.items.forEach(function(it, idx) {
       var last = idx === cat.items.length - 1;
       var border = last ? '' : 'border-bottom:1px solid #e2e8f0';
-      html += '<tr><td style="padding:6px 8px;'+border+'">'+esc(it.plan)+'</td><td style="padding:6px 8px;'+border+';color:'+cat.color+';font-weight:600">'+esc(it.owner)+'</td></tr>';
+      var srcKey = 'bp_src_action_' + catIdx + '_' + idx;
+      html += '<tr><td style="padding:6px 8px;'+border+'">'+esc(it.plan)+'</td>'+
+        '<td style="padding:6px 8px;'+border+';color:'+cat.color+';font-weight:600">'+esc(it.owner)+'</td>'+
+        '<td style="padding:6px 8px;'+border+'">'+buildSrcInputs(srcKey, { showLabel: false })+'</td></tr>';
     });
   });
   html += '</tbody></table></div>'+
@@ -2146,25 +2372,26 @@ function renderBusinessPlan() {
       '</div>'+
     '</div>'+
 
-    // Cascade alignment table
+    // Cascade alignment table — สถานะดึงจากข้อมูลจริง (CEO_KPI_ACTUALS) หรือช่องวาง link ต้นทาง
     '<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-top:10px">'+
       '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔗 ความเชื่อมโยงแผนธุรกิจ ↔ OKR Dashboard:</div>'+
       '<table style="width:100%;font-size:12px;border-collapse:collapse">'+
         '<thead><tr style="background:#e2e8f0">'+
           '<th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">แผนธุรกิจ</th>'+
           '<th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">OKR Dashboard</th>'+
-          '<th style="padding:8px;text-align:center;border-bottom:2px solid #cbd5e1">สถานะ</th>'+
+          '<th style="padding:8px;text-align:center;border-bottom:2px solid #cbd5e1;min-width:240px">สถานะ</th>'+
         '</tr></thead>'+
         '<tbody>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">Vision:GM 70:30</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">GM Dashboard</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">AOE:วิจัยลูกค้า</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">OKR Business Growth</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">IC:BCT</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">BCT+War Room</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">DINC:AI+Data</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">CEO KPI+AI Course</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">HC:3 ผ่าน</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">OKR Team Growth+Eval360</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
-          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">Action:GM 600 บาท</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">PR Dashboard</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
-          '<tr><td style="padding:6px 8px">OC:วัฒนธรรม</td><td style="padding:6px 8px">OKR Community+Mentor</td><td style="padding:6px 8px;text-align:center">✅</td></tr>'+
+          buildCascadeRow_('Vision:GM 70:30','GM Dashboard',['gm','gross margin','หลังการขาย','บริการ 70']) +
+          buildCascadeRow_('AOE:วิจัยลูกค้า','OKR Business Growth',['aoe','วิจัย','ลูกค้า','growth','ซื้อ']) +
+          buildCascadeRow_('IC:BCT','BCT+War Room',['bct','war room','ความครอบคลุม']) +
+          buildCascadeRow_('DINC:AI+Data','CEO KPI+AI Course',['ai','data','qc','ตรวจสอบคุณภาพ','ดิจิทัล']) +
+          buildCascadeRow_('HC:3 ผ่าน','OKR Team Growth+Eval360',['eval360','3 ผ่าน','พัฒนา','อบรม','mentor']) +
+          buildCascadeRow_('Action:GM 600 บาท','PR Dashboard',['pr','600','parts','อะไหล่','ความพร้อม']) +
+          buildCascadeRow_('OC:วัฒนธรรม','OKR Community+Mentor',['วัฒนธรรม','community','mentor','ค่านิยม']) +
         '</tbody>'+
       '</table>'+
+      '<div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6">💡 ถ้ายังไม่มีสถานะจริง → วาง link Google Sheet ของแหล่งข้อมูลต้นทางในช่องด้านบน + ระบุ "แท็บ/ช่วงข้อมูล" (เช่น <em>แท็บ: KPI สรุป, ช่วง: ม.ค.-มิ.ย.</em>) — ระบบจะบันทึกไว้ใช้ครั้งต่อไป</div>'+
     '</div>'+
   '</div>';
 
@@ -2270,6 +2497,108 @@ function esc(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+/* ═══════════════════════════════════════════════════
+   Source Link Helpers — ช่องวางลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล
+   - ใช้ในทุกการวัดผล (S-Objectives KR, Action Plan, KPI table)
+   - localStorage key format: bp_src_<section>_<index>
+   - บันทึกเป็น JSON { link, tabRange }
+   ═══════════════════════════════════════════════════ */
+
+/* saveSrcLink(keyBase, linkInputId, tabInputId)
+   - บันทึก link + tabRange ลง localStorage (JSON)
+   - keyBase = full localStorage key เช่น 'bp_src_sobj_0_1'
+*/
+function saveSrcLink(keyBase, linkInputId, tabInputId) {
+  var lsKey = keyBase;
+  var linkEl = document.getElementById(linkInputId);
+  var tabEl = document.getElementById(tabInputId);
+  var data = { link: '', tabRange: '' };
+  // อ่านค่าเดิมก่อน (กรณีมี note หรือฟิลด์อื่น)
+  try {
+    var raw = localStorage.getItem(lsKey);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') data = parsed;
+    }
+  } catch(e) {}
+  if (linkEl) data.link = linkEl.value.trim();
+  if (tabEl) data.tabRange = tabEl.value.trim();
+  try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
+  // flash border เป็นสีเขียวเพื่อยืนยันว่าบันทึกแล้ว
+  if (linkEl) {
+    var orig = linkEl.style.borderColor;
+    linkEl.style.borderColor = '#10b981';
+    setTimeout(function() { if (linkEl) linkEl.style.borderColor = orig; }, 800);
+  }
+  if (tabEl) {
+    var orig2 = tabEl.style.borderColor;
+    tabEl.style.borderColor = '#10b981';
+    setTimeout(function() { if (tabEl) tabEl.style.borderColor = orig2; }, 800);
+  }
+}
+
+/* saveSrcTab(keyBase, tabInputId)
+   - บันทึกเฉพาะ tabRange (ใช้เมื่อมีแค่ช่องแท็บ)
+*/
+function saveSrcTab(keyBase, tabInputId) {
+  var lsKey = keyBase;
+  var tabEl = document.getElementById(tabInputId);
+  var data = { link: '', tabRange: '' };
+  try {
+    var raw = localStorage.getItem(lsKey);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') data = parsed;
+    }
+  } catch(e) {}
+  if (tabEl) data.tabRange = tabEl.value.trim();
+  try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
+  if (tabEl) {
+    var orig = tabEl.style.borderColor;
+    tabEl.style.borderColor = '#10b981';
+    setTimeout(function() { if (tabEl) tabEl.style.borderColor = orig; }, 800);
+  }
+}
+
+/* loadSrcData(keyBase) — โหลด { link, tabRange } จาก localStorage
+   - คืน { link: '', tabRange: '' } ถ้าไม่มีข้อมูล
+*/
+function loadSrcData(keyBase) {
+  try {
+    var raw = localStorage.getItem(keyBase);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return { link: parsed.link || '', tabRange: parsed.tabRange || '' };
+      }
+    }
+  } catch(e) {}
+  return { link: '', tabRange: '' };
+}
+
+/* buildSrcInputs(keyBase, opts) — สร้าง HTML ช่องวางลิงก์ + แท็บ/ช่วง
+   - opts: { showLabel (bool), label (string), compact (bool) }
+   - คืน HTML string พร้อม value จาก localStorage
+*/
+function buildSrcInputs(keyBase, opts) {
+  opts = opts || {};
+  var data = loadSrcData(keyBase);
+  var linkId = keyBase + '_link';
+  var tabId = keyBase + '_tab';
+  var labelHtml = opts.showLabel ? '<div style="font-size:9px;font-weight:700;color:#64748b;margin-bottom:2px">' + esc(opts.label || '📎 ลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล') + '</div>' : '';
+  return labelHtml +
+    '<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;align-items:center">' +
+      '<input type="text" id="' + linkId + '" placeholder="วางลิงก์ Google Sheet" ' +
+        'style="flex:1;min-width:150px;padding:3px 6px;font-size:10px;border:1px solid #cbd5e1;border-radius:4px" ' +
+        'value="' + esc(data.link) + '" ' +
+        'onchange="saveSrcLink(\'' + keyBase + '\',\'' + linkId + '\',\'' + tabId + '\')" />' +
+      '<input type="text" id="' + tabId + '" placeholder="แท็บ / ช่วงข้อมูล" ' +
+        'style="width:120px;padding:3px 6px;font-size:10px;border:1px solid #cbd5e1;border-radius:4px" ' +
+        'value="' + esc(data.tabRange) + '" ' +
+        'onchange="saveSrcLink(\'' + keyBase + '\',\'' + linkId + '\',\'' + tabId + '\')" />' +
+    '</div>';
 }
 
 function getDeptColor(name) {
@@ -3105,6 +3434,8 @@ function renderDeptContent(idx) {
       if (!noWeight) {
         html += '<div style="margin-top:4px;font-size:0.68rem;color:var(--text3)">⚖️ ' + Math.round(totalW * 100) + '%</div>';
       }
+      // ── Source link block: ช่องวาง link ต้นทางสำหรับแต่ละคน ──
+      html += buildPersonSourceLink_(p, dept, meta);
       html += '</div>';
     });
     html += '</div>';
@@ -3342,10 +3673,11 @@ function renderKpiStatus(res) {
   html += '<th style="text-align:center">ความคืบหน้า</th>';
   html += '<th style="text-align:center">สถานะ</th>';
   html += '<th style="text-align:left">แหล่งข้อมูล</th>';
+  html += '<th style="text-align:left">ลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล</th>';
   html += '</tr></thead>';
   html += '<tbody>';
 
-  items.forEach(function(item) {
+  items.forEach(function(item, krIdx) {
     var krShort = item.krText || '';
     // Shorten KR text if too long (show first ~80 chars + ...)
     if (krShort.length > 80) krShort = krShort.substring(0, 77) + '...';
@@ -3367,6 +3699,20 @@ function renderKpiStatus(res) {
     }
     var detailHtml = item.sourceDetail ? '<div class="kpi-source-detail">' + esc(item.sourceDetail) + '</div>' : '';
 
+    // ── ช่องลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล (ทุกแถว KPI) ──
+    //   localStorage key: bp_src_kpi_<personName>_<krIdx>
+    //   ถ้ามี sourceUrl จากระบบ → แสดง link เดิม + ช่องแก้ไข
+    //   ถ้าไม่มี → ช่อง input ให้วาง link + กรอกแท็บ/ช่วง
+    var kpiSrcKey = 'bp_src_kpi_' + (personModalPersonName || 'unknown').replace(/[^a-zA-Z0-9ก-๛]/g, '_').substring(0, 30) + '_' + krIdx;
+    var kpiSrcHtml = '';
+    if (item.sourceUrl) {
+      // มี sourceUrl จากระบบอยู่แล้ว → แสดง link เดิม + ช่องแก้ไขเพิ่มเติม
+      kpiSrcHtml = '<div style="font-size:10px;color:#64748b;margin-bottom:2px"><a href="' + esc(item.sourceUrl) + '" target="_blank" style="color:#3b82f6;text-decoration:none">ลิงก์ระบบ ↗</a></div>' + buildSrcInputs(kpiSrcKey, { showLabel: false });
+    } else {
+      // ไม่มี sourceUrl → ช่อง input ให้วาง link + กรอกแท็บ/ช่วง
+      kpiSrcHtml = buildSrcInputs(kpiSrcKey, { showLabel: false });
+    }
+
     html += '<tr class="kpi-row kpi-row-' + status + '">';
     html += '<td style="text-align:left" title="' + esc(item.krText || '') + '">' + esc(krShort) + '</td>';
     html += '<td style="text-align:right;font-variant-numeric:tabular-nums">' + currentVal + '</td>';
@@ -3380,10 +3726,11 @@ function renderKpiStatus(res) {
     html += '</td>';
     html += '<td style="text-align:center"><span class="kpi-status-badge ' + statusClass + '">' + statusLabel + '</span></td>';
     html += '<td style="text-align:left">' + sourceHtml + '</td>';
+    html += '<td style="text-align:left">' + kpiSrcHtml + '</td>';
     html += '</tr>';
     // Detail row (expandable)
     if (detailHtml) {
-      html += '<tr class="kpi-detail-row"><td colspan="6">' + detailHtml + '</td></tr>';
+      html += '<tr class="kpi-detail-row"><td colspan="7">' + detailHtml + '</td></tr>';
     }
   });
 
@@ -5111,6 +5458,215 @@ var DEPT_SHEET_LINKS = {
   'PMS ศูนย์บริการ': 'https://docs.google.com/spreadsheets/d/15zM39IFLOpczwP_ZnBG3ScRKPl4lgSCi66HQAgwoXoQ/edit',
   'PMS/PMG Backoffice': 'https://docs.google.com/spreadsheets/d/1f9DtFbss0jDW5Of6pw5yEDh5mciIk4oVvwrAgPPpKJE/edit'
 };
+
+/* ═══════════════════════════════════════════════════
+   Person Source Link — ช่องวาง link ต้นทางสำหรับแต่ละคน
+   - ใช้ DEPT_SHEET_LINKS เป็น default
+   - บันทึก link ที่ผู้ใช้วางลง localStorage (key: psrc_<dept>_<person>)
+   - ค้นหาสถานะ KPI จาก Google Apps Script (gsGetPersonKpiStatus)
+   - แสดง "📊 ผลลัพธ์ปัจจุบัน & สถานะ" คล้ายของสมศักดิ์ หรือแสดง link เป็นจุดคลิก
+   ═══════════════════════════════════════════════════ */
+
+/* ── buildPersonSourceLink_: สร้าง HTML สำหรับช่องวาง link + แสดงสถานะ ── */
+function buildPersonSourceLink_(p, dept, meta) {
+  if (!p || !p.name) return '';
+  var deptName = dept ? dept.name : '';
+  var personName = p.name;
+
+  // Sanitize key สำหรับ localStorage + DOM id
+  var keyBase = (deptName + '_' + personName).replace(/[^a-zA-Z0-9ก-๛]/g, '_').substring(0, 50);
+  var lsKey = 'psrc_' + keyBase;
+
+  // Default link จาก DEPT_SHEET_LINKS
+  var defaultLink = (typeof DEPT_SHEET_LINKS !== 'undefined' && DEPT_SHEET_LINKS[deptName]) ? DEPT_SHEET_LINKS[deptName] : '';
+
+  // อ่านค่าที่เคยบันทึก
+  var savedLink = '', savedTabRange = '', savedNote = '';
+  try {
+    var raw = localStorage.getItem(lsKey);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      savedLink = parsed.link || '';
+      savedTabRange = parsed.tabRange || '';
+      savedNote = parsed.note || '';
+    }
+  } catch(e) {}
+
+  // Link ที่จะใช้: savedLink > defaultLink
+  var activeLink = savedLink || defaultLink;
+
+  // DOM ids
+  var linkId = 'psrc_link_' + keyBase;
+  var tabId = 'psrc_tab_' + keyBase;
+  var statusId = 'psrc_status_' + keyBase;
+
+  var html = '<div onclick="event.stopPropagation()" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);font-size:11px">' +
+    '<div style="font-weight:700;color:' + (meta ? meta.text : '#334155') + ';margin-bottom:4px;font-size:10px">📊 แหล่งข้อมูลต้นทาง</div>' +
+    '<input type="text" id="' + linkId + '" placeholder="วาง link Google Sheet..." value="' + esc(savedLink || '') + '" ' +
+      'onchange="savePersonSourceLink_(\'' + keyBase + '\')" ' +
+      'style="font-size:10px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;width:100%;box-sizing:border-box;margin-bottom:3px" />' +
+    '<input type="text" id="' + tabId + '" placeholder="แท็บ: ___ ช่วง: ___ (เช่น แท็บ: KPI สรุป, ช่วง: ม.ค.-มิ.ย.)" value="' + esc(savedTabRange || '') + '" ' +
+      'onchange="savePersonSourceLink_(\'' + keyBase + '\')" ' +
+      'style="font-size:10px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;width:100%;box-sizing:border-box;color:#64748b;margin-bottom:4px" />' +
+    '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
+      '<button onclick="event.stopPropagation();loadPersonSourceStatus_(\'' + keyBase + '\',\'' + personName.replace(/'/g, "\\'") + '\',\'' + deptName.replace(/'/g, "\\'") + '\')" ' +
+        'style="font-size:10px;padding:3px 8px;border:1px solid ' + (meta ? meta.color : '#3b82f6') + ';border-radius:4px;background:' + (meta ? meta.bg : '#eff6ff') + ';color:' + (meta ? meta.text : '#1e40af') + ';cursor:pointer">🔄 ดึงสถานะ</button>' +
+      (activeLink ? '<a href="' + esc(activeLink) + '" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;padding:3px 8px;border:1px solid #bfdbfe;border-radius:4px;background:#eff6ff;color:#1e40af;text-decoration:none;display:inline-block">📊 เปิด Sheet ↗</a>' : '') +
+    '</div>' +
+    '<div id="' + statusId + '" style="margin-top:6px"></div>' +
+  '</div>';
+
+  // โหลดสถานะแบบ async หลัง render (ใช้ setTimeout เพื่อให้ DOM พร้อม)
+  setTimeout(function() {
+    loadPersonSourceStatus_(keyBase, personName, deptName);
+  }, 100);
+
+  return html;
+}
+
+/* ── savePersonSourceLink_: บันทึก link + แท็บ/ช่วง ลง localStorage ── */
+function savePersonSourceLink_(keyBase) {
+  var lsKey = 'psrc_' + keyBase;
+  var linkEl = document.getElementById('psrc_link_' + keyBase);
+  var tabEl = document.getElementById('psrc_tab_' + keyBase);
+  if (!linkEl && !tabEl) return;
+  var data = {
+    link: linkEl ? linkEl.value.trim() : '',
+    tabRange: tabEl ? tabEl.value.trim() : ''
+  };
+  try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
+  if (linkEl) {
+    var orig = linkEl.style.borderColor;
+    linkEl.style.borderColor = '#10b981';
+    setTimeout(function() { linkEl.style.borderColor = orig; }, 800);
+  }
+}
+
+/* ── loadPersonSourceStatus_: ดึงสถานะ KPI ของบุคคลนั้น
+   - เรียก gsGetPersonKpiStatus (Google Apps Script) — ใช้ matchKR_ ฝั่ง server
+   - ถ้าได้ข้อมูล → แสดงตารางสถานะ KPI คล้ายสมศักดิ์
+   - ถ้าไม่ได้ → แสดง link ต้นทางเป็นจุดคลิก + แท็บ/ช่วง
+   - ใช้ google.script.run (Apps Script environment) หรือ fallback เป็น static display
+── */
+function loadPersonSourceStatus_(keyBase, personName, deptName) {
+  var container = document.getElementById('psrc_status_' + keyBase);
+  if (!container) return;
+
+  // อ่าน link ที่บันทึกไว้
+  var lsKey = 'psrc_' + keyBase;
+  var savedLink = '', savedTabRange = '';
+  try {
+    var raw = localStorage.getItem(lsKey);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      savedLink = parsed.link || '';
+      savedTabRange = parsed.tabRange || '';
+    }
+  } catch(e) {}
+
+  // Default link
+  var defaultLink = (typeof DEPT_SHEET_LINKS !== 'undefined' && DEPT_SHEET_LINKS[deptName]) ? DEPT_SHEET_LINKS[deptName] : '';
+  var activeLink = savedLink || defaultLink;
+
+  // แสดง loading
+  container.innerHTML = '<div style="font-size:10px;color:#94a3b8;padding:4px 0"><span style="display:inline-block;width:10px;height:10px;border:2px solid #cbd5e1;border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:4px"></span>กำลังดึงสถานะ...</div>';
+
+  // พยายามเรียก google.script.run (Apps Script environment)
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    try {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          renderPersonSourceStatus_(container, res, activeLink, savedTabRange, personName, deptName);
+        })
+        .withFailureHandler(function(err) {
+          renderPersonSourceStatusFallback_(container, activeLink, savedTabRange, personName, deptName, err);
+        })
+        .gsGetPersonKpiStatus(personName, deptName);
+      return;
+    } catch(e) {
+      // ผ่านต่อไป fallback
+    }
+  }
+
+  // Fallback: ไม่มี google.script.run → แสดง link เป็นจุดคลิก
+  renderPersonSourceStatusFallback_(container, activeLink, savedTabRange, personName, deptName, null);
+}
+
+/* ── renderPersonSourceStatus_: แสดงสถานะ KPI เมื่อได้ข้อมูลจาก server ── */
+function renderPersonSourceStatus_(container, res, activeLink, tabRange, personName, deptName) {
+  if (!container) return;
+  if (!res || !res.items || res.items.length === 0) {
+    renderPersonSourceStatusFallback_(container, activeLink, tabRange, personName, deptName, null);
+    return;
+  }
+
+  // กรองเฉพาะ items ที่มีข้อมูลจริง
+  var realItems = [];
+  for (var i = 0; i < res.items.length; i++) {
+    var it = res.items[i];
+    if (it.status !== 'no-data' && it.status !== 'skip' && it.currentValue !== null && it.currentValue !== undefined) {
+      realItems.push(it);
+    }
+  }
+
+  if (realItems.length === 0) {
+    renderPersonSourceStatusFallback_(container, activeLink, tabRange, personName, deptName, null);
+    return;
+  }
+
+  // สร้างตารางสถานะ KPI แบบ compact
+  var html = '<div style="margin-top:6px;padding:8px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0">' +
+    '<div style="font-size:10px;font-weight:700;color:#334155;margin-bottom:6px">📊 ผลลัพธ์ปัจจุบัน & สถานะ (' + esc(personName) + ')</div>' +
+    '<table style="width:100%;font-size:10px;border-collapse:collapse">';
+
+  realItems.forEach(function(item) {
+    var krShort = item.krText || '';
+    if (krShort.length > 60) krShort = krShort.substring(0, 57) + '...';
+    var cur = formatKpiValue_(item.currentValue);
+    var tgt = formatKpiValue_(item.targetValue);
+    var pct = item.progressPct || 0;
+    var badge = pct >= 100 ? '✅' : (pct >= 80 ? '⚠️' : '🔴');
+    var statusColor = pct >= 100 ? '#10b981' : (pct >= 80 ? '#f59e0b' : '#ef4444');
+
+    html += '<tr style="border-bottom:1px solid #f1f5f9">' +
+      '<td style="padding:3px 4px;vertical-align:top" title="' + esc(item.krText || '') + '">' + esc(krShort) + '</td>' +
+      '<td style="padding:3px 4px;text-align:right;white-space:nowrap;color:#475569">' + esc(cur) + '</td>' +
+      '<td style="padding:3px 4px;text-align:center;white-space:nowrap;color:' + statusColor + ';font-weight:700">' + badge + ' ' + pct + '%</td>' +
+    '</tr>';
+  });
+
+  html += '</table>';
+
+  // แสดงแหล่งข้อมูล
+  if (activeLink) {
+    html += '<div style="margin-top:6px;font-size:9px;color:#94a3b8">แหล่งข้อมูล: <a href="' + esc(activeLink) + '" target="_blank" style="color:#3b82f6;text-decoration:none">' + esc(activeLink.substring(0, 40)) + '...</a></div>';
+  }
+  if (tabRange) {
+    html += '<div style="font-size:9px;color:#64748b;margin-top:2px">' + esc(tabRange) + '</div>';
+  }
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+/* ── renderPersonSourceStatusFallback_: แสดง link เป็นจุดคลิกเมื่อไม่มีข้อมูลจริง ── */
+function renderPersonSourceStatusFallback_(container, activeLink, tabRange, personName, deptName, err) {
+  if (!container) return;
+  var html = '';
+  if (activeLink) {
+    html = '<div style="margin-top:6px;padding:6px 8px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0">' +
+      '<div style="font-size:10px;color:#64748b;margin-bottom:3px">📊 คลิกดูข้อมูลต้นทาง:</div>' +
+      '<a href="' + esc(activeLink) + '" target="_blank" style="font-size:10px;color:#3b82f6;text-decoration:none;font-weight:600;display:inline-block;padding:3px 8px;border:1px solid #bfdbfe;border-radius:4px;background:#eff6ff">📊 เปิด Google Sheet ↗</a>';
+    if (tabRange) {
+      html += '<div style="font-size:9px;color:#94a3b8;margin-top:4px">' + esc(tabRange) + '</div>';
+    }
+    html += '<div style="font-size:9px;color:#94a3b8;margin-top:3px">💡 วาง link + ระบุแท็บ/ช่วง แล้วกด "🔄 ดึงสถานะ" เพื่อวัดผล</div>';
+    html += '</div>';
+  } else {
+    html = '<div style="margin-top:6px;font-size:10px;color:#94a3b8">ยังไม่มี link ต้นทาง — วาง link Google Sheet ด้านบนเพื่อวัดผล</div>';
+  }
+  container.innerHTML = html;
+}
 
 /* ── Start ── */
 init();
