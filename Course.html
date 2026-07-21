@@ -380,7 +380,7 @@ body{font-family:'Sarabun','Segoe UI',system-ui,-apple-system,sans-serif;backgro
     <div class="group-label"><span class="dot" style="background:#10b981"></span> กลุ่ม 2 · Core Skills (ทักษะหลัก)</div>
     <div class="mod-item" data-mod="m4"><span class="m-num">M4</span><span class="m-icon">🔬</span><span class="m-title">วิเคราะห์ข้อมูล (Data Analysis)</span><span class="m-check">○</span></div>
     <div class="mod-item" data-mod="m5"><span class="m-num">M5</span><span class="m-icon">🎨</span><span class="m-title">ออกแบบ Dashboard (Dashboard Design)</span><span class="m-check">○</span></div>
-    <div class="mod-item" data-mod="m6"><span class="m-num">M6</span><span class="m-icon">📐</span><span class="m-title">สูตร Google Sheets (Sheets Formulas)</span><span class="m-check">○</span></div>
+    <div class="mod-item" data-mod="m6"><span class="m-num">M6</span><span class="m-icon">💬</span><span class="m-title">การสื่อสารกับ AI (AI Communication)</span><span class="m-check">○</span></div>
     <div class="mod-item" data-mod="m7"><span class="m-num">M7</span><span class="m-icon">📊</span><span class="m-title">Visualization (การแสดงผลข้อมูล)</span><span class="m-check">○</span></div>
 
     <div class="group-label"><span class="dot" style="background:#7c3aed"></span> กลุ่ม 3 · Quality &amp; Ops (คุณภาพและการดำเนินงาน)</div>
@@ -426,7 +426,7 @@ body{font-family:'Sarabun','Segoe UI',system-ui,-apple-system,sans-serif;backgro
   <div class="journey-steps">
     <div class="j-step"><div class="j-num">1</div><div class="j-title">การคิด</div><div class="j-desc">กำหนดเป้าหมายและ KPI</div></div>
     <div class="j-step"><div class="j-num">2</div><div class="j-title">การเตรียม</div><div class="j-desc">จัดระเบียบข้อมูล</div></div>
-    <div class="j-step"><div class="j-num">3</div><div class="j-title">การใช้ AI</div><div class="j-desc">สร้างสูตรและออกแบบ</div></div>
+    <div class="j-step"><div class="j-num">3</div><div class="j-title">การใช้ AI</div><div class="j-desc">ออกแบบผลลัพธ์และเงื่อนไข</div></div>
     <div class="j-step"><div class="j-num">4</div><div class="j-title">การตรวจสอบ</div><div class="j-desc">ตรวจตามหลัก Data Visualization (การแสดงผลข้อมูล)</div></div>
     <div class="j-step"><div class="j-num">5</div><div class="j-title">การต่อยอด</div><div class="j-desc">พัฒนาต่อเนื่อง</div></div>
   </div>
@@ -497,7 +497,7 @@ var MODULES = {
       '<div class="quote">"เตรียมข้อมูล 70% สร้าง Dashboard 30% — แต่คนมักทำกลับกัน" ถ้าข้อมูลไม่สะอาด AI ก็สร้าง Dashboard ที่ผิดได้</div>'
     ],
     dashboard:'repair',
-    prompt:{level:'beginner', code:'<span class="pf">Objective:</span> เตรียมข้อมูลรถในโรงซ่อมให้พร้อมสร้าง Dashboard\n<span class="pf">Audience:</span> ทีมซ่อมและหัวหน้างาน\n<span class="pf">Data:</span> ข้อมูลรถแต่ละคัน: ทะเบียน, สถานะ, สถานี, วันเข้า, วันกำหนดส่ง\n<span class="pf">KPI:</span> จำนวนรถต่อสถานี, Cycle Time, รถเกินกำหนด\n<span class="pf">Chart:</span> Real-time counter + Progress bar ต่อสถานี + ตารางรถปัจจุบัน\n<span class="pf">Output:</span> Google Sheets พร้อม Data Validation และสูตรอัตโนมัติ\\n<span class="pc"># Comment: ข้อมูลมาตรฐานก่อน (dropdown, ISO date, ชื่อคอลัมน์สั้นชัด) แล้วค่อยสร้าง Dashboard</span>'},
+    prompt:{level:'beginner', code:'<span class="pf">Objective:</span> เตรียมข้อมูลรถในโรงซ่อมให้พร้อมสร้าง Dashboard\n<span class="pf">Audience:</span> ทีมซ่อมและหัวหน้างาน\n<span class="pf">Data:</span> ข้อมูลรถแต่ละคัน: ทะเบียน, สถานะ, สถานี, วันเข้า, วันกำหนดส่ง\n<span class="pf">KPI:</span> จำนวนรถต่อสถานี, Cycle Time, รถเกินกำหนด\n<span class="pf">Chart:</span> Real-time counter + Progress bar ต่อสถานี + ตารางรถปัจจุบัน\n<span class="pf">Output:</span> Google Sheets พร้อม Data Validation และระบบคำนวณอัตโนมัติ\n<span class="pc"># Comment: ข้อมูลมาตรฐานก่อน (dropdown, ISO date, ชื่อคอลัมน์สั้นชัด) แล้วค่อยสร้าง Dashboard</span>'},
     workshop:['ดึงข้อมูลจริงมา 1 ชีต ตรวจหาข้อมูลที่ไม่มาตรฐาน','สร้าง Data Validation และ Dropdown สำหรับสถานะและสถานี','ตั้งชื่อคอลัมน์ให้สั้น ชัด เข้าใจง่าย — ใช้ภาษาเดียวกันทุกที่'],
     solution:{
       title:'เฉลยและตัวอย่างผลสำเร็จ',
@@ -586,27 +586,27 @@ var MODULES = {
 
   },
   m6: {
-    num:'M6', icon:'📐', title:'สูตร Google Sheets (Sheets Formulas)', group:'Core Skills (ทักษะหลัก)', groupColor:'#10b981',
-    desc:'สูตรคือหัวใจของ Dashboard — SUMIFS, QUERY, IMPORTRANGE, SPARKLINE, ARRAYFORMULA เรียนรู้แล้วใช้ AI ช่วยเขียนได้',
+    num:'M6', icon:'💬', title:'การสื่อสารกับ AI (AI Communication)', group:'Core Skills (ทักษะหลัก)', groupColor:'#10b981',
+    desc:'ไม่ต้องรู้สูตร — แค่บอก AI ว่าต้องการเห็นผลลัพธ์อะไร เงื่อนไขอะไร แสดงอย่างไร — AI จัดการสูตรให้เอง',
     source:{label:'Finance P&L Dashboard + Parts Checker', url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?parts=1'},
     sources:[
       {label:'War Room — หน้า OKR/KPI', url:URL_WAR_ROOM, page:'OKR/KPI'}
     ],
     story:[
-      '<span class="highlight">Finance P&L Dashboard</span> ต้องรวมข้อมูล 5 ปีจาก 3 ชีต — ทีมใช้ IMPORTRANGE ดึงข้อมูล, QUERY กรอง, SUMIFS รวมตามเดือน',
-      'สูตรสำคัญที่ใช้: <code>SUMIFS</code> รวมยอดตามเงื่อนไข, <code>QUERY</code> ดึงและกรอง, <code>SPARKLINE</code> สร้าง mini chart ในเซลล์, <code>VLOOKUP/INDEX-MATCH</code> ดึงข้อมูลข้ามชีต',
-      'พี่สิงห์สอนว่า "ให้ AI เขียนสูตรได้ แต่ต้องเข้าใจสูตรก่อน — ไม่งั้นแก้ไม่ได้เวลามันผิด"',
-      '<div class="quote">"สูตรที่ดีคือสูตรที่คนอื่นเปิดดูแล้วเข้าใจได้ ไม่ใช่สูตรที่ยาวจนอ่านไม่ออก"</div>'
+      '<span class="highlight">Finance P&L Dashboard</span> ต้องรวมข้อมูล 5 ปีจาก 3 ชีต — ทีมไม่ได้เขียนสูตรเอง แค่บอก AI ว่าต้องการเห็นรายได้รายเดือน 5 ปี กรองเฉพาะปีที่เลือก และแสดง P&L statement ปีต่อปี',
+      'ไม่ต้องรู้ว่าใช้ฟังก์ชันอะไร — แค่บอก AI: <code>"รวมยอดตามเดือนและประเภทสินค้า"</code> หรือ <code>"ดึงข้อมูลเฉพาะช่วง ม.ค.-มิ.ย. เรียงจากยอดสูงสุด"</code> — AI จัดการสูตรให้เอง',
+      'พี่สิงห์สอนว่า "ให้ AI เขียนสูตรได้ แต่คุณไม่ต้องจำสูตร — แค่บอกให้ชัดว่าต้องการเห็นผลอะไร เงื่อนไขอะไร แล้วตรวจผลให้ตรง"',
+      '<div class="quote">"อย่าบอก AI ว่าใช้สูตรอะไร — บอกว่าต้องการเห็นผลลัพธ์อะไร แล้ว AI จะหาสูตรให้เอง"</div>'
     ],
     dashboard:'finance',
-    prompt:{level:'advanced', code:'<span class="pf">Objective:</span> สร้างสูตรสรุป P&L 5 ปี จากข้อมูลดิบ\n<span class="pf">Audience:</span> ทีมการเงินและผู้บริหาร\n<span class="pf">Data:</span> รายได้-ค่าใช้จ่ายรายเดือน 5 ปี (60 เดือน)\n<span class="pf">KPI:</span> รายได้, ต้นทุน, กำไรขั้นต้น, กำไรสุทธิ, อัตรากำไร\n<span class="pf">Chart:</span> กราฟ 5 ปี + ตาราง P&L statement ปีต่อปี\n<span class="pf">Output:</span> สูตร SUMIFS + QUERY + SPARKLINE ใน Google Sheets\n<span class="pc"># ตัวอย่างสูตร:</span>\n<span class="pn">=SUMIFS(ยอดขาย!C:C, ยอดขาย!A:A, ">="&DATE(ปี,1,1), ยอดขาย!A:A, "<="&DATE(ปี,12,31))</span>\n<span class="pn">=SPARKLINE(QUERY(ข้อมูล!A:C, "select B where A >= date \'"&TEXT(A1,"yyyy-MM-dd")&"\'"))</span>'},
-    workshop:['ใช้ SUMIFS รวมยอดขายตามเดือนและประเภทสินค้า','ใช้ SPARKLINE สร้าง mini trend chart ในเซลล์เดียว','ให้ AI เขียนสูตร QUERY จากคำสั่งภาษาไทย แล้วตรวจดูผล'],
+    prompt:{level:'advanced', code:'<span class="pf">Objective:</span> สรุป P&L 5 ปี จากข้อมูลดิบ\n<span class="pf">Audience:</span> ทีมการเงินและผู้บริหาร\n<span class="pf">Data:</span> รายได้-ค่าใช้จ่ายรายเดือน 5 ปี (60 เดือน)\n<span class="pf">KPI:</span> รายได้, ต้นทุน, กำไรขั้นต้น, กำไรสุทธิ, อัตรากำไร\n<span class="pf">Chart:</span> กราฟ 5 ปี + ตาราง P&L statement ปีต่อปี\n<span class="pf">Output:</span> ตารางสรุป P&L ปีต่อปี + แนวโน้ม 5 ปี ใน Google Sheets\n<span class="pc"># บอก AI ว่าต้องการเห็นอะไร — ไม่ต้องระบุสูตร</span>\n<span class="pn">"รวมรายได้และค่าใช้จ่ายรายเดือนเป็นรายปี แยกตามปี แสดงกำไรขั้นต้นและกำไรสุทธิ พร้อมอัตรากำไรเป็น %"</span>\n<span class="pn">"ดึงข้อมูลเฉพาะปีที่เลือกได้ และสร้างกราฟแนวโน้ม 5 ปีในตารางเดียว"</span>'},
+    workshop:['บอก AI ว่าต้องการเห็นยอดขายรวมตามเดือนและประเภทสินค้า — ไม่ต้องระบุสูตร','บอก AI ว่าต้องการเห็นแนวโน้มย่อยในแต่ละแถวของตาราง','บอก AI ว่าต้องการดึงข้อมูลเฉพาะช่วงเดือนและเรียงจากยอดสูงสุด แล้วตรวจดูผล'],
     solution:{
       title:'เฉลยและตัวอย่างผลสำเร็จ',
       items:[
-        {q:'ใช้ SUMIFS รวมยอดขายตามเดือนและประเภทสินค้า',a:'สูตร: =SUMIFS(ยอดขาย!C:C, ยอดขาย!A:A, >= &DATE(ปี,1,1), ยอดขาย!A:A, <= &DATE(ปี,12,31)) — รวมยอดตามเดือนและประเภทสินค้าจาก Sheet ยอดขาย',result:'ผลสำเร็จ: Finance P&L Dashboard รวมข้อมูล 5 ปีจาก 3 ชีต — ใช้ IMPORTRANGE ดึงข้อมูล + SUMIFS รวม + QUERY กรอง',link:{label:'ดู Finance Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?finance=1'}},
-        {q:'ใช้ SPARKLINE สร้าง mini trend chart ในเซลล์เดียว',a:'สูตร: =SPARKLINE(QUERY(ข้อมูล!A:C, select B where A >= date &TEXT(A1,yyyy-MM-dd))) — สร้างกราฟเส้นเล็กในเซลล์เดียว แสดงแนวโน้มได้ทันที',result:'ผลสำเร็จ: SPARKLINE ในแต่ละแถวของตาราง — เห็นแนวโน้มได้โดยไม่ต้องสร้างกราฟแยก'},
-        {q:'ให้ AI เขียนสูตร QUERY จากคำสั่งภาษาไทย แล้วตรวจดูผล',a:'Prompt: เขียนสูตร QUERY ดึงข้อมูลยอดขายเดือน ม.ค.-มิ.ย. จาก Sheet ยอดขาย เรียงตามยอดสูงสุด → AI เขียน: =QUERY(ยอดขาย!A:D, SELECT WHERE A >= date 2025-01-01 AND A <= date 2025-06-30 ORDER BY D DESC)',result:'ผลสำเร็จ: Parts Checker มี 1,245 รายการ + 22+ filters — ใช้ QUERY กรองและเรียงข้อมูลได้หลายพันบาท'}
+        {q:'บอก AI ว่าต้องการเห็นยอดขายรวมตามเดือนและประเภทสินค้า',a:'Prompt: "รวมยอดขายจาก Sheet ยอดขาย แยกตามเดือนและประเภทสินค้า แสดงเป็นตารางสรุป" → AI สร้างสูตรให้อัตโนมัติ ไม่ต้องรู้ว่าใช้ฟังก์ชันอะไร',result:'ผลสำเร็จ: Finance P&L Dashboard รวมข้อมูล 5 ปีจาก 3 ชีต — AI จัดการดึงข้อมูล รวมยอด และกรองตามเงื่อนไขให้เอง',link:{label:'ดู Finance Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?finance=1'}},
+        {q:'บอก AI ว่าต้องการเห็นแนวโน้มย่อยในแต่ละแถวของตาราง',a:'Prompt: "เพิ่มแนวโน้มย่อย (mini trend) ในแต่ละแถวของตาราง ให้เห็นทิศทางได้ทันที" → AI สร้างกราฟเส้นเล็กในเซลล์ให้อัตโนมัติ',result:'ผลสำเร็จ: แนวโน้มย่อยในแต่ละแถวของตาราง — เห็นทิศทางได้โดยไม่ต้องสร้างกราฟแยก'},
+        {q:'บอก AI ว่าต้องการดึงข้อมูลเฉพาะช่วงเดือนและเรียงจากยอดสูงสุด แล้วตรวจดูผล',a:'Prompt: "ดึงข้อมูลยอดขายเดือน ม.ค.-มิ.ย. จาก Sheet ยอดขาย เรียงตามยอดสูงสุด" → AI สร้างสูตรกรองและเรียงลำดับให้เอง',result:'ผลสำเร็จ: Parts Checker มี 1,245 รายการ + 22+ filters — AI กรองและเรียงข้อมูลให้ได้หลายพันบาท'}
       ]
     },
 
@@ -642,7 +642,7 @@ var MODULES = {
     desc:'ก่อนส่งมอบ Dashboard ต้องตรวจ — ข้อมูลถูกไหม? สีสื่อความหมายไหม? อ่านง่ายไหม? ตอบคำถามผู้ใช้ไหม?',
     source:{label:'OKR Dashboard + ENVR น้ำมัน', url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?envr=1'},
     story:[
-      'ตอนส่ง <span class="highlight">OKR Dashboard</span> ครั้งแรก ทีมลืมตรวจ — ปรากฏว่า progress bar ของ KR บางตัวเกิน 100% เพราะสูตรคิดผิด, สีสถานะไม่ตรงกับเกณฑ์',
+      'ตอนส่ง <span class="highlight">OKR Dashboard</span> ครั้งแรก ทีมลืมตรวจ — ปรากฏว่า progress bar ของ KR บางตัวเกิน 100% เพราะระบบคำนวณผิด, สีสถานะไม่ตรงกับเกณฑ์',
       'OKR Dashboard ครอบคลุม <b>5 กลุ่มงาน · 147 คน · 42 Objectives · ~480 KRs</b> ผ่าน 6 แท็บ (ภาพรวม, Business, Team, Personal, Personal Credit in PKG Community, สรุป) พร้อม 13 stat cards และ table wraps ที่มี progress bars',
       'หลังจากนั้นทีมสร้าง <b>Review Checklist</b> 12 ข้อ ตรวจทุกครั้งก่อนส่ง — ลด error ลง 90% ใน 2 เดือน',
       '<div class="quote">"ตรวจ 5 นาที ประหยัดเวลาแก้ 5 ชั่วโมง"</div>'
@@ -653,8 +653,8 @@ var MODULES = {
     solution:{
       title:'เฉลยและตัวอย่างผลสำเร็จ',
       items:[
-        {q:'สร้าง checklist ของตัวเอง 10 ข้อ ตรวจทุกครั้งก่อนส่ง',a:'10 ข้อ: 1) ข้อมูลถูกไหม 2) สีสื่อความหมายไหม 3) อ่านง่ายไหม 4) ตอบคำถามผู้ใช้ไหม 5) สูตรถูกไหม 6) filter ทำงานไหม 7) มือถือดูได้ไหม 8) ข้อมูลอัปเดตไหม 9) มีเอกสารประกอบไหม 10) มี owner ไหม',result:'ผลสำเร็จ: ลด error ลง 90% ใน 2 เดือน — OKR Dashboard 5 กลุ่มงาน 147 คน 42 Objectives ~480 KRs ผ่าน checklist ครบ',link:{label:'ดู OKR Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?okrall=1'}},
-        {q:'ให้เพื่อน review และให้ feedback ใน 3 ข้อ',a:'เพื่อนพบ: 1) progress bar บางตัวเกิน 100% เพราะสูตรคิดผิด 2) สีสถานะไม่ตรงกับเกณฑ์ 3) cell ยาวเกิน 40 ตัวถูกตัดทิ้ง',result:'ผลสำเร็จ: แก้ทั้ง 3 ข้อก่อนส่งมอบ — ประหยัดเวลาแก้ 5 ชั่วโมง ด้วยการตรวจ 5 นาที'},
+        {q:'สร้าง checklist ของตัวเอง 10 ข้อ ตรวจทุกครั้งก่อนส่ง',a:'10 ข้อ: 1) ข้อมูลถูกไหม 2) สีสื่อความหมายไหม 3) อ่านง่ายไหม 4) ตอบคำถามผู้ใช้ไหม 5) ผลคำนวณถูกไหม 6) filter ทำงานไหม 7) มือถือดูได้ไหม 8) ข้อมูลอัปเดตไหม 9) มีเอกสารประกอบไหม 10) มี owner ไหม',result:'ผลสำเร็จ: ลด error ลง 90% ใน 2 เดือน — OKR Dashboard 5 กลุ่มงาน 147 คน 42 Objectives ~480 KRs ผ่าน checklist ครบ',link:{label:'ดู OKR Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?okrall=1'}},
+        {q:'ให้เพื่อน review และให้ feedback ใน 3 ข้อ',a:'เพื่อนพบ: 1) progress bar บางตัวเกิน 100% เพราะระบบคำนวณผิด 2) สีสถานะไม่ตรงกับเกณฑ์ 3) cell ยาวเกิน 40 ตัวถูกตัดทิ้ง',result:'ผลสำเร็จ: แก้ทั้ง 3 ข้อก่อนส่งมอบ — ประหยัดเวลาแก้ 5 ชั่วโมง ด้วยการตรวจ 5 นาที'},
         {q:'แก้ตาม feedback แล้วเปรียบเทียบ before/after',a:'Before: progress bar เกิน 100%, สีไม่ตรงเกณฑ์, cell ถูกตัด · After: progress bar แสดง % ถูกต้อง, สีตรงเกณฑ์ (เขียว/เหลือง/แดง), cell แสดงครบ',result:'ผลสำเร็จ: ENVR Dashboard ได้ Review Score 90/100 (Grade A) — ผ่าน checklist 10 ข้อ ครบ 9 ข้อ'}
       ]
     },
@@ -707,45 +707,45 @@ var MODULES = {
   },
   m11: {
     num:'M11', icon:'🧪', title:'QA (การประกันคุณภาพ)', group:'Quality & Ops (คุณภาพและการดำเนินงาน)', groupColor:'#7c3aed',
-    desc:'QA คือการตรวจสอบว่า Dashboard ทำงานถูกต้อง — สูตรถูก ข้อมูลตรง แสดงผลครบ และทดสอบกับผู้ใช้จริง',
-    source:{label:'Repair Flow Dashboard + PMGI อะไหล่', url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?pmgi=1'},
+    desc:'QA คือการตรวจสอบว่า Dashboard ทำงานถูกต้อง — คำนวณถูก ข้อมูลตรง แสดงผลครบ และทดสอบกับผู้ใช้จริง',
+    source:{label:'GM Supplement Dashboard + Repair Flow', url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?supplement=1'},
     story:[
-      'ตอนทดสอบ <span class="highlight">PMGI Parts Dashboard</span> ทีมพบว่ากรองตามสาขาแล้วยอดรวมไม่ตรง — เพราะสูตร SUMIFS อ้างช่วงผิดหลังเพิ่มแถวใหม่ · Dashboard นี้มี <b>5 แท็บ</b> (ภาพรวม, อะไหล่ทางเลือก, Top 10, สถิติ, รายงาน) ใช้ <b>card-head+card-body</b> layout 11 cards และ 31 number displays · margin 226,549 บาท (เป้า 300K/เดือน · 76% at-risk)',
-      'หลังทำ QA อย่างเป็นระบบ: ทดสอบสูตรด้วยข้อมูลสั้น, เช็คผลรวม cross-check กับข้อมูลต้นทาง, ทดสอบ filter ทุกแบบ — พบ error 3 จุดก่อนส่งมอบ · แท็บ Top 10 เรียงอะไหล่ตาม margin: ไฟหน้า LED 45,200 (18.2%), กันชน 38,800 (15.6%), บังคับลม 32,100 (14.1%) · Top 10 รวม = 71% ของ margin ทั้งหมด',
-      '<div class="quote">"QA คือเหมือนเช็ครถก่อนส่งมอบ — ตรวจทุกจุด ไม่ปล่อยให้ลูกค้าเจอก่อน" · PMGI Parts มี margin 12.3% ต่ำกว่าเป้า 15% — แต่แนวโน้มปรับตัวดีขึ้นทุกเดือน</div>'
+      'ตอนทดสอบ <span class="highlight">GM Supplement Dashboard</span> ทีมพบว่ากรองตามสาขาแล้วยอด GM รวมไม่ตรง — เพราะระบบคำนวณอ้างช่วงผิดหลังเพิ่มแถวใหม่ · Dashboard นี้มี <b>4 แท็บ</b> (เปรียบเทียบ GM/ปี, เป้า/ผลงาน ก.ค. 69, สรุปผลิตภัณฑ์เสริม ปี2026, PR Dashboard) ใช้ <b>card-head+card-body</b> layout · แสดงผลเคลือบแก้ว 58 คัน/เดือน (116% ของเป้า 50) · GM ผลิตภัณฑ์เสริมรายเดือน · 12 SA · Top 10 Products',
+      'หลังทำ QA อย่างเป็นระบบ: ทดสอบผลลัพธ์ด้วยข้อมูลสั้น, เช็คผลรวม cross-check กับข้อมูลต้นทาง, ทดสอบ filter ทุกแบบ — พบ error 3 จุดก่อนส่งมอบ · แท็บเปรียบเทียบ GM/ปี เรียงตามเดือน: ม.ค. 280K → ธ.ค. 400K · YoY เปรียบเทียบ 2569 vs 2568 · Top 10 Products: เคลือบแก้ว 58 คัน (116%), น้ำมันเครื่อง 45 คัน (90%), ยาง 38 คัน (76%)',
+      '<div class="quote">"QA คือเหมือนเช็ครถก่อนส่งมอบ — ตรวจทุกจุด ไม่ปล่อยให้ลูกค้าเจอก่อน" · GM Supplement มีเคลือบแก้ว 58 คัน/เดือน เกินเป้า 116% — แต่บาง SA ยังต่ำกว่าเป้า ต้องเพิ่มการฝึกอบรม</div>'
     ],
-    dashboard:'pmgi',
-    prompt:{level:'intermediate', code:'<span class="pf">Objective:</span> สร้าง QA checklist สำหรับ Dashboard\n<span class="pf">Audience:</span> ทีมสร้าง Dashboard\n<span class="pf">Data:</span> สูตร, ข้อมูลต้นทาง, ผลลัพธ์ที่แสดง\n<span class="pf">KPI:</span> สูตรถูก %, ข้อมูลตรง %, error ที่เหลือ\n<span class="pf">Chart:</span> QA log + test results + sign-off\n<span class="pf">Output:</span> QA checklist + test cases ใน Google Sheets\n<span class="pc"># ทดสอบ: filter ทุกแบบ → เช็คยอดรวม → cross-check</span>'},
-    workshop:['สร้าง test cases 10 ข้อ — ครอบคลุมสูตร, filter, ข้อมูล','ทดสอบกับผู้ใช้จริง 3 คน เก็บ feedback','แก้ตาม feedback แล้วทดสอบซ้ำจนกว่าจะผ่านทุกข้อ'],
+    dashboard:'supplement',
+    prompt:{level:'intermediate', code:'<span class="pf">Objective:</span> สร้าง QA checklist สำหรับ Dashboard\n<span class="pf">Audience:</span> ทีมสร้าง Dashboard\n<span class="pf">Data:</span> ผลลัพธ์ที่แสดง, ข้อมูลต้นทาง, ค่าที่คำนวณ\n<span class="pf">KPI:</span> คำนวณถูก %, ข้อมูลตรง %, error ที่เหลือ\n<span class="pf">Chart:</span> QA log + test results + sign-off\n<span class="pf">Output:</span> QA checklist + test cases ใน Google Sheets\n<span class="pc"># ทดสอบ: filter ทุกแบบ → เช็คยอดรวม → cross-check</span>'},
+    workshop:['สร้าง test cases 10 ข้อ — ครอบคลุมผลลัพธ์, filter, ข้อมูล','ทดสอบกับผู้ใช้จริง 3 คน เก็บ feedback','แก้ตาม feedback แล้วทดสอบซ้ำจนกว่าจะผ่านทุกข้อ'],
     solution:{
       title:'เฉลยและตัวอย่างผลสำเร็จ',
       items:[
-        {q:'สร้าง test cases 10 ข้อ — ครอบคลุมสูตร, filter, ข้อมูล',a:'10 test cases: 1) filter สาขา CNB ยอดรวมตรงไหม 2) filter CSK ยอดรวมตรงไหม 3) filter ทั้งหมดยอดรวมตรงไหม 4) SUMIFS ผลรวมตรงไหม 5) QUERY เรียงถูกไหม 6) เปลี่ยนข้อมูลสูตรอัปเดตไหม 7) filter วันที่ทำงานไหม 8) เพิ่มแถวใหม่สูตรรวมไหม 9) ลบแถวสูตรยังถูกไหม 10) mobile ดูได้ไหม',result:'ผลสำเร็จ: PMGI Parts Dashboard 5 แท็บ — margin 226,549 บาท (เป้า 300K/เดือน · 76% at-risk) — พบ error 3 จุดก่อนส่งมอบ',link:{label:'ดู PMGI Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?pmgi=1'}},
-        {q:'ทดสอบกับผู้ใช้จริง 3 คน เก็บ feedback',a:'ผู้ใช้ 1: filter สาขาแล้วยอดรวมไม่ตรง (SUMIFS อ้างช่วงผิด) · ผู้ใช้ 2: Top 10 เรียงผิด · ผู้ใช้ 3: mobile บางการ์ดซ้อนทับ',result:'ผลสำเร็จ: แก้ทั้ง 3 จุดก่อนส่งมอบ — Top 10 รวม 71% ของ margin ทั้งหมด (ไฟหน้า LED 45,200 = 18.2%)'},
-        {q:'แก้ตาม feedback แล้วทดสอบซ้ำจนกว่าจะผ่านทุกข้อ',a:'แก้: 1) SUMIFS เปลี่ยนเป็น whole-column reference (C:C) 2) QUERY เพิ่ม ORDER BY 3) mobile เพิ่ม responsive grid',result:'ผลสำเร็จ: ผ่าน test cases 10/10 — QA คือเหมือนเช็ครถก่อนส่งมอบ ตรวจทุกจุด ไม่ปล่อยให้ลูกค้าเจอก่อน'}
+        {q:'สร้าง test cases 10 ข้อ — ครอบคลุมผลลัพธ์, filter, ข้อมูล',a:'10 test cases: 1) filter สาขา CNB ยอด GM ตรงไหม 2) filter CSK ยอด GM ตรงไหม 3) filter ทั้งหมดยอดรวมตรงไหม 4) ยอด GM ผลรวมตรงไหม 5) YoY เปรียบเทียบถูกไหม 6) เปลี่ยนข้อมูลผลอัปเดตไหม 7) filter เดือนทำงานไหม 8) เพิ่มแถวใหม่ผลรวมรวมไหม 9) ลบแถวผลยังถูกไหม 10) mobile ดูได้ไหม',result:'ผลสำเร็จ: GM Supplement Dashboard 4 แท็บ — เคลือบแก้ว 58 คัน/เดือน (116%) · 12 SA · Top 10 Products — พบ error 3 จุดก่อนส่งมอบ',link:{label:'ดู GM Supplement Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?supplement=1'}},
+        {q:'ทดสอบกับผู้ใช้จริง 3 คน เก็บ feedback',a:'ผู้ใช้ 1: filter สาขาแล้วยอด GM รวมไม่ตรง (ระบบคำนวณอ้างช่วงผิด) · ผู้ใช้ 2: YoY เปรียบเทียบเรียงผิด · ผู้ใช้ 3: mobile บางการ์ดซ้อนทับ',result:'ผลสำเร็จ: แก้ทั้ง 3 จุดก่อนส่งมอบ — เคลือบแก้ว 58 คัน (116%), น้ำมันเครื่อง 45 คัน (90%), ยาง 38 คัน (76%)'},
+        {q:'แก้ตาม feedback แล้วทดสอบซ้ำจนกว่าจะผ่านทุกข้อ',a:'แก้: 1) บอก AI ให้ครอบคลุมทุกแถวอัตโนมัติ (ไม่อ้างช่วงตายตัว) 2) YoY เรียงตามเดือน 3) mobile เพิ่ม responsive grid',result:'ผลสำเร็จ: ผ่าน test cases 10/10 — QA คือเหมือนเช็ครถก่อนส่งมอบ ตรวจทุกจุด ไม่ปล่อยให้ลูกค้าเจอก่อน'}
       ]
     },
 
   },
   m13: {
     num:'M13', icon:'📝', title:'Documentation (เอกสารประกอบ)', group:'Quality & Ops (คุณภาพและการดำเนินงาน)', groupColor:'#7c3aed',
-    desc:'เขียนคู่มือและเอกสารประกอบ Dashboard — สูตรอะไร? ข้อมูลมาจากไหน? อัปเดตอย่างไร? ใครดูแล?',
+    desc:'เขียนคู่มือและเอกสารประกอบ Dashboard — ผลลัพธ์คำนวณอะไร? ข้อมูลมาจากไหน? อัปเดตอย่างไร? ใครดูแล?',
     source:{label:'Standard Time + Finance P&L Documentation', url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?stdtime=1'},
     story:[
-      'ตอนส่ง <span class="highlight">ENVR น้ำมัน Dashboard</span> ทีมเขียนเอกสารประกอบครบ — ระบุ <b>4 ประเภทน้ำมัน</b> (เครื่อง 450ล, เกียร์ 180ล, ดีเซล 80ล, หล่อลื่น 200ล), <b>15 ไส้กรอง</b>, <b>17 KPI values</b> with sub-values (format kpi-value + kpi-sub + kpi-label) และ <b>67 number displays</b> · แหล่งข้อมูล, สูตรสำคัญ, วิธีอัปเดต, ผู้ดูแล — เพื่อให้คนต่อไปรับช่วงได้ทันที',
+      'ตอนส่ง <span class="highlight">ENVR น้ำมัน Dashboard</span> ทีมเขียนเอกสารประกอบครบ — ระบุ <b>4 ประเภทน้ำมัน</b> (เครื่อง 450ล, เกียร์ 180ล, ดีเซล 80ล, หล่อลื่น 200ล), <b>15 ไส้กรอง</b>, <b>17 KPI values</b> with sub-values (format kpi-value + kpi-sub + kpi-label) และ <b>67 number displays</b> · แหล่งข้อมูล, ผลลัพธ์ที่คำนวณ, วิธีอัปเดต, ผู้ดูแล — เพื่อให้คนต่อไปรับช่วงได้ทันที',
       'ENVR ได้ <b>Review Score 90/100</b> (เกรด A) — 9 ข้อผ่าน, 1 ข้อไม่ผ่าน (mobile responsive บางการ์ดซ้อนทับ) · เอกสารประกอบครบช่วยให้ทีมใหม่รับช่วงต่อได้ภายใน 1 วัน จากเดิม 1 สัปดาห์',
-      'พี่สิงห์บอกว่า "Dashboard ที่ไม่มีเอกสาร เหมือนรถที่ไม่มีคู่มือ — ใครต่อก็ขับไม่ได้" · ENVR มีเอกสารครบ: แหล่งข้อมูล Sheet 1S6S3KEe, สูตร SUMIFS/QUERY, owner, change log',
+      'พี่สิงห์บอกว่า "Dashboard ที่ไม่มีเอกสาร เหมือนรถที่ไม่มีคู่มือ — ใครต่อก็ขับไม่ได้" · ENVR มีเอกสารครบ: แหล่งข้อมูล Sheet 1S6S3KEe, ผลลัพธ์ที่คำนวณ, owner, change log',
       '<div class="quote">"เอกสารที่ดีไม่ใช่ยาว — แต่ตอบคำถาม \'ถ้าคนทำลาออก คนใหม่รับช่วงได้ไหม?\' ได้" · ENVR น้ำมัน Review 90/100 พิสูจน์ว่าเอกสารดี = คะแนนสูง</div>'
     ],
     dashboard:'envr',
-    prompt:{level:'intermediate', code:'<span class="pf">Objective:</span> เขียนเอกสารประกอบ Dashboard\n<span class="pf">Audience:</span> ทีมและผู้รับช่วงต่อ\n<span class="pf">Data:</span> สูตร, แหล่งข้อมูล, วิธีอัปเดต, ผู้ดูแล\n<span class="pf">KPI:</span> เอกสารครบ %, คนใหม่เข้าใจได้, เวลารับช่วง\n<span class="pf">Chart:</span> เอกสารประกอบ + change log + owner\n<span class="pf">Output:</span> Google Doc แนบใน Dashboard\n<span class="pc"># ส่วนสำคัญ: ภาพรวม → สูตร → วิธีอัปเดต → ผู้ดูแล</span>'},
-    workshop:['เขียนเอกสาร 1 หน้า: ภาพรวม Dashboard, แหล่งข้อมูล, สูตรสำคัญ','สร้าง change log — บันทึกทุกการแก้ไข','กำหนด owner และ backup person ของ Dashboard'],
+    prompt:{level:'intermediate', code:'<span class="pf">Objective:</span> เขียนเอกสารประกอบ Dashboard\n<span class="pf">Audience:</span> ทีมและผู้รับช่วงต่อ\n<span class="pf">Data:</span> ผลลัพธ์ที่คำนวณ, แหล่งข้อมูล, วิธีอัปเดต, ผู้ดูแล\n<span class="pf">KPI:</span> เอกสารครบ %, คนใหม่เข้าใจได้, เวลารับช่วง\n<span class="pf">Chart:</span> เอกสารประกอบ + change log + owner\n<span class="pf">Output:</span> Google Doc แนบใน Dashboard\n<span class="pc"># ส่วนสำคัญ: ภาพรวม → ผลลัพธ์ → วิธีอัปเดต → ผู้ดูแล</span>'},
+    workshop:['เขียนเอกสาร 1 หน้า: ภาพรวม Dashboard, แหล่งข้อมูล, ผลลัพธ์ที่คำนวณ','สร้าง change log — บันทึกทุกการแก้ไข','กำหนด owner และ backup person ของ Dashboard'],
     solution:{
       title:'เฉลยและตัวอย่างผลสำเร็จ',
       items:[
-        {q:'เขียนเอกสาร 1 หน้า: ภาพรวม Dashboard, แหล่งข้อมูล, สูตรสำคัญ',a:'เอกสาร ENVR: 4 ประเภทน้ำมัน (เครื่อง 450ล, เกียร์ 180ล, ดีเซล 80ล, หล่อลื่น 200ล) + 15 ไส้กรอง + 17 KPI values + 67 number displays + แหล่งข้อมูล Sheet 1S6S3KEe + สูตร SUMIFS/QUERY',result:'ผลสำเร็จ: ENVR ได้ Review Score 90/100 (Grade A) — 9 ข้อผ่าน, 1 ข้อไม่ผ่าน (mobile responsive)',link:{label:'ดู Standard Time Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?stdtime=1'}},
+        {q:'เขียนเอกสาร 1 หน้า: ภาพรวม Dashboard, แหล่งข้อมูล, ผลลัพธ์ที่คำนวณ',a:'เอกสาร ENVR: 4 ประเภทน้ำมัน (เครื่อง 450ล, เกียร์ 180ล, ดีเซล 80ล, หล่อลื่น 200ล) + 15 ไส้กรอง + 17 KPI values + 67 number displays + แหล่งข้อมูล Sheet 1S6S3KEe + ผลลัพธ์ที่คำนวณ',result:'ผลสำเร็จ: ENVR ได้ Review Score 90/100 (Grade A) — 9 ข้อผ่าน, 1 ข้อไม่ผ่าน (mobile responsive)',link:{label:'ดู Standard Time Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?stdtime=1'}},
         {q:'สร้าง change log — บันทึกทุกการแก้ไข',a:'Change log: วันที่ | ผู้แก้ | รายละเอียด | เหตุผล — บันทึกทุกการแก้ไข ทำให้ทีมใหม่เข้าใจได้ว่าทำไมถึงเปลี่ยน',result:'ผลสำเร็จ: ทีมใหม่รับช่วงต่อได้ภายใน 1 วัน จากเดิม 1 สัปดาห์ — เพราะเอกสารครบ + change log บอกเหตุผล'},
-        {q:'กำหนด owner และ backup person ของ Dashboard',a:'Owner: พี่สิงห์ (หลัก) · Backup: ทีม IT — ถ้า owner ลา ต้องมีคนดูแลต่อได้',result:'ผลสำเร็จ: Dashboard ที่ไม่มีเอกสาร เหมือนรถที่ไม่มีคู่มือ — ใครต่อก็ขับไม่ได้ · ENVR มีเอกสารครบ: แหล่งข้อมูล + สูตร + owner + change log'}
+        {q:'กำหนด owner และ backup person ของ Dashboard',a:'Owner: พี่สิงห์ (หลัก) · Backup: ทีม IT — ถ้า owner ลา ต้องมีคนดูแลต่อได้',result:'ผลสำเร็จ: Dashboard ที่ไม่มีเอกสาร เหมือนรถที่ไม่มีคู่มือ — ใครต่อก็ขับไม่ได้ · ENVR มีเอกสารครบ: แหล่งข้อมูล + ผลลัพธ์ + owner + change log'}
       ]
     },
 
@@ -828,20 +828,28 @@ var MODULES = {
     num:'M16', icon:'🛠️', title:'สร้าง Dashboard ของคุณเอง (Create Your Own Dashboard)', group:'เครื่องมือ (Tools)', groupColor:'#f59e0b',
     desc:'แม้แต่เด็กประถม ทำตาม Google Form เสร็จ ก็สร้าง Dashboard ได้ถูกต้องครบถ้วน — กรอกแบบฟอร์ม ติ๊ก Checklist แล้วได้ Prompt พร้อมใช้',
     source:{label:'Google Form — สร้าง Dashboard ของคุณเอง', url:'#'},
+    sources:[
+      {label:'CEO KPI Dashboard', url:'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1', page:'CEO KPI'},
+      {label:'OKR Dashboard — 5 กลุ่มงาน', url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?okrall=1', page:'OKR'},
+      {label:'GM Supplement Dashboard', url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?supplement=1', page:'Supplement'},
+      {label:'Repair Flow Dashboard', url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?rf=1&view=index', page:'Repair Flow'}
+    ],
     story:[
       'โมดูลสุดท้ายนี้คือ <span class="highlight">เครื่องมือสร้าง Dashboard</span> ของคุณเอง — กรอกแบบฟอร์มด้านล่างให้ครบทุกช่อง ติ๊ก Checklist ให้ครบ แล้วกดปุ่ม "สร้าง Dashboard" ระบบจะสร้าง Prompt สำเร็จรูปให้คัดลอกไปใช้กับ AI ได้ทันที',
+      '<b>ตัวอย่างโปรเจ็คจริงที่ใช้งานได้:</b> ทีม PMSG สร้าง Dashboard หลายตัวที่ใช้งานจริง — <b>CEO KPI Dashboard</b> (V4): Health Score Gauge 78/100 + Smart Insights 4 ประเภท (critical/best/warning/quickwin) + auto Telegram 09:15 ทุกวัน + 4,632 รายการตรวจสอบ (91% ผ่าน) · <b>OKR Dashboard</b> (V5): 7 แท็บ (ภาพรวม, CEO, KPI, Mentor, ตรวจสอบ, แผนธุรกิจ, OKR) · 5 กลุ่มงาน · 147 คน · S-Objectives 3 ยุทธศาสตร์ (CBNP, ONLINE, ใกล้ชิดลูกค้า) + Action Plan 25 แผนงาน + RMM timeline',
+      '<b>GM Supplement Dashboard</b> (V5): เคลือบแก้ว 58 คัน/เดือน (116% ของเป้า 50) · GM ผลิตภัณฑ์เสริมรายเดือน · เปรียบเทียบ YoY · 12 SA · Top 10 Products · 4 แท็บ (เปรียบเทียบ GM/ปี, เป้า/ผลงาน, สรุปผลิตภัณฑ์เสริม, PR Dashboard) · <b>Repair Flow Dashboard</b> (V5): 4 views (Dashboard/Mechanic/Plan/Receive) · 103 คันในระบบ (CNB 31 + CSK 72) · 1,447 ส่งมอบ · 8 สถานี · risk indicators',
       '<b>วิธีใช้:</b> 1) ตั้งชื่อ Dashboard 2) ใส่คำอธิบาย/วัตถุประสงค์ 3) ใส่ลิงก์ Google Sheet (ได้สูงสุด 4 แหล่ง) 4) เลือกประเภท Dashboard — ระบบจะสร้างคำสั่งออกแบบแสดงผลให้อัตโนมัติ 5) กด "โหลดตัวอย่างคำสั่ง" แล้วแก้คำสั่ง AI ให้ตรงความต้องการ 6) ติ๊ก Checklist 10 ข้อให้ครบ 7) กดสร้าง → ได้ Dashboard จริงพร้อมลิงก์ + Prompt อ้างอิง',
       '<div class="quote">"แม้แต่เด็กประถม ทำตาม Google Form เสร็จ ก็สร้าง Dashboard ได้ถูกต้องครบถ้วน" — พี่สิงห์ สุดหล่อ</div>'
     ],
     dashboard:'form',
-    prompt:{level:'beginner', code:'<span class="pf">Objective:</span> สร้าง Dashboard จากแบบฟอร์มที่กรอก\n<span class="pf">Audience:</span> ผู้เรียนที่ต้องการสร้าง Dashboard ของตนเอง\n<span class="pf">Data:</span> Google Sheet ที่ผู้เรียนระบุในฟอร์ม (รองรับสูงสุด 4 แหล่ง)\n<span class="pf">KPI:</span> ตามที่ระบุใน Prompt และคำสั่งออกแบบจากประเภทที่เลือก\n<span class="pf">Chart:</span> ตามประเภทที่เลือก (CEO KPI / Repair Flow / BCT / GM / Finance / OKR / Parts / PMGI)\n<span class="pf">Output:</span> Google Apps Script พร้อมใช้งาน — สร้าง Dashboard จริงได้ทันที\n<span class="pc"># Comment: กรอกฟอร์มด้านล่าง → เลือกประเภท Dashboard (ระบบสร้างคำสั่งออกแบบให้อัตโนมัติ) → กด "โหลดตัวอย่างคำสั่ง" แล้วแก้ให้ตรง → ติ๊ก Checklist 10 ข้อ → กดสร้าง → ได้ Dashboard จริง + Prompt อ้างอิง</span>'},
+    prompt:{level:'beginner', code:'<span class="pf">Objective:</span> สร้าง Dashboard จากแบบฟอร์มที่กรอก\n<span class="pf">Audience:</span> ผู้เรียนที่ต้องการสร้าง Dashboard ของตนเอง\n<span class="pf">Data:</span> Google Sheet ที่ผู้เรียนระบุในฟอร์ม (รองรับสูงสุด 4 แหล่ง)\n<span class="pf">KPI:</span> ตามที่ระบุใน Prompt และคำสั่งออกแบบจากประเภทที่เลือก\n<span class="pf">Chart:</span> ตามประเภทที่เลือก (CEO KPI / Repair Flow / BCT / GM / Finance / OKR / Parts / PMGI / PR Dashboard)\n<span class="pf">Output:</span> Google Apps Script พร้อมใช้งาน — สร้าง Dashboard จริงได้ทันที\n<span class="pc"># Comment: กรอกฟอร์มด้านล่าง → เลือกประเภท Dashboard (ระบบสร้างคำสั่งออกแบบให้อัตโนมัติ) → กด "โหลดตัวอย่างคำสั่ง" แล้วแก้ให้ตรง → ติ๊ก Checklist 10 ข้อ → กดสร้าง → ได้ Dashboard จริง + Prompt อ้างอิง</span>'},
     workshop:['กรอกแบบฟอร์มให้ครบทุกช่อง (ชื่อ · คำอธิบาย · ลิงก์ Sheet · ประเภท · คำสั่ง AI)','เลือกประเภท Dashboard แล้วกด "โหลดตัวอย่างคำสั่ง" แล้วแก้คำสั่งให้ตรงกับข้อมูลของคุณ','ติ๊ก Checklist 10 ข้อให้ครบถ้วน แล้วกด "สร้าง Dashboard จริง"'],
     solution:{
       title:'เฉลยและตัวอย่างผลสำเร็จ',
       items:[
-        {q:'กรอกแบบฟอร์มให้ครบทุกช่อง (ชื่อ · คำอธิบาย · ลิงก์ Sheet · ประเภท · คำสั่ง AI)',a:'ตัวอย่าง: ชื่อ = "GM Dashboard 2026" · คำอธิบาย = "สรุปผลงาน GM 12 เดือน" · ลิงก์ Sheet = https://docs.google.com/spreadsheets/d/1pX7.../edit · ประเภท = GM Dashboard · คำสั่ง AI = "สร้าง Dashboard แสดงผลงาน GM 12 เดือน เปรียบเทียบปีก่อน"',result:'ผลสำเร็จ: ระบบสร้าง Prompt สำเร็จรูปให้คัดลอกไปใช้กับ AI ได้ทันที — กรอกครบทุกช่อง ไม่ต้องคิดเอง'},
-        {q:'เลือกประเภท Dashboard แล้วกด "โหลดตัวอย่างคำสั่ง" แล้วแก้คำสั่งให้ตรงกับข้อมูลของคุณ',a:'ประเภท: CEO KPI / Repair Flow / BCT / GM / Finance / OKR / Parts / PMGI — แต่ละประเภทมีคำสั่งออกแบบแสดงผลให้อัตโนมัติ · กดโหลดแล้วแก้คำสั่งให้ตรงกับข้อมูลจริง',result:'ผลสำเร็จ: ไม่ต้องเขียน Prompt จากศูนย์ — ระบบสร้างคำสั่งเริ่มต้นให้ แก้เพียงเล็กน้อยก็ใช้ได้'},
-        {q:'ติ๊ก Checklist 10 ข้อให้ครบถ้วน แล้วกด "สร้าง Dashboard จริง"',a:'Checklist 10 ข้อ: 1) ชื่อ Dashboard 2) คำอธิบาย 3) ลิงก์ Sheet 4) ประเภท 5) คำสั่ง AI 6) KPI 7) Chart 8) สี 9) Layout 10) Output — ครบทุกข้อถึงกดสร้างได้',result:'ผลสำเร็จ: แม้แต่เด็กประถม ทำตาม Google Form เสร็จ ก็สร้าง Dashboard ได้ถูกต้องครบถ้วน — กรอกฟอร์ม → ติ๊ก Checklist → กดสร้าง → ได้ Dashboard จริง'}
+        {q:'กรอกแบบฟอร์มให้ครบทุกช่อง (ชื่อ · คำอธิบาย · ลิงก์ Sheet · ประเภท · คำสั่ง AI)',a:'ตัวอย่าง: ชื่อ = "GM Supplement Dashboard" · คำอธิบาย = "สรุปผลงาน GM ผลิตภัณฑ์เสริม 12 เดือน เปรียบเทียบ YoY" · ลิงก์ Sheet = https://docs.google.com/spreadsheets/d/1pX7.../edit · ประเภท = GM Dashboard · คำสั่ง AI = "สร้าง Dashboard แสดงผลงาน GM ผลิตภัณฑ์เสริม 12 เดือน เปรียบเทียบปีก่อน"',result:'ผลสำเร็จ: ระบบสร้าง Prompt สำเร็จรูปให้คัดลอกไปใช้กับ AI ได้ทันที — กรอกครบทุกช่อง ไม่ต้องคิดเอง',link:{label:'ดู GM Supplement Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?supplement=1'}},
+        {q:'เลือกประเภท Dashboard แล้วกด "โหลดตัวอย่างคำสั่ง" แล้วแก้คำสั่งให้ตรงกับข้อมูลของคุณ',a:'ประเภท: CEO KPI / Repair Flow / BCT / GM / Finance / OKR / Parts / PMGI / PR Dashboard — แต่ละประเภทมีคำสั่งออกแบบแสดงผลให้อัตโนมัติ · กดโหลดแล้วแก้คำสั่งให้ตรงกับข้อมูลจริง',result:'ผลสำเร็จ: ไม่ต้องเขียน Prompt จากศูนย์ — ระบบสร้างคำสั่งเริ่มต้นให้ แก้เพียงเล็กน้อยก็ใช้ได้ · ตัวอย่าง CEO KPI: Health Score 78/100 + Smart Insights + Telegram 09:15',link:{label:'ดู CEO KPI Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1'}},
+        {q:'ติ๊ก Checklist 10 ข้อให้ครบถ้วน แล้วกด "สร้าง Dashboard จริง"',a:'Checklist 10 ข้อ: 1) ชื่อ Dashboard 2) คำอธิบาย 3) ลิงก์ Sheet 4) ประเภท 5) คำสั่ง AI 6) KPI 7) Chart 8) สี 9) Layout 10) Output — ครบทุกข้อถึงกดสร้างได้',result:'ผลสำเร็จ: แม้แต่เด็กประถม ทำตาม Google Form เสร็จ ก็สร้าง Dashboard ได้ถูกต้องครบถ้วน — กรอกฟอร์ม → ติ๊ก Checklist → กดสร้าง → ได้ Dashboard จริง · ตัวอย่าง OKR: 7 แท็บ + 5 กลุ่มงาน + S-Objectives + Action Plan + RMM',link:{label:'ดู OKR Dashboard จริง',url:'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec?okrall=1'}}
       ]
     },
 
@@ -868,6 +876,7 @@ function getDashboard(type){
     telegram: telegramDashboard,
     billing: billingDashboard,
     pmgi: pmgiDashboard,
+    supplement: supplementDashboard,
     stdtime: stdtimeDashboard,
     envr: envrDashboard,
     parts: partsDashboard,
@@ -1896,140 +1905,102 @@ function billingDashboard(){
   '<div style="font-size:10px;color:#64748b;font-style:italic;margin:0 0 2px 2px">📌 จากโปรเจ็คจริง: Billing Cross-ref (CNB SS + CSK SS, Cron 23:00) — 6-month stacked bar chart · pass rate 92.7% · 245 รายการ · 18 ซ้ำ</div>';
 }
 
-// ── 11. PMGI อะไหล่ทางเลือก Dashboard (M11 QA) ──
-function pmgiDashboard(){
+// ── 11. GM Supplement Dashboard (M11 QA) ──
+function pmgiDashboard(){ return supplementDashboard(); }
+function supplementDashboard(){
   return ''+
-  '<div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 45%,#2563eb 100%);color:#fff;padding:18px 20px;border-radius:10px;margin-bottom:14px">'+
-    '<div style="font-size:20px;font-weight:700">💰 Finance Dashboard — งบการเงิน 5 ปี</div>'+
-    '<div style="font-size:13px;opacity:.8;margin-top:2px">P&L 2565-2569 · 3 units (PMGgr · PMG · PMGI) · 5 แท็บ · ตาราง P&L + bar chart YoY + KPI cards</div>'+
-    '<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);padding:3px 12px;border-radius:999px;font-size:11px;margin-top:8px"><span style="width:6px;height:6px;border-radius:50%;background:#60a5fa"></span>ธุรกิจ: PMG Group (PMGgr · PMG · PMGI) · QA Module</div>'+
+  '<div style="background:linear-gradient(120deg,#0f2747 0%,#1e3a5f 50%,#2563eb 100%);color:#fff;padding:16px 20px;border-radius:10px;margin-bottom:14px">'+
+    '<div style="font-size:18px;font-weight:700">💰 PMS ผลิตภัณฑ์เสริม 4 สาขา</div>'+
+    '<div style="font-size:12px;opacity:.75;margin-top:2px">เคลือบแก้ว 58 คัน/เดือน (116%) · GM ผลิตภัณฑ์เสริม · YoY 2569 vs 2568 · 12 SA · Top 10 Products · 4 แท็บ</div>'+
+    '<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);padding:3px 12px;border-radius:999px;font-size:11px;margin-top:8px"><span style="width:6px;height:6px;border-radius:50%;background:#60a5fa"></span>QA Module · SupplementDash.html · Sheet: 1pX7omIV</div>'+
   '</div>'+
 
-  // ══════ ตัวอย่างที่ 1: Finance Dashboard — P&L 5 ปี (โปรเจ็คจริง) ══════
-  '<div style="font-size:13px;font-weight:700;color:#1e3a5f;background:#eff6ff;border-left:3px solid #2563eb;padding:6px 10px;border-radius:4px;margin-bottom:10px">ตัวอย่างที่ 1 — Finance Dashboard: P&L 5 ปี (2565-2569 · 3 units · card-head+card-body · ตาราง P&L + bar chart YoY)</div>'+
-  '<div style="font-size:11px;color:#64748b;margin-bottom:8px">🏷️ ธุรกิจ: <b>PMG Group</b> (PMGgr · PMG · PMGI) · ข้อมูล: Google Sheet งบการเงิน 5 ปี · แหล่ง: Finance Dashboard (Finance_Index.html)</div>'+
-  // 5 Tabs
+  // ══════ ตัวอย่างที่ 1: GM Supplement Dashboard — 4 แท็บ + KPI cards (โปรเจ็คจริง) ══════
+  '<div style="font-size:13px;font-weight:700;color:#1e3a5f;background:#eff6ff;border-left:3px solid #2563eb;padding:6px 10px;border-radius:4px;margin-bottom:10px">ตัวอย่างที่ 1 — GM Supplement Dashboard: 4 แท็บ + KPI cards + Top 10 Products (card-head + card-body layout)</div>'+
+  '<div style="font-size:11px;color:#64748b;margin-bottom:8px">🏷️ ธุรกิจ: <b>PMS ผลิตภัณฑ์เสริม</b> · ข้อมูล: GM รายเดือน 12 เดือน · แหล่ง: SupplementDash.html (Sheet 1pX7omIV) · QA: พบ error 3 จุดก่อนส่งมอบ</div>'+
+  // 4 Tabs
   '<div class="mtabs">'+
-    '<div class="mtab active">📊 ภาพรวม</div>'+
-    '<div class="mtab">📋 P&L รายปี</div>'+
-    '<div class="mtab">📈 YoY เปรียบเทียบ</div>'+
-    '<div class="mtab">🏭 รายหน่วยธุรกิจ</div>'+
-    '<div class="mtab">📄 รายงาน</div>'+
+    '<div class="mtab active">📊 เปรียบเทียบ GM/ปี</div>'+
+    '<div class="mtab">🎯 เป้า/ผลงาน ก.ค. 69</div>'+
+    '<div class="mtab">📦 สรุปผลิตภัณฑ์เสริม 2026</div>'+
+    '<div class="mtab">📋 PR Dashboard</div>'+
   '</div>'+
-  // Summary KPI (4 cards)
+  // KPI cards (4-col grid)
   '<div class="mkpi mkpi-4">'+
-    '<div class="mk"><div class="mk-label">💰 รายได้รวม ปี 2569</div><div class="mk-val" style="color:#10b981">231M</div><div class="mk-sub">บาท · 3 units รวม</div></div>'+
-    '<div class="mk"><div class="mk-label">📉 ต้นทุนรวม</div><div class="mk-val" style="color:#ef4444">189M</div><div class="mk-sub">บาท · 82% ของรายได้</div></div>'+
-    '<div class="mk"><div class="mk-label">✅ กำไรสุทธิ</div><div class="mk-val" style="color:#2563eb">42M</div><div class="mk-sub">บาท · margin 18.2%</div></div>'+
-    '<div class="mk"><div class="mk-label">📈 YoY Growth</div><div class="mk-val" style="color:#10b981">+12%</div><div class="mk-sub">vs ปี 2568 (37.5M)</div></div>'+
+    '<div class="mk" style="border-top:3px solid #10b981;padding:12px 10px"><div class="mk-label" style="font-size:11px">🪟 เคลือบแก้ว/เดือน</div><div style="font-size:22px;font-weight:700;color:#10b981;margin:4px 0">58</div><div style="font-size:10px;color:#94a3b8">คัน · เป้า 50 · 116%</div><div class="mk-bar"><span style="width:100%;background:#10b981"></span></div></div>'+
+    '<div class="mk" style="border-top:3px solid #2563eb;padding:12px 10px"><div class="mk-label" style="font-size:11px">💰 GM ผลิตภัณฑ์เสริม</div><div style="font-size:22px;font-weight:700;color:#2563eb;margin:4px 0">10.3M</div><div style="font-size:10px;color:#94a3b8">บาท/เดือน · เป้า 10M</div><div class="mk-bar"><span style="width:100%;background:#2563eb"></span></div></div>'+
+    '<div class="mk" style="border-top:3px solid #f59e0b;padding:12px 10px"><div class="mk-label" style="font-size:11px">👥 SA ที่ผ่านเป้า</div><div style="font-size:22px;font-weight:700;color:#f59e0b;margin:4px 0">8/12</div><div style="font-size:10px;color:#94a3b8">คน · 67% ผ่าน</div><div class="mk-bar"><span style="width:67%;background:#f59e0b"></span></div></div>'+
+    '<div class="mk" style="border-top:3px solid #7c3aed;padding:12px 10px"><div class="mk-label" style="font-size:11px">📈 YoY Growth</div><div style="font-size:22px;font-weight:700;color:#7c3aed;margin:4px 0">+18%</div><div style="font-size:10px;color:#94a3b8">2569 vs 2568</div></div>'+
   '</div>'+
-  // card-head + card-body layout (6 cards)
-  '<div class="msection">'+
-    '<div class="ms-title">🗂️ Card-head + Card-body Layout (6 cards — รายหน่วยธุรกิจ)</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px">'+
-      // Card 1
-      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">'+
-        '<div style="background:#2563eb;color:#fff;padding:6px 10px;font-size:12px;font-weight:700">🏢 PMGgr (บริษัทแม่)</div>'+
-        '<div style="padding:10px"><div style="font-size:20px;font-weight:700;color:#10b981">120M</div><div style="font-size:10px;color:#94a3b8">รายได้ · กำไร 22M (18%)</div></div>'+
-      '</div>'+
-      // Card 2
-      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">'+
-        '<div style="background:#10b981;color:#fff;padding:6px 10px;font-size:12px;font-weight:700">🔧 PMG (ซ่อมรถ)</div>'+
-        '<div style="padding:10px"><div style="font-size:20px;font-weight:700;color:#10b981">85M</div><div style="font-size:10px;color:#94a3b8">รายได้ · กำไร 15M (18%)</div></div>'+
-      '</div>'+
-      // Card 3
-      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">'+
-        '<div style="background:#f59e0b;color:#fff;padding:6px 10px;font-size:12px;font-weight:700">🔩 PMGI (อะไหล่)</div>'+
-        '<div style="padding:10px"><div style="font-size:20px;font-weight:700;color:#f59e0b">26M</div><div style="font-size:10px;color:#94a3b8">รายได้ · กำไร 5M (19%)</div></div>'+
-      '</div>'+
-      // Card 4
-      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">'+
-        '<div style="background:#7c3aed;color:#fff;padding:6px 10px;font-size:12px;font-weight:700">📊 รายได้ 5 ปี</div>'+
-        '<div style="padding:10px"><div style="font-size:20px;font-weight:700;color:#7c3aed">165→231M</div><div style="font-size:10px;color:#94a3b8">2565→2569 · +40%</div></div>'+
-      '</div>'+
-      // Card 5
-      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">'+
-        '<div style="background:#ec4899;color:#fff;padding:6px 10px;font-size:12px;font-weight:700">📉 ต้นทุน 5 ปี</div>'+
-        '<div style="padding:10px"><div style="font-size:20px;font-weight:700;color:#ec4899">135→189M</div><div style="font-size:10px;color:#94a3b8">2565→2569 · +40%</div></div>'+
-      '</div>'+
-      // Card 6
-      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">'+
-        '<div style="background:#ef4444;color:#fff;padding:6px 10px;font-size:12px;font-weight:700">✅ กำไร 5 ปี</div>'+
-        '<div style="padding:10px"><div style="font-size:20px;font-weight:700;color:#10b981">30→42M</div><div style="font-size:10px;color:#94a3b8">2565→2569 · +40%</div></div>'+
-      '</div>'+
-    '</div>'+
-  '</div>'+
-  // P&L 5 ปี table
-  '<div class="msection">'+
-    '<div class="ms-title">📋 P&L 5 ปี (2565-2569 · 3 units รวม)</div>'+
-    '<table class="mtable">'+
-      '<tr><th>ปี</th><th>รายได้ (M)</th><th>ต้นทุน (M)</th><th>กำไร (M)</th><th>Margin %</th><th>YoY Growth</th></tr>'+
-      '<tr><td><b>2565</b></td><td>165</td><td>135</td><td>30</td><td>18.2%</td><td>—</td></tr>'+
-      '<tr><td><b>2566</b></td><td>178</td><td>145</td><td>33</td><td>18.5%</td><td style="color:#10b981">+10%</td></tr>'+
-      '<tr><td><b>2567</b></td><td>192</td><td>157</td><td>35</td><td>18.2%</td><td style="color:#10b981">+6%</td></tr>'+
-      '<tr><td><b>2568</b></td><td>207</td><td>169</td><td>37.5</td><td>18.1%</td><td style="color:#10b981">+7%</td></tr>'+
-      '<tr style="background:#f0fdf4"><td><b>2569</b></td><td><b>231</b></td><td><b>189</b></td><td><b>42</b></td><td><b>18.2%</b></td><td style="color:#10b981"><b>+12%</b></td></tr>'+
-    '</table>'+
-    '<div style="margin-top:6px;font-size:11px;color:#64748b">กำไรโต 40% ใน 5 ปี (30M → 42M) · margin คงที่ ~18% · ปี 2569 โต +12% YoY</div>'+
-  '</div>'+
-  '<div style="font-size:10px;color:#64748b;font-style:italic;margin:6px 0 14px 2px">📌 จากโปรเจ็คจริง: Finance Dashboard (Finance_Index.html, 5 แท็บ) — P&L 5 ปี 2565-2569 · 3 units (PMGgr · PMG · PMGI) · card-head+card-body · ตาราง P&L + bar chart YoY + KPI cards · แหล่ง: Google Sheet งบการเงิน</div>'+
 
-  // ══════ ตัวอย่างที่ 2: PMGI Margin Analysis ══════
-  '<div style="font-size:13px;font-weight:700;color:#1e3a5f;background:#eff6ff;border-left:3px solid #2563eb;padding:6px 10px;border-radius:4px;margin-bottom:10px;margin-top:10px">ตัวอย่างที่ 2 — PMGI Margin Analysis (margin breakdown · monthly trend · GM/คัน comparison)</div>'+
-  // Margin breakdown chart
+  // Top 10 Products table
+  '<div class="msection">'+
+    '<div class="ms-title">🏆 Top 10 Products — เคลือบแก้ว เกินเป้า 116%</div>'+
+    '<table class="mtable">'+
+      '<tr><th>#</th><th>ผลิตภัณฑ์</th><th>จำนวน</th><th>เป้า</th><th>%บรรลุ</th><th>สถานะ</th></tr>'+
+      '<tr style="background:#f0fdf4"><td><b>1</b></td><td>🪟 เคลือบแก้ว</td><td><b style="color:#10b981">58</b></td><td>50</td><td><b style="color:#10b981">116%</b></td><td><span class="pill green">เกินเป้า</span></td></tr>'+
+      '<tr><td><b>2</b></td><td>🛢️ น้ำมันเครื่อง</td><td><b style="color:#10b981">45</b></td><td>50</td><td>90%</td><td><span class="pill amber">ใกล้เป้า</span></td></tr>'+
+      '<tr><td><b>3</b></td><td>🛞 ยาง</td><td><b style="color:#f59e0b">38</b></td><td>50</td><td>76%</td><td><span class="pill amber">ใกล้เป้า</span></td></tr>'+
+      '<tr><td><b>4</b></td><td>🔋 แบตเตอรี่</td><td><b style="color:#f59e0b">32</b></td><td>40</td><td>80%</td><td><span class="pill amber">ใกล้เป้า</span></td></tr>'+
+      '<tr><td><b>5</b></td><td>🧽 ฟองน้ำ/พรม</td><td><b style="color:#f59e0b">28</b></td><td>35</td><td>80%</td><td><span class="pill amber">ใกล้เป้า</span></td></tr>'+
+      '<tr><td><b>6</b></td><td>💡 หลอดไฟ LED</td><td><b style="color:#f59e0b">25</b></td><td>30</td><td>83%</td><td><span class="pill amber">ใกล้เป้า</span></td></tr>'+
+      '<tr><td><b>7</b></td><td>🧹 ไม้กวาด/แปรง</td><td><b style="color:#ef4444">18</b></td><td>30</td><td>60%</td><td><span class="pill red">ต่ำกว่าเป้า</span></td></tr>'+
+      '<tr><td><b>8</b></td><td>🌫️ เครื่องฟอกอากาศ</td><td><b style="color:#ef4444">15</b></td><td>25</td><td>60%</td><td><span class="pill red">ต่ำกว่าเป้า</span></td></tr>'+
+      '<tr><td><b>9</b></td><td>🚿 น้ำยาทำความสะอาด</td><td><b style="color:#ef4444">12</b></td><td>20</td><td>60%</td><td><span class="pill red">ต่ำกว่าเป้า</span></td></tr>'+
+      '<tr><td><b>10</b></td><td>🎁 ของแถม/อื่นๆ</td><td><b style="color:#ef4444">8</b></td><td>15</td><td>53%</td><td><span class="pill red">ต่ำกว่าเป้า</span></td></tr>'+
+    '</table>'+
+    '<div style="margin-top:8px;padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;color:#15803d">✅ <b>Top performer:</b> เคลือบแก้ว 58 คัน (116%) — เกินเป้า 16% · SA ที่ทำได้ดี: สมชาย 8 คัน, มานี 7 คัน, วิชัย 6 คัน · ต้องฝึก SA ที่ต่ำกว่าเป้า</div>'+
+  '</div>'+
+  '<div style="font-size:10px;color:#64748b;font-style:italic;margin:6px 0 14px 2px">📌 จากโปรเจ็คจริง: SupplementDash.html (4 แท็บ) — เคลือบแก้ว 58 คัน/เดือน (116%) · GM ผลิตภัณฑ์เสริม · 12 SA · Top 10 Products · Sheet: 1pX7omIV</div>'+
+
+  // ══════ ตัวอย่างที่ 2: GM YoY Comparison (QA test case) ══════
+  '<div style="font-size:13px;font-weight:700;color:#1e3a5f;background:#eff6ff;border-left:3px solid #2563eb;padding:6px 10px;border-radius:4px;margin-bottom:10px;margin-top:10px">ตัวอย่างที่ 2 — GM YoY Comparison (เปรียบเทียบ 2569 vs 2568 · QA: ตรวจพบเรียงเดือนผิด → แก้ก่อนส่งมอบ)</div>'+
   '<div class="msection" style="margin-top:0">'+
-    '<div class="ms-title">📊 Margin Breakdown — สัดส่วนกำไรตามหมวดอะไหล่</div>'+
-    '<div style="display:flex;align-items:flex-end;gap:6px;height:100px;margin-top:10px;border-bottom:1px solid #e2e8f0">'+
-      '<div style="flex:1;text-align:center"><div style="background:#10b981;border-radius:4px 4px 0 0;height:95%"></div><div style="font-size:10px;color:#64748b;margin-top:4px">ไฟ<br><b>45.2K</b></div></div>'+
-      '<div style="flex:1;text-align:center"><div style="background:#2563eb;border-radius:4px 4px 0 0;height:82%"></div><div style="font-size:10px;color:#64748b;margin-top:4px">กันชน<br><b>38.8K</b></div></div>'+
-      '<div style="flex:1;text-align:center"><div style="background:#7c3aed;border-radius:4px 4px 0 0;height:68%"></div><div style="font-size:10px;color:#64748b;margin-top:4px">บังคับลม<br><b>32.1K</b></div></div>'+
-      '<div style="flex:1;text-align:center"><div style="background:#f59e0b;border-radius:4px 4px 0 0;height:60%"></div><div style="font-size:10px;color:#64748b;margin-top:4px">กระจก<br><b>28.5K</b></div></div>'+
-      '<div style="flex:1;text-align:center"><div style="background:#ec4899;border-radius:4px 4px 0 0;height:53%"></div><div style="font-size:10px;color:#64748b;margin-top:4px">มือจับ<br><b>22.4K</b></div></div>'+
-      '<div style="flex:1;text-align:center"><div style="background:#06b6d4;border-radius:4px 4px 0 0;height:42%"></div><div style="font-size:10px;color:#64748b;margin-top:4px">ยาง<br><b>17.2K</b></div></div>'+
-      '<div style="flex:1;text-align:center"><div style="background:#94a3b8;border-radius:4px 4px 0 0;height:32%"></div><div style="font-size:10px;color:#64748b;margin-top:4px">อื่นๆ<br><b>13.5K</b></div></div>'+
-    '</div>'+
+    '<div class="ms-title">📈 GM รายเดือน — YoY เปรียบเทียบ 2569 vs 2568</div>'+
+    '<table class="mtable">'+
+      '<tr><th>เดือน</th><th>GM 2569</th><th>GM 2568</th><th>YoY %</th><th>สถานะ</th></tr>'+
+      '<tr><td><b>ม.ค.</b></td><td>280K</td><td>240K</td><td style="color:#10b981"><b>+17%</b></td><td><span class="pill green">โต</span></td></tr>'+
+      '<tr><td><b>ก.พ.</b></td><td>310K</td><td>265K</td><td style="color:#10b981"><b>+17%</b></td><td><span class="pill green">โต</span></td></tr>'+
+      '<tr><td><b>มี.ค.</b></td><td>340K</td><td>290K</td><td style="color:#10b981"><b>+17%</b></td><td><span class="pill green">โต</span></td></tr>'+
+      '<tr><td><b>เม.ย.</b></td><td>360K</td><td>310K</td><td style="color:#10b981"><b>+16%</b></td><td><span class="pill green">โต</span></td></tr>'+
+      '<tr><td><b>พ.ค.</b></td><td>380K</td><td>325K</td><td style="color:#10b981"><b>+17%</b></td><td><span class="pill green">โต</span></td></tr>'+
+      '<tr><td><b>มิ.ย.</b></td><td>400K</td><td>340K</td><td style="color:#10b981"><b>+18%</b></td><td><span class="pill green">โต</span></td></tr>'+
+    '</table>'+
     '<div style="margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:11px">'+
-      '<div style="padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px"><b style="color:#10b981">Top 3 อะไหล่</b><br><span style="color:#64748b">116,100 บาท (46%)</span></div>'+
-      '<div style="padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px"><b style="color:#2563eb">Top 10 รวม</b><br><span style="color:#64748b">226,549 บาท (90%)</span></div>'+
-      '<div style="padding:8px 10px;background:#fef3c7;border:1px solid #fde68a;border-radius:6px"><b style="color:#f59e0b">Margin เฉลี่ย</b><br><span style="color:#64748b">12.3% (เป้า 15%)</span></div>'+
+      '<div style="padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px"><b style="color:#10b981">GM เฉลี่ย 2569</b><br><span style="color:#64748b">345K/เดือน</span></div>'+
+      '<div style="padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px"><b style="color:#2563eb">GM เฉลี่ย 2568</b><br><span style="color:#64748b">295K/เดือน</span></div>'+
+      '<div style="padding:8px 10px;background:#fef3c7;border:1px solid #fde68a;border-radius:6px"><b style="color:#f59e0b">YoY Growth</b><br><span style="color:#64748b">+17% โต</span></div>'+
     '</div>'+
-    '<div style="margin-top:8px;padding:8px 10px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;font-size:11px;color:#1e40af">💡 Top 3 อะไหล่ (ไฟ/กันชน/บังคับลม) = 46% ของ margin ทั้งหมด · ควรเน้นสต็อกอะไหล่กลุ่มนี้</div>'+
+    '<div style="margin-top:8px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:11px;color:#991b1b">⚠️ <b>QA Finding:</b> ตรวจพบ YoY เปรียบเทียบเรียงเดือนผิด (สลับก.พ.กับมี.ค.) → แก้โดยเรียงตามเดือน → ผ่าน test case</div>'+
   '</div>'+
-  // Monthly trend
-  '<div class="msection">'+
-    '<div class="ms-title">📈 Monthly Trend — Margin รายเดือน vs เป้า 300K</div>'+
+  '<div style="font-size:10px;color:#64748b;font-style:italic;margin:6px 0 14px 2px">📌 จากโปรเจ็คจริง: SupplementDash.html — แท็บเปรียบเทียบ GM/ปี · YoY +17% · 2569 เฉลี่ย 345K vs 2568 เฉลี่ย 295K · QA พบ error 3 จุดก่อนส่งมอบ</div>'+
+
+  // ══════ ตัวอย่างที่ 3: QA Test Cases (10 ข้อ) ══════
+  '<div style="font-size:13px;font-weight:700;color:#1e3a5f;background:#eff6ff;border-left:3px solid #2563eb;padding:6px 10px;border-radius:4px;margin-bottom:10px;margin-top:10px">ตัวอย่างที่ 3 — QA Test Cases (10 ข้อ · พบ error 3 จุด → แก้ก่อนส่งมอบ · ผ่าน 10/10)</div>'+
+  '<div class="msection" style="margin-top:0">'+
+    '<div class="ms-title">🧪 QA Test Cases — 10 ข้อ (ครอบคลุมผลลัพธ์, filter, ข้อมูล, mobile)</div>'+
     '<table class="mtable">'+
-      '<tr><th>เดือน</th><th>รายได้</th><th>ต้นทุน</th><th>กำไร</th><th>Margin %</th><th>สถานะ</th></tr>'+
-      '<tr><td><b>ม.ค.</b></td><td>280K</td><td>248K</td><td>32K</td><td>11.4%</td><td><span class="pill amber">At-risk</span></td></tr>'+
-      '<tr><td><b>ก.พ.</b></td><td>310K</td><td>274K</td><td>36K</td><td>11.6%</td><td><span class="pill amber">At-risk</span></td></tr>'+
-      '<tr><td><b>มี.ค.</b></td><td>340K</td><td>299K</td><td>41K</td><td>12.1%</td><td><span class="pill green">On-track</span></td></tr>'+
-      '<tr><td><b>เม.ย.</b></td><td>360K</td><td>316K</td><td>44K</td><td>12.2%</td><td><span class="pill green">On-track</span></td></tr>'+
-      '<tr><td><b>พ.ค.</b></td><td>380K</td><td>333K</td><td>47K</td><td>12.4%</td><td><span class="pill green">On-track</span></td></tr>'+
-      '<tr><td><b>มิ.ย.</b></td><td>400K</td><td>351K</td><td>49K</td><td>12.3%</td><td><span class="pill green">On-track</span></td></tr>'+
+      '<tr><th>#</th><th>Test Case</th><th>ผลลัพธ์</th><th>สถานะ</th></tr>'+
+      '<tr><td><b>1</b></td><td>filter สาขา CNB → ยอด GM ตรงไหม</td><td>ตรง ✓</td><td><span class="pill green">ผ่าน</span></td></tr>'+
+      '<tr><td><b>2</b></td><td>filter สาขา CSK → ยอด GM ตรงไหม</td><td>ตรง ✓</td><td><span class="pill green">ผ่าน</span></td></tr>'+
+      '<tr><td><b>3</b></td><td>filter ทั้งหมด → ยอดรวมตรงไหม</td><td>ตรง ✓</td><td><span class="pill green">ผ่าน</span></td></tr>'+
+      '<tr style="background:#fef2f2"><td><b>4</b></td><td>ผลรวม GM ตรงไหม</td><td><b>ไม่ตรง ✗</b> (อ้างช่วงผิด)</td><td><span class="pill red">Error</span></td></tr>'+
+      '<tr style="background:#fef2f2"><td><b>5</b></td><td>YoY เปรียบเทียบเรียงถูกไหม</td><td><b>เรียงผิด ✗</b></td><td><span class="pill red">Error</span></td></tr>'+
+      '<tr><td><b>6</b></td><td>เปลี่ยนข้อมูล → ผลลัพธ์อัปเดตไหม</td><td>อัปเดต ✓</td><td><span class="pill green">ผ่าน</span></td></tr>'+
+      '<tr><td><b>7</b></td><td>filter เดือนทำงานไหม</td><td>ทำงาน ✓</td><td><span class="pill green">ผ่าน</span></td></tr>'+
+      '<tr><td><b>8</b></td><td>เพิ่มแถวใหม่ → ผลรวมอัปเดตไหม</td><td>รวม ✓</td><td><span class="pill green">ผ่าน</span></td></tr>'+
+      '<tr><td><b>9</b></td><td>ลบแถว → ผลรวมยังถูกไหม</td><td>ถูก ✓</td><td><span class="pill green">ผ่าน</span></td></tr>'+
+      '<tr style="background:#fef2f2"><td><b>10</b></td><td>mobile ดูได้ไหม</td><td><b>บางการ์ดซ้อนทับ ✗</b></td><td><span class="pill red">Error</span></td></tr>'+
     '</table>'+
-    '<div class="mline" style="height:70px;margin-top:8px">'+
-      '<svg viewBox="0 0 400 70" preserveAspectRatio="none">'+
-        '<line x1="0" y1="20" x2="400" y2="20" stroke="#ef4444" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>'+
-        '<text x="390" y="17" font-size="8" fill="#ef4444" text-anchor="end">เป้า 300K</text>'+
-        '<polyline points="10,50 80,44 150,36 220,30 290,24 360,18" fill="none" stroke="#10b981" stroke-width="2.5"/>'+
-        '<polyline points="10,55 80,50 150,44 220,40 290,36 360,33" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3,2"/>'+
-      '</svg>'+
+    '<div style="margin-top:8px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;color:#15803d">'+
+      '<b>✅ แก้ทั้ง 3 จุดก่อนส่งมอบ:</b><br>'+
+      '1) บอก AI ให้รวมข้อมูลทั้งคอลัมน์อัตโนมัติ<br>'+
+      '2) YoY → เรียงตามเดือน<br>'+
+      '3) Mobile → เพิ่ม responsive grid (grid-template-columns: 1fr ใน mobile breakpoint)<br>'+
+      '<b>ผล: ผ่าน test cases 10/10 — QA คือเหมือนเช็ครถก่อนส่งมอบ ตรวจทุกจุด ไม่ปล่อยให้ลูกค้าเจอก่อน</b>'+
     '</div>'+
-    '<div class="legend"><div class="lg"><span class="lg-dot" style="background:#10b981"></span> Margin จริง</div><div class="lg"><span class="lg-dot" style="background:#f59e0b"></span> ต้นทุน</div><div class="lg"><span class="lg-dot" style="background:#ef4444"></span> เป้า 300K</div></div>'+
-    '<div style="margin-top:4px;font-size:11px;color:#f59e0b">⚠️ Margin เฉลี่ย 12.3% ยังต่ำกว่าเป้า 15% · แนวโน้มปรับตัวดีขึ้นทุกเดือน</div>'+
   '</div>'+
-  // GM/คัน comparison
-  '<div class="msection">'+
-    '<div class="ms-title">🚗 GM/คัน Comparison — กำไรขั้นต้นต่อคัน</div>'+
-    '<table class="mtable">'+
-      '<tr><th>สาขา</th><th>คันที่ซ่อม</th><th>GM รวม</th><th>GM/คัน</th><th>สถานะ</th></tr>'+
-      '<tr><td>CNB</td><td>30</td><td>7,560</td><td><b style="color:#10b981">252</b></td><td><span class="pill green">ผ่าน</span></td></tr>'+
-      '<tr><td>CSK</td><td>72</td><td>18,000</td><td><b style="color:#10b981">250</b></td><td><span class="pill green">ผ่าน</span></td></tr>'+
-      '<tr><td>อื่นๆ</td><td>48</td><td>10,800</td><td><b style="color:#f59e0b">225</b></td><td><span class="pill amber">At-risk</span></td></tr>'+
-    '</table>'+
-    '<div style="margin-top:6px;font-size:11px;color:#64748b">เป้า GM/คัน ≥ 240 บาท · CNB และ CSK ผ่าน · สาขาอื่นๆ ต่ำกว่าเป้า</div>'+
-  '</div>'+
-  '<div style="font-size:10px;color:#64748b;font-style:italic;margin:0 0 2px 2px">📌 จากโปรเจ็คจริง: PMGI Parts (PMGI_Parts.html, 5 แท็บ, margin 226,549) — margin breakdown chart + monthly trend + GM/คัน comparison · Sheet: 18OLNEck</div>';
+  '<div style="font-size:10px;color:#64748b;font-style:italic;margin:0 0 2px 2px">📌 จากโปรเจ็คจริง: SupplementDash.html (4 แท็บ) — QA test cases 10 ข้อ · พบ error 3 จุดก่อนส่งมอบ · ผ่าน 10/10 · Sheet: 1pX7omIV</div>';
 }
 
 // ── 12. Standard Time Dashboard (M12 Consultant) ──
@@ -2241,10 +2212,10 @@ function envrDashboard(){
       '<tr><td>2. สีสื่อความหมาย</td><td>เขียว/เหลือง/แดง ตามสถานะ</td><td>ใช้ถูกต้อง</td><td>10</td><td><span class="pill green">ผ่าน</span></td></tr>'+
       '<tr><td>3. อ่านง่าย</td><td>font อ่านง่าย เครื่องหมายชัด</td><td>อ่านได้ทันที</td><td>9</td><td><span class="pill green">ผ่าน</span></td></tr>'+
       '<tr><td>4. ตอบคำถามผู้ใช้</td><td>สต็อกต่ำ? สั่งซื้อ? ใช้เท่าไหร่?</td><td>ครบทุกคำถาม</td><td>10</td><td><span class="pill green">ผ่าน</span></td></tr>'+
-      '<tr><td>5. สูตรถูก</td><td>SUMIFS, QUERY ถูกต้อง</td><td>ผลรวมตรง</td><td>10</td><td><span class="pill green">ผ่าน</span></td></tr>'+
+      '<tr><td>5. คำนวณถูก</td><td>ผลลัพธ์ถูกต้อง</td><td>ผลรวมตรง</td><td>10</td><td><span class="pill green">ผ่าน</span></td></tr>'+
       '<tr><td>6. Filter ทำงาน</td><td>15 ปุ่มกรองทำงานครบ</td><td>15/15 ทำงาน</td><td>9</td><td><span class="pill green">ผ่าน</span></td></tr>'+
       '<tr><td>7. อัปเดตอัตโนมัติ</td><td>Apps Script trigger ทำงาน</td><td>อัปเดตทุก 2 ชม.</td><td>8</td><td><span class="pill green">ผ่าน</span></td></tr>'+
-      '<tr><td>8. เอกสารประกอบครบ</td><td>คู่มือ + สูตร + owner</td><td>ครบ</td><td>9</td><td><span class="pill green">ผ่าน</span></td></tr>'+
+      '<tr><td>8. เอกสารประกอบครบ</td><td>คู่มือ + ผลลัพธ์ + owner</td><td>ครบ</td><td>9</td><td><span class="pill green">ผ่าน</span></td></tr>'+
       '<tr><td>9. แจ้งเตือนทำงาน</td><td>Telegram/LINE alert ส่งถึง</td><td>ส่งถึง 100%</td><td>10</td><td><span class="pill green">ผ่าน</span></td></tr>'+
       '<tr><td>10. Mobile responsive</td><td>แสดงผลถูกบนมือถือ</td><td>บางส่วนคาดเคลื่อน</td><td>5</td><td><span class="pill red">ไม่ผ่าน</span></td></tr>'+
     '</table>'+
@@ -2336,15 +2307,15 @@ function partsDashboard(){
       '<tr><td><b>P-005</b></td><td>ไฟท้าย LED</td><td>Toyota</td><td>Aftermarket</td><td>2,200</td><td>0</td><td><span class="pill red">หมด</span></td></tr>'+
     '</table>'+
   '</div>'+
-  // สูตรที่ใช้
+  // ผลลัพธ์ที่ต้องการ
   '<div class="msection">'+
-    '<div class="ms-title">🧮 สูตรที่ใช้</div>'+
+    '<div class="ms-title">🧮 ผลลัพธ์ที่ต้องการ — บอก AI ว่าต้องการเห็นอะไร</div>'+
     '<table class="mtable">'+
-      '<tr><th>สูตร</th><th>การใช้งาน</th></tr>'+
-      '<tr><td><code>COUNTIFS</code></td><td>นับจำนวนตามเงื่อนไขหลายข้อ (สต็อกต่ำ, หมด, Dead)</td></tr>'+
-      '<tr><td><code>FILTER</code></td><td>กรองรายการตามสถานะและยี่ห้อ</td></tr>'+
-      '<tr><td><code>QUERY</code></td><td>ดึงข้อมูลตามเงื่อนไขซับซ้อน 22+ filters</td></tr>'+
-      '<tr><td><code>VLOOKUP</code></td><td>ดึงราคาและสต็อกจาก Sheet ต่างกัน</td></tr>'+
+      '<tr><th>ผลลัพธ์ที่ต้องการ</th><th>วิธีบอก AI</th></tr>'+
+      '<tr><td>นับจำนวนตามเงื่อนไขหลายข้อ</td><td>"นับจำนวนที่สต็อกต่ำ หมด และ Dead แยกตามยี่ห้อ"</td></tr>'+
+      '<tr><td>กรองรายการตามสถานะและยี่ห้อ</td><td>"กรองเฉพาะสถานะหมดและยี่ห้อ Honda"</td></tr>'+
+      '<tr><td>ดึงข้อมูลตามเงื่อนไขซับซ้อน 22+ filters</td><td>"ดึงข้อมูลที่สต็อก < 5 และราคา > 1,000 เรียงตามราคาสูงสุด"</td></tr>'+
+      '<tr><td>ดึงราคาและสต็อกจาก Sheet ต่างกัน</td><td>"ดึงราคาจาก Sheet ราคา และสต็อกจาก Sheet สต็อก มารวมกัน"</td></tr>'+
     '</table>'+
   '</div>'+
   '<div style="font-size:10px;color:#64748b;font-style:italic;margin:6px 0 14px 2px">📌 จากโปรเจ็คจริง: Parts Checker (PartsChecker.html, 1,245 รายการ, 22+ filters) — 3 แท็บ (ค้นหา, เปรียบเทียบ, สถิติ) · 9 cards · 8 form groups · quick value/label/icon items</div>'+
@@ -3489,21 +3460,20 @@ function renderProjectShowcase(){
   var WR = 'https://script.google.com/macros/s/AKfycbyqPhGrk9706lZ5H0rOlNDDR1xPvW9aiIFpDILEZAQZB_7uzRAhE5JcJTaLeZ93SG-EAA/exec';
 
   var projects = [
-    {icon:'🧭', name:'CEO KPI Dashboard', desc:'Health Score 78/100 · Smart Insights · 4 KPI มิติ · auto Telegram 09:15', url:V4+'?ceokpi=1', color:'#2563eb', tag:'V4'},
-    {icon:'📊', name:'OKR Dashboard', desc:'5 กลุ่มงาน · 7 แท็บ (ภาพรวม, CEO, KPI, Mentor, ตรวจสอบ, แผนธุรกิจ) · 225 คน', url:V5+'?okrall=1', color:'#8b5cf6', tag:'V5'},
-    {icon:'📋', name:'แผนธุรกิจ PMSG', desc:'Business Model Canvas · S-Objectives 4 ข้อ · ทุนองค์กร 4 ด้าน · Action Plan', url:V5+'?okrall=1', color:'#f59e0b', tag:'ใหม่'},
-    {icon:'💰', name:'GM Dashboard', desc:'GM รายเดือน 12 เดือน · YoY · สัดส่วน ขาย/หลังการขาย · doughnut chart', url:V5+'?gm=1', color:'#10b981', tag:'V5'},
-    {icon:'🔧', name:'Repair Flow Dashboard', desc:'103 คันในระบบ · 1,447 ส่งมอบ · 8 สถานี · CNB 31 + CSK 72', url:V5+'?rf=1&view=index', color:'#3b82f6', tag:'V5'},
+    {icon:'🧭', name:'CEO KPI Dashboard', desc:'Health Score 78/100 · Smart Insights · 4 KPI มิติ · auto Telegram 09:15 · 4,632 รายการ (91% ผ่าน)', url:V4+'?ceokpi=1', color:'#2563eb', tag:'V4'},
+    {icon:'📊', name:'OKR Dashboard', desc:'7 แท็บ · 5 กลุ่มงาน · 147 คน · S-Objectives 3 ยุทธศาสตร์ · Action Plan 25 แผนงาน · RMM', url:V5+'?okrall=1', color:'#8b5cf6', tag:'V5'},
+    {icon:'💰', name:'GM Supplement', desc:'เคลือบแก้ว 58 คัน/เดือน (116%) · GM ผลิตภัณฑ์เสริม · YoY · 12 SA · Top 10 Products', url:V5+'?supplement=1', color:'#10b981', tag:'V5'},
+    {icon:'🔧', name:'Repair Flow', desc:'4 views · 103 คันในระบบ (CNB 31+CSK 72) · 1,447 ส่งมอบ · 8 สถานี · risk indicators', url:V5+'?rf=1&view=index', color:'#3b82f6', tag:'V5'},
     {icon:'📅', name:'BCT Calendar', desc:'ปฏิทินนัดรับบริการ · Form→LINE Notify · QC 90.8% (4,206/4,632)', url:V5+'?bct=ui', color:'#06b6d4', tag:'V5'},
-    {icon:'🪟', name:'เคลือบแก้ว (Supplement)', desc:'เคลือบแก้ว 58 คัน/เดือน (116%) · GM ผลิตภัณฑ์เสริม · เป้า 50/เดือน', url:V5+'?supplement=1', color:'#0ea5e9', tag:'V5'},
-    {icon:'🎯', name:'PR Dashboard', desc:'เป้าขายผลิตภัณฑ์เสริม · 5 แท็บ · 12 SA · Top 10 Products · เปรียบเทียบ', url:V5+'?pr=1', color:'#ec4899', tag:'V5'},
-    {icon:'🧪', name:'PMGI Parts', desc:'อะไหล่ทางเลือก · 5 แท็บ · margin 226,549 บาท · Top 10 · 3 suppliers', url:V5+'?pmgi=1', color:'#84cc16', tag:'V5'},
-    {icon:'📈', name:'Finance P&L', desc:'งบการเงิน 5 ปี · รายได้/ต้นทุน/กำไร · bar chart เปรียบเทียบงวด', url:V5+'?finance=1', color:'#6366f1', tag:'V5'},
+    {icon:'🎯', name:'PR Dashboard', desc:'เป้าขายผลิตภัณฑ์เสริม · 4 แท็บ · 12 SA · Top 10 Products · เปรียบเทียบรายบุคคล', url:V5+'?pr=1', color:'#ec4899', tag:'V5'},
+    {icon:'🪟', name:'GM Supplement', desc:'เคลือบแก้ว 58 คัน/เดือน (116%) · GM ผลิตภัณฑ์เสริม · YoY +17% · 12 SA · Top 10 Products · 4 แท็บ', url:V5+'?supplement=1', color:'#84cc16', tag:'V5'},
+    {icon:'📈', name:'Finance P&L', desc:'งบการเงิน 5 ปี (2565-2569) · 3 units (PMGgr/PMG/PMGI) · bar chart YoY', url:V5+'?finance=1', color:'#6366f1', tag:'V5'},
     {icon:'👥', name:'Eval360 Dashboard', desc:'360° ประเมิน 510 คน · 5 บริษัท · Ranking · Team Analysis · Radar', url:V5+'?eval360=1', color:'#f97316', tag:'V5'},
-    {icon:'🛡️', name:'War Room', desc:'16 tabs · real-time API · Monitor 6 cards · OKR · Service Mix · YoY', url:WR, color:'#ef4444', tag:'V3'},
-    {icon:'🔍', name:'Parts Checker', desc:'ตรวจสอบอะไหล่ · สต็อก · Top 10 ใกล้หมด · ฟิลเตอร์หมวด/สาขา', url:V5+'?parts=1', color:'#14b8a6', tag:'V5'},
-    {icon:'⏱️', name:'Standard Time', desc:'เวลามาตรฐาน · สถานีซ่อม · รอบหมุน · ประสิทธิภาพ', url:V5+'?stdtime=1', color:'#a855f7', tag:'V5'},
-    {icon:'📚', name:'Course (หลักสูตรนี้)', desc:'16 โมดูล · 13 ตัวอย่าง Dashboard · Google Form M16 · Best Practice', url:V5+'?course=1', color:'#f59e0b', tag:'V5'},
+    {icon:'🛡️', name:'War Room', desc:'16 tabs · session token + 2FA · intrusion detection · Telegram alert · Monitor 6 cards', url:WR, color:'#ef4444', tag:'V3'},
+    {icon:'🔍', name:'Parts Checker', desc:'ตรวจสอบอะไหล่ · 3 แท็บ · 22+ filters · 1,245 รายการ · side-by-side comparison', url:V5+'?parts=1', color:'#14b8a6', tag:'V5'},
+    {icon:'⏱️', name:'Standard Time', desc:'เวลามาตรฐาน · 16 สถานี · Gantt timeline · 21.9 วัน · ISO 9001 SOP/WI', url:V5+'?stdtime=1', color:'#a855f7', tag:'V5'},
+    {icon:'🛢️', name:'ENVR น้ำมัน', desc:'4 น้ำมัน · 15 ไส้กรอง · 17 KPI · Review 90/100 (Grade A) · 15 filter buttons', url:V5+'?envr=1', color:'#0d9488', tag:'V5'},
+    {icon:'📚', name:'Course (หลักสูตรนี้)', desc:'16 โมดูล · 13 ตัวอย่าง Dashboard · Google Form M16 · Best Practice · PDPA 2FA', url:V5+'?course=1', color:'#f59e0b', tag:'V5'},
   ];
 
   var cards = projects.map(function(p, i){
@@ -3525,7 +3495,7 @@ function renderProjectShowcase(){
   return ''+
   '<div class="block">'+
     '<h3><span class="b-icon">🏆</span> โปรเจ็คตัวอย่างทั้งหมด (All Project Showcase)</h3>'+
-    '<div class="tip-callout" style="margin-bottom:14px"><b>15 โปรเจ็คจริง</b> ที่ทีม PMSG สร้างด้วย AI — คลิกที่การ์ดเพื่อเปิด Dashboard จริง และใช้เป็นตัวอย่างอ้างอิงในการสร้าง Dashboard ของคุณ</div>'+
+    '<div class="tip-callout" style="margin-bottom:14px"><b>14 โปรเจ็คจริง</b> ที่ทีม PMSG สร้างด้วย AI — คลิกที่การ์ดเพื่อเปิด Dashboard จริง และใช้เป็นตัวอย่างอ้างอิงในการสร้าง Dashboard ของคุณ</div>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">'+
       cards+
     '</div>'+
@@ -3603,8 +3573,8 @@ function renderCapstone(){
     {t:'วิเคราะห์ข้อมูล',d:'ดูข้อมูลดิบ หาแนวโน้ม'},
     {t:'เสนอ KPI',d:'เลือก KPI ที่ตอบโจทย์'},
     {t:'ออกแบบ Layout',d:'วางตำแหน่ง summary→trend→detail'},
-    {t:'สร้างสูตร',d:'SUMIFS QUERY SPARKLINE'},
-    {t:'สร้าง Dashboard',d:'ประกอบสูตร+chart เป็นหน้าจบ'},
+    {t:'กำหนดผลลัพธ์',d:'บอก AI ว่าต้องการเห็นอะไร'},
+    {t:'สร้าง Dashboard',d:'ประกอบผลลัพธ์+chart เป็นหน้าจบ'},
     {t:'ตรวจสอบ',d:'ใช้ Review Checklist'},
     {t:'ปรับปรุง',d:'PDCA — รับ feedback พัฒนาต่อ'}
   ];
@@ -3638,7 +3608,7 @@ function renderCapstone(){
       '</div>'+
       '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:16px">'+
         '<div style="font-size:13px;font-weight:700;color:#ef4444;margin-bottom:6px">🔴 Advanced</div>'+
-        '<div style="font-size:12px;color:#475569;line-height:1.6">เพิ่มเงื่อนไข สูตร สี layout ใน Prompt<br><code style="font-size:10px">+ สีตามระบบ PMG + layout inverted pyramid</code>'+
+        '<div style="font-size:12px;color:#475569;line-height:1.6">เพิ่มเงื่อนไข ผลลัพธ์ สี layout ใน Prompt<br><code style="font-size:10px">+ สีตามระบบ PMG + layout inverted pyramid</code>'+
         '<div style="margin-top:8px;font-size:11px;color:#64748b">✓ ใช้งานได้จริง<br>✓ ตรงความต้องการ</div></div>'+
       '</div>'+
     '</div>';

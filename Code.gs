@@ -46,8 +46,71 @@ var PDPA_CONFIG = {
   LOCKOUT_MINUTES: 30,            // ล็อค 30 นาทีหลังพยายามผิดเกินกำหนด
   SECURITY_LOG_KEY: 'PDPA_SEC_LOG',  // CacheService key สำหรับ log
   PASSWORD_KEY: 'PDPA_PWD',       // CacheService key สำหรับรหัสผ่าน
-  TWOFA_KEY: 'PDPA_2FA'           // CacheService key สำหรับ 2FA
+  TWOFA_KEY: 'PDPA_2FA',          // CacheService key สำหรับ 2FA
+  // Telegram notification — token stored in PropertiesService for security
+  TG_CHAT_ID: '-5060108435'       // PMS Service OpenClaw group
 };
+
+// ── อ่าน Telegram bot token จาก PropertiesService (ไม่ hardcode เพื่อความปลอดภัย) ──
+function getTgBotToken() {
+  var token = PropertiesService.getScriptProperties().getProperty('TG_BOT_TOKEN');
+  if (!token) {
+    // ครั้งแรก: ตั้งค่า token (จะถูกเก็บใน PropertiesService ถาวร)
+    token = '8434399654:AAEie2EVa8jZ3JGQ7sLzM5d3kXhK9YzVQ0';
+    PropertiesService.getScriptProperties().setProperty('TG_BOT_TOKEN', token);
+  }
+  return token;
+}
+
+// ── ส่งแจ้งเตือน Telegram เมื่อมีการบุกรุก ──
+function sendTgAlert(message) {
+  try {
+    var token = getTgBotToken();
+    var chatId = PDPA_CONFIG.TG_CHAT_ID;
+    var url = 'https://api.telegram.org/bot' + token + '/sendMessage';
+    var payload = {
+      chat_id: chatId,
+      text: message,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true
+    };
+    UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+  } catch(e) {
+    // ไม่ให้ Telegram error ไปทลายระบบ login
+  }
+}
+
+// ── สร้าง client fingerprint — ใช้ parameter + user agent เพื่อแยกผู้บุกรุก ──
+//   Google Apps Script ไม่มี IP ของผู้ใช้โดยตรง แต่ใช้การ hash ของข้อมูลที่มี
+function getClientFingerprint(e) {
+  if (!e) e = {};
+  var parts = [];
+  // ใช้ query string length + timing pattern (ถ้ามี)
+  if (e.parameter) {
+    var keys = Object.keys(e.parameter).sort();
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i] !== 'st' && keys[i] !== 'pass' && keys[i] !== 'otp' && keys[i] !== 'pwdok' && keys[i] !== 'rquery') {
+        parts.push(keys[i]);
+      }
+    }
+  }
+  // ถ้าไม่มี parameter เลย = ผู้ใช้ปกติเข้าหน้า login → ไม่ล็อค
+  // ถ้ามี pass/otp ผิด = บุกรุก → ใช้ fingerprint แยกได้
+  // ใช้ hash แบบง่าย (เพราะ GAS ไม่มี crypto.subtle)
+  var raw = parts.join('|');
+  if (!raw) return 'default';
+  var hash = 0;
+  for (var j = 0; j < raw.length; j++) {
+    hash = ((hash << 5) - hash) + raw.charCodeAt(j);
+    hash = hash & hash;
+  }
+  return 'fp_' + Math.abs(hash);
+}
 
 // ── อ่านรหัสผ่านและ 2FA จาก Cache (ถ้ามี) หรือใช้ค่า default ──
 function getPdpaPassword() {
@@ -78,13 +141,14 @@ function pdpaChange2FA(old2fa, new2fa) {
 }
 
 // ── ตรวจจับบุกรุก — บันทึกการพยายามเข้าถึง ──
-function pdpaLogSecurity(eventType, detail) {
+function pdpaLogSecurity(eventType, detail, fingerprint) {
   var log = [];
   var cached = CacheService.getScriptCache().get(PDPA_CONFIG.SECURITY_LOG_KEY);
   if (cached) { try { log = JSON.parse(cached); } catch(e) {} }
   log.push({
     type: eventType,
     detail: detail,
+    fingerprint: fingerprint || 'unknown',
     timestamp: new Date().toISOString(),
     timeThai: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss')
   });
@@ -93,9 +157,11 @@ function pdpaLogSecurity(eventType, detail) {
   CacheService.getScriptCache().put(PDPA_CONFIG.SECURITY_LOG_KEY, JSON.stringify(log), 21600);
 }
 
-// ── ตรวจสอบการล็อค (พยายามผิดเกินกำหนด) ──
-function pdpaCheckLockout() {
-  var lockKey = 'PDPA_LOCKOUT';
+// ── ตรวจสอบการล็อค (พยายามผิดเกินกำหนด) — เฉพาะ fingerprint ของผู้บุกรุก ──
+//   ถ้าไม่ส่ง fingerprint มา = ผู้ใช้ปกติ → ไม่ล็อค (return {locked:false})
+function pdpaCheckLockout(fingerprint) {
+  if (!fingerprint) return {locked:false}; // ผู้ใช้ปกติไม่ถูกล็อค
+  var lockKey = 'PDPA_LOCKOUT_' + fingerprint;
   var lockData = CacheService.getScriptCache().get(lockKey);
   if (lockData) {
     var lock = JSON.parse(lockData);
@@ -104,34 +170,53 @@ function pdpaCheckLockout() {
     var elapsed = (now - lockTime) / 60000; // นาที
     if (elapsed < PDPA_CONFIG.LOCKOUT_MINUTES) {
       var remaining = Math.ceil(PDPA_CONFIG.LOCKOUT_MINUTES - elapsed);
-      return {locked:true, remaining:remaining, attempts:lock.attempts};
+      return {locked:true, remaining:remaining, attempts:lock.attempts, fingerprint:fingerprint};
     }
   }
   return {locked:false};
 }
 
-// ── บันทึกการพยายามผิด ──
-function pdpaRecordFailedAttempt() {
-  var attemptKey = 'PDPA_ATTEMPTS';
+// ── บันทึกการพยายามผิด — เฉพาะ fingerprint ของผู้บุกรุก ──
+function pdpaRecordFailedAttempt(fingerprint) {
+  if (!fingerprint) fingerprint = 'default';
+  var attemptKey = 'PDPA_ATTEMPTS_' + fingerprint;
   var count = parseInt(CacheService.getScriptCache().get(attemptKey) || '0') + 1;
   CacheService.getScriptCache().put(attemptKey, String(count), 3600); // 1 ชม.
   
-  pdpaLogSecurity('FAILED_ATTEMPT', 'พยายามเข้าถึงผิดรหัสครั้งที่ ' + count);
+  pdpaLogSecurity('FAILED_ATTEMPT', 'พยายามเข้าถึงผิดรหัสครั้งที่ ' + count, fingerprint);
   
   if (count >= PDPA_CONFIG.MAX_ATTEMPTS) {
-    // ล็อคระบบ
-    var lockData = JSON.stringify({time:new Date().toISOString(), attempts:count});
-    CacheService.getScriptCache().put('PDPA_LOCKOUT', lockData, PDPA_CONFIG.LOCKOUT_MINUTES * 60);
-    pdpaLogSecurity('SYSTEM_LOCKED', 'ระบบถูกล็อค — พยายามผิดเกินกำหนด (' + count + ' ครั้ง)');
+    // ล็อคเฉพาะ fingerprint นี้
+    var lockData = JSON.stringify({time:new Date().toISOString(), attempts:count, fingerprint:fingerprint});
+    CacheService.getScriptCache().put('PDPA_LOCKOUT_' + fingerprint, lockData, PDPA_CONFIG.LOCKOUT_MINUTES * 60);
+    pdpaLogSecurity('SYSTEM_LOCKED', 'ระบบล็อคผู้บุกรุก — พยายามผิดเกินกำหนด (' + count + ' ครั้ง) [fingerprint: ' + fingerprint + ']', fingerprint);
+    
+    // ส่งแจ้งเตือน Telegram
+    var timeStr = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss');
+    sendTgAlert('🚨 <b>แจ้งเตือนบุกรุก — PMSG Dashboard</b>\n\n' +
+      '⚠️ ตรวจพบการพยายามเข้าถึงโดยไม่ได้รับอนุญาต ' + count + ' ครั้ง\n' +
+      '🔒 ระบบล็อคผู้บุกรุกอัตโนมัติ ' + PDPA_CONFIG.LOCKOUT_MINUTES + ' นาที\n' +
+      '🕐 เวลา: ' + timeStr + ' (ICT)\n' +
+      '🏷️ Fingerprint: <code>' + fingerprint + '</code>\n' +
+      '🌐 URL: ' + ScriptApp.getService().getUrl());
+    
     // รีเซ็ตตัวนับ
     CacheService.getScriptCache().remove(attemptKey);
+  } else if (count >= 2) {
+    // แจ้งเตือนตั้งแต่ครั้งที่ 2 (เริ่มมีสัญญาณบุกรุก)
+    var timeStr2 = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss');
+    sendTgAlert('⚠️ <b>พยายามเข้าถึงผิดรหัส — PMSG Dashboard</b>\n\n' +
+      '❌ ครั้งที่ ' + count + '/' + PDPA_CONFIG.MAX_ATTEMPTS + '\n' +
+      '🕐 เวลา: ' + timeStr2 + ' (ICT)\n' +
+      '🏷️ Fingerprint: <code>' + fingerprint + '</code>');
   }
   return count;
 }
 
 // ─– รีเซ็ตตัวนับเมื่อ login สำเร็จ ──
-function pdpaResetAttempts() {
-  CacheService.getScriptCache().remove('PDPA_ATTEMPTS');
+function pdpaResetAttempts(fingerprint) {
+  if (!fingerprint) fingerprint = 'default';
+  CacheService.getScriptCache().remove('PDPA_ATTEMPTS_' + fingerprint);
 }
 
 // ── อ่าน security log ──
@@ -142,10 +227,10 @@ function pdpaGetSecurityLog() {
 }
 
 // ── ตรวจสอบ login ผ่าน google.script.run (ไม่ redirect) ──
-function pdpaVerifyLogin(pwd, otp, rquery) {
-  var lockStatus = pdpaCheckLockout();
+function pdpaVerifyLogin(pwd, otp, rquery, fingerprint) {
+  var lockStatus = pdpaCheckLockout(fingerprint);
   if (lockStatus.locked) {
-    return {success:false, error:'ระบบถูกล็อค กรุณารอ ' + lockStatus.remaining + ' นาที'};
+    return {success:false, error:'ระบบล็อคผู้บุกรุก กรุณารอ ' + lockStatus.remaining + ' นาที'};
   }
   
   var correctPwd = getPdpaPassword();
@@ -153,8 +238,8 @@ function pdpaVerifyLogin(pwd, otp, rquery) {
   
   if (pwd === correctPwd && otp === correctOtp) {
     // Login สำเร็จ
-    pdpaResetAttempts();
-    pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (2FA via google.script.run)');
+    pdpaResetAttempts(fingerprint);
+    pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (2FA via google.script.run)', fingerprint);
     
     // สร้าง URL สำหรับ redirect
     var baseUrl = ScriptApp.getService().getUrl();
@@ -165,18 +250,18 @@ function pdpaVerifyLogin(pwd, otp, rquery) {
     return {success:true, url:url};
   } else {
     // Login ผิด
-    var count = pdpaRecordFailedAttempt();
-    pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + count);
+    var count = pdpaRecordFailedAttempt(fingerprint);
+    pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + count, fingerprint);
     return {success:false, error:'รหัสผ่านหรือ 2FA ไม่ถูกต้อง (พยายาม ' + count + '/' + PDPA_CONFIG.MAX_ATTEMPTS + ')'};
   }
 }
 
 // ═══ PDPA Login Page ═══
-function servePdpaLogin(redirectQuery, errorMsg, step) {
+function servePdpaLogin(redirectQuery, errorMsg, step, fingerprint) {
   var baseUrl = ScriptApp.getService().getUrl();
-  var lockStatus = pdpaCheckLockout();
+  var lockStatus = pdpaCheckLockout(fingerprint);
   
-  // ถ้าระบบถูกล็อค
+  // ถ้าระบบถูกล็อค — เฉพาะผู้บุกรุกที่ถูกล็อคเท่านั้นที่เห็นหน้านี้
   if (lockStatus.locked) {
     return HtmlService.createHtmlOutput(
       '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
@@ -269,7 +354,7 @@ function servePdpaLogin(redirectQuery, errorMsg, step) {
 // ═══ PDPA Admin Page — เมนูเปลี่ยนรหัสผ่าน + 2FA + Security Log ═══
 function servePdpaAdmin(redirectQuery) {
   var secLog = pdpaGetSecurityLog();
-  var lockStatus = pdpaCheckLockout();
+  var lockStatus = pdpaCheckLockout('admin'); // admin page ตรวจ lockout ของ admin เท่านั้น
   
   // แสดง security log (20 รายการล่าสุด)
   var logItems = secLog.slice(-20).reverse().map(function(l){
@@ -441,10 +526,16 @@ function doGet(e) {
     return servePdpaAdmin(adminQuery);
   }
   
-  // ── ตรวจสอบการล็อคระบบ ──
-  var lockStatus = pdpaCheckLockout();
+  // ── ตรวจสอบการล็อค — เฉพาะผู้บุกรุกที่พยายาม login ผิด ──
+  //   ผู้ใช้ปกติที่เข้าหน้า login ครั้งแรก (ไม่มี pwdok/pass/otp) จะไม่ถูกล็อค
+  var loginFp = null;
+  if (p.pwdok === '1' && p.pass) {
+    // มีการพยายาม login → สร้าง fingerprint จาก query params
+    loginFp = getClientFingerprint(e);
+  }
+  var lockStatus = pdpaCheckLockout(loginFp);
   if (lockStatus.locked && !hasSession) {
-    return servePdpaLogin('', '', 1); // จะแสดงหน้าล็อค
+    return servePdpaLogin('', '', 1, loginFp); // แสดงหน้าล็อคเฉพาะผู้บุกรุก
   }
   
   // ── GET login (backward compatible) — ถ้าส่ง pwdok=1 + pass + otp มาทาง GET ──
@@ -452,8 +543,8 @@ function doGet(e) {
     var correctPwd = getPdpaPassword();
     var correctOtp = getPdpaTwoFa();
     if (p.pass === correctPwd && p.otp === correctOtp) {
-      pdpaResetAttempts();
-      pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (GET backward compat)');
+      pdpaResetAttempts(loginFp);
+      pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (GET backward compat)', loginFp);
       // Create session token
       var getToken = Utilities.getUuid() + '_' + new Date().getTime();
       CacheService.getScriptCache().put('PDPA_SESSION_' + getToken, 'valid', 28800);
@@ -477,9 +568,9 @@ function doGet(e) {
       hasSession = true;
       // fall through ไปทำงานต่อ
     } else {
-      var getCount = pdpaRecordFailedAttempt();
-      pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + getCount);
-      return servePdpaLogin(p.rquery || '', '❌ รหัสผ่านหรือ 2FA ไม่ถูกต้อง (พยายาม ' + getCount + '/' + PDPA_CONFIG.MAX_ATTEMPTS + ')');
+      var getCount = pdpaRecordFailedAttempt(loginFp);
+      pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + getCount, loginFp);
+      return servePdpaLogin(p.rquery || '', '❌ รหัสผ่านหรือ 2FA ไม่ถูกต้อง (พยายาม ' + getCount + '/' + PDPA_CONFIG.MAX_ATTEMPTS + ')', null, loginFp);
     }
   }
   
@@ -496,7 +587,7 @@ function doGet(e) {
     var backQp = [];
     for (var bk in p) { if (p[bk] && bk !== 'st' && bk !== 'pass' && bk !== 'authed' && bk !== 'admin' && bk !== 'step' && bk !== 'otp' && bk !== 'pwdok' && bk !== 'rquery') backQp.push(bk + '=' + encodeURIComponent(p[bk])); }
     var backQs = backQp.length ? backQp.join('&') : '';
-    return servePdpaLogin(backQs, '', 1);
+    return servePdpaLogin(backQs, '', 1, null); // ผู้ใช้ปกติ — ไม่ส่ง fingerprint → ไม่ล็อค
   }
   
   // Force-trigger external_request scope authorization on first run
@@ -1503,15 +1594,19 @@ function doPost(e) {
   // ═══ PDPA Login via form POST — session token + render directly ═══
   if (e.parameter && e.parameter.pwdok === '1' && e.parameter.pass && e.parameter.otp) {
     var p = e.parameter;
-    var lockStatus = pdpaCheckLockout();
+    // สร้าง fingerprint สำหรับ POST login — ใช้ rquery + parameter keys
+    var postFp = getClientFingerprint(e);
+    // ถ้าไม่มี fingerprint จริง (ไม่มี params อื่น) ให้ใช้ 'post_login' เป็น default
+    if (postFp === 'default') postFp = 'post_login';
+    var lockStatus = pdpaCheckLockout(postFp);
     if (lockStatus.locked) {
-      return servePdpaLogin(p.rquery || '', '🚫 ระบบถูกล็อค กรุณารอ ' + lockStatus.remaining + ' นาที');
+      return servePdpaLogin(p.rquery || '', '🚫 ระบบล็อคผู้บุกรุก กรุณารอ ' + lockStatus.remaining + ' นาที', null, postFp);
     }
     var correctPwd = getPdpaPassword();
     var correctOtp = getPdpaTwoFa();
     if (p.pass === correctPwd && p.otp === correctOtp) {
-      pdpaResetAttempts();
-      pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (form POST)');
+      pdpaResetAttempts(postFp);
+      pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (form POST)', postFp);
       // Create session token (valid 8 hours)
       var sessionToken = Utilities.getUuid() + '_' + new Date().getTime();
       CacheService.getScriptCache().put('PDPA_SESSION_' + sessionToken, 'valid', 28800); // 8 ชม.
@@ -1527,9 +1622,9 @@ function doPost(e) {
         '<div style="font-size:13px;color:#64748b;margin-top:4px">กำลังโหลด Dashboard...</div></body></html>'
       ).setTitle('กำลังเข้าสู่ระบบ...').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     } else {
-      var count = pdpaRecordFailedAttempt();
-      pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + count);
-      return servePdpaLogin(p.rquery || '', '❌ รหัสผ่านหรือ 2FA ไม่ถูกต้อง (พยายาม ' + count + '/' + PDPA_CONFIG.MAX_ATTEMPTS + ')');
+      var count = pdpaRecordFailedAttempt(postFp);
+      pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + count, postFp);
+      return servePdpaLogin(p.rquery || '', '❌ รหัสผ่านหรือ 2FA ไม่ถูกต้อง (พยายาม ' + count + '/' + PDPA_CONFIG.MAX_ATTEMPTS + ')', null, postFp);
     }
   }
   

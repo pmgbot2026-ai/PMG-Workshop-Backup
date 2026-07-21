@@ -1221,6 +1221,44 @@ function switchTab(tabId, btn) {
 function renderBusinessPlan() {
   var html = '';
 
+  // ── โหลด CEO KPI actual results แบบ async ──
+  if (typeof CEO_KPI_ACTUALS === 'undefined') {
+    CEO_KPI_ACTUALS = [];
+    // โหลดจาก CEO ทุกคน
+    var ceoLeaders = [
+      { name: 'สมศักดิ์ ธัมมะปาละ', dept: 'PMG/PMGI' },
+      { name: 'กาญจนา ขุนจิตต์', dept: 'PMS ขาย' },
+      { name: 'ชุติมา สิทธิบุศย์', dept: 'PMS ศูนย์บริการ' },
+      { name: 'ณัฐภัทร ขุนจิตต์', dept: 'PMS ขาย' },
+      { name: 'กาญจนา ขุนจิตต์', dept: 'PMS ศูนย์บริการ' },
+      { name: 'ณัฐภัทร ขุนจิตต์', dept: 'PMS/PMG Backoffice' }
+    ];
+    var loadedCount = 0;
+    ceoLeaders.forEach(function(leader) {
+      try {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result && result.kpi && result.kpi.items) {
+              CEO_KPI_ACTUALS = CEO_KPI_ACTUALS.concat(result.kpi.items);
+            }
+            loadedCount++;
+            if (loadedCount >= ceoLeaders.length) {
+              // Re-render business plan section เมื่อโหลดครบ
+              var bpSection = document.querySelector('[data-tab="businessplan"]');
+              if (bpSection) {
+                bpSection.dataset.rendered = '';
+                renderBusinessPlan();
+              }
+            }
+          })
+          .withFailureHandler(function() {
+            loadedCount++;
+          })
+          .gsGetCEOData(leader.name, leader.dept);
+      } catch(e) { loadedCount++; }
+    });
+  }
+
   // ── Hero ──
   html += '<div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 50%,#3b82f6 100%);color:#fff;padding:24px 28px;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 20px rgba(59,130,246,0.2)">'+
     '<div style="font-size:24px;font-weight:800;margin-bottom:6px">📋 แผนธุรกิจ PMSG (Business Plan)</div>'+
@@ -1693,8 +1731,32 @@ function renderBusinessPlan() {
         var firstCeo = allCeoKrs.length > 0 ? allCeoKrs[0] : null;
         var target = firstCeo ? firstCeo.target : (kr.pdfTarget || null);
         var ceoSource = firstCeo ? firstCeo.source : null;
+        // ดึงผลลัพธ์ปัจจุบันจาก CEO_KPI_ACTUALS (ถ้าโหลดแล้ว)
         var actual = kr.pdfActual || null;
         var statusStr = kr.pdfStatus || null;
+        var actualPct = 0;
+        if (typeof CEO_KPI_ACTUALS !== 'undefined' && CEO_KPI_ACTUALS && CEO_KPI_ACTUALS.length > 0) {
+          // Match KR กับ CEO KPI items โดยใช้ keyword
+          for (var ai = 0; ai < CEO_KPI_ACTUALS.length; ai++) {
+            var kpiItem = CEO_KPI_ACTUALS[ai];
+            var kpiText = (kpiItem.krText || '').toLowerCase();
+            var matched = false;
+            for (var kwi = 0; kwi < kr.kw.length; kwi++) {
+              if (kpiText.indexOf(kr.kw[kwi].toLowerCase()) >= 0) { matched = true; break; }
+            }
+            if (matched && kpiItem.status !== 'no-data' && kpiItem.status !== 'skip') {
+              actual = kpiItem.currentValue ? String(kpiItem.currentValue) : actual;
+              target = kpiItem.targetValue ? String(kpiItem.targetValue) : target;
+              actualPct = kpiItem.progressPct || 0;
+              if (actualPct > 0) {
+                statusStr = actualPct >= 100 ? '✅ บรรลุเป้า ' + actualPct + '%' : 
+                           actualPct >= 80 ? '⚠️ ใกล้เป้า ' + actualPct + '%' : 
+                           '🔴 ต่ำกว่าเป้า ' + actualPct + '%';
+              }
+              break;
+            }
+          }
+        }
         // สร้าง owners array สำหรับ KR นี้
         var krOwners = allCeoKrs.map(function(ckr) {
           return { personName: ckr.personName, deptName: ckr.deptName };
