@@ -579,7 +579,7 @@ function doGet(e) {
     // fall through ไปทำงานต่อ
   }
   // ── API endpoints ไม่ต้อง login ──
-  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action)) || p.pmwi === '1' || p.stdtime === '1') {
+  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action)) || p.pmwi === '1' || p.stdtime === '1' || p.envr === '1' || p.parts === '1' || p.pmgi === '1' || p.finance === '1' || p.supplement === '1' || p.pr === '1' || p.course === '1' || p.billing === '1' || p.gm === '1' || p.rf === '1' || p.bct === 'ui' || p.bct === '1' || p.eval360 === '1') {
     // fall through — API/embed bypass
   }
   // ── ถ้าไม่มี session และไม่ใช่ API — แสดงหน้า login ──
@@ -12095,7 +12095,7 @@ function partsCheckParts_(quotationUrl) {
     }
     
     // Parse HTML table: extract codes and names from <tr> rows
-    // Each row has <td> for code and <td> for name — parse row by row for accuracy
+    // BCT JSP แสดงอะไหล่หลายตัวใน 1 cell (คั่นด้วย <BR>) ต้องแยกออกเป็นรายการคนละบรรทัด
     var trPattern = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
     var parts = [];
     var trMatch;
@@ -12108,53 +12108,68 @@ function partsCheckParts_(quotationUrl) {
       while ((tdM = tdRe.exec(trContent)) !== null) {
         tdInRow.push(tdM[1]);
       }
-      // Look for a td with a 10-digit code, then find the td with the name
-      // Code td: contains <p>1234567890<BR>
-      // Name td: contains <p>SOMETHING<BR> (not just digits)
+      
+      // ── NEW: แยก cell ที่มีหลาย <BR> ออกเป็น sub-items ──
+      // แต่ละ cell อาจมีหลายบรรทัด: <p>1234567890<BR> <p>9876543210<BR> ...
+      // ต้อง split ตาม <BR> แล้วหารหัส + ชื่อในแต่ละบรรทัด
+      var allCodesInRow = [];
+      var allNamesInRow = [];
       for (var tdi = 0; tdi < tdInRow.length; tdi++) {
-        var codeMatch = /<p>(\d{10})<BR>/.exec(tdInRow[tdi]);
-        if (!codeMatch) continue;
-        var code = codeMatch[1];
-        // Find the name in the NEXT td that has text content
-        var pName = '';
-        for (var nti = tdi + 1; nti < tdInRow.length; nti++) {
-          var nameMatch = /<p>([^<]+?)<BR>/.exec(tdInRow[nti]);
-          if (nameMatch) {
-            pName = nameMatch[1].replace(/&nbsp;/g, '').replace(/&#43;/g, '+').trim();
-            break;
+        var cellContent = tdInRow[tdi];
+        // แยกตาม <BR> หรือ <br>
+        var subLines = cellContent.split(/<BR\s*\/?>/i);
+        for (var sli = 0; sli < subLines.length; sli++) {
+          var subLine = subLines[sli].replace(/<[^>]+>/g, '').replace(/&nbsp;/g, '').replace(/&#43;/g, '+').trim();
+          if (!subLine) continue;
+          // ตรวจว่าเป็นรหัส 10 หลักหรือไม่
+          var codeMatch = /^(\d{10})$/.exec(subLine) || /(\d{10})/.exec(subLine);
+          if (codeMatch && subLine.length <= 12) {
+            allCodesInRow.push(codeMatch[1]);
+          }
+          // ตรวจว่าเป็นชื่ออะไหล่หรือไม่ (ไม่ใช่ตัวเลข/ไม่ใช่ header)
+          if (subLine.length >= 3 && subLine.length <= 80 && !/^\d/.test(subLine)) {
+            if (subLine.indexOf('***') < 0 && subLine.indexOf('ค่าแรง') < 0 &&
+                subLine.indexOf('ค่าอะไหล่') < 0 && subLine !== 'เปลี่ยน' && subLine !== 'เบา' &&
+                subLine.indexOf('ทำสี') < 0 && subLine.indexOf('ซ่อม') < 0 &&
+                subLine.indexOf('หมายเหตุ') < 0 && subLine.indexOf('ราคา') < 0 &&
+                subLine.indexOf('รวม') < 0 && subLine.indexOf('ส่วนลด') < 0 &&
+                subLine.indexOf('VAT') < 0 && subLine.indexOf('จำนวน') < 0 &&
+                subLine.indexOf('หน่วย') < 0 && subLine.indexOf('บาท') < 0 &&
+                subLine.indexOf('เครดิต') < 0 && subLine.indexOf('รถยี่ห้อ') < 0 &&
+                subLine.indexOf('ทะเบียน') < 0 && subLine.indexOf('เลขที่') < 0 &&
+                subLine.indexOf('วันที่') < 0 && subLine.indexOf('ชื่อ') < 0 &&
+                subLine.indexOf('SA') >= 0 && subLine.length < 10 ? false : true) {
+              if (subLine === 'ISUZU' || subLine === 'Genuine' || subLine === 'Parts') continue;
+              if (subLine === 'รายการ' || subLine === 'ลำดับ') continue;
+              if (subLine === 'no.' || subLine === 'No.' || subLine === 'NO.') continue;
+              if (subLine === 'ราคา/หน่วย' || subLine === 'ราคารวม' || subLine === 'จำนวนเงิน') continue;
+              allNamesInRow.push(subLine);
+            }
           }
         }
-        if (!pName) continue;
-        // Filter out non-part-name text
+      }
+      
+      // Pair codes with names (code[i] → name[i])
+      // ถ้ามีหลาย codes และหลาย names ในแถวเดียว → แยกเป็นอะไหล่หลายตัว
+      var maxLen = Math.max(allCodesInRow.length, allNamesInRow.length);
+      for (var pi = 0; pi < maxLen; pi++) {
+        var code = allCodesInRow[pi] || '';
+        var pName = allNamesInRow[pi] || '';
+        if (!code || code.length < 6) continue;
+        if (!pName || pName.length < 2) continue;
+        // Filter out non-part names
         if (pName.indexOf('***') >= 0) continue;
         if (pName.indexOf('ค่าแรง') >= 0) continue;
         if (pName === 'เปลี่ยน' || pName === 'เบา') continue;
         if (pName.indexOf('ทำสี') >= 0 || pName.indexOf('ซ่อม') >= 0) continue;
-        if (pName.length < 2) continue;
         if (pName.length > 80) continue;
         if (/^\d+[\.,]?\d*$/.test(pName)) continue;
-        if (pName === 'ISUZU' || pName === 'Genuine' || pName === 'Parts') continue;
-        if (pName.indexOf('หมายเหตุ') >= 0) continue;
-        if (pName.indexOf('ราคา') >= 0 && pName.length < 15) continue;
-        if (pName.indexOf('รวม') >= 0 && pName.length < 15) continue;
-        if (pName.indexOf('ส่วนลด') >= 0) continue;
-        if (pName.indexOf('VAT') >= 0) continue;
-        if (pName.indexOf('จำนวน') >= 0) continue;
-        if (pName.indexOf('หน่วย') >= 0) continue;
-        if (pName.indexOf('บาท') >= 0) continue;
-        if (pName.indexOf('เครดิต') >= 0) continue;
-        if (pName.indexOf('รถยี่ห้อ') >= 0) continue;
-        if (pName.indexOf('รุ่น') >= 0 && pName.length < 15) continue;
-        if (pName.indexOf('ทะเบียน') >= 0) continue;
-        if (pName.indexOf('เลขที่') >= 0) continue;
-        if (pName.indexOf('วันที่') >= 0) continue;
-        if (pName.indexOf('ชื่อ') >= 0 && pName.length < 10) continue;
-        if (pName.indexOf('SA') >= 0 && pName.length < 10) continue;
-        if (pName.indexOf('JOB') >= 0 && pName.length < 10) continue;
-        if (pName.indexOf('อะไหล่') >= 0 && pName.length < 10) continue;
-        if (pName === 'รายการ' || pName === 'ลำดับ') continue;
-        if (pName === 'no.' || pName === 'No.' || pName === 'NO.') continue;
-        if (pName === 'ราคา/หน่วย' || pName === 'ราคารวม' || pName === 'จำนวนเงิน') continue;
+        // Check for duplicate (same code already added)
+        var isDup = false;
+        for (var di = 0; di < parts.length; di++) {
+          if (parts[di].code === code) { isDup = true; break; }
+        }
+        if (isDup) continue;
         parts.push({
           code: code, last5: code.slice(-5),
           name: pName, qty: 1, price: ''
@@ -13374,6 +13389,13 @@ function gsGetOKRDeptCount() {
 }
 
 function gsGetCEOData(personName, deptName) {
+  // Cache ผลลัพธ์ 5 นาที เพื่อหลีกเลี่ยงการโหลดซ้ำ
+  var cacheKey = 'CEO_DATA_' + personName + '_' + deptName;
+  var cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+  
   var timestamp = new Date().toISOString();
   var personData = null;
   try {
@@ -13405,7 +13427,145 @@ function gsGetCEOData(personName, deptName) {
   } catch (e) {
     kpiData = { items: [], timestamp: timestamp };
   }
-  return { person: personData, kpi: kpiData, timestamp: timestamp };
+  var result = { person: personData, kpi: kpiData, timestamp: timestamp };
+  // Cache 5 นาที
+  try {
+    var resultStr = JSON.stringify(result);
+    if (resultStr.length < 90000) {
+      CacheService.getScriptCache().put(cacheKey, resultStr, 300);
+    }
+  } catch(e) {}
+  return result;
+}
+
+// ── ฟังก์ชันเร็วสำหรับ Business Plan: ดึง CEO KPI จาก V4 API ──
+function gsGetCEOActuals() {
+  var cacheKey = 'CEO_ACTUALS_BP_V2';
+  var cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+  
+  var items = [];
+  var timestamp = new Date().toISOString();
+  
+  // ── 1. ดึงจาก V4 CEO KPI API (ที่ทำงานได้แน่นอน) ──
+  try {
+    var v4Url = 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?api=1&tab=overview';
+    var resp = UrlFetchApp.fetch(v4Url, { muteHttpExceptions: true, followRedirects: true, validateHttpsCertificates: false });
+    if (resp.getResponseCode() === 200) {
+      var v4Data = JSON.parse(resp.getContentText());
+      var s = v4Data.summary || {};
+      var y = s.yearly || {};
+      var cn = s.cn || {};
+      var csk = s.csk || {};
+      var delv = s.delivery || {};
+      
+      // QC ตรวจสอบคุณภาพ — 4,632 รายการ (91% ผ่าน)
+      if (y.total > 0) {
+        items.push({
+          krText: 'QC ตรวจสอบคุณภาพ ประจำปี',
+          currentValue: y.pass,
+          targetValue: y.total,
+          status: y.passPct >= 0.9 ? 'on-track' : 'at-risk',
+          progressPct: Math.round(y.passPct * 100),
+          source: 'CEO KPI Dashboard',
+          sourceUrl: 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1',
+          sourceDetail: 'QC ตรวจสอบคุณภาพสี — ประจำปี ' + y.year
+        });
+      }
+      
+      // ศูนย์สี — ส่งมอบรวม CNB + CSK
+      var totalDelivered = (cn.delivered || 0) + (csk.delivered || 0);
+      if (totalDelivered > 0) {
+        items.push({
+          krText: 'บริหารจัดการยอดรถเข้าศูนย์สีให้ได้ตามเป้าเฉลี่ย 280 คัน/เดือน (รวม 3,400 คัน/ปี)',
+          currentValue: totalDelivered,
+          targetValue: 3400,
+          status: totalDelivered >= 3400 ? 'on-track' : (totalDelivered >= 1700 ? 'at-risk' : 'behind'),
+          progressPct: Math.round((totalDelivered / 3400) * 100),
+          source: 'CEO KPI Dashboard',
+          sourceUrl: 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1',
+          sourceDetail: 'ศูนย์สี สะสมปี — CNB ' + (cn.delivered||0) + ' + CSK ' + (csk.delivered||0) + ' = ' + totalDelivered + ' คัน'
+        });
+      }
+      
+      // รถในระบบซ่อม — CNB + CSK
+      var inSystem = (cn.total || 0) + (csk.total || 0);
+      if (inSystem > 0) {
+        items.push({
+          krText: 'รถในระบบซ่อม (CNB + CSK)',
+          currentValue: inSystem,
+          targetValue: 103,
+          status: 'on-track',
+          progressPct: Math.round((inSystem / 103) * 100),
+          source: 'Repair Flow Dashboard',
+          sourceUrl: '',
+          sourceDetail: 'CNB ' + (cn.total||0) + ' + CSK ' + (csk.total||0) + ' = ' + inSystem + ' คันในระบบ'
+        });
+      }
+      
+      // ส่งมอบตรงเวลา
+      if (delv.onTime !== undefined) {
+        var totalDelv = (delv.onTime || 0) + (delv.overdue || 0);
+        if (totalDelv > 0) {
+          items.push({
+            krText: 'ส่งมอบตรงเวลา',
+            currentValue: delv.onTime,
+            targetValue: totalDelv,
+            status: delv.overdue === 0 ? 'on-track' : 'at-risk',
+            progressPct: Math.round((delv.onTime / totalDelv) * 100),
+            source: 'Repair Flow Dashboard',
+            sourceUrl: '',
+            sourceDetail: 'ตรงเวลา ' + delv.onTime + ' / ทั้งหมด ' + totalDelv + ' (overdue ' + delv.overdue + ')'
+          });
+        }
+      }
+    }
+  } catch(e) {
+    // V4 API fail — ยังมีข้อมูลจาก V5 ด้านล่าง
+  }
+  
+  // ── 2. ดึงจาก V5 internal data (GM, CBNP, ผลิตภัณฑ์เสริม) ──
+  try {
+    var kpi = getPersonKpiStatus_('สมศักดิ์ ธัมมะปาละ', 'PMG/PMGI');
+    if (kpi && kpi.items) {
+      for (var i = 0; i < kpi.items.length; i++) {
+        if (kpi.items[i].status !== 'no-data' && kpi.items[i].status !== 'skip' && kpi.items[i].currentValue !== null) {
+          items.push(kpi.items[i]);
+        }
+      }
+    }
+  } catch(e) {}
+  
+  try {
+    var kpi2 = getPersonKpiStatus_('ชุติมา สิทธิบุศย์', 'PMS ศูนย์บริการ');
+    if (kpi2 && kpi2.items) {
+      for (var j = 0; j < kpi2.items.length; j++) {
+        if (kpi2.items[j].status !== 'no-data' && kpi2.items[j].status !== 'skip' && kpi2.items[j].currentValue !== null) {
+          items.push(kpi2.items[j]);
+        }
+      }
+    }
+  } catch(e) {}
+  
+  // Deduplicate by krText
+  var seen = {};
+  var deduped = [];
+  for (var k = 0; k < items.length; k++) {
+    var key = (items[k].krText || '').substring(0, 50);
+    if (!seen[key]) { seen[key] = true; deduped.push(items[k]); }
+  }
+  
+  var result = { items: deduped, count: deduped.length, timestamp: timestamp };
+  // Cache 5 นาที
+  try {
+    var resultStr = JSON.stringify(result);
+    if (resultStr.length < 90000) {
+      CacheService.getScriptCache().put(cacheKey, resultStr, 300);
+    }
+  } catch(e) {}
+  return result;
 }
 
 /**

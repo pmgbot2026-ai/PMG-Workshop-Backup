@@ -440,6 +440,57 @@ body{font-family:'Sarabun','Segoe UI',system-ui,-apple-system,sans-serif;backgro
 </div>
 
 <script>
+// ── OFFLINE MODE STUB ──────────────────────────────────────
+// Mock google.script.run + fetch for standalone HTML (no server)
+if (typeof window !== 'undefined') {
+  if (typeof window.google === 'undefined') {
+    window.google = { script: { run: {} } };
+  }
+  var _gsrTarget = window.google.script.run;
+  _gsrTarget._success = null;
+  _gsrTarget._failure = null;
+  _gsrTarget.withSuccessHandler = function(fn){ this._success = fn; return _proxyRef; };
+  _gsrTarget.withFailureHandler  = function(fn){ this._failure = fn; return _proxyRef; };
+  _gsrTarget.withUserObject      = function(o){ return _proxyRef; };
+  var _proxyRef = new Proxy(_gsrTarget, {
+    get: function(target, prop, receiver) {
+      if (prop === '_success' || prop === '_failure') return target[prop];
+      if (typeof target[prop] === 'function') return target[prop];
+      // Unknown property = a server function name → return stub function
+      return function() {
+        console.log('[Offline] google.script.run.' + String(prop) + ' called (stubbed)', arguments);
+        var self = target;
+        setTimeout(function(){
+          if (typeof self._success === 'function') {
+            try { self._success([]); } catch(e){ console.warn('[Offline] success handler error:', e); }
+          }
+        }, 50);
+        return _proxyRef;
+      };
+    }
+  });
+  window.google.script.run = _proxyRef;
+  // Mock fetch() to return empty data (avoids CORS/network errors offline)
+  if (typeof window.fetch === 'function' && !window._fetchStubbed) {
+    window._origFetch = window.fetch;
+    window.fetch = function(url, opts) {
+      console.log('[Offline] fetch() stubbed:', url);
+      return Promise.resolve({
+        ok: true, status: 200, redirected: false,
+        text:  function(){ return Promise.resolve(''); },
+        json:  function(){ return Promise.resolve({}); },
+        blob:  function(){ return Promise.resolve(new Blob([''])); },
+        clone: function(){ return this; },
+        headers: { get: function(){ return null; } }
+      });
+    };
+    window._fetchStubbed = true;
+  }
+}
+// ── END OFFLINE MODE STUB ──────────────────────────────────
+
+
+
 // Injected by server — API URL for fetch() calls (replaced at serve time)
 var SCRIPT_API_URL = 'SCRIPT_API_URL_PLACEHOLDER';
 

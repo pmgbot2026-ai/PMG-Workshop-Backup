@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PM/WI | กระบวนการทำงาน PMG Workshop</title>
+<style>
+:root{--bg:#f8fafc;--card:#ffffff;--card2:#f1f5f9;--accent:#2563eb;--accent2:#7c3aed;--green:#16a34a;--red:#dc2626;--orange:#ea580c;--yellow:#d97706;--purple:#7c3aed;--pink:#db2777;--cyan:#0891b2;--text:#1e293b;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--glow:0 0 12px rgba(37,99,235,.12)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+.header{background:linear-gradient(135deg,#1e40af 0%,#2563eb 50%,#3b82f6 100%);padding:16px 20px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.header h1{font-size:20px;color:#fff;display:flex;align-items:center;gap:8px}
+.header .subtitle{font-size:12px;color:rgba(255,255,255,.85);margin-top:2px}
+.header .ver{font-size:10px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.2);padding:1px 6px;border-radius:4px;margin-left:8px}
+.tabs{display:flex;gap:4px;margin-top:10px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.tab-btn{background:rgba(255,255,255,.15);color:rgba(255,255,255,.85);border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap;transition:.2s}
+.tab-btn:hover{background:rgba(255,255,255,.3);color:#fff}
+.tab-btn.active{background:#fff;color:#1e40af;font-weight:700}
+.content{padding:16px 20px 60px}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ═══ Flow Chart ═══ */
+.flow-chain{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:20px 0;min-height:160px}
+.flow-step{flex:0 0 140px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
+.flow-icon{width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:8px;position:relative;z-index:2;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:transform .2s}
+.flow-icon:hover{transform:scale(1.1)}
+.flow-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.flow-desc{font-size:10px;color:var(--text2);max-width:120px;line-height:1.3}
+.flow-arrow{position:absolute;right:-20px;top:32px;font-size:20px;color:var(--text3);z-index:1}
+.flow-step:last-child .flow-arrow{display:none}
+
+/* ═══ Process Cards ═══ */
+.process-card{background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;border:1px solid var(--border);position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.process-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:4px 0 0 4px}
+.process-card.receive::before{background:var(--cyan)}
+.process-card.inspect::before{background:var(--accent)}
+.process-card.repair::before{background:var(--orange)}
+.process-card.qc::before{background:var(--purple)}
+.process-card.deliver::before{background:var(--green)}
+.process-card.bct::before{background:var(--pink)}
+.process-card h3{font-size:15px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.process-card h3 .step-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:12px;font-weight:700}
+.process-card .doc-ref{font-size:10px;color:var(--text3);float:right;margin-top:-20px}
+.process-card p{font-size:13px;color:var(--text2);margin-bottom:8px}
+
+/* ═══ Step Table ═══ */
+.step-table{width:100%;border-collapse:collapse;font-size:12px;margin:10px 0}
+.step-table th{background:#eff6ff;padding:8px 6px;text-align:left;font-weight:600;color:var(--accent);border-bottom:2px solid #bfdbfe;font-size:11px;white-space:nowrap}
+.step-table td{padding:6px;border-bottom:1px solid var(--border);vertical-align:top}
+.step-table tr:nth-child(even){background:#f8fafc}
+.step-table .num{text-align:center;font-weight:700;color:var(--accent);width:30px}
+
+/* ═══ KPI Box ═══ */
+.kpi-row{display:flex;gap:10px;margin:12px 0;flex-wrap:wrap}
+.kpi-box{background:var(--card2);border-radius:8px;padding:10px 14px;text-align:center;flex:1;min-width:100px;border:1px solid var(--border)}
+.kpi-box .kpi-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.kpi-box .kpi-value{font-size:22px;font-weight:700}
+.kpi-box .kpi-unit{font-size:10px;color:var(--text3)}
+
+/* ═══ RACI ═══ */
+.raci-table{width:100%;border-collapse:collapse;font-size:11px;margin:10px 0}
+.raci-table th{background:#eff6ff;padding:6px 4px;text-align:center;font-size:10px;color:var(--accent);border-bottom:2px solid #bfdbfe}
+.raci-table td{padding:6px 4px;text-align:center;border-bottom:1px solid var(--border);font-size:11px}
+.raci-table td:first-child{text-align:left;font-weight:600;color:var(--text)}
+.raci-R{background:#dcfce7;color:#166534;font-weight:700;border-radius:4px}
+.raci-A{background:#dbeafe;color:#1e40af;font-weight:700;border-radius:4px}
+.raci-C{background:#fef3c7;color:#92400e;font-weight:600;border-radius:4px}
+.raci-I{background:#f1f5f9;color:#475569;font-weight:600;border-radius:4px}
+
+/* ═══ Checklist ═══ */
+.checklist{list-style:none;padding:0}
+.checklist li{padding:6px 10px;margin:3px 0;border-radius:6px;font-size:12px;display:flex;align-items:flex-start;gap:8px}
+.checklist li::before{content:'☐';font-size:14px;flex-shrink:0}
+.checklist li.must{background:#fef2f2;border-left:3px solid var(--red)}
+.checklist li.should{background:#fffbeb;border-left:3px solid var(--yellow)}
+.checklist li.info{background:#eff6ff;border-left:3px solid var(--accent)}
+
+/* ═══ ISO Badge ═══ */
+.iso-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.iso-badge.mandatory{background:#dcfce7;color:#166534}
+.iso-badge.recommended{background:#dbeafe;color:#1e40af}
+.iso-badge.optional{background:#fef3c7;color:#92400e}
+
+/* ═══ Flow Diagram ═══ */
+.flow-diagram{position:relative;padding:20px 0}
+.flow-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.flow-box{background:var(--card2);border-radius:10px;padding:12px 16px;flex:1;min-width:200px;border:1px solid var(--border);transition:all .2s}
+.flow-box:hover{border-color:var(--accent);box-shadow:0 0 12px rgba(37,99,235,.15)}
+.flow-box h4{font-size:12px;color:var(--accent);margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.flow-box p{font-size:11px;color:var(--text2);line-height:1.4}
+.flow-box .ref{font-size:9px;color:var(--text3);margin-top:4px}
+
+/* ═══ Detailed Flow Chart ═══ */
+.fc{background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.fc h4{font-size:13px;margin-bottom:16px;display:flex;align-items:center;gap:6px}
+.fc-row{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px}
+.fc-node{border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.4;position:relative;flex:0 0 auto;min-width:130px;max-width:200px;text-align:center}
+.fc-node.step{background:var(--card2);border:1px solid var(--border)}
+.fc-node.start{background:linear-gradient(135deg,#0891b2,#06b6d4);color:#fff;font-weight:700;border-radius:20px}
+.fc-node.end{background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;font-weight:700;border-radius:20px}
+.fc-node.decision{background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#78350f;font-weight:700;border-radius:8px;min-width:140px}
+.fc-node.fail{background:#fef2f2;border:1px solid var(--red);color:var(--red)}
+.fc-node.success{background:#f0fdf4;border:1px solid var(--green);color:var(--green)}
+.fc-node .fc-label{font-size:9px;color:var(--text3);margin-top:2px}
+.fc-conn{display:flex;align-items:center;font-size:18px;color:var(--text3);flex:0 0 auto;padding:0 2px}
+.fc-conn.up{flex-direction:column;font-size:14px}
+.fc-branch{display:flex;gap:12px;flex-wrap:wrap;margin:4px 0 4px 0}
+.fc-branch-label{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-bottom:4px}
+.fc-branch-label.yes{background:#dcfce7;color:#166534}
+.fc-branch-label.no{background:#fee2e2;color:#991b1b}
+
+/* ═══ Responsive ═══ */
+@media(max-width:600px){
+  .flow-chain{flex-direction:column;align-items:center}
+  .flow-step{flex:none;width:100%;flex-direction:row;text-align:left;gap:10px;margin-bottom:8px}
+  .flow-icon{width:48px;height:48px;font-size:22px;margin-bottom:0}
+  .flow-arrow{right:auto;top:auto;bottom:-8px;left:28px;transform:rotate(90deg)}
+  .flow-title{font-size:12px}
+  .kpi-row{flex-direction:column}
+  .flow-row{flex-direction:column}
+  .fc-row{flex-direction:column;align-items:center}
+  .fc-node{max-width:100%}
+  .fc-branch{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div style="position:fixed;top:8px;right:8px;z-index:99999;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(220,38,38,0.3);cursor:default;font-family:system-ui,sans-serif;letter-spacing:0.3px" title="ข้อมูลส่วนบุคคล PDPA — ห้ามส่งออกหรือเผยแพร่โดยไม่ได้รับอนุญาต">🔒 ข้อมูลลับ PDPA</div>
+<div class="header">
+<h1>📘 กระบวนการทำงาน (PM/WI)<span class="ver">ISO 9001:2015</span></h1>
+<div class="subtitle">PMG Workshop — ขั้นตอนการทำงานตั้งแต่รับรถจนถึงส่งมอบรถ | มาตรฐาน ISO 9001:2015 ข้อ 8.1 8.5 8.6</div>
+<div class="tabs">
+<button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">📋 ภาพรวม</button>
+<button class="tab-btn" data-tab="p1" onclick="switchTab('p1')">📥 รับรถ</button>
+<button class="tab-btn" data-tab="p2" onclick="switchTab('p2')">🔧 ซ่อม</button>
+<button class="tab-btn" data-tab="p3" onclick="switchTab('p3')">✅ ตรวจ QC</button>
+<button class="tab-btn" data-tab="p4" onclick="switchTab('p4')">🚗 ส่งมอบ</button>
+<button class="tab-btn" data-tab="p5" onclick="switchTab('p5')">🪟 เคลือบแก้ว</button>
+<button class="tab-btn" data-tab="kpi" onclick="switchTab('kpi')">📊 KPI</button>
+<button class="tab-btn" data-tab="daily" onclick="switchTab('daily')" style="background:rgba(34,197,94,.15);color:#16a34a">📋 สรุปประจำวัน</button>
+<button class="tab-btn" data-tab="raci" onclick="switchTab('raci')">👥 บทบาท</button>
+</div>
+</div>
+
+<div class="content">
+
+<!-- ═══ Tab: Overview ═══ -->
+<div id="tab-overview" class="tab-panel active">
+
+<div style="margin-bottom:20px">
+<p style="font-size:13px;color:var(--text2)">เอกสารกระบวนการทำงาน (Procedure Manual / Work Instruction) ตามมาตรฐาน ISO 9001:2015 ข้อ 8.1 (การวางแผน), 8.5 (การผลิต/บริการ), 8.6 (การปล่อยผลิตภัณฑ์) สำหรับการบริหารงานซ่อมรถยนต์และเคลือบแก้ว PMG Workshop</p>
+</div>
+
+<!-- Flow Chain -->
+<div style="margin-bottom:12px"><h3 style="font-size:14px;color:var(--accent)">🔄 กระบวนการหลัก (Core Process Flow)</h3></div>
+<div class="flow-chain">
+<div class="flow-step">
+<div class="flow-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2)">📥</div>
+<div class="flow-title">รับรถ</div>
+<div class="flow-desc">ลงทะเบียน<br>รับแจ้งซ่อม<br>ตรวจสภาพเบื้องต้น</div>
+<div class="flow-arrow">→</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb)">🔍</div>
+<div class="flow-title">ตรวจสภาพ</div>
+<div class="flow-desc">ประเมินงาน<br>กำหนดสถานี<br>จัดคิวซ่อม</div>
+<div class="flow-arrow">→</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon" style="background:linear-gradient(135deg,#f97316,#ea580c)">🔧</div>
+<div class="flow-title">ซ่อม</div>
+<div class="flow-desc">เคาะ→โป๊ว→พ่น<br>→ประกอบ→ขัดสี<br>→ล้าง</div>
+<div class="flow-arrow">→</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">✅</div>
+<div class="flow-title">SUP QC</div>
+<div class="flow-desc">ตรวจ FinalCheck<br>แก้ไขงาน (ถ้ามี)<br>ยืนยันคุณภาพ</div>
+<div class="flow-arrow">→</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">🚗</div>
+<div class="flow-title">ส่งมอบ</div>
+<div class="flow-desc">นัดส่งมอบ<br>ส่งมอบ PMG<br>บันทึกวันเสร็จ</div>
+</div>
+</div>
+
+<!-- BCT Flow -->
+<div style="margin:24px 0 12px"><h3 style="font-size:14px;color:var(--pink)">🪟 กระบวนการเคลือบแก้ว (BCT Glass Coating Process)</h3></div>
+<div class="flow-chain">
+<div class="flow-step">
+<div class="flow-icon" style="background:linear-gradient(135deg,#ec4899,#db2777)">📝</div>
+<div class="flow-title">บันทึกลูกค้า</div>
+<div class="flow-desc">B1 ลงข้อมูล<br>ชื่อ/ทะเบียน/เบอร์<br>เลือกแพ็กเกจ</div>
+<div class="flow-arrow">→</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon" style="background:linear-gradient(135deg,#a855f7,#9333ea)">🪟</div>
+<div class="flow-title">เคลือบแก้ว</div>
+<div class="flow-desc">พ่น 1 ปี/3 ปี<br>Diamond<br>ตามแพ็กเกจ</div>
+<div class="flow-arrow">→</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">🚗</div>
+<div class="flow-title">ส่งมอบรถ</div>
+<div class="flow-desc">นัดส่งมอบ<br>ลงวันจริง<br>แจ้งเตือนลูกค้า</div>
+<div class="flow-arrow">→</div>
+</div>
+<div class="flow-step">
+<div class="flow-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">🔔</div>
+<div class="flow-title">บำรุงผิวแก้ว</div>
+<div class="flow-desc">ติดตาม 9 รอบ<br>แจ้งเตือนครบกำหนด<br>บันทึกการติดต่อ</div>
+</div>
+</div>
+
+<!-- ISO References -->
+<div style="margin-top:20px;padding:12px 16px;background:rgba(56,189,248,.06);border-radius:8px;border-left:3px solid var(--accent)">
+<h4 style="font-size:12px;color:var(--accent);margin-bottom:6px">📚 มาตรฐานอ้างอิง (Normative References)</h4>
+<ul style="font-size:11px;color:var(--text2);list-style:none;padding:0">
+<li>• <span class="iso-badge mandatory">ISO 9001:2015 ข้อ 8.1</span> การวางแผนการผลิตสินค้าและบริการ — กำหนดขั้นตอน ทรัพยากร และเกณฑ์รับ</li>
+<li>• <span class="iso-badge mandatory">ISO 9001:2015 ข้อ 8.5.1</span> การควบคุมการผลิต — ติดตาม วัดผล ระบุบุคคลที่ทำงาน</li>
+<li>• <span class="iso-badge mandatory">ISO 9001:2015 ข้อ 8.5.2</span> การระบุและ追溯 — ระบุรถ/งานซ่อมในแต่ละสถานี</li>
+<li>• <span class="iso-badge mandatory">ISO 9001:2015 ข้อ 8.6</span> การปล่อยผลิตภัณฑ์ — SUP QC ตรวจก่อนส่งมอบ</li>
+<li>• <span class="iso-badge recommended">ISO 9001:2015 ข้อ 7.5</span> ข้อมูลจัดทำเอกสาร — เอกสารกระบวนการทำงานนี้</li>
+<li>• <span class="iso-badge optional">ISO 9001:2015 ข้อ 9.1.3</span> การวิเคราะห์และประเมินผล — KPI dashboard</li>
+</ul>
+</div>
+
+<!-- Document Control -->
+<div style="margin-top:16px;padding:12px 16px;background:var(--card2);border-radius:8px;font-size:11px;color:var(--text3)">
+<strong>เอกสารหมายเลข:</strong> PMG-PM-001 &nbsp;|&nbsp; <strong>ฉบับที่:</strong> 1.0 &nbsp;|&nbsp; <strong>วันที่มีผล:</strong> 21/05/2026 &nbsp;|&nbsp; <strong>ผู้อนุมัติ:</strong> สมศักดิ์ &nbsp;|&nbsp; <strong>หน้า:</strong> 1/8
+</div>
+</div>
+
+<!-- ═══ Tab P1: รับรถ ═══ -->
+<div id="tab-p1" class="tab-panel">
+
+<div class="process-card receive">
+<h3><span class="step-num" style="background:var(--cyan);color:#000">1</span> 📥 ขั้นตอนการรับรถ (Vehicle Intake)<div class="doc-ref">PMG-WI-101 | ISO 9001:2015 ข้อ 8.2, 8.5.1</div></h3>
+<p>กระบวนการรับรถเข้าศูนย์ซ่อม ตั้งแต่ลูกค้าแจ้งซ่อมจนถึงการประเมินงานและจัดคิว</p>
+</div>
+
+<!-- ═══ FLOW CHART P1: รับรถ ═══ -->
+<div class="fc">
+<h4>🔄 แผนผังกระบวนการรับรถ (Vehicle Intake Flow Chart)</h4>
+<div class="fc-row" style="justify-content:center;gap:6px">
+<div class="fc-node start">📥 เริ่ม<br>รับรถเข้าศูนย์</div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">📞 รับแจ้งซ่อม<br><span style="font-size:10px;color:var(--text3)">โทร/LINE/Walk-in</span></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">📋 บันทึกข้อมูลรถ<br><span style="font-size:10px;color:var(--text3)">ทะเบียน ยี่ห้อ รุ่น ประกัน</span></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">🔍 ตรวจสภาพรถ<br><span style="font-size:10px;color:var(--text3)">ถ่ายรูป บันทึกจุดเสีย</span></div>
+</div>
+<div class="fc-row" style="justify-content:center;gap:6px;margin-top:8px"><div class="fc-conn up">↓</div></div>
+<div class="fc-row" style="justify-content:center;gap:6px"><div class="fc-node decision">📊 มีประกัน<br>หรือไม่?</div></div>
+<div class="fc-row" style="margin-top:8px;gap:24px;margin-left:20px">
+<div style="text-align:center">
+<div class="fc-branch-label yes">✅ มีประกัน</div>
+<div class="fc-node step" style="margin-top:4px">🛡️ ตรวจสอบความครอบคลุม</div>
+<div class="fc-conn up" style="display:block;text-align:center">↓</div>
+<div class="fc-node decision" style="font-size:11px">ครอบคลุม?</div>
+<div style="display:flex;gap:8px;margin-top:4px">
+<div style="text-align:center"><div class="fc-branch-label yes" style="font-size:9px">✅ ครอบ</div><div class="fc-node success" style="font-size:10px;margin-top:2px">เบิกประกัน</div></div>
+<div style="text-align:center"><div class="fc-branch-label no" style="font-size:9px">❌ ไม่ครอบ</div><div class="fc-node fail" style="font-size:10px;margin-top:2px">เสียเอง</div></div>
+</div>
+</div>
+<div style="text-align:center">
+<div class="fc-branch-label no">❌ ไม่มีประกัน</div>
+<div class="fc-node step" style="margin-top:4px">💰 แจ้งค่าซ่อม<br><span style="font-size:10px;color:var(--text3)">ประเมินราคา</span></div>
+</div>
+</div>
+<div class="fc-row" style="justify-content:center;gap:6px;margin-top:12px"><div class="fc-conn up">↓</div></div>
+<div class="fc-row" style="justify-content:center;gap:6px">
+<div class="fc-node step">📅 กำหนดสถานี+คิว<br><span style="font-size:10px;color:var(--text3)">เคาะ→โป๊ว→พ่น→ประกอบ→ขัดสี→ล้าง</span></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">📆 แจ้งคาดการณ์วันเสร็จ<br><span style="font-size:10px;color:var(--text3)">นัดหมาย 3 ช่วง (เลื่อนได้ 3 ครั้ง)</span></div>
+<div class="fc-conn">→</div>
+<div class="fc-node end">🔧 เข้าสู่<br>กระบวนการซ่อม</div>
+</div>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--cyan)">
+<h4 style="color:var(--cyan);font-size:13px;margin-bottom:8px">📋 ขั้นตอนย่อย (Sub-processes)</h4>
+<table class="step-table">
+<tr><th style="width:30px">ลำดับ</th><th>ขั้นตอน</th><th>ผู้รับผิดชอบ</th><th>เอกสาร/ระบบ</th><th>ผลลัพธ์</th></tr>
+<tr><td class="num">1.1</td><td>ลูกค้าแจ้งซ่อม หรือ SA รับแจ้ง<br><span style="color:var(--text3);font-size:10px">รับแจ้งผ่านโทรศัพท์ / LINE / Walk-in</span></td><td>SA (Service Advisor)</td><td>แบบฟอร์มรับแจ้ง<br>Line Group ลูกค้า</td><td>ใบแจ้งซ่อม</td></tr>
+<tr><td class="num">1.2</td><td>บันทึกข้อมูลรถในระบบ<br><span style="color:var(--text3);font-size:10px">ทะเบียน ยี่ห้อ รุ่น ประกัน วันแจ้ง</span></td><td>SA</td><td>PMG Workshop Dashboard<br>สถานะงานซ่อม → รับแจ้ง</td><td>ข้อมูลรถในระบบ<br><span class="iso-badge mandatory">ข้อ 8.5.2 ระบุรถ</span></td></tr>
+<tr><td class="num">1.3</td><td>ตรวจสภาพเบื้องต้น<br><span style="color:var(--text3);font-size:10px">ตรวจจุดที่เสีย ถ่ายรูป บันทึก</span></td><td>SA / ช่างตรวจ</td><td>แบบฟอร์มตรวจสภาพ</td><td>รายงานตรวจสภาพ</td></tr>
+<tr><td class="num">1.4</td><td>กำหนดสถานีซ่อมและคิว<br><span style="color:var(--text3);font-size:10px">เคาะ → โป๊ว → พ่น → ประกอบ → ขัดสี → ล้าง</span></td><td>SA / ผู้จัดการซ่อม</td><td>PMG Workshop<br>สถานะงานซ่อม</td><td>ลำดับสถานี<br>วันเริ่ม-เสร็จ</td></tr>
+<tr><td class="num">1.5</td><td>แจ้งคาดการณ์วันเสร็จ<br><span style="color:var(--text3);font-size:10px">แจ้งลูกค้าเป็นนัดหมาย 3 ช่วง</span></td><td>SA</td><td>ระบบนัดหมาย<br>(เลื่อนนัด 3 ครั้ง)</td><td>นัดหมายส่งมอบ</td></tr>
+</table>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--yellow)">
+<h4 style="color:var(--yellow);font-size:13px;margin-bottom:8px">⚠️ จุดควบคุม (Control Points)</h4>
+<ul class="checklist">
+<li class="must">ข้อมูลรถครบถ้วน: ทะเบียน ยี่ห้อ รุ่น ประกัน วันแจ้งซ่อม <span class="iso-badge mandatory">ข้อ 8.5.2</span></li>
+<li class="must">นัดหมายส่งมอบต้องบันทึกในระบบ พร้อมเหตุผลกรณีเลื่อนนัด</li>
+<li class="should">ถ่ายรูปสภาพรถก่อนซ่อม และหลังซ่อนเป็นหลักฐาน</li>
+<li class="info">รถที่มีประกัน ต้องตรวจสอบความครอบคลุมก่อนรับงาน</li>
+</ul>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--accent)">
+<h4 style="color:var(--accent);font-size:13px;margin-bottom:8px">🖥️ ระบบสนับสนุน (System Reference)</h4>
+<div class="flow-row">
+<div class="flow-box">
+<h4>📊 PMG Workshop</h4>
+<p>แท็บ <strong>สถานะงานซ่อม</strong> → ดูข้อมูลรถทั้งหมด<br>แท็บ <strong>เคลื่อนไหว</strong> → เลื่อนนัด / เคลื่อนสถานี / นัดส่งมอบ</p>
+<div class="ref">API: ?api=1&tab=status</div>
+</div>
+<div class="flow-box">
+<h4>🔔 ระบบแจ้งเตือน</h4>
+<p>LINE → แจ้งลูกค้าเมื่อรับรถ<br>SMS → แจ้งเมื่อใกล้ถึงวันนัด<br>Email → แจ้ง SA/ทีม</p>
+<div class="ref">API: ?bct=1&action=sendNotification</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ═══ Tab P2: ซ่อม ═══ -->
+<div id="tab-p2" class="tab-panel">
+
+<div class="process-card repair">
+<h3><span class="step-num" style="background:var(--orange);color:#000">2</span> 🔧 ขั้นตอนการซ่อม (Repair Process)<div class="doc-ref">PMG-WI-201 | ISO 9001:2015 ข้อ 8.5.1, 8.5.2</div></h3>
+<p>กระบวนการซ่อมตั้งแต่เข้าสถานีแรกจนถึงเสร็จงานซ่อมทุกสถานี ตามลำดับที่กำหนด</p>
+</div>
+
+<!-- ═══ FLOW CHART P2: ซ่อม ═══ -->
+<div class="fc">
+<h4>🔄 แผนผังกระบวนการซ่อม (Repair Process Flow Chart)</h4>
+<div class="fc-row" style="justify-content:center;gap:6px">
+<div class="fc-node start">🔧 เริ่ม<br>รถเข้าซ่อม</div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">🔨 เคาะ<br><span style="font-size:10px;color:var(--text3)">ถอด/ซ่อมตัวถัง</span><div class="fc-label">สถานี 1</div></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">🧴 โป๊ว<br><span style="font-size:10px;color:var(--text3)">พอกส่วนตัวถัง</span><div class="fc-label">สถานี 2</div></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">🎨 พ่น<br><span style="font-size:10px;color:var(--text3)">พ่นสี/เคลือบ</span><div class="fc-label">สถานี 3</div></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">🔩 ประกอบ<br><span style="font-size:10px;color:var(--text3)">ประกอบชิ้นส่วน</span><div class="fc-label">สถานี 4</div></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">✨ ขัดสี<br><span style="font-size:10px;color:var(--text3)">ขัดผิว/เก็บงาน</span><div class="fc-label">สถานี 5</div></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">🚿 ล้าง<br><span style="font-size:10px;color:var(--text3)">ล้างรถ</span><div class="fc-label">สถานี 6</div></div>
+</div>
+<div class="fc-row" style="justify-content:center;gap:6px;margin-top:10px"><div class="fc-conn up">↓</div></div>
+<div class="fc-row" style="justify-content:center;gap:6px">
+<div class="fc-node end">✅ ส่งตรวจ<br>SUP QC</div>
+</div>
+<div style="margin-top:10px;padding:10px 14px;background:rgba(239,68,68,.08);border-radius:8px;border-left:3px solid var(--red)">
+<p style="font-size:12px;color:var(--red);font-weight:700;margin-bottom:4px">⚠️ กฎการเคลื่อนสถานี</p>
+<p style="font-size:11px;color:var(--text2)">• รถต้องผ่านสถานีตามลำดับ <strong>เคาะ → โป๊ว → พ่น → ประกอบ → ขัดสี → ล้าง</strong> เท่านั้น<br>• บันทึก <strong>วันเริ่ม-วันเสร็จ</strong> และ <strong>ช่างผู้ทำ</strong> ในทุกสถานี <span class="iso-badge mandatory">ข้อ 8.5.2</span><br>• หากเลื่อนนัด ต้องบันทึกเหตุผล (ระบบอนุญาต 3 ครั้ง)</p>
+</div>
+</div>
+
+<!-- Station Flow -->
+<div style="margin-bottom:16px">
+<h4 style="color:var(--orange);font-size:13px;margin-bottom:10px">🏭 สถานีซ่อม (Repair Stations)</h4>
+<div class="flow-chain">
+<div class="flow-step"><div class="flow-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)">🔨</div><div class="flow-title">เคาะ</div><div class="flow-desc">ถอด/ซ่อม<br>ตัวถัง</div><div class="flow-arrow">→</div></div>
+<div class="flow-step"><div class="flow-icon" style="background:linear-gradient(135deg,#f97316,#ea580c)">🧴</div><div class="flow-title">โป๊ว</div><div class="flow-desc">พอกส่วน<br>ตัวถัง</div><div class="flow-arrow">→</div></div>
+<div class="flow-step"><div class="flow-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb)">🎨</div><div class="flow-title">พ่น</div><div class="flow-desc">พ่นสี<br>งานพ่น</div><div class="flow-arrow">→</div></div>
+<div class="flow-step"><div class="flow-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">🔩</div><div class="flow-title">ประกอบ</div><div class="flow-desc">ประกอบ<br>ชิ้นส่วน</div><div class="flow-arrow">→</div></div>
+<div class="flow-step"><div class="flow-icon" style="background:linear-gradient(135deg,#22d3ee,#06b6d4)">✨</div><div class="flow-title">ขัดสี</div><div class="flow-desc">ขัดผิวสี<br>เก็บงาน</div><div class="flow-arrow">→</div></div>
+<div class="flow-step"><div class="flow-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">🚿</div><div class="flow-title">ล้าง</div><div class="flow-desc">ล้างรถ<br>เตรียมตรวจ</div></div>
+</div>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--orange)">
+<h4 style="color:var(--orange);font-size:13px;margin-bottom:8px">📋 รายละเอียดสถานี (Station Details)</h4>
+<table class="step-table">
+<tr><th style="width:30px">ลำดับ</th><th>สถานี</th><th>รหัส</th><th>หน้าที่หลัก</th><th>ข้อมูลบันทึก</th><th>เกณฑ์รับ (Acceptance)</th></tr>
+<tr><td class="num">2.1</td><td>เคาะ (Knock)</td><td>knock</td><td>ถอดชิ้นส่วน ซ่อมตัวถัง ดัดโครง</td><td>วันรอ, วันเริ่ม, ช่างผู้ทำ, วันเสร็จ, จำนวนวัน</td><td>ตัวถังเรียบ ระยะตรง ไม่มีรอยบุบ</td></tr>
+<tr><td class="num">2.2</td><td>โป๊ว (Fill/Patch)</td><td>patch</td><td>พอกส่วนตัวถัง ขัดผิว พร้อมพ่น</td><td>วันรอ, วันเริ่ม, ช่างผู้ทำ, วันเสร็จ, จำนวนวัน</td><td>ผิวเรียบ ไม่มีรอยด่าง พร้อมพ่นสี</td></tr>
+<tr><td class="num">2.3</td><td>พ่น (Spray)</td><td>squirt</td><td>พ่นสี หลุบพ่น เคลือบเคล็ร์โคต</td><td>วันรอ, วันเริ่ม, ช่างผู้ทำ, วันเสร็จ, จำนวนวัน</td><td>สีสม่ำเสมอ ไม่มีรอยหิ้ว/ฝุ่น ตรงตามรุ่น</td></tr>
+<tr><td class="num">2.4</td><td>ประกอบ (Assemble)</td><td>assemble</td><td>ประกอบชิ้นส่วนกลับ ติดตั้งอุปกรณ์</td><td>วันรอ, วันเริ่ม, ช่างผู้ทำ, วันเสร็จ, จำนวนวัน</td><td>ชิ้นส่วนครบ ไม่มีรอยหย่อน สอนตรง</td></tr>
+<tr><td class="num">2.5</td><td>ขัดสี (Polish)</td><td>polish</td><td>ขัดผิวสี เก็บงาน ขัดลเก็ติก เคลือบแว็กซ์</td><td>วันรอ, วันเริ่ม, ช่างผู้ทำ, วันเสร็จ, จำนวนวัน</td><td>ผิวเงา ไม่มีรอยขัด สีสม่ำเสมอ</td></tr>
+<tr><td class="num">2.6</td><td>ล้าง (Wash)</td><td>wash</td><td>ล้างรถ เช็ดทำความสะอาด เตรียมส่งตรวจ</td><td>วันเสร็จ</td><td>รถสะอาด ไม่มีรอยเปื้อน</td></tr>
+</table>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--yellow)">
+<h4 style="color:var(--yellow);font-size:13px;margin-bottom:8px">⚠️ จุดควบคุม (Control Points)</h4>
+<ul class="checklist">
+<li class="must">รถต้องผ่านสถานีตามลำดับ: เคาะ → โป๊ว → พ่น → ประกอบ → ขัดสี → ล้าง <span class="iso-badge mandatory">ข้อ 8.5.1</span></li>
+<li class="must">บันทึกวันเริ่ม-เสร็จ และช่างผู้ทำ ในแต่ละสถานี <span class="iso-badge mandatory">ข้อ 8.5.2</span></li>
+<li class="must">หากเลื่อนนัด ต้องบันทึกเหตุผล (ระบบอนุญาต 3 ครั้ง)</li>
+<li class="should">ตรวจนับชิ้นส่วนก่อนประกอบ ป้องกันชิ้นขาดหาย</li>
+<li class="info">ระบบคำนวณจำนวนวันอัตโนมัติ: วันเสร็จ − วันเริ่ม + 1</li>
+</ul>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--red)">
+<h4 style="color:var(--red);font-size:13px;margin-bottom:8px">🔄 การเคลื่อนสถานี (Station Movement)</h4>
+<p style="font-size:12px;color:var(--text2);margin-bottom:8px">เมื่อรถเสร็จสถานีหนึ่ง ให้เคลื่อนย้ายไปสถานีถัดไป ดังนี้:</p>
+<table class="step-table">
+<tr><th>สถานีปัจจุบัน</th><th>→</th><th>สถานีถัดไป</th><th>ผู้ดำเนินการ</th></tr>
+<tr><td>เคาะ เสร็จ</td><td>→</td><td>โป๊ว</td><td>ช่างเคาะ → ส่งมอบให้ช่างโป๊ว</td></tr>
+<tr><td>โป๊ว เสร็จ</td><td>→</td><td>พ่น</td><td>ช่างโป๊ว → ส่งมอบให้ช่างพ่น</td></tr>
+<tr><td>พ่น เสร็จ</td><td>→</td><td>ประกอบ</td><td>ช่างพ่น → ส่งมอบให้ช่างประกอบ</td></tr>
+<tr><td>ประกอบ เสร็จ</td><td>→</td><td>ขัดสี</td><td>ช่างประกอบ → ส่งมอบให้ช่างขัดสี</td></tr>
+<tr><td>ขัดสี เสร็จ</td><td>→</td><td>ล้าง</td><td>ช่างขัดสี → ส่งมอบล้างรถ</td></tr>
+<tr><td>ล้าง เสร็จ</td><td>→</td><td>SUP QC</td><td>ล้างเสร็จ → ส่งตรวจ FinalCheck</td></tr>
+</table>
+<p style="font-size:11px;color:var(--text3);margin-top:8px">💡 ใช้แท็บ <strong>เคลื่อนไหว → เคลื่อนสถานะงานซ่อม</strong> ในระบบเพื่อเคลื่อนย้ายสถานี</p>
+</div>
+</div>
+
+<!-- ═══ Tab P3: ตรวจ QC ═══ -->
+<div id="tab-p3" class="tab-panel">
+
+<!-- ═══ FLOW CHART P3: ตรวจ QC ═══ -->
+<div class="fc">
+<h4>🔄 แผนผังกระบวนการตรวจ QC (FinalCheck Flow Chart)</h4>
+<div class="fc-row" style="justify-content:center;gap:6px">
+<div class="fc-node start">🚿 รถล้างเสร็จ<br>ส่งเข้าตรวจ</div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">📋 SUP QC รับรถ<br><span style="font-size:10px;color:var(--text3)">เข้าสถานีตรวจ</span></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">🔍 ตรวจงานซ่อมทุกจุด<br><span style="font-size:10px;color:var(--text3)">ประกอบ/สี/ตัวถัง/ขัดสี/ความสะอาด</span></div>
+</div>
+<div class="fc-row" style="justify-content:center;gap:6px;margin-top:8px"><div class="fc-conn up">↓</div></div>
+<div class="fc-row" style="justify-content:center;gap:6px"><div class="fc-node decision">✅ ผ่าน<br>หรือไม่?</div></div>
+<div class="fc-row" style="margin-top:8px;gap:24px;margin-left:20px">
+<div style="text-align:center">
+<div class="fc-branch-label yes">✅ ผ่าน QC</div>
+<div class="fc-node success" style="margin-top:4px">✅ รอส่งมอบ<br><span style="font-size:10px">สถานะ → รอส่งมอบ PMG</span></div>
+<div class="fc-conn up" style="display:block;text-align:center">↓</div>
+<div class="fc-node end">🚗 ส่งมอบรถ<br>ให้ลูกค้า</div>
+</div>
+<div style="text-align:center">
+<div class="fc-branch-label no">❌ ไม่ผ่าน</div>
+<div class="fc-node fail" style="margin-top:4px">🔄 SUP แก้ไขงาน<br><span style="font-size:10px">ระบุสาเหตุ</span></div>
+<div class="fc-conn up" style="display:block;text-align:center">↓</div>
+<div class="fc-node step">🔧 แก้ไขตามข้อ<br><span style="font-size:10px;color:var(--text3)">ประกอบ/สี/ตัวถัง/ขัดสี/สะอาด</span></div>
+<div class="fc-conn up" style="display:block;text-align:center">↓</div>
+<div class="fc-node decision" style="font-size:11px">แก้ไข<br>เสร็จ?</div>
+<div class="fc-row" style="margin-top:4px;gap:8px">
+<div style="text-align:center"><div class="fc-branch-label yes" style="font-size:9px">✅ เสร็จ</div><div class="fc-node success" style="font-size:10px;margin-top:2px">ตรวจซ้ำ<br>→ กลับขึ้นไป</div></div>
+<div style="text-align:center"><div class="fc-branch-label no" style="font-size:9px">❌ เกิน 2 ครั้ง</div><div class="fc-node fail" style="font-size:10px;margin-top:2px">แจ้งผู้จัดการ</div></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="process-card qc">
+<h3><span class="step-num" style="background:var(--purple);color:#fff">3</span> ✅ ขั้นตอนการตรวจ (Quality Control / FinalCheck)<div class="doc-ref">PMG-WI-301 | ISO 9001:2015 ข้อ 8.6, 8.7</div></h3>
+<p>กระบวนการตรวจสอบคุณภาพงานซ่อมก่อนส่งมอบรถคืนลูกค้า ตามมาตรฐาน ISO 9001:2015 ข้อ 8.6 การปล่อยผลิตภัณฑ์</p>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--purple)">
+<h4 style="color:var(--purple);font-size:13px;margin-bottom:8px">📋 ขั้นตอนการตรวจ (FinalCheck Procedure)</h4>
+<table class="step-table">
+<tr><th style="width:30px">ลำดับ</th><th>ขั้นตอน</th><th>ผู้รับผิดชอบ</th><th>เกณฑ์รับ (Acceptance Criteria)</th><th>หากไม่ผ่าน</th></tr>
+<tr><td class="num">3.1</td><td>รถเข้าสถานี SUP QC<br><span style="color:var(--text3);font-size:10px">หลังจากล้างเสร็จ รถถูกส่งเข้าตรวจ</span></td><td>SUP QC</td><td>—</td><td>—</td></tr>
+<tr><td class="num">3.2</td><td>ตรวจสอบงานซ่อมทุกจุด<br><span style="color:var(--text3);font-size:10px">ตรวจงานประกอบ งานสี งานตัวถัง ความสะอาด</span></td><td>SUP QC</td><td>✅ งานประกอบครบ ✅ สีสม่ำเสมอ ✅ ตัวถังเรียบ ✅ รถสะอาด</td><td>ส่งกลับแก้ไข (SUP แก้ไขงาน)</td></tr>
+<tr><td class="num">3.3</td><td>บันทึกผลการตรวจ<br><span style="color:var(--text3);font-size:10px">ระบุสาเหตุหากไม่ผ่าน: งานประกอบ/งานสี/งานตัวถัง/ขัดสี/ความสะอาด</span></td><td>SUP QC</td><td>ข้อมูลครบถ้วนถูกต้อง <span class="iso-badge mandatory">ข้อ 8.5.2</span></td><td>—</td></tr>
+<tr><td class="num">3.4</td><td>ผ่าน QC → รอส่งมอบ<br><span style="color:var(--text3);font-size:10px">รถย้ายสถานะเป็น "รอส่งมอบ PMG"</span></td><td>SUP QC</td><td>ผ่านทุกข้อ</td><td>แก้ไขแล้วกลับมาตรวจใหม่</td></tr>
+</table>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--red)">
+<h4 style="color:var(--red);font-size:13px;margin-bottom:8px">🔄 กระบวนการแก้ไขงาน (Rework Process)</h4>
+<div class="flow-row">
+<div class="flow-box">
+<h4>❌ ไม่ผ่าน QC</h4>
+<p>กรณีรถไม่ผ่าน FinalCheck จะถูกส่งกลับไปสถานีที่มีปัญหา</p>
+<div class="ref">สาเหตุ: งานประกอบ / งานสี / งานตัวถัง / ขัดสี / ความสะอาด</div>
+</div>
+<div class="flow-box">
+<h4>🔧 แก้ไขงาน (Rework)</h4>
+<p>สถานะเปลี่ยนเป็น "SUP แก้ไขงาน" ช่างจะแก้ไขตามข้อที่ไม่ผ่าน</p>
+<div class="ref">ระบบ: สถานะ SUP แก้ไขงาน → supFix</div>
+</div>
+<div class="flow-box">
+<h4>✅ ตรวจซ้ำ (Re-inspect)</h4>
+<p>แก้ไขเสร็จ → ตรวจซ้ำอีกครั้ง จนกว่าจะผ่าน</p>
+<div class="ref">ซ้ำจนกว่าจะผ่านทุกข้อ</div>
+</div>
+</div>
+<p style="font-size:11px;color:var(--text3);margin-top:8px">💡 ดูข้อมูล FinalCheck ในแท็บ <strong>✅ ตรวจ FinalCheck</strong> ของ PMG Workshop Dashboard</p>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--yellow)">
+<h4 style="color:var(--yellow);font-size:13px;margin-bottom:8px">⚠️ จุดควบคุม (Control Points)</h4>
+<ul class="checklist">
+<li class="must">รถทุกคันต้องผ่าน FinalCheck ก่อนส่งมอบ <span class="iso-badge mandatory">ข้อ 8.6</span></li>
+<li class="must">บันทึกสาเหตุการไม่ผ่าน QC ทุกครั้ง ไม่ว่าจะแก้ไขแล้วหรือไม่</li>
+<li class="must">ห้ามส่งมอบรถที่ไม่ผ่าน QC โดยเด็ดขาด</li>
+<li class="should">รถที่แก้ไขเกิน 2 ครั้ง ให้แจ้งผู้จัดการ</li>
+<li class="info">อัตราการผ่าน QC จะถูกติดตามเป็น KPI รายเดือน</li>
+</ul>
+</div>
+</div>
+
+<!-- ═══ Tab P4: ส่งมอบ ═══ -->
+<div id="tab-p4" class="tab-panel">
+
+<!-- ═══ FLOW CHART P4: ส่งมอบ ═══ -->
+<div class="fc">
+<h4>🔄 แผนผังกระบวนการส่งมอบ (Delivery Flow Chart)</h4>
+<div class="fc-row" style="justify-content:center;gap:6px">
+<div class="fc-node start">✅ ผ่าน QC<br>รอส่งมอบ</div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">📅 นัดหมายส่งมอบ<br><span style="font-size:10px;color:var(--text3)">กำหนดวัน-เวลากับลูกค้า/SA</span></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">📨 แจ้งเตือน<br><span style="font-size:10px;color:var(--text3)">LINE/SMS/อีเมล 1 วันก่อน</span></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">🔍 ตรวจรถก่อนส่ง<br><span style="font-size:10px;color:var(--text3)">ความสมบูรณ์/สะอาด/พร้อม</span></div>
+</div>
+<div class="fc-row" style="justify-content:center;gap:6px;margin-top:8px"><div class="fc-conn up">↓</div></div>
+<div class="fc-row" style="justify-content:center;gap:6px"><div class="fc-node decision">🚗 ลูกค้า<br>มารับหรือไม่?</div></div>
+<div class="fc-row" style="margin-top:8px;gap:24px;margin-left:20px">
+<div style="text-align:center">
+<div class="fc-branch-label yes">✅ มารับ</div>
+<div class="fc-node success" style="margin-top:4px">📋 ส่งมอบรถ<br><span style="font-size:10px">บันทึกวันส่งมอบจริง</span></div>
+<div class="fc-conn up" style="display:block;text-align:center">↓</div>
+<div class="fc-node end">✅ เสร็จสิ้น<br>ปิดงานซ่อม</div>
+</div>
+<div style="text-align:center">
+<div class="fc-branch-label no">⏰ เลื่อนนัด</div>
+<div class="fc-node step" style="margin-top:4px">📆 เลื่อนนัดส่งมอบ<br><span style="font-size:10px;color:var(--text3)">บันทึกเหตุผล (สูงสุด 3 ครั้ง)</span></div>
+<div class="fc-conn up" style="display:block;text-align:center">↓</div>
+<div class="fc-node decision" style="font-size:11px">เลื่อน<br>เกิน 3 ครั้ง?</div>
+<div style="display:flex;gap:8px;margin-top:4px">
+<div style="text-align:center"><div class="fc-branch-label yes" style="font-size:9px">❌ ไม่เกิน</div><div class="fc-node step" style="font-size:10px;margin-top:2px">กลับไปนัดใหม่</div></div>
+<div style="text-align:center"><div class="fc-branch-label no" style="font-size:9px">⚠️ เกิน 3 ครั้ง</div><div class="fc-node fail" style="font-size:10px;margin-top:2px">แจ้งผู้จัดการ<br>พิจารณา</div></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="process-card deliver">
+<h3><span class="step-num" style="background:var(--green);color:#000">4</span> 🚗 ขั้นตอนการส่งมอบรถ (Vehicle Delivery)<div class="doc-ref">PMG-WI-401 | ISO 9001:2015 ข้อ 8.6, 8.5.5</div></h3>
+<p>กระบวนการส่งมอบรถคืนลูกค้า ตั้งแต่นัดหมายส่งมอบจนถึงส่งมอบจริง</p>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--green)">
+<h4 style="color:var(--green);font-size:13px;margin-bottom:8px">📋 ขั้นตอนการส่งมอบ</h4>
+<table class="step-table">
+<tr><th style="width:30px">ลำดับ</th><th>ขั้นตอน</th><th>ผู้รับผิดชอบ</th><th>เอกสาร/ระบบ</th><th>ผลลัพธ์</th></tr>
+<tr><td class="num">4.1</td><td>นัดหมายส่งมอบ<br><span style="color:var(--text3);font-size:10px">กำหนดวัน-เวลาส่งมอบกับลูกค้า/SA</span></td><td>SA</td><td>ระบบ: เคลื่อนไหว → นัดหมายส่งมอบ</td><td>วันส่งมอบในระบบ</td></tr>
+<tr><td class="num">4.2</td><td>แจ้งเตือนส่งมอบ<br><span style="color:var(--text3);font-size:10px">แจ้งผ่าน LINE/SMS/อีเมล 1 วันก่อนส่งมอบ</span></td><td>ระบบอัตโนมัติ</td><td>ระบบแจ้งเตือนอัตโนมัติ</td><td>ลูกค้าได้รับแจ้งเตือน</td></tr>
+<tr><td class="num">4.3</td><td>ตรวจสอบรถก่อนส่งมอบ<br><span style="color:var(--text3);font-size:10px">ตรวจสอบความสมบูรณ์ สะอาด พร้อมส่งมอบ</span></td><td>SUP QC</td><td>เช็คลิสต์ก่อนส่งมอบ</td><td>รถผ่านเช็คลิสต์</td></tr>
+<tr><td class="num">4.4</td><td>ส่งมอบรถให้ PMG/ลูกค้า<br><span style="color:var(--text3);font-size:10px">บันทึกวันส่งมอบจริงในระบบ</span></td><td>SA / ผู้จัดการ</td><td>PMG Workshop → สถานะ "ส่งมอบแล้ว"</td><td>สถานะ: ส่งมอบให้ PMG แล้ว ✅</td></tr>
+</table>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--yellow)">
+<h4 style="color:var(--yellow);font-size:13px;margin-bottom:8px">⚠️ จุดควบคุม (Control Points)</h4>
+<ul class="checklist">
+<li class="must">รถต้องผ่าน FinalCheck (SUP QC) ก่อนส่งมอบ <span class="iso-badge mandatory">ข้อ 8.6</span></li>
+<li class="must">บันทึกวันส่งมอบจริงในระบบ <span class="iso-badge mandatory">ข้อ 8.5.2</span></li>
+<li class="should">แจ้งเตือนลูกค้าก่อนวันส่งมอบอย่างน้อย 1 วัน</li>
+<li class="info">หากเลื่อนนัดส่งมอบ ต้องบันทึกเหตุผล (ระบบรองรับการเลื่อนนัด 3 ครั้ง)</li>
+</ul>
+</div>
+</div>
+
+<!-- ═══ Tab P5: เคลือบแก้ว (BCT) ═══ -->
+<div id="tab-p5" class="tab-panel">
+
+<!-- ═══ FLOW CHART P5: เคลือบแก้ว (BCT) ═══ -->
+<div class="fc">
+<h4>🔄 แผนผังกระบวนการเคลือบแก้ว (BCT Glass Coating Flow Chart)</h4>
+<div class="fc-row" style="justify-content:center;gap:6px">
+<div class="fc-node start">📝 รับลูกค้า<br>B1 บันทึกข้อมูล</div>
+<div class="fc-conn">→</div>
+<div class="fc-node decision">เลือก<br>แพ็กเกจ?</div>
+</div>
+<div class="fc-row" style="margin-top:6px;gap:12px;margin-left:20px">
+<div style="text-align:center">
+<div class="fc-branch-label yes" style="font-size:9px">พ่น 1 ปี</div>
+<div class="fc-node step" style="font-size:11px;margin-top:2px">🪟 พ่นเคลือบ 1 ปี<br><span style="font-size:10px;color:var(--text3)">B1 คอลัมน์ เคลือบแก้ว</span></div>
+</div>
+<div style="text-align:center">
+<div class="fc-branch-label yes" style="font-size:9px;background:rgba(168,85,247,.2);color:var(--purple)">พ่น 3 ปี</div>
+<div class="fc-node step" style="font-size:11px;margin-top:2px">🪟 พ่นเคลือบ 3 ปี<br><span style="font-size:10px;color:var(--text3)">B1 คอลัมน์ เคลือบแก้ว</span></div>
+</div>
+<div style="text-align:center">
+<div class="fc-branch-label yes" style="font-size:9px;background:rgba(56,189,248,.2);color:var(--accent)">Diamond</div>
+<div class="fc-node step" style="font-size:11px;margin-top:2px">💎 Diamond Coating<br><span style="font-size:10px;color:var(--text3)">B1 คอลัมน์ เคลือบแก้ว</span></div>
+</div>
+<div style="text-align:center">
+<div class="fc-branch-label no" style="font-size:9px">บำรุงเท่านั้น</div>
+<div class="fc-node step" style="font-size:11px;margin-top:2px">🔔 บำรุงผิวแก้ว<br><span style="font-size:10px;color:var(--text3)">⚠️ ไม่ได้เคลือบใหม่<br>ว่างเพราะไม่แถมบำรุง</span></div>
+</div>
+</div>
+<div class="fc-row" style="justify-content:center;gap:6px;margin-top:10px"><div class="fc-conn up">↓</div></div>
+<div class="fc-row" style="justify-content:center;gap:6px">
+<div class="fc-node step">📅 จองคิวนัดหมาย<br><span style="font-size:10px;color:var(--text3)">C2 คิว 1 (09:00) / คิว 2 (13:00)</span></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">🪟 ดำเนินการเคลือบ<br><span style="font-size:10px;color:var(--text3)">ตามแพ็กเกจที่เลือก</span></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step">🚗 ส่งมอบรถ<br><span style="font-size:10px;color:var(--text3)">บันทึกวันส่งมอบจริง</span></div>
+</div>
+<div class="fc-row" style="justify-content:center;gap:6px;margin-top:8px"><div class="fc-conn up">↓</div></div>
+<div class="fc-row" style="justify-content:center;gap:6px">
+<div class="fc-node step" style="background:rgba(251,191,36,.15);border:1px solid var(--yellow)">🔔 ระบบแจ้งเตือนบำรุง<br><span style="font-size:10px;color:var(--text3)">ติดตาม 9 รอบ / ทุกเดือน</span></div>
+<div class="fc-conn">→</div>
+<div class="fc-node step" style="background:rgba(168,85,247,.15);border:1px solid var(--purple)">📞 โทรติดตาม<br><span style="font-size:10px;color:var(--text3)">บันทึกผลการติดต่อทุกรอบ</span></div>
+<div class="fc-conn">→</div>
+<div class="fc-node end">✅ เสร็จสิ้น<br>ครบ 9 รอบ</div>
+</div>
+</div>
+
+<div class="process-card bct">
+<h3><span class="step-num" style="background:var(--pink);color:#fff">5</span> 🪟 กระบวนการเคลือบแก้ว (BCT Glass Coating Process)<div class="doc-ref">PMG-WI-501 | ISO 9001:2015 ข้อ 8.5.1</div></h3>
+<p>กระบวนการบริการเคลือบแก้วและบำรุงผิวแก้ว ตั้งแต่รับลูกค้าจนถึงการติดตามบำรุงผิวแก้ว 9 รอบ</p>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--pink)">
+<h4 style="color:var(--pink);font-size:13px;margin-bottom:8px">📋 ขั้นตอนหลัก</h4>
+<table class="step-table">
+<tr><th style="width:30px">ลำดับ</th><th>ขั้นตอน</th><th>ผู้รับผิดชอบ</th><th>แผ่นข้อมูล (Sheet)</th><th>ผลลัพธ์</th></tr>
+<tr><td class="num">5.1</td><td>บันทึกข้อมูลลูกค้า<br><span style="color:var(--text3);font-size:10px">ชื่อ ทะเบียน เบอร์โทร ยี่ห้อ รุ่น ช่องทาง</span></td><td>SA / พนักงาน BCT</td><td>B1_บันทึกข้อมูลลูกค้า</td><td>ข้อมูลลูกค้าในระบบ <span class="iso-badge mandatory">ข้อ 8.5.2</span></td></tr>
+<tr><td class="num">5.2</td><td>เลือกแพ็กเกจเคลือบแก้ว<br><span style="color:var(--text3);font-size:10px">พ่น 1 ปี / พ่น 3 ปี / Diamond / บำรุงผิวแก้ว</span></td><td>ลูกค้า + SA</td><td>B1 คอลัมน์ เคลือบแก้ว</td><td>ประเภทเคลือบ</td></tr>
+<tr><td class="num">5.3</td><td>จองคิวนัดหมาย<br><span style="color:var(--text3);font-size:10px">คิว 1 (09:00) / คิว 2 (13:00) / คิวพิเศษ</span></td><td>SA / พนักงาน BCT</td><td>C2_จองคิว</td><td>นัดหมายในปฏิทิน</td></tr>
+<tr><td class="num">5.4</td><td>ดำเนินการเคลือบแก้ว<br><span style="color:var(--text3);font-size:10px">ตามแพ็กเกจที่ลูกค้าเลือก</span></td><td>ช่างเคลือบแก้ว</td><td>B1 คอลัมน์ วันที่เคลือบ</td><td>รถเคลือบเสร็จ</td></tr>
+<tr><td class="num">5.5</td><td>ส่งมอบรถให้ลูกค้า<br><span style="color:var(--text3);font-size:10px">บันทึกวันส่งมอบจริง</span></td><td>SA</td><td>B1/B2 คอลัมน์ วันส่งมอบ</td><td>สถานะ: ส่งมอบแล้ว ✅</td></tr>
+<tr><td class="num">5.6</td><td>ติดตามบำรุงผิวแก้ว<br><span style="color:var(--text3);font-size:10px">แจ้งเตือนเมื่อครบกำหนด ติดตาม 9 รอบ</span></td><td>ระบบอัตโนมัติ + พนักงาน</td><td>B2_แจ้งเตือนครบบำรุง</td><td>บันทึกการติดต่อทุกรอบ</td></tr>
+</table>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--cyan)">
+<h4 style="color:var(--cyan);font-size:13px;margin-bottom:8px">🔔 ระบบแจ้งเตือนบำรุงผิวแก้ว</h4>
+<table class="step-table">
+<tr><th>รอบที่</th><th>ช่วงเวลา</th><th>การดำเนินการ</th><th>ช่องทางแจ้งเตือน</th></tr>
+<tr><td>รอบที่ 1-2</td><td>เดือนที่ 1-3 หลังเคลือบ</td><td>แจ้งเตือนครบกำหนดบำรุง → โทรติดตาม → บันทึกผล</td><td>LINE / SMS / อีเมล</td></tr>
+<tr><td>รอบที่ 3-5</td><td>เดือนที่ 4-9</td><td>แจ้งเตือน → โทร → นัดเข้าบำรุง → บันทึกวันเข้าบำรุง</td><td>LINE / SMS / อีเมล</td></tr>
+<tr><td>รอบที่ 6-9</td><td>เดือนที่ 10-18</td><td>แจ้งเตือน → โทร → นัดเข้าบำรุง → บันทึกวันเข้าบำรุง</td><td>LINE / SMS / อีเมล</td></tr>
+</table>
+<p style="font-size:11px;color:var(--text3);margin-top:8px">💡 ระบบตรวจสอบอัตโนมัติทุกวัน เวลา 08:00 ผ่าน Time-driven Trigger</p>
+<p style="font-size:11px;color:var(--text3)">💡 ถ้ารถ "ไม่แถมบำรุงผิวแก้ว" ระบบจะแสดงสถานะพิเศษ: ว่างเพราะไม่แถมบำรุงผิวแก้ว</p>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--yellow)">
+<h4 style="color:var(--yellow);font-size:13px;margin-bottom:8px">⚠️ จุดควบคุม (Control Points)</h4>
+<ul class="checklist">
+<li class="must">บันทึกข้อมูลลูกค้าครบถ้วนทุกฟิลด์: ชื่อ ทะเบียน เบอร์โทร ยี่ห้อ รุ่น <span class="iso-badge mandatory">ข้อ 8.5.2</span></li>
+<li class="must">นัดหมายต้องบันทึกในระบบ C2 จองคิว ก่อนเข้าทำ</li>
+<li class="must">บันทึกวันส่งมอบจริงเมื่อส่งมอบรถ</li>
+<li class="must">ติดตามบำรุงผิวแก้วทุกรอบ บันทึกผลการติดต่อ</li>
+<li class="should">แจ้งเตือนลูกค้าผ่าน LINE/SMS/อีเมล ก่อนวันครบกำหนดบำรุง 7 วัน</li>
+</ul>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--accent)">
+<h4 style="color:var(--accent);font-size:13px;margin-bottom:8px">🖥️ ระบบสนับสนุน — BCT Dashboard</h4>
+<div class="flow-row">
+<div class="flow-box">
+<h4>📊 แดชบอร์ด</h4>
+<p>สรุปจำนวนลูกค้า สถานะเคลือบ บำรุง ครบกำหนด</p>
+<div class="ref">?bct=ui → แท็บ แดชบอร์ด</div>
+</div>
+<div class="flow-box">
+<h4>🔔 แจ้งเตือน</h4>
+<p>รายการครบกำหนดบำรุง ส่งแจ้งเตือน LINE/SMS/อีเมล</p>
+<div class="ref">?bct=ui → แท็บ แจ้งเตือน</div>
+</div>
+<div class="flow-box">
+<h4>📅 ปฏิทิน</h4>
+<p>ปฏิทินนัดหมาย เคลือบ บำรุง ส่งมอบ ทุกประเภท</p>
+<div class="ref">?bct=ui → แท็บ ปฏิทิน</div>
+</div>
+<div class="flow-box">
+<h4>📋 คิว</h4>
+<p>ตารางคิวรายสัปดาห์ คิว 1/คิว 2/พิเศษ</p>
+<div class="ref">?bct=ui → แท็บ คิว</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ═══ Tab KPI ═══ -->
+<div id="tab-kpi" class="tab-panel">
+
+<div class="process-card" style="border-left:3px solid var(--accent)">
+<h3 style="color:var(--accent);display:flex;align-items:center;gap:8px"><span class="step-num" style="background:var(--accent);color:#000">📊</span> ตัวชี้วัดคุณภาพ (KPI) & เป้าหมาย<div class="doc-ref">ISO 9001:2015 ข้อ 9.1.3</div></h3>
+</div>
+
+<div class="kpi-row">
+<div class="kpi-box"><div class="kpi-label">เวลาซ่อมเฉลี่ย (Cycle Time)</div><div class="kpi-value" style="color:var(--accent)">7-14</div><div class="kpi-unit">วัน</div></div>
+<div class="kpi-box"><div class="kpi-label">อัตราผ่าน QC ตั้งแต่รอบแรก</div><div class="kpi-value" style="color:var(--green)">≥80%</div><div class="kpi-unit">First Pass Rate</div></div>
+<div class="kpi-box"><div class="kpi-label">อัตราส่งมอบตรงเวลา</div><div class="kpi-value" style="color:var(--orange)">≥90%</div><div class="kpi-unit">On-Time Delivery</div></div>
+<div class="kpi-box"><div class="kpi-label">อัตราการกลับมาแก้ไข (Rework)</div><div class="kpi-value" style="color:var(--red)">≤20%</div><div class="kpi-unit">Rework Rate</div></div>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--accent)">
+<h4 style="color:var(--accent);font-size:13px;margin-bottom:8px">📈 ตัวชี้วัดรายสถานี</h4>
+<table class="step-table">
+<tr><th>สถานี</th><th>KPI หลัก</th><th>เป้าหมาย</th><th>วิธีวัด</th></tr>
+<tr><td>🔨 เคาะ</td><td>เวลาเคาะเฉลี่ย</td><td>≤3 วัน</td><td>วันเสร็จ - วันเริ่ม + 1</td></tr>
+<tr><td>🧴 โป๊ว</td><td>เวลาโป๊วเฉลี่ย</td><td>≤2 วัน</td><td>วันเสร็จ - วันเริ่ม + 1</td></tr>
+<tr><td>🎨 พ่น</td><td>เวลาพ่นเฉลี่ย</td><td>≤3 วัน</td><td>วันเสร็จ - วันเริ่ม + 1</td></tr>
+<tr><td>🔩 ประกอบ</td><td>เวลาประกอบเฉลี่ย</td><td>≤2 วัน</td><td>วันเสร็จ - วันเริ่ม + 1</td></tr>
+<tr><td>✨ ขัดสี</td><td>เวลาขัดสีเฉลี่ย</td><td>≤2 วัน</td><td>วันเสร็จ - วันเริ่ม + 1</td></tr>
+<tr><td>🚿 ล้าง</td><td>เวลาล้างเฉลี่ย</td><td>≤1 วัน</td><td>วันเสร็จ - วันเข้าล้าง + 1</td></tr>
+<tr><td>✅ SUP QC</td><td>อัตราผ่าน QC รอบแรก</td><td>≥80%</td><td>รถผ่าน QC ÷ รถทั้งหมด</td></tr>
+<tr><td>🚗 ส่งมอบ</td><td>อัตราส่งมอบตรงเวลา</td><td>≥90%</td><td>ส่งตรงเวลา ÷ส่งทั้งหมด</td></tr>
+</table>
+<p style="font-size:11px;color:var(--text3);margin-top:8px">💡 ดูข้อมูล KPI รายสถานีได้ในแท็บ <strong>📈 สถานีซ่อม KPI</strong> ของ PMG Workshop Dashboard</p>
+</div>
+
+<div class="process-card" style="border-left:3px solid var(--pink)">
+<h4 style="color:var(--pink);font-size:13px;margin-bottom:8px">🪟 KPI เคลือบแก้ว (BCT KPIs)</h4>
+<table class="step-table">
+<tr><th>KPI</th><th>เป้าหมาย</th><th>วิธีวัด</th></tr>
+<tr><td>อัตราการกลับมาบำรุงตามนัด</td><td>≥70%</td><td>จำนวนรถเข้าบำรุงตามนัด ÷ จำนวนรถครบกำหนด</td></tr>
+<tr><td>เวลาตอบกลับแจ้งเตือน</td><td>≤24 ชม.</td><td>เวลาที่โทรติดตาม - เวลาที่ระบบแจ้งเตือน</td></tr>
+<tr><td>อัตราการติดต่อสำเร็จ</td><td>≥80%</td><td>จำนวนรถที่ติดต่อได้ ÷ จำนวนรถที่ต้องติดต่อ</td></tr>
+<tr><td>รอบบำรุงครบทุกรอบ</td><td>≥60%</td><td>รถที่บำรุงครบ 9 รอบ ÷ รถทั้งหมด</td></tr>
+</table>
+</div>
+</div>
+
+<!-- ═══ Tab สรุปประจำวัน ═══ -->
+<div id="tab-daily" class="tab-panel">
+
+<div class="process-card" style="border-left:3px solid #16a34a">
+<h3 style="color:#16a34a;display:flex;align-items:center;gap:8px"><span class="step-num" style="background:#16a34a;color:#fff">📋</span> สรุปงานแล้วเสร็จประจำวัน (Daily Completion Summary)<div class="doc-ref">ISO 9001:2015 ข้อ 8.5.1, 9.1.3</div></h3>
+<p>รายการตรวจสอบงานแล้วเสร็จในแต่ละสถานี เพื่อให้ผู้จัดการ/SA ตรวจสอบได้ทุกวัน ก่อนปิดกะ</p>
+</div>
+
+<!-- 🔨 สถานีเคาะ -->
+<div class="process-card" style="border-left:3px solid #ef4444">
+<h4 style="color:#ef4444;font-size:13px;margin-bottom:8px">🔨 สถานีเคาะ — งานแล้วเสร็จประจำวัน</h4>
+<table class="step-table">
+<tr><th style="width:30px">✓</th><th>รายการตรวจสอบ</th><th>เกณฑ์รับ</th><th>ผู้ตรวจ</th></tr>
+<tr><td class="num">1</td><td>ตัวถังเรียบ ไม่มีรอยบุบ/รอยด่าง</td><td>ระยะตรง ±2 มม. ผิวเรียบสม่ำเสมอ</td><td>ช่างเคาะ + หัวหน้า</td></tr>
+<tr><td class="num">2</td><td>ชิ้นส่วนที่ถอดออก ประกอบกลับครบ</td><td>นับจำนวนชิ้นส่วน ถอด=ประกอบ</td><td>ช่างเคาะ</td></tr>
+<tr><td class="num">3</td><td>บันทึกวันเริ่ม-วันเสร็จ และช่างผู้ทำ</td><td>ข้อมูลครบในระบบ <span class="iso-badge mandatory">ข้อ 8.5.2</span></td><td>SA / ผู้จัดการ</td></tr>
+<tr><td class="num">4</td><td>รถพร้อมส่งต่อสถานีโป๊ว</td><td>สถานะเปลี่ยนเป็น "โป๊ว" ในระบบ</td><td>SA</td></tr>
+</table>
+<div style="margin-top:8px;padding:8px 12px;background:#fef2f2;border-radius:6px;font-size:11px;color:#991b1b;border-left:3px solid #ef4444">
+⚠️ <strong>ห้ามส่งต่อ</strong> หากตัวถังยังไม่เรียบ หรือชิ้นส่วนไม่ครบ — ต้องแก้ไขให้ผ่านเกณฑ์ก่อน
+</div>
+</div>
+
+<!-- 🧴 สถานีโป๊ว -->
+<div class="process-card" style="border-left:3px solid #f97316">
+<h4 style="color:#f97316;font-size:13px;margin-bottom:8px">🧴 สถานีโป๊ว — งานแล้วเสร็จประจำวัน</h4>
+<table class="step-table">
+<tr><th style="width:30px">✓</th><th>รายการตรวจสอบ</th><th>เกณฑ์รับ</th><th>ผู้ตรวจ</th></tr>
+<tr><td class="num">1</td><td>ผิวพอกเรียบ ไม่มีรอยด่าง/รอยแตก</td><td>ผิวเรียบสม่ำเสมอ ไม่มีรอยต่อ</td><td>ช่างโป๊ว + หัวหน้า</td></tr>
+<tr><td class="num">2</td><td>ผิวพร้อมพ่นสี</td><td>สะอาด ไม่มีฝุ่น/คราบ</td><td>ช่างโป๊ว</td></tr>
+<tr><td class="num">3</td><td>บันทึกวันเริ่ม-วันเสร็จ และช่างผู้ทำ</td><td>ข้อมูลครบในระบบ <span class="iso-badge mandatory">ข้อ 8.5.2</span></td><td>SA / ผู้จัดการ</td></tr>
+<tr><td class="num">4</td><td>รถพร้อมส่งต่อสถานีพ่น</td><td>สถานะเปลี่ยนเป็น "พ่น" ในระบบ</td><td>SA</td></tr>
+</table>
+<div style="margin-top:8px;padding:8px 12px;background:#fff7ed;border-radius:6px;font-size:11px;color:#9a3412;border-left:3px solid #f97316">
+⚠️ <strong>ห้ามส่งต่อ</strong> หากผิวยังไม่เรียบ หรือมีรอยแตก — ต้องแก้ไขก่อนพ่นสี
+</div>
+</div>
+
+<!-- 🎨 สถานีพ่น -->
+<div class="process-card" style="border-left:3px solid #3b82f6">
+<h4 style="color:#3b82f6;font-size:13px;margin-bottom:8px">🎨 สถานีพ่น — งานแล้วเสร็จประจำวัน</h4>
+<table class="step-table">
+<tr><th style="width:30px">✓</th><th>รายการตรวจสอบ</th><th>เกณฑ์รับ</th><th>ผู้ตรวจ</th></tr>
+<tr><td class="num">1</td><td>สีสม่ำเสมอ ไม่มีรอยหิ้ว/ฝุ่น</td><td>เทียบกับสีต้นแบบ ไม่มีรอยผิดเพี้ยน</td><td>ช่างพ่น + หัวหน้า</td></tr>
+<tr><td class="num">2</td><td>สีตรงตามรุ่นรถ</td><td>รหัสสีตรงกับรุ่น/ปี รถยนต์</td><td>ช่างพ่น</td></tr>
+<tr><td class="num">3</td><td>หลุบพ่นเคลียร์เคลือบเรียบ</td><td>ผิวเงาสม่ำเสมอ ไม่มีรอยน้ำยา</td><td>ช่างพ่น</td></tr>
+<tr><td class="num">4</td><td>บันทึกวันเริ่ม-วันเสร็จ และช่างผู้ทำ</td><td>ข้อมูลครบในระบบ <span class="iso-badge mandatory">ข้อ 8.5.2</span></td><td>SA / ผู้จัดการ</td></tr>
+<tr><td class="num">5</td><td>รถพร้อมส่งต่อสถานีประกอบ</td><td>สถานะเปลี่ยนเป็น "ประกอบ" ในระบบ</td><td>SA</td></tr>
+</table>
+<div style="margin-top:8px;padding:8px 12px;background:#eff6ff;border-radius:6px;font-size:11px;color:#1e40af;border-left:3px solid #3b82f6">
+⚠️ <strong>ห้ามส่งต่อ</strong> หากสียังไม่สม่ำเสมอ หรือมีรอยหิ้ว — ต้องพ่นซ่อมใหม่ก่อน
+</div>
+</div>
+
+<!-- 🔩 สถานีประกอบ -->
+<div class="process-card" style="border-left:3px solid #8b5cf6">
+<h4 style="color:#8b5cf6;font-size:13px;margin-bottom:8px">🔩 สถานีประกอบ — งานแล้วเสร็จประจำวัน</h4>
+<table class="step-table">
+<tr><th style="width:30px">✓</th><th>รายการตรวจสอบ</th><th>เกณฑ์รับ</th><th>ผู้ตรวจ</th></tr>
+<tr><td class="num">1</td><td>ชิ้นส่วนประกอบครบ ไม่มีรอยหย่อน</td><td>นับจำนวนชิ้นส่วน ตรงตามรายการถอด</td><td>ช่างประกอบ + หัวหน้า</td></tr>
+<tr><td class="num">2</td><td>สกรู/นัต/คลิป ติดตั้งครบถ้วน</td><td>ไม่มีชิ้นส่วนเหลือ/ขาด</td><td>ช่างประกอบ</td></tr>
+<tr><td class="num">3</td><td>ช่องว่าง/ระยะห่างสม่ำเสมอ</td><td>ระยะห่างแนวนอน/แนวตั้ง ±1 มม.</td><td>ช่างประกอบ</td></tr>
+<tr><td class="num">4</td><td>บันทึกวันเริ่ม-วันเสร็จ และช่างผู้ทำ</td><td>ข้อมูลครบในระบบ <span class="iso-badge mandatory">ข้อ 8.5.2</span></td><td>SA / ผู้จัดการ</td></tr>
+<tr><td class="num">5</td><td>รถพร้อมส่งต่อสถานีขัดสี</td><td>สถานะเปลี่ยนเป็น "ขัดสี" ในระบบ</td><td>SA</td></tr>
+</table>
+<div style="margin-top:8px;padding:8px 12px;background:#f5f3ff;border-radius:6px;font-size:11px;color:#5b21b6;border-left:3px solid #8b5cf6">
+⚠️ <strong>ห้ามส่งต่อ</strong> หากชิ้นส่วนไม่ครบ หรือมีรอยหย่อน — ต้องแก้ไขก่อนขัดสี
+</div>
+</div>
+
+<!-- ✨ สถานีขัดสี -->
+<div class="process-card" style="border-left:3px solid #06b6d4">
+<h4 style="color:#06b6d4;font-size:13px;margin-bottom:8px">✨ สถานีขัดสี — งานแล้วเสร็จประจำวัน</h4>
+<table class="step-table">
+<tr><th style="width:30px">✓</th><th>รายการตรวจสอบ</th><th>เกณฑ์รับ</th><th>ผู้ตรวจ</th></tr>
+<tr><td class="num">1</td><td>ผิวเงาสม่ำเสมอ ไม่มีรอยขัด/รอยวง</td><td>มองใต้แสงไฟไม่เห็นรอยขัด</td><td>ช่างขัดสี + หัวหน้า</td></tr>
+<tr><td class="num">2</td><td>เกล็ดเคลือบเงา ไม่มีรอยฝ้า</td><td>ผิวเงากระจก สะท้อนแสงสม่ำเสมอ</td><td>ช่างขัดสี</td></tr>
+<tr><td class="num">3</td><td>บันทึกวันเริ่ม-วันเสร็จ และช่างผู้ทำ</td><td>ข้อมูลครบในระบบ <span class="iso-badge mandatory">ข้อ 8.5.2</span></td><td>SA / ผู้จัดการ</td></tr>
+<tr><td class="num">4</td><td>รถพร้อมส่งต่อสถานีล้าง</td><td>สถานะเปลี่ยนเป็น "ล้าง" ในระบบ</td><td>SA</td></tr>
+</table>
+<div style="margin-top:8px;padding:8px 12px;background:#ecfeff;border-radius:6px;font-size:11px;color:#155e75;border-left:3px solid #06b6d4">
+⚠️ <strong>ห้ามส่งต่อ</strong> หากผิวยังมีรอยขัด หรือเกล็ดไม่เงา — ต้องขัดซ่อมใหม่
+</div>
+</div>
+
+<!-- 🚿 สถานีล้าง -->
+<div class="process-card" style="border-left:3px solid #22c55e">
+<h4 style="color:#16a34a;font-size:13px;margin-bottom:8px">🚿 สถานีล้าง — งานแล้วเสร็จประจำวัน</h4>
+<table class="step-table">
+<tr><th style="width:30px">✓</th><th>รายการตรวจสอบ</th><th>เกณฑ์รับ</th><th>ผู้ตรวจ</th></tr>
+<tr><td class="num">1</td><td>รถสะอาด ไม่มีรอยเปื้อน/คราบ</td><td>ตรวจภายนอกทุกด้าน ไม่มีรอย</td><td>ช่างล้าง + หัวหน้า</td></tr>
+<tr><td class="num">2</td><td>ภายในรถสะอาด ไม่มีฝุ่น</td><td>แผงคอนโซล เบาะ พรม สะอาด</td><td>ช่างล้าง</td></tr>
+<tr><td class="num">3</td><td>บันทึกวันเสร็จในระบบ</td><td>ระบุวันล้างเสร็จ <span class="iso-badge mandatory">ข้อ 8.5.2</span></td><td>SA</td></tr>
+<tr><td class="num">4</td><td>รถพร้อมส่งตรวจ FinalCheck</td><td>สถานะเปลี่ยนเป็น "SUP QC" ในระบบ</td><td>SA</td></tr>
+</table>
+</div>
+
+<!-- ✅ SUP QC -->
+<div class="process-card" style="border-left:3px solid #7c3aed">
+<h4 style="color:#7c3aed;font-size:13px;margin-bottom:8px">✅ SUP QC (ตรวจ FinalCheck) — งานแล้วเสร็จประจำวัน</h4>
+<table class="step-table">
+<tr><th style="width:30px">✓</th><th>รายการตรวจสอบ</th><th>เกณฑ์รับ</th><th>ผู้ตรวจ</th></tr>
+<tr><td class="num">1</td><td>ตรวจงานประกอบครบถ้วน</td><td>ชิ้นส่วนทุกชิ้นติดตั้งถูกต้อง</td><td>SUP QC</td></tr>
+<tr><td class="num">2</td><td>ตรวจงานสีสม่ำเสมอ</td><td>สีตรงรุ่น ไม่มีรอยหิ้ว/ฝุ่น</td><td>SUP QC</td></tr>
+<tr><td class="num">3</td><td>ตรวจงานตัวถังเรียบ</td><td>ไม่มีรอยบุบ/รอยด่าง</td><td>SUP QC</td></tr>
+<tr><td class="num">4</td><td>ตรวจผิวขัดสีเงา</td><td>ไม่มีรอยขัด/รอยวง</td><td>SUP QC</td></tr>
+<tr><td class="num">5</td><td>ตรวจความสะอาด</td><td>รถสะอาดทั้งภายในและภายนอก</td><td>SUP QC</td></tr>
+<tr><td class="num">6</td><td>บันทึกผลการตรวจ (ผ่าน/ไม่ผ่าน + สาเหตุ)</td><td>ข้อมูลครบในระบบ <span class="iso-badge mandatory">ข้อ 8.6</span></td><td>SUP QC</td></tr>
+</table>
+<div style="margin-top:8px;padding:8px 12px;background:#f5f3ff;border-radius:6px;font-size:11px;color:#5b21b6;border-left:3px solid #7c3aed">
+⚠️ <strong>ห้ามปล่อยรถ</strong> หากตรวจไม่ผ่านแม้แต่ 1 ข้อ — ต้องแก้ไขและตรวจซ้ำจนกว่าจะผ่านทุกข้อ <span class="iso-badge mandatory">ข้อ 8.6</span>
+</div>
+</div>
+
+<!-- 🚗 ส่งมอบ -->
+<div class="process-card" style="border-left:3px solid #16a34a">
+<h4 style="color:#16a34a;font-size:13px;margin-bottom:8px">🚗 ส่งมอบรถ — งานแล้วเสร็จประจำวัน</h4>
+<table class="step-table">
+<tr><th style="width:30px">✓</th><th>รายการตรวจสอบ</th><th>เกณฑ์รับ</th><th>ผู้ตรวจ</th></tr>
+<tr><td class="num">1</td><td>รถผ่าน FinalCheck ทุกข้อแล้ว</td><td>สถานะ "SUP QC ผ่าน" ในระบบ</td><td>SUP QC + SA</td></tr>
+<tr><td class="num">2</td><td>นัดหมายส่งมอบกับลูกค้า/SA</td><td>บันทึกวันส่งมอบในระบบ</td><td>SA</td></tr>
+<tr><td class="num">3</td><td>แจ้งเตือนลูกค้าก่อนวันส่งมอบ</td><td>ส่ง LINE/SMS/อีเมล อย่างน้อย 1 วันก่อน</td><td>ระบบอัตโนมัติ</td></tr>
+<tr><td class="num">4</td><td>บันทึกวันส่งมอบจริง</td><td>ระบุวันส่งมอบจริงในระบบ <span class="iso-badge mandatory">ข้อ 8.5.2</span></td><td>SA</td></tr>
+</table>
+<div style="margin-top:8px;padding:8px 12px;background:#f0fdf4;border-radius:6px;font-size:11px;color:#166534;border-left:3px solid #16a34a">
+✅ <strong>เสร็จสิ้น</strong> — สถานะเปลี่ยนเป็น "ส่งมอบแล้ว" ปิดงานซ่อม
+</div>
+</div>
+
+<!-- 🪟 เคลือบแก้ว -->
+<div class="process-card" style="border-left:3px solid #db2777">
+<h4 style="color:#db2777;font-size:13px;margin-bottom:8px">🪟 เคลือบแก้ว (BCT) — งานแล้วเสร็จประจำวัน</h4>
+<table class="step-table">
+<tr><th style="width:30px">✓</th><th>รายการตรวจสอบ</th><th>เกณฑ์รับ</th><th>ผู้ตรวจ</th></tr>
+<tr><td class="num">1</td><td>ข้อมูลลูกค้าครบถ้วน (ชื่อ/ทะเบียน/เบอร์/ยี่ห้อ/รุ่น)</td><td>ทุกฟิลด์กรอกครบ <span class="iso-badge mandatory">ข้อ 8.5.2</span></td><td>พนักงาน BCT</td></tr>
+<tr><td class="num">2</td><td>เลือกแพ็กเกจเคลือบแก้วถูกต้อง</td><td>ตรงกับที่ลูกค้าเลือก (1 ปี/3 ปี/Diamond)</td><td>พนักงาน BCT + SA</td></tr>
+<tr><td class="num">3</td><td>จองคิวนัดหมายในระบบ C2</td><td>คิวว่าง ไม่ซ้ำซ้อนกับรถคันอื่น</td><td>พนักงาน BCT</td></tr>
+<tr><td class="num">4</td><td>ดำเนินการเคลือบตามแพ็กเกจ</td><td>เคลือบครบตามขั้นตอนของแพ็กเกจ</td><td>ช่างเคลือบ</td></tr>
+<tr><td class="num">5</td><td>บันทึกวันส่งมอบจริง</td><td>ระบุวันส่งมอบในระบบ B1/B2</td><td>SA / พนักงาน BCT</td></tr>
+<tr><td class="num">6</td><td>ตรวจสอบรายการบำรุงผิวแก้ว 9 รอบ</td><td>ระบบแจ้งเตือนอัตโนมัติครบทุกรอบ</td><td>ระบบ + พนักงาน BCT</td></tr>
+</table>
+<div style="margin-top:8px;padding:8px 12px;background:#fdf2f8;border-radius:6px;font-size:11px;color:#9d174d;border-left:3px solid #db2777">
+⚠️ <strong>กรณีไม่แถมบำรุงผิวแก้ว</strong> — ระบบจะแสดงสถานะ "ว่างเพราะไม่แถมบำรุงผิวแก้ว" แทนที่จะแสดงรอบบำรุง
+</div>
+</div>
+
+<!-- สรุปรายวัน -->
+<div class="process-card" style="border-left:3px solid #16a34a;background:linear-gradient(135deg,#f0fdf4,#ecfdf5)">
+<h3 style="color:#16a34a;display:flex;align-items:center;gap:8px">📋 วิธีใช้งานสรุปประจำวัน</h3>
+<p style="font-size:13px;color:var(--text2);margin-bottom:10px">ให้ผู้จัดการ/หัวหน้าช่าง ตรวจสอบตามรายการข้างต้นทุกวัน ก่อนปิดกะ ดังนี้:</p>
+<ul style="font-size:12px;color:var(--text2);list-style:none;padding:0">
+<li style="padding:6px 10px;margin:3px 0;background:#fff;border-radius:6px;border-left:3px solid #16a34a">✅ เช็ครถที่เสร็จสถานีนั้นวันนี้ — ตรวจทุกข้อในรายการ</li>
+<li style="padding:6px 10px;margin:3px 0;background:#fff;border-radius:6px;border-left:3px solid #16a34a">✅ บันทึกวันเริ่ม-วันเสร็จ และช่างผู้ทำในระบบ <span class="iso-badge mandatory">ข้อ 8.5.2</span></li>
+<li style="padding:6px 10px;margin:3px 0;background:#fff;border-radius:6px;border-left:3px solid #16a34a">❌ ห้ามส่งต่อสถานีถัดไป หากไม่ผ่านเกณฑ์รับทุกข้อ</li>
+<li style="padding:6px 10px;margin:3px 0;background:#fff;border-radius:6px;border-left:3px solid #16a34a">📊 ดูสถานะงานซ่อมรายวันได้ที่ <strong>PMG Workshop → แท็บ สถานะงานซ่อม</strong></li>
+<li style="padding:6px 10px;margin:3px 0;background:#fff;border-radius:6px;border-left:3px solid #16a34a">⚠️ รถที่ไม่ผ่าน FinalCheck ต้องแก้ไขก่อน — <strong>ห้ามส่งมอบ</strong> <span class="iso-badge mandatory">ข้อ 8.6</span></li>
+</ul>
+</div>
+
+</div>
+
+<!-- ═══ Tab RACI ═══ -->
+<div id="tab-raci" class="tab-panel">
+
+<div class="process-card" style="border-left:3px solid var(--accent2)">
+<h3 style="color:var(--accent2);display:flex;align-items:center;gap:8px"><span class="step-num" style="background:var(--accent2);color:#fff">👥</span> ตารางบทบาทและความรับผิดชอบ (RACI Matrix)<div class="doc-ref">ISO 9001:2015 ข้อ 5.3</div></h3>
+<p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+<span class="raci-R">R</span> = Responsible (ผู้ปฏิบิติ) &nbsp;
+<span class="raci-A">A</span> = Accountable (ผู้รับผิดชอบ) &nbsp;
+<span class="raci-C">C</span> = Consulted (ผู้ให้คำปรึกษา) &nbsp;
+<span class="raci-I">I</span> = Informed (ผู้ที่ต้องแจ้ง)
+</p>
+</div>
+
+<table class="raci-table">
+<tr>
+<th style="text-align:left;width:180px">กระบวนการ / บทบาท</th>
+<th>SA<br><span style="font-size:9px">Service<br>Advisor</span></th>
+<th>ช่างซ่อม<br><span style="font-size:9px">Mechanic</span></th>
+<th>SUP QC<br><span style="font-size:9px">Quality<br>Control</span></th>
+<th>ผู้จัดการ<br><span style="font-size:9px">Manager</span></th>
+<th>พนักงาน BCT<br><span style="font-size:9px">BCT<br>Staff</span></th>
+<th>ระบบ<br><span style="font-size:9px">System</span></th>
+</tr>
+<tr>
+<td>📥 รับแจ้งซ่อม / ลงทะเบียน</td>
+<td><span class="raci-R">R</span></td>
+<td></td>
+<td></td>
+<td><span class="raci-A">A</span></td>
+<td><span class="raci-C">C</span></td>
+<td><span class="raci-I">I</span></td>
+</tr>
+<tr>
+<td>🔍 ตรวจสภาพ / ประเมินงาน</td>
+<td><span class="raci-C">C</span></td>
+<td><span class="raci-R">R</span></td>
+<td><span class="raci-C">C</span></td>
+<td><span class="raci-A">A</span></td>
+<td></td>
+<td><span class="raci-I">I</span></td>
+</tr>
+<tr>
+<td>🔧 ดำเนินการซ่อม (ทุกสถานี)</td>
+<td></td>
+<td><span class="raci-R">R</span></td>
+<td></td>
+<td><span class="raci-A">A</span></td>
+<td></td>
+<td><span class="raci-I">I</span></td>
+</tr>
+<tr>
+<td>📊 บันทึกวันเริ่ม-เสร็จ ในแต่ละสถานี</td>
+<td></td>
+<td><span class="raci-R">R</span></td>
+<td><span class="raci-C">C</span></td>
+<td><span class="raci-A">A</span></td>
+<td></td>
+<td><span class="raci-R">R</span></td>
+</tr>
+<tr>
+<td>✅ ตรวจ FinalCheck</td>
+<td></td>
+<td></td>
+<td><span class="raci-R">R</span></td>
+<td><span class="raci-A">A</span></td>
+<td></td>
+<td><span class="raci-I">I</span></td>
+</tr>
+<tr>
+<td>🔄 แก้ไขงาน (Rework)</td>
+<td></td>
+<td><span class="raci-R">R</span></td>
+<td><span class="raci-C">C</span></td>
+<td><span class="raci-A">A</span></td>
+<td></td>
+<td><span class="raci-I">I</span></td>
+</tr>
+<tr>
+<td>🚗 นัดส่งมอบ / ส่งมอบรถ</td>
+<td><span class="raci-R">R</span></td>
+<td></td>
+<td><span class="raci-C">C</span></td>
+<td><span class="raci-A">A</span></td>
+<td><span class="raci-C">C</span></td>
+<td><span class="raci-I">I</span></td>
+</tr>
+<tr>
+<td>🪟 บันทึกลูกค้า BCT</td>
+<td><span class="raci-C">C</span></td>
+<td></td>
+<td></td>
+<td><span class="raci-A">A</span></td>
+<td><span class="raci-R">R</span></td>
+<td><span class="raci-I">I</span></td>
+</tr>
+<tr>
+<td>🪟 เคลือบแก้ว / บำรุง</td>
+<td></td>
+<td></td>
+<td></td>
+<td><span class="raci-A">A</span></td>
+<td><span class="raci-R">R</span></td>
+<td><span class="raci-I">I</span></td>
+</tr>
+<tr>
+<td>🔔 แจ้งเตือนบำรุงผิวแก้ว</td>
+<td><span class="raci-C">C</span></td>
+<td></td>
+<td></td>
+<td><span class="raci-A">A</span></td>
+<td><span class="raci-R">R</span></td>
+<td><span class="raci-R">R</span></td>
+</tr>
+<tr>
+<td>📊 ติดตาม KPI</td>
+<td><span class="raci-I">I</span></td>
+<td></td>
+<td><span class="raci-C">C</span></td>
+<td><span class="raci-A">A</span></td>
+<td></td>
+<td><span class="raci-R">R</span></td>
+</tr>
+</table>
+
+<div class="process-card" style="border-left:3px solid var(--text3);margin-top:16px">
+<h4 style="font-size:13px;color:var(--text2);margin-bottom:8px">📖 คำอธิบายบทบาท</h4>
+<table class="step-table">
+<tr><th style="width:120px">บทบาท</th><th>หน้าที่หลัก</th></tr>
+<tr><td style="font-weight:700;color:var(--cyan)">SA (Service Advisor)</td><td>รับแจ้งซ่อม ประสานงานลูกค้า นัดหมาย ส่งมอบรถ</td></tr>
+<tr><td style="font-weight:700;color:var(--orange)">ช่างซ่อม (Mechanic)</td><td>ดำเนินการซ่อมตามลำดับสถานี บันทึกวันเริ่ม-เสร็จ</td></tr>
+<tr><td style="font-weight:700;color:var(--purple)">SUP QC</td><td>ตรวจ FinalCheck อนุมัติส่งมอบ บันทึกสาเหตุไม่ผ่าน</td></tr>
+<tr><td style="font-weight:700;color:var(--accent)">ผู้จัดการ (Manager)</td><td>รับผิดชอบรวม อนุมัติ ติดตาม KPI แก้ไขปัญหา</td></tr>
+<tr><td style="font-weight:700;color:var(--pink)">พนักงาน BCT</td><td>บันทึกลูกค้า เคลือบแก้ว ติดตามบำรุง โทรแจ้งเตือน</td></tr>
+<tr><td style="font-weight:700;color:var(--green)">ระบบ (System)</td><td>บันทึกข้อมูล สร้างแจ้งเตือน คำนวณ KPI อัตโนมัติ</td></tr>
+</table>
+</div>
+
+<div style="margin-top:20px;padding:12px 16px;background:rgba(56,189,248,.06);border-radius:8px;border-left:3px solid var(--accent)">
+<h4 style="font-size:12px;color:var(--accent);margin-bottom:4px">📚 เอกสารอ้างอิงที่เกี่ยวข้อง</h4>
+<ul style="font-size:11px;color:var(--text2);list-style:none;padding:0">
+<li>• PMG-PM-001 กระบวนการทำงาน (เอกสารนี้)</li>
+<li>• PMG-WI-101 ขั้นตอนการรับรถ</li>
+<li>• PMG-WI-201 ขั้นตอนการซ่อม</li>
+<li>• PMG-WI-301 ขั้นตอนการตรวจ QC</li>
+<li>• PMG-WI-401 ขั้นตอนการส่งมอบ</li>
+<li>• PMG-WI-501 กระบวนการเคลือบแก้ว (BCT)</li>
+<li>• BCT_SS_ID: Spreadsheet ข้อมูลเคลือบแก้ว</li>
+<li>• ISO 9001:2015 ข้อ 4.4, 5.3, 7.5, 8.1, 8.5, 8.6, 9.1.3</li>
+</ul>
+</div>
+
+<div style="margin-top:12px;padding:12px 16px;background:var(--card2);border-radius:8px;font-size:11px;color:var(--text3)">
+<strong>เอกสารหมายเลข:</strong> PMG-PM-001 &nbsp;|&nbsp; <strong>ฉบับที่:</strong> 1.0 &nbsp;|&nbsp; <strong>วันที่มีผล:</strong> 21/05/2026 &nbsp;|&nbsp; <strong>ผู้อนุมัติ:</strong> สมศักดิ์ &nbsp;|&nbsp; <strong>หน้า:</strong> 8/8 &nbsp;|&nbsp; <strong>สถานะ:</strong> ใช้งาน ✅
+</div>
+</div>
+
+</div><!-- end .content -->
+
+<script>
+function switchTab(t){
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tab===t)});
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.toggle('active',p.id==='tab-'+t)});
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📊 Dashboard — Real-time</title>
+<style>
+:root{--bg:#f0f4f8;--card:#fff;--accent:#2563eb;--accent2:#7c3aed;--green:#059669;--red:#dc2626;--orange:#ea580c;--text:#1e293b;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;padding-bottom:40px}
+.header{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:12px 16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(37,99,235,.25)}
+.header h1{font-size:18px;color:#fff;display:flex;align-items:center;gap:6px;justify-content:space-between}
+.header .live{font-size:11px;background:var(--red);color:#fff;padding:2px 8px;border-radius:10px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.header .sub{font-size:12px;color:rgba(255,255,255,.7);margin-top:2px}
+.branch-toggle{display:flex;gap:4px;margin-top:8px}
+.branch-btn{padding:4px 12px;border:1px solid rgba(255,255,255,.3);border-radius:6px;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:12px}
+.branch-btn.active{background:#fff;color:#1e3a5f;font-weight:600}
+.content{padding:12px 16px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--card);border-radius:var(--radius);padding:14px;text-align:center;box-shadow:var(--shadow);border:1px solid var(--border)}
+.card .label{font-size:11px;color:var(--text3);text-transform:uppercase}
+.card .value{font-size:26px;font-weight:700;margin-top:4px}
+.card.green .value{color:var(--green)}
+.card.red .value{color:var(--red)}
+.card.orange .value{color:var(--orange)}
+.card.blue .value{color:var(--accent)}
+.card.purple .value{color:var(--accent2)}
+.section{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.section h3{font-size:15px;font-weight:600;margin-bottom:10px;color:var(--accent);display:flex;align-items:center;gap:6px}
+.station-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.station-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+.station-card .stn-name{font-size:12px;font-weight:600;margin-bottom:4px}
+.station-card .stn-count{font-size:22px;font-weight:700}
+.station-card .stn-detail{font-size:10px;color:var(--text3);margin-top:2px}
+.stn-bar{height:4px;border-radius:2px;margin-top:4px;background:#e2e8f0;overflow:hidden}
+.stn-bar-fill{height:100%;border-radius:2px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f8fafc;padding:8px 6px;text-align:left;font-weight:600;color:var(--text2);border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:6px;border-bottom:1px solid var(--border);vertical-align:top}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge.green{background:#d1fae5;color:var(--green)}
+.badge.orange{background:#ffedd5;color:var(--orange)}
+.badge.blue{background:#dbeafe;color:var(--accent)}
+.badge.gray{background:#f1f5f9;color:#64748b}
+.badge.red{background:#fee2e2;color:var(--red)}
+.loading{text-align:center;padding:40px;color:var(--text3)}
+.progress-bar{position:relative;height:20px;background:#e5e7eb;border-radius:10px;overflow:hidden;min-width:100px}
+.progress-fill{height:100%;border-radius:10px;transition:width .3s}
+.progress-text{position:absolute;top:0;left:0;right:0;text-align:center;font-size:10px;font-weight:600;line-height:20px;color:#000}
+</style>
+</head>
+<body>
+<div style="position:fixed;top:8px;right:8px;z-index:99999;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(220,38,38,0.3);cursor:default;font-family:system-ui,sans-serif;letter-spacing:0.3px" title="ข้อมูลส่วนบุคคล PDPA — ห้ามส่งออกหรือเผยแพร่โดยไม่ได้รับอนุญาต">🔒 ข้อมูลลับ PDPA</div>
+<div class="header">
+<h1><span>📊 Dashboard Real-time</span> <span class="live">● LIVE</span></h1>
+<div class="sub" id="branchLabel">—</div>
+<div class="branch-toggle">
+<button class="branch-btn active" onclick="setBranch('cnb')">มหาราช</button>
+<button class="branch-btn" onclick="setBranch('csk')">ซีเอสเค</button>
+</div>
+</div>
+<div class="content" id="content">
+<div class="loading">กำลังโหลด...</div>
+</div>
+<script>
+// ── OFFLINE MODE STUB ──────────────────────────────────────
+// Mock google.script.run + fetch for standalone HTML (no server)
+if (typeof window !== 'undefined') {
+  if (typeof window.google === 'undefined') {
+    window.google = { script: { run: {} } };
+  }
+  var _gsrTarget = window.google.script.run;
+  _gsrTarget._success = null;
+  _gsrTarget._failure = null;
+  _gsrTarget.withSuccessHandler = function(fn){ this._success = fn; return _proxyRef; };
+  _gsrTarget.withFailureHandler  = function(fn){ this._failure = fn; return _proxyRef; };
+  _gsrTarget.withUserObject      = function(o){ return _proxyRef; };
+  var _proxyRef = new Proxy(_gsrTarget, {
+    get: function(target, prop, receiver) {
+      if (prop === '_success' || prop === '_failure') return target[prop];
+      if (typeof target[prop] === 'function') return target[prop];
+      // Unknown property = a server function name → return stub function
+      return function() {
+        console.log('[Offline] google.script.run.' + String(prop) + ' called (stubbed)', arguments);
+        var self = target;
+        setTimeout(function(){
+          if (typeof self._success === 'function') {
+            try { self._success([]); } catch(e){ console.warn('[Offline] success handler error:', e); }
+          }
+        }, 50);
+        return _proxyRef;
+      };
+    }
+  });
+  window.google.script.run = _proxyRef;
+  // Mock fetch() to return empty data (avoids CORS/network errors offline)
+  if (typeof window.fetch === 'function' && !window._fetchStubbed) {
+    window._origFetch = window.fetch;
+    window.fetch = function(url, opts) {
+      console.log('[Offline] fetch() stubbed:', url);
+      return Promise.resolve({
+        ok: true, status: 200, redirected: false,
+        text:  function(){ return Promise.resolve(''); },
+        json:  function(){ return Promise.resolve({}); },
+        blob:  function(){ return Promise.resolve(new Blob([''])); },
+        clone: function(){ return this; },
+        headers: { get: function(){ return null; } }
+      });
+    };
+    window._fetchStubbed = true;
+  }
+}
+// ── END OFFLINE MODE STUB ──────────────────────────────────
+
+
+
+var SCRIPT_URL = '#';
+var currentBranch = 'cnb';
+var stationNames = {knock:'เคาะ',patch:'โป๊ว',squirt:'พ่น',assemble:'ประกอบ',polish:'ขัดสี',wash:'ล้าง',supQC:'SUP QC',deliver:'ส่งมอบ'};
+var stationOrder = ['knock','patch','squirt','assemble','polish','wash','supQC','deliver'];
+var stationColors = {knock:'#dc2626',patch:'#ea580c',squirt:'#d97706',assemble:'#059669',polish:'#2563eb',wash:'#7c3aed',supQC:'#db2777',deliver:'#16a34a'};
+
+function init() {
+  var params = new URLSearchParams(window.location.search);
+  currentBranch = params.get('branch') || 'cnb';
+  setBranch(currentBranch);
+  loadDashboard();
+  setInterval(loadDashboard, 15000); // refresh every 15s
+}
+
+function setBranch(b) {
+  currentBranch = b;
+  document.querySelectorAll('.branch-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.textContent.indexOf(b === 'cnb' ? 'มหาราช' : 'ซีเอสเค') >= 0);
+  });
+  document.getElementById('branchLabel').textContent = b === 'cnb' ? 'มหาราช (CNB)' : 'ซีเอสเค (CSK)';
+  loadDashboard();
+}
+
+function loadDashboard() {
+  fetch(SCRIPT_URL + '?rf=1&action=getDashboard&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch}))
+  ).then(function(r) { return r.json(); }).then(function(r) {
+    if (r.success) {
+      renderDashboard(r.data);
+    } else {
+      document.getElementById('content').innerHTML = '<div class="loading">❌ ' + esc(r.error||'error') + '</div>';
+    }
+  }).catch(function(e) {
+    document.getElementById('content').innerHTML = '<div class="loading">❌ ' + esc(e.message) + '</div>';
+  });
+}
+
+function renderDashboard(d) {
+  var html = '';
+  
+  // Stats cards
+  html += '<div class="cards">';
+  html += '<div class="card blue"><div class="label">ทั้งหมด</div><div class="value">' + (d.stats.total||0) + '</div></div>';
+  html += '<div class="card orange"><div class="label">รอรับงาน</div><div class="value">' + (d.stats.waiting||0) + '</div></div>';
+  html += '<div class="card red"><div class="label">กำลังทำ</div><div class="value">' + (d.stats.inProgress||0) + '</div></div>';
+  html += '<div class="card green"><div class="label">เสร็จแล้ว</div><div class="value">' + (d.stats.completed||0) + '</div></div>';
+  html += '</div>';
+  
+  // Station grid
+  html += '<div class="section"><h3>🏭 สถานีซ่อม</h3><div class="station-grid">';
+  stationOrder.forEach(function(s) {
+    var ss = d.stationSummary[s] || {};
+    var total = (ss.waiting||0) + (ss.active||0);
+    var color = stationColors[s];
+    html += '<div class="station-card" style="border-top:3px solid ' + color + '">';
+    html += '<div class="stn-name">' + (stationNames[s]) + '</div>';
+    html += '<div class="stn-count" style="color:' + color + '">' + total + '</div>';
+    html += '<div class="stn-detail">รอ: ' + (ss.waiting||0) + ' | ทำ: ' + (ss.active||0) + '</div>';
+    var pct = total > 0 ? Math.round((ss.active||0) / total * 100) : 0;
+    html += '<div class="stn-bar"><div class="stn-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div>';
+    html += '</div>';
+  });
+  html += '</div></div>';
+  
+  // Vehicle list
+  html += '<div class="section"><h3>🚗 รถทุกคัน</h3>';
+  if (d.vehicles.length === 0) {
+    html += '<div class="loading">ไม่มีรถ</div>';
+  } else {
+    html += '<div style="overflow-x:auto"><table><thead><tr><th>ทะเบียน</th><th>สถานะ</th><th>สถานี</th><th>ช่าง</th><th>เวลา</th><th>SA</th><th>ความคืบหน้า</th></tr></thead><tbody>';
+    d.vehicles.forEach(function(v) {
+      var total = (v.stations||[]).length;
+      var currentIdx = (v.stations||[]).indexOf(v.currentStation);
+      var pct = total > 0 ? Math.round((currentIdx + 1) / total * 100) : 0;
+      
+      var statusBadge = '';
+      if (v.status === 'completed') statusBadge = '<span class="badge green">✅ เสร็จ</span>';
+      else if (v.mechanicName) statusBadge = '<span class="badge orange">🔴 กำลังทำ</span>';
+      else statusBadge = '<span class="badge blue">⏳ รอ</span>';
+      
+      var stationBadge = v.currentStation ? '<span class="badge" style="background:' + stationColors[v.currentStation] + '20;color:' + stationColors[v.currentStation] + '">' + (stationNames[v.currentStation]||v.currentStation) + '</span>' : '-';
+      
+      var timeStr = '';
+      if (v.durationMin > 0) timeStr = v.durationMin + ' นาที';
+      
+      html += '<tr>';
+      html += '<td><b>' + esc(v.plate) + '</b></td>';
+      html += '<td>' + statusBadge + '</td>';
+      html += '<td>' + stationBadge + '</td>';
+      html += '<td>' + esc(v.mechanicName||'-') + '</td>';
+      html += '<td>' + timeStr + '</td>';
+      html += '<td>' + esc(v.sa||'-') + '</td>';
+      html += '<td><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%;background:' + (v.status==='completed'?'var(--green)':'var(--accent)') + '"></div><div class="progress-text">' + pct + '%</div></div></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+  
+  // Mechanic performance
+  if (d.mechanicPerf && d.mechanicPerf.length > 0) {
+    html += '<div class="section"><h3>👨‍🔧 ประสิทธิภาพช่าง</h3>';
+    html += '<table><thead><tr><th>ช่าง</th><th>งานที่จบ</th><th>เวลารวม</th><th>เฉลี่ย/งาน</th></tr></thead><tbody>';
+    d.mechanicPerf.forEach(function(m) {
+      html += '<tr><td><b>' + esc(m.name) + '</b></td><td>' + m.jobs + '</td><td>' + m.totalMin + ' นาที</td><td>' + m.avgMin + ' นาที</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  
+  document.getElementById('content').innerHTML = html;
+}
+
+function esc(s) { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+init();
+</script>
+</body>
+</html>

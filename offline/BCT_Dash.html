@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BCT เคลือบแก้ว 2569</title>
+  <base target="_top">
+  <style>
+    :root {
+      --primary: #1a237e;
+      --primary-light: #3949ab;
+      --accent: #ff6f00;
+      --accent-light: #ffa000;
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --text: #212121;
+      --text-light: #757575;
+      --success: #2e7d32;
+      --warning: #f57f17;
+      --danger: #c62828;
+      --border: #e0e0e0;
+      --shadow: 0 2px 8px rgba(0,0,0,0.1);
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; padding-bottom: 28px; }
+    
+    /* Header */
+    .header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; font-weight: 600; }
+    .header .subtitle { font-size: 12px; opacity: 0.8; }
+    
+    /* Tabs */
+    .tabs { display: flex; background: white; border-bottom: 2px solid var(--border); overflow-x: auto; position: sticky; top: 52px; z-index: 90; }
+    .tab { padding: 10px 16px; cursor: pointer; font-size: 13px; font-weight: 500; white-space: nowrap; border-bottom: 3px solid transparent; transition: all 0.2s; color: var(--text-light); }
+    .tab:hover { background: #f0f0f0; }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+    
+    /* Panels */
+    .panel { display: none; padding: 16px; max-width: 1200px; margin: 0 auto; }
+    .panel.active { display: block; }
+    
+    /* Cards */
+    .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 12px; }
+    .card h2 { font-size: 16px; color: var(--primary); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .card h3 { font-size: 14px; color: var(--primary-light); margin-bottom: 6px; }
+    
+    /* Dashboard Grid */
+    .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+    .stat-card { background: white; border-radius: var(--radius); padding: 16px; text-align: center; box-shadow: var(--shadow); border-top: 4px solid var(--primary); }
+    .stat-card.orange { border-top-color: var(--accent); }
+    .stat-card.green { border-top-color: var(--success); }
+    .stat-card.red { border-top-color: var(--danger); }
+    .stat-number { font-size: 28px; font-weight: 700; color: var(--primary); }
+    .stat-card.orange .stat-number { color: var(--accent); }
+    .stat-card.green .stat-number { color: var(--success); }
+    .stat-card.red .stat-number { color: var(--danger); }
+    .stat-label { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+    
+    /* Forms */
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-light); margin-bottom: 3px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; font-family: inherit; background: white;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(26,35,126,0.1); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: 4px; padding: 8px 16px; border: none; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-light); }
+    .btn-accent { background: var(--accent); color: white; }
+    .btn-accent:hover { background: var(--accent-light); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-outline { background: white; color: var(--primary); border: 1px solid var(--primary); }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    /* Table */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table th { background: var(--primary); color: white; padding: 8px 10px; text-align: left; font-weight: 600; position: sticky; top: 0; white-space: nowrap; }
+    table td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table tr:hover { background: #f8f9ff; }
+    table .status-tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .status-closed { background: #e8f5e9; color: var(--success); }
+    .status-open { background: #fff3e0; color: var(--warning); }
+    .status-overdue { background: #ffebee; color: var(--danger); }
+    
+    /* Calendar */
+    .calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .calendar-header h2 { border: none; margin: 0; padding: 0; }
+    .cal-nav { display: flex; gap: 8px; align-items: center; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .cal-day-header { background: var(--primary); color: white; text-align: center; padding: 8px 4px; font-weight: 600; font-size: 12px; }
+    .cal-day { background: white; min-height: 90px; padding: 4px; font-size: 12px; cursor: pointer; }
+    .cal-day:hover { background: #f0f4ff; }
+    .cal-day.today { background: #e8eaf6; }
+    .cal-day.other-month { opacity: 0.4; }
+    .cal-day .day-num { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+    .cal-event { padding: 2px 4px; margin: 1px 0; border-radius: 3px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+    .cal-event.coating { background: #e3f2fd; color: #1565c0; border-left: 3px solid #1565c0; }
+    .cal-event.maintenance { background: #fff3e0; color: #e65100; border-left: 3px solid #e65100; }
+    .cal-event.deliver { background: #e8f5e9; color: #2e7d32; border-left: 3px solid #2e7d32; }
+    .cal-event.overdue { background: #ffebee; color: #c62828; border-left: 3px solid #c62828; }
+    .cal-event.special { background: #fce4ec; color: #880e4f; border-left: 3px solid #880e4f; }
+    
+    /* Notification Panel */
+    .notif-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-bottom: 1px solid var(--border); }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .notif-icon.overdue { background: #ffebee; color: var(--danger); }
+    .notif-icon.upcoming { background: #fff3e0; color: var(--warning); }
+    .notif-icon.today { background: #e3f2fd; color: var(--primary); }
+    .notif-content { flex: 1; }
+    .notif-content strong { font-size: 13px; }
+    .notif-content .detail { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+    .notif-actions { display: flex; gap: 4px; margin-top: 4px; }
+    
+    /* Maintenance cycle badge */
+    .cycle-badge { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 700; margin: 1px; }
+    .cycle-done { background: #e8f5e9; color: var(--success); }
+    .cycle-pending { background: #fff3e0; color: var(--warning); }
+    .cycle-overdue { background: #ffebee; color: var(--danger); }
+    
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: white; border-radius: var(--radius); padding: 20px; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .modal h2 { font-size: 18px; color: var(--primary); margin-bottom: 12px; }
+    .modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    
+    /* Loading */
+    .loading { text-align: center; padding: 40px; color: var(--text-light); }
+    .spinner { display: inline-block; width: 30px; height: 30px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Toast */
+    .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: var(--radius); color: white; font-size: 14px; z-index: 300; animation: slideIn 0.3s ease; }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+    .toast.warning { background: var(--warning); }
+    @keyframes slideIn { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    
+    /* Badge */
+    .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; border-radius: 9px; background: var(--danger); color: white; font-size: 10px; font-weight: 700; padding: 0 4px; }
+    
+    /* Search box */
+    .search-box { display: flex; gap: 8px; margin-bottom: 12px; }
+    .search-box input { flex: 1; }
+    
+    /* Queue calendar now uses .cal-grid / .cal-day from Calendar tab */
+    .cal-event.special { background: #fff3e0; color: #e65100; font-size: 10px; padding: 1px 3px; border-radius: 3px; margin: 1px 0; cursor: default; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    
+    /* Print style */
+    @media print {
+      .header, .tabs { display: none; }
+      .panel { display: block !important; padding: 0; }
+    }
+    
+    @media (max-width: 768px) {
+      .form-row, .form-row3 { grid-template-columns: 1fr; }
+      .dash-grid { grid-template-columns: repeat(2, 1fr); }
+      .cal-grid { font-size: 11px; }
+      .cal-day { min-height: 60px; }
+      .cal-grid { font-size: 11px; }
+      .cal-day { min-height: 60px; }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <h1>🔮 BCT เคลือบแก้ว 2569 <span style="position:fixed;top:8px;right:16px;background:#dc2626;color:white;font-size:.65rem;padding:3px 8px;border-radius:10px;font-weight:700;letter-spacing:.5px;z-index:9999;box-shadow:0 2px 8px rgba(220,38,38,.3)">🔒 PDPA ข้อมูลลับ</span></h1>
+    <div class="subtitle">ระบบจัดการเคลือบแก้ว & บำรุงผิวแก้ว — PMS Auto Guarantee</div>
+  </div>
+  <div style="text-align:right; font-size:12px;">
+    <div id="currentTime"></div>
+    <div id="currentUser" style="opacity:0.7;">v209</div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" id="mainTabs">
+  <div class="tab active" data-tab="dashboard">📊 แดชบอร์ด</div>
+  <div class="tab" data-tab="customers">👥 ลูกค้า</div>
+  <div class="tab" data-tab="maintenance">🛡️ บำรุงผิวแก้ว <span class="badge" id="maintenanceBadge" style="display:none;">0</span></div>
+  <div class="tab" data-tab="calendar">📅 ปฏิทิน</div>
+  <div class="tab" data-tab="queue">📋 จองคิว</div>
+  <div class="tab" data-tab="appointment">➕ นัดหมายใหม่</div>
+  <div class="tab" data-tab="notifications">🔔 แจ้งเตือน</div>
+  <div class="tab" data-tab="settings">⚙️ ตั้งค่า</div>
+</div>
+
+<!-- ═══ Dashboard Panel ═══ -->
+<div class="panel active" id="panel-dashboard">
+  <div class="dash-grid" id="dashStats"></div>
+  
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+    <div class="card">
+      <h2>⚠️ ครบกำหนดบำรุงเร็วนี้</h2>
+      <div id="dashUpcoming"></div>
+    </div>
+    <div class="card">
+      <h2>🔴 เกินกำหนดบำรุง</h2>
+      <div id="dashOverdue"></div>
+    </div>
+  </div>
+  
+  <div class="card" style="margin-top:12px;">
+    <h2>💰 สรุปรายได้</h2>
+    <div id="dashRevenue"></div>
+  </div>
+</div>
+
+<!-- ═══ Customers Panel ═══ -->
+<div class="panel" id="panel-customers">
+  <div class="card">
+    <div class="search-box">
+      <input type="text" id="searchPlate" placeholder="🔍 ค้นหาทะเบียน/ชื่อลูกค้า..." onkeyup="searchCustomers()">
+      <button class="btn btn-primary" onclick="loadCustomers()">🔄 โหลดใหม่</button>
+    </div>
+    <div class="table-wrap">
+      <table id="customersTable">
+        <thead>
+          <tr>
+            <th>สถานะ</th><th>ทะเบียน</th><th>ชื่อลูกค้า</th><th>เบอร์โทร</th>
+            <th>ประเภท</th><th>เคลือบแก้ว</th><th>MR</th><th>นัดหมาย</th><th>ส่งมอบ</th><th>บำรุง</th>
+          </tr>
+        </thead>
+        <tbody id="customersBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Maintenance Panel ═══ -->
+<div class="panel" id="panel-maintenance">
+  <div class="search-box">
+    <input type="text" id="searchMaint" placeholder="🔍 ค้นหาทะเบียน/ชื่อลูกค้า..." onkeyup="searchMaintenance()">
+    <button class="btn btn-accent" onclick="loadMaintenance()">🔄 โหลดใหม่</button>
+    <button class="btn btn-outline" onclick="loadMaintenance(true)">⚡ เฉพาะที่ครบกำหนด</button>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+      <table id="maintenanceTable">
+        <thead>
+          <tr>
+            <th>ทะเบียน</th><th>ชื่อลูกค้า</th><th>เบอร์โทร</th><th>เคลือบ</th>
+            <th>ครั้งที่</th><th>ครบกำหนด</th><th>สถานะ</th><th>การดำเนินการ</th>
+          </tr>
+        </thead>
+        <tbody id="maintenanceBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Calendar Panel ═══ -->
+<div class="panel" id="panel-calendar">
+  <div class="card">
+    <div class="calendar-header">
+      <h2 id="calMonthYear"></h2>
+      <div class="cal-nav">
+        <button class="btn btn-outline btn-sm" onclick="calPrev()">◀</button>
+        <button class="btn btn-primary btn-sm" onclick="calToday()">วันนี้</button>
+        <button class="btn btn-outline btn-sm" onclick="calNext()">▶</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+  
+  <div class="card" style="margin-top:12px;">
+    <h2>📝 รายการวันนี้</h2>
+    <div id="calTodayList"></div>
+  </div>
+</div>
+
+<!-- ═══ Queue Panel ═══ -->
+<div class="panel" id="panel-queue">
+  <div class="card">
+    <div class="calendar-header">
+      <h2>📋 ตารางจองคิวเคลือบแก้ว <span id="queueMonthYear"></span></h2>
+      <div class="cal-nav">
+        <button class="btn btn-outline btn-sm" onclick="queuePrev()">◀</button>
+        <button class="btn btn-primary btn-sm" onclick="queueToday()">เดือนนี้</button>
+        <button class="btn btn-outline btn-sm" onclick="queueNext()">▶</button>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <input type="text" id="queueSearch" placeholder="🔍 ค้นหา ทะเบียนรถ, ชื่อลูกค้า..." oninput="filterQueue()" style="width:100%; max-width:400px;">
+    </div>
+    <div id="queueGrid" class="cal-grid"></div>
+    <div id="queueDetail" style="display:none; margin-top:12px;">
+      <div class="card" style="background:var(--card-bg);">
+        <h3 id="queueDetailTitle"></h3>
+        <div id="queueDetailContent"></div>
+        <button class="btn btn-outline btn-sm" onclick="closeQueueDetail()" style="margin-top:8px;">✕ ปิด</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Appointment Panel ═══ -->
+<div class="panel" id="panel-appointment">
+  <div class="card">
+    <h2>➕ นัดหมายเคลือบแก้ว / บำรุงผิวแก้ว</h2>
+    <p style="font-size:12px; color:var(--text-light); margin-bottom:12px;">
+      ใส่ทะเบียนรถ → ระบบดึงข้อมูลอัตโนมัติ → บันทึก → แจ้งเตือน Line/SMS อัตโนมัติ
+    </p>
+    
+    <div class="form-group">
+      <label>ทะเบียนรถ / เลขเครื่อง</label>
+      <input type="text" id="aptPlate" placeholder="เช่น FKF159" onkeyup="lookupPlate()" style="text-transform:uppercase;">
+      <div id="aptLookupResult" style="font-size:12px; color:var(--success); margin-top:2px;"></div>
+    </div>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label>ชื่อลูกค้า</label>
+        <input type="text" id="aptName">
+      </div>
+      <div class="form-group">
+        <label>เบอร์โทร</label>
+        <input type="text" id="aptPhone">
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label>ที่อยู่</label>
+      <input type="text" id="aptAddress">
+    </div>
+    <!-- Hidden fields for real (unmasked) PDPA data used when saving -->
+    <input type="hidden" id="aptRealName">
+    <input type="hidden" id="aptRealPhone">
+    <input type="hidden" id="aptRealAddress">
+    
+    <div class="form-row3">
+      <div class="form-group">
+        <label>ยี่ห้อ</label>
+        <select id="aptBrand">
+          <option value="">เลือก</option>
+          <option value="ISUZU">ISUZU</option>
+          <option value="TOYOTA">TOYOTA</option>
+          <option value="HONDA">HONDA</option>
+          <option value="FORD">FORD</option>
+          <option value="MITSUBISHI">MITSUBISHI</option>
+          <option value="NISSAN">NISSAN</option>
+          <option value="MAZDA">MAZDA</option>
+          <option value="CHEVROLET">CHEVROLET</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>รุ่นรถ</label>
+        <input type="text" id="aptModel" placeholder="แค๊ป, MU-X, D-MAX...">
+      </div>
+      <div class="form-group">
+        <label>ประเภทรถ</label>
+        <select id="aptCarType">
+          <option value="รถใหม่ PMS">รถใหม่ PMS</option>
+          <option value="รถใหม่">รถใหม่</option>
+          <option value="รถใช้งานแล้ว">รถใช้งานแล้ว</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="form-row3">
+      <div class="form-group">
+        <label>เคลือบแก้ว</label>
+        <select id="aptCoatingType">
+          <option value="พ่น 1 ปี">พ่น 1 ปี</option>
+          <option value="พ่น 3 ปี">พ่น 3 ปี</option>
+          <option value="Diamond">Diamond</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ช่องทาง</label>
+        <select id="aptChannel">
+          <option value="ที่ปรึกษาการขาย">ที่ปรึกษาการขาย</option>
+          <option value="MR สมาชิกแนะนำ">MR สมาชิกแนะนำ</option>
+          <option value="PMG">PMG</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ราคา</label>
+        <input type="number" id="aptPrice">
+      </div>
+    </div>
+    
+    <div class="form-row3">
+      <div class="form-group">
+        <label>สมาชิกที่ดูแลรถ</label>
+        <select id="aptMember">
+          <option value="">เลือก</option>
+          <option>ซาย</option><option>นก</option><option>บอม</option>
+          <option>พลอย</option><option>พี่อ้อ</option><option>สอง</option>
+          <option>แนน</option><option>โอ๊ะ</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>MR</label>
+        <select id="aptMR">
+          <option value="">เลือก</option>
+          <option>สันติภาพ</option><option>สุมลรัตน์</option><option>ไพลิน</option>
+          <option>โฆษิต</option><option>ชนกวรรณ</option><option>สราวุธ</option>
+          <option>ธิติมา</option><option>พัชพร</option><option>เกณิกา</option>
+          <option>เรวดี</option><option>โสภิตา</option><option>บุษบา</option>
+          <option>จุฑามณี</option><option>ชนาธิป</option><option>นราวุฒิ</option>
+          <option>ธีรภัทร</option><option>อรอมล</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ผู้รับเรื่อง</label>
+        <input type="text" id="aptReceiver">
+      </div>
+    </div>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label>📅 วันที่นัดเข้าทำ</label>
+        <input type="date" id="aptDate">
+      </div>
+      <div class="form-group">
+        <label>📅 วันที่นัดส่งมอบ</label>
+        <input type="date" id="aptDeliverDate">
+      </div>
+    </div>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label>Line Group URL</label>
+        <input type="text" id="aptLineGroup" placeholder="https://line.me/R/ti/g/...">
+      </div>
+      <div class="form-group">
+        <label>ประเภทการนัดหมาย</label>
+        <select id="aptType">
+          <option value="coating">เคลือบแก้ว</option>
+          <option value="maintenance">บำรุงผิวแก้ว</option>
+          <option value="both">เคลือบ + บำรุง</option>
+        </select>
+      </div>
+    </div>
+    
+    <div style="margin-top:12px; display:flex; gap:8px;">
+      <button class="btn btn-primary" onclick="saveAppointment()" id="btnSaveApt">💾 บันทึกนัดหมาย</button>
+      <button class="btn btn-accent" onclick="saveAppointment(true)">💾+📨 บันทึกและส่งแจ้งเตือน</button>
+      <button class="btn btn-outline" onclick="clearAptForm()">🗑️ ล้างฟอร์ม</button>
+    </div>
+    <div id="aptResult" style="margin-top:8px; font-size:12px;"></div>
+  </div>
+</div>
+
+<!-- ═══ Notifications Panel ═══ -->
+<div class="panel" id="panel-notifications">
+  <div class="card">
+    <h2>🔔 รายการแจ้งเตือนครบกำหนดบำรุงผิวแก้ว</h2>
+    <div id="notifList"></div>
+  </div>
+  
+  <div class="card" style="margin-top:12px;">
+    <h2>📨 ส่งแจ้งเตือนด้วยตนเอง</h2>
+    <div class="form-group">
+      <label>ทะเบียนรถ</label>
+      <input type="text" id="manualNotifPlate" style="text-transform:uppercase;">
+    </div>
+    <div class="form-group">
+      <label>ข้อความ</label>
+      <textarea id="manualNotifMsg" rows="3" placeholder="ข้อความแจ้งเตือน..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>เบอร์โทร (SMS)</label>
+        <input type="text" id="manualNotifPhone">
+      </div>
+      <div class="form-group">
+        <label>Line Group URL</label>
+        <input type="text" id="manualNotifLine">
+      </div>
+    </div>
+    <button class="btn btn-accent" onclick="sendManualNotification()">📨 ส่งแจ้งเตือน</button>
+  </div>
+</div>
+
+<!-- ═══ Settings Panel ═══ -->
+<div class="panel" id="panel-settings">
+  <div class="card">
+    <h2>⚙️ ตั้งค่าการแจ้งเตือน</h2>
+    <div class="form-group">
+      <label>LINE Channel Access Token <small style="color:#888;">(Messaging API — แทนที่ LINE Notify ที่ถูกยกเลิก)</small></label>
+      <input type="password" id="cfgLineChannelToken" placeholder="กรอก Channel Access Token จาก LINE Developers">
+      <small id="cfgLineChannelTokenHint" style="color:#888;"></small>
+    </div>
+    <div class="form-group">
+      <label>LINE Group ID <small style="color:#888;">(สำหรับ Messaging API)</small></label>
+      <input type="text" id="cfgLineGroupId" placeholder="กรอก LINE Group ID เช่น Cxxxxxxxxxxxxxxx">
+      <small id="cfgLineGroupIdHint" style="color:#888;"></small>
+    </div>
+    <details style="margin:8px 0 12px;border:1px solid var(--border);border-radius:6px;padding:6px 10px;">
+      <summary style="color:var(--text-light);cursor:pointer;font-size:12px;">⏮️ LINE Notify Token (เลิกใช้แล้ว — สำรอง)</summary>
+      <div class="form-group" style="margin-top:8px;">
+        <label>LINE Notify Token</label>
+        <input type="password" id="cfgLineToken" placeholder="กรอก token จาก https://notify-bot.line.me/th/">
+        <small id="cfgLineTokenHint" style="color:#888;"></small>
+      </div>
+    </details>
+    <div class="form-row">
+      <div class="form-group">
+        <label>SMS Username</label>
+        <input type="text" id="cfgSmsUser">
+      </div>
+      <div class="form-group">
+        <label>SMS Password</label>
+        <input type="password" id="cfgSmsPass" placeholder="กรอกรหัสผ่านใหม่ หรือเว้นว่างถ้าไม่ต้องการเปลี่ยน">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>SMS Sender (ชื่อผู้ส่ง)</label>
+      <input type="text" id="cfgSmsSender" value="PRACHAKIJ" placeholder="PRACHAKIJ">
+    </div>
+    <button class="btn btn-primary" onclick="saveConfigSettings()">💾 บันทึกตั้งค่า</button>
+    <span id="cfgSaveStatus" style="margin-left:8px;"></span>
+  </div>
+</div>
+
+<!-- ═══ Maintenance Note Modal ═══ -->
+<div class="modal-overlay" id="maintModal">
+  <div class="modal">
+    <h2>📝 บันทึกการติดต่อ / บำรุง</h2>
+    <div id="maintModalInfo" style="font-size:13px; margin-bottom:12px; padding:8px; background:#f5f5f5; border-radius:4px;"></div>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label>วันที่โทร</label>
+        <input type="date" id="maintCallDate">
+      </div>
+      <div class="form-group">
+        <label>ผู้ติดต่อ</label>
+        <input type="text" id="maintCaller">
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label>สถานะการติดต่อ</label>
+      <select id="maintCallStatus">
+        <option value="">เลือก</option>
+        <option value="ติดต่อได้">✅ ติดต่อได้</option>
+        <option value="นัดแล้ว">📅 นัดแล้ว</option>
+        <option value="เข้าใช้บริการแล้ว">✅ เข้าใช้บริการแล้ว</option>
+        <option value="ติดต่อครั้งหน้า-ไม่รับสาย">📞 ไม่รับสาย</option>
+        <option value="ติดต่อครั้งหน้า-ไม่อยู่ / ไม่สะดวกคุย">🕓 ไม่สะดวกคุย</option>
+        <option value="ติดต่อไม่ได้-ปิดเครื่อง">📴 ปิดเครื่อง</option>
+        <option value="ติดต่อไม่ได้-ไม่เปิดใช้บริการ">📵 ไม่เปิดใช้บริการ</option>
+        <option value="ส่ง SMS">📱 ส่ง SMS</option>
+        <option value="ส่งline">💬 ส่ง Line</option>
+        <option value="ไม่สนใจ">❌ ไม่สนใจ</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label>รายละเอียด</label>
+      <textarea id="maintCallDetail" rows="2" placeholder="รายละเอียดการติดต่อ..."></textarea>
+    </div>
+    
+    <div class="form-group">
+      <label>วันที่เข้าบำรุงจริง (ถ้ามี)</label>
+      <input type="date" id="maintDate">
+    </div>
+    
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeMaintModal()">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveMaintNote()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Event Detail Modal ═══ -->
+<div class="modal-overlay" id="eventModal">
+  <div class="modal">
+    <h2 id="eventModalTitle"></h2>
+    <div id="eventModalBody" style="font-size:13px;"></div>
+    <div class="modal-actions" id="eventModalActions"></div>
+  </div>
+</div>
+
+<!-- ═══ Customer Detail Modal ═══ -->
+<div class="modal-overlay" id="customerModal">
+  <div class="modal" style="max-width:600px;">
+    <h2 id="customerModalTitle"></h2>
+    <div id="customerModalBody" style="font-size:13px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeCustomerModal()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── OFFLINE MODE STUB ──────────────────────────────────────
+// Mock google.script.run + fetch for standalone HTML (no server)
+if (typeof window !== 'undefined') {
+  if (typeof window.google === 'undefined') {
+    window.google = { script: { run: {} } };
+  }
+  var _gsrTarget = window.google.script.run;
+  _gsrTarget._success = null;
+  _gsrTarget._failure = null;
+  _gsrTarget.withSuccessHandler = function(fn){ this._success = fn; return _proxyRef; };
+  _gsrTarget.withFailureHandler  = function(fn){ this._failure = fn; return _proxyRef; };
+  _gsrTarget.withUserObject      = function(o){ return _proxyRef; };
+  var _proxyRef = new Proxy(_gsrTarget, {
+    get: function(target, prop, receiver) {
+      if (prop === '_success' || prop === '_failure') return target[prop];
+      if (typeof target[prop] === 'function') return target[prop];
+      // Unknown property = a server function name → return stub function
+      return function() {
+        console.log('[Offline] google.script.run.' + String(prop) + ' called (stubbed)', arguments);
+        var self = target;
+        setTimeout(function(){
+          if (typeof self._success === 'function') {
+            try { self._success([]); } catch(e){ console.warn('[Offline] success handler error:', e); }
+          }
+        }, 50);
+        return _proxyRef;
+      };
+    }
+  });
+  window.google.script.run = _proxyRef;
+  // Mock fetch() to return empty data (avoids CORS/network errors offline)
+  if (typeof window.fetch === 'function' && !window._fetchStubbed) {
+    window._origFetch = window.fetch;
+    window.fetch = function(url, opts) {
+      console.log('[Offline] fetch() stubbed:', url);
+      return Promise.resolve({
+        ok: true, status: 200, redirected: false,
+        text:  function(){ return Promise.resolve(''); },
+        json:  function(){ return Promise.resolve({}); },
+        blob:  function(){ return Promise.resolve(new Blob([''])); },
+        clone: function(){ return this; },
+        headers: { get: function(){ return null; } }
+      });
+    };
+    window._fetchStubbed = true;
+  }
+}
+// ── END OFFLINE MODE STUB ──────────────────────────────────
+
+
+
+  // ═══ Global State ═══
+  var STATE = {
+    customers: [],
+    maintenance: [],
+    calendarEvents: [],
+    dashboard: {},
+    queueData: null,
+    calMonth: new Date().getMonth(),
+    calYear: new Date().getFullYear(),
+    currentMaintRow: null,
+    currentMaintCycle: null
+  };
+  
+  // ═══ Init ═══
+  document.addEventListener('DOMContentLoaded', function() {
+    initTabs();
+    updateTime();
+    setInterval(updateTime, 60000);
+    loadDashboard();
+  });
+  
+  function updateTime() {
+    var now = new Date();
+    var opts = {weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit'};
+    document.getElementById('currentTime').textContent = now.toLocaleDateString('th-TH', opts);
+  }
+  
+  function initTabs() {
+    document.querySelectorAll('.tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        switchTab(this.getAttribute('data-tab'));
+      });
+    });
+  }
+  
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelector('[data-tab="'+name+'"]').classList.add('active');
+    document.getElementById('panel-'+name).classList.add('active');
+    
+    // Lazy load
+    switch(name) {
+      case 'dashboard': loadDashboard(); break;
+      case 'customers': loadCustomers(); break;
+      case 'maintenance': loadMaintenance(); break;
+      case 'calendar': renderCalendar(); loadCalendarEvents(); break;
+      case 'queue': loadQueue(); break;
+      case 'notifications': loadNotifications(); break;
+      case 'settings': loadConfigSettings(); break;
+    }
+  }
+  
+  // ═══ API Call Helper ═══
+  function api(action, params) {
+    return google.script.run.withSuccessHandler(function(r) { return r; })
+      .withFailureHandler(function(e) { showToast('Error: '+e, 'error'); return null; })
+      .getBctData(action, params);
+  }
+  
+  // Promise wrapper for google.script.run with timeout and logging
+  function apiPromise(action, params) {
+    return new Promise(function(resolve, reject) {
+      var timedOut = false;
+      var timer = setTimeout(function() {
+        timedOut = true;
+        console.error('[apiPromise] TIMEOUT after 15s for action:', action);
+        reject(new Error('Timeout: server ไม่ตอบสนอง (15s) — action: ' + action));
+      }, 15000);
+      
+      google.script.run
+        .withSuccessHandler(function(r) {
+          clearTimeout(timer);
+          if (!timedOut) {
+            console.log('[apiPromise] SUCCESS:', action, 'params:', JSON.stringify(params).substring(0,100));
+            resolve(r);
+          }
+        })
+        .withFailureHandler(function(e) {
+          clearTimeout(timer);
+          if (!timedOut) {
+            console.error('[apiPromise] FAILURE:', action, 'error:', e);
+            reject(new Error(e.message || String(e)));
+          }
+        })
+        .getBctData(action, params || {});
+    });
+  }
+  
+  // ═══ Dashboard ═══
+  function loadDashboard() {
+    apiPromise('getDashboard', {}).then(function(data) {
+      if (!data) return;
+      STATE.dashboard = data;
+      renderDashboard(data);
+    });
+  }
+  
+  function renderDashboard(d) {
+    var html = '';
+    html += '<div class="stat-card"><div class="stat-number">'+d.customers.total+'</div><div class="stat-label">ลูกค้าทั้งหมด</div></div>';
+    html += '<div class="stat-card green"><div class="stat-number">'+d.customers.closed+'</div><div class="stat-label">ปิดงานได้</div></div>';
+    html += '<div class="stat-card orange"><div class="stat-number">'+d.customers.open+'</div><div class="stat-label">อยู่ระหว่างดำเนินการ</div></div>';
+    html += '<div class="stat-card"><div class="stat-number">'+d.customers.newCar+'</div><div class="stat-label">รถใหม่ PMS</div></div>';
+    html += '<div class="stat-card orange"><div class="stat-number">'+d.maintenance.upcoming+'</div><div class="stat-label">ครบกำหนดเร็วนี้</div></div>';
+    html += '<div class="stat-card red"><div class="stat-number">'+d.maintenance.overdue+'</div><div class="stat-label">เกินกำหนด</div></div>';
+    html += '<div class="stat-card green"><div class="stat-number">'+d.maintenance.done+'</div><div class="stat-label">บำรุงเสร็จแล้ว</div></div>';
+    html += '<div class="stat-card"><div class="stat-number">'+d.coating.spray1y+'</div><div class="stat-label">พ่น 1 ปี</div></div>';
+    html += '<div class="stat-card"><div class="stat-number">'+d.coating.spray3y+'</div><div class="stat-label">พ่น 3 ปี</div></div>';
+    html += '<div class="stat-card"><div class="stat-number">'+d.coating.diamond+'</div><div class="stat-label">Diamond</div></div>';
+    document.getElementById('dashStats').innerHTML = html;
+    
+    // Revenue
+    var r = d.revenue;
+    document.getElementById('dashRevenue').innerHTML = 
+      '<div style="display:flex; justify-content:space-around; text-align:center;">' +
+      '<div><div style="font-size:24px; font-weight:700; color:var(--primary);">'+formatNumber(r.total)+'</div><div style="font-size:12px; color:var(--text-light);">รายได้รวม</div></div>' +
+      '<div><div style="font-size:24px; font-weight:700; color:var(--accent);">'+formatNumber(r.cost)+'</div><div style="font-size:12px; color:var(--text-light);">ต้นทุน</div></div>' +
+      '<div><div style="font-size:24px; font-weight:700; color:var(--success);">'+formatNumber(r.profit)+'</div><div style="font-size:12px; color:var(--text-light);">กำไร</div></div>' +
+      '</div>';
+    
+    // Badge
+    var totalAlerts = d.maintenance.upcoming + d.maintenance.overdue;
+    var badge = document.getElementById('maintenanceBadge');
+    if (totalAlerts > 0) {
+      badge.textContent = totalAlerts;
+      badge.style.display = '';
+    }
+    
+    // Load upcoming/overdue items
+    apiPromise('getMaintenance', {maxRows: 10, upcoming: true}).then(function(data) {
+      if (!data || !data.maintenance) return;
+      var today = new Date();
+      var upcoming = [], overdue = [];
+      data.maintenance.forEach(function(m) {
+        var dd = m.nextDueDate ? parseThaiDate(m.nextDueDate) : null;
+        if (dd && dd < today) overdue.push(m);
+        else upcoming.push(m);
+      });
+      
+      var upHtml = upcoming.slice(0,5).map(function(m) {
+        var stBadge = '';
+        var cs = (m.lastContactStatus || '').trim();
+        var mNote = (m.maintenanceNote || '').trim();
+        if (mNote.indexOf('ไม่แถม') >= 0 || mNote.indexOf('ไม่ได้แถม') >= 0) stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;color:#fff;background:#dc2626;border:1.5px solid #b91c1c;margin-left:4px;">⛔ ' + escHtml(mNote) + '</span>';
+        else if (cs === 'นัดแล้ว' || cs === 'นัดหมายแล้ว') stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;background:#bbdefb;color:#0d47a1;border:1.5px solid #2196f3;margin-left:4px;">📅 นัดหมายแล้ว</span>';
+        else if (cs === 'ส่ง SMS' || cs === 'ส่งline' || cs === 'ส่ง Line' || cs === 'แจ้งเตือนแล้ว' || cs === 'แจ้งเตือน' || cs === 'ส่งแล้ว') stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;background:#ffe0b2;color:#e65100;border:1.5px solid #ff9800;margin-left:4px;">🔔 แจ้งเตือนแล้ว</span>';
+        else if (cs === 'เข้าใช้บริการแล้ว') stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;background:#c8e6c9;color:#1b5e20;border:1.5px solid #4caf50;margin-left:4px;">✅ บำรุงแล้ว</span>';
+        else if (cs === 'ติดต่อได้') stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;background:#e0f2fe;color:#0369a1;border:1.5px solid #0ea5e9;margin-left:4px;">📞 ติดต่อได้</span>';
+        else if (cs.indexOf('ติดต่อไม่ได้') >= 0) stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;background:#fecaca;color:#991b1b;border:1.5px solid #ef4444;margin-left:4px;">❌ ' + escHtml(cs) + '</span>';
+        else if (cs.indexOf('ติดต่อครั้งหน้า') >= 0 || cs.indexOf('ติดต่อคราวหน้า') >= 0) stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;background:#fef9c3;color:#854d0e;border:1.5px solid #eab308;margin-left:4px;">⏭️ ' + escHtml(cs) + '</span>';
+        else if (cs) stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;color:#475569;background:#e2e8f0;border:1.5px solid #94a3b8;margin-left:4px;">📋 ' + escHtml(cs) + '</span>';
+        else if (!cs) stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;color:#64748b;background:#e2e8f0;border:1.5px solid #94a3b8;margin-left:4px;">⏳ รอติดต่อ</span>';
+        return '<div class="notif-item"><div class="notif-icon upcoming">⏰</div>' +
+          '<div class="notif-content"><strong>'+escHtml(m.plate)+' — '+maskName(m.name)+'</strong>' +
+          '<div class="detail">ครั้งที่ '+m.nextDueCycle+' • ครบ '+m.nextDueDate+stBadge+'</div></div></div>';
+      }).join('');
+      document.getElementById('dashUpcoming').innerHTML = upHtml || '<div style="text-align:center; color:var(--text-light); padding:20px;">🎉 ไม่มี</div>';
+      
+      var ovHtml = overdue.slice(0,5).map(function(m) {
+        var stBadge = '';
+        var cs2 = (m.lastContactStatus || '').trim();
+        var mNote2 = (m.maintenanceNote || '').trim();
+        if (mNote2.indexOf('ไม่แถม') >= 0 || mNote2.indexOf('ไม่ได้แถม') >= 0) stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;color:#fff;background:#dc2626;border:1.5px solid #b91c1c;margin-left:4px;">⛔ ' + escHtml(mNote2) + '</span>';
+        else if (cs2 === 'นัดแล้ว' || cs2 === 'นัดหมายแล้ว') stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;background:#bbdefb;color:#0d47a1;border:1.5px solid #2196f3;margin-left:4px;">📅 นัดหมายแล้ว</span>';
+        else if (cs2 === 'ส่ง SMS' || cs2 === 'ส่งline' || cs2 === 'ส่ง Line' || cs2 === 'แจ้งเตือนแล้ว' || cs2 === 'แจ้งเตือน' || cs2 === 'ส่งแล้ว') stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;background:#ffe0b2;color:#e65100;border:1.5px solid #ff9800;margin-left:4px;">🔔 แจ้งเตือนแล้ว</span>';
+        else if (cs2 === 'เข้าใช้บริการแล้ว') stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;background:#c8e6c9;color:#1b5e20;border:1.5px solid #4caf50;margin-left:4px;">✅ บำรุงแล้ว</span>';
+        else if (cs2 === 'ติดต่อได้') stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;background:#e0f2fe;color:#0369a1;border:1.5px solid #0ea5e9;margin-left:4px;">📞 ติดต่อได้</span>';
+        else if (cs2.indexOf('ติดต่อไม่ได้') >= 0) stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;background:#fecaca;color:#991b1b;border:1.5px solid #ef4444;margin-left:4px;">❌ ' + escHtml(cs2) + '</span>';
+        else if (cs2.indexOf('ติดต่อครั้งหน้า') >= 0 || cs2.indexOf('ติดต่อคราวหน้า') >= 0) stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;background:#fef9c3;color:#854d0e;border:1.5px solid #eab308;margin-left:4px;">⏭️ ' + escHtml(cs2) + '</span>';
+        else if (cs2) stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;color:#475569;background:#e2e8f0;border:1.5px solid #94a3b8;margin-left:4px;">📋 ' + escHtml(cs2) + '</span>';
+        else if (!cs2) stBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;color:#64748b;background:#e2e8f0;border:1.5px solid #94a3b8;margin-left:4px;">⏳ ยังไม่ติดต่อ</span>';
+        return '<div class="notif-item"><div class="notif-icon overdue">🔴</div>' +
+          '<div class="notif-content"><strong>'+escHtml(m.plate)+' — '+maskName(m.name)+'</strong>' +
+          '<div class="detail">ครั้งที่ '+m.nextDueCycle+' • เกินกำหนด '+m.nextDueDate+stBadge+'</div></div></div>';
+      }).join('');
+      document.getElementById('dashOverdue').innerHTML = ovHtml || '<div style="text-align:center; color:var(--text-light); padding:20px;">🎉 ไม่มี</div>';
+    });
+  }
+  
+  // ═══ Customers ═══
+  function loadCustomers() {
+    document.getElementById('customersBody').innerHTML = '<tr><td colspan="10" class="loading"><div class="spinner"></div> กำลังโหลด...</td></tr>';
+    apiPromise('getCustomers', {maxRows: 300}).then(function(data) {
+      if (!data || !data.customers) return;
+      STATE.customers = data.customers;
+      renderCustomers(data.customers);
+    });
+  }
+  
+  function renderCustomers(customers) {
+    var html = '';
+    customers.forEach(function(c) {
+      var statusClass = c.status.indexOf('ปิดได้') >= 0 ? 'status-closed' : 'status-open';
+      
+      // Build maintenance cycle badges with inline action buttons
+      var maintBadge = '';
+      var hasPending = false;
+      var maintNote = c.maintenanceNote || (c.maintenance && c.maintenance.maintenanceNote ? c.maintenance.maintenanceNote : '');
+      // Track overall status for display
+      var maintAlertSent = false;
+      var maintAptSet = false;
+      var maintDone = false;
+      var hasServices = c.maintenance && c.maintenance.services && c.maintenance.services.length > 0;
+      if (hasServices) {
+        c.maintenance.services.forEach(function(svc) {
+          var cs = (svc.callStatus || '').trim();
+          if (svc.maintenanceDate && cs === 'เข้าใช้บริการแล้ว') {
+            maintBadge += '<span class="cycle-badge cycle-done">'+svc.cycle+'✅</span>';
+            maintDone = true;
+          } else if (svc.maintenanceDate) {
+            maintBadge += '<span class="cycle-badge cycle-done">'+svc.cycle+'✅ บำรุงแล้ว</span>';
+            maintDone = true;
+          } else if (svc.dueDate) {
+            var dd = parseThaiDate(svc.dueDate);
+            var isOverdue = dd && dd < new Date();
+            var statusLabel = '';
+            if (cs === 'นัดแล้ว' || cs === 'นัดหมายแล้ว') { statusLabel = ' 📅นัดหมายแล้ว'; maintAptSet = true; }
+            else if (cs === 'ส่ง SMS' || cs === 'ส่งline' || cs === 'ส่ง Line' || cs === 'แจ้งเตือนแล้ว' || cs === 'แจ้งเตือน' || cs === 'ส่งแล้ว') { statusLabel = ' 🔔แจ้งเตือนแล้ว'; maintAlertSent = true; }
+            else if (cs === 'เข้าใช้บริการแล้ว') { statusLabel = ' ✅บำรุงแล้ว'; maintDone = true; }
+            else if (cs === 'ติดต่อไม่ได้-ปิดเครื่อง' || cs === 'ติดต่อไม่ได้-ไม่รับสาย' || cs === 'ติดต่อไม่ได้') { statusLabel = ' ❌ติดต่อไม่ได้'; }
+            else if (cs === 'ติดต่อครั้งหน้า' || cs === 'ติดต่อคราวหน้า') { statusLabel = ' ⏭️ติดต่อครั้งหน้า'; }
+            maintBadge += '<span class="cycle-badge '+(isOverdue?'cycle-overdue':'cycle-pending')+'">'+svc.cycle+'⏰'+statusLabel+'</span>';
+            hasPending = true;
+          }
+        });
+      } else if (c.maintenance && c.maintenance.nextDueDate) {
+        maintBadge = '<span class="cycle-badge cycle-pending">'+c.maintenance.nextDueCycle+'⏰ '+c.maintenance.nextDueDate+'</span>';
+        hasPending = true;
+      }
+      // Prepend overall status badges before cycle badges — BIG and prominent upfront
+      var maintStatusLine = '';
+      if (maintDone) maintStatusLine += '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:800;background:#c8e6c9;color:#1b5e20;margin:2px;white-space:nowrap;border:1.5px solid #4caf50;">✅ บำรุงแล้ว</span>';
+      if (maintAptSet) maintStatusLine += '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:800;background:#bbdefb;color:#0d47a1;margin:2px;white-space:nowrap;border:1.5px solid #2196f3;">📅 นัดหมายแล้ว</span>';
+      if (maintAlertSent) maintStatusLine += '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:800;background:#ffe0b2;color:#e65100;margin:2px;white-space:nowrap;border:1.5px solid #ff9800;">🔔 แจ้งเตือนแล้ว</span>';
+      maintBadge = maintStatusLine + maintBadge;
+      // Show reason if maintenance is empty/blank — BIG clear explanation for why blank
+      if (!maintBadge) {
+        if (maintNote && maintNote.indexOf('ไม่แถม') >= 0) {
+          maintBadge = '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:800;color:#fff;background:#dc2626;margin:2px;white-space:nowrap;border:1.5px solid #b91c1c;">⛔ ' + escHtml(maintNote) + '</span>';
+        } else if (c.coatingType && c.coatingType.indexOf('บำรุง') < 0 && !c.maintenance) {
+          // ลงทะเบียนเคลือบใหม่ (ไม่ใช่บำรุง) แต่ไม่มีข้อมูลบำรุง = ไม่มีแถมบำรุง
+          maintBadge = '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:800;color:#fff;background:#ef4444;margin:2px;white-space:nowrap;border:1.5px solid #dc2626;">⛔ ไม่แถมบำรุงผิวแก้ว</span>';
+        } else if (c.maintenance && c.maintenance.services && c.maintenance.services.length === 0) {
+          maintBadge = '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:700;color:#64748b;background:#e2e8f0;margin:2px;white-space:nowrap;border:1.5px solid #94a3b8;">⏳ ยังไม่ครบกำหนดบำรุง</span>';
+        } else if (c.maintenance && !c.maintenance.services) {
+          maintBadge = '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:700;color:#64748b;background:#e2e8f0;margin:2px;white-space:nowrap;border:1.5px solid #94a3b8;">⏳ ยังไม่ครบกำหนดบำรุง</span>';
+        } else if (!c.maintenance) {
+          // ไม่มีข้อมูลบำรุงเลย — ต้องแยกว่าคันนี้เป็น "เคลือบใหม่" หรือ "บำรุง"
+          // ถ้า coatingType มีคำว่า "บำรุง" = ควรมีข้อมูลแต่หาไม่เจอ
+          if (c.coatingType && c.coatingType.indexOf('บำรุง') >= 0) {
+            maintBadge = '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:700;color:#64748b;background:#e2e8f0;margin:2px;white-space:nowrap;border:1.5px solid #94a3b8;">⏳ รอข้อมูลบำรุง</span>';
+          } else {
+            maintBadge = '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:800;color:#fff;background:#ef4444;margin:2px;white-space:nowrap;border:1.5px solid #dc2626;">⛔ ไม่แถมบำรุงผิวแก้ว</span>';
+          }
+        } else {
+          maintBadge = '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:700;color:#64748b;background:#e2e8f0;margin:2px;white-space:nowrap;border:1.5px solid #94a3b8;">— ไม่มีข้อมูลบำรุง</span>';
+        }
+      } else if (maintNote && maintNote.indexOf('ไม่แถม') >= 0) {
+        // Even if there are some badges, also show the "ไม่แถม" note if present
+        maintBadge += '<br><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;color:#fff;background:#dc2626;margin:2px;white-space:nowrap;">⛔ ' + escHtml(maintNote) + '</span>';
+      }
+      
+      html += '<tr style="cursor:pointer;" onclick="showCustomerDetail('+STATE.customers.indexOf(c)+')">';
+      html += '<td><span class="status-tag '+statusClass+'">'+(c.status.indexOf('ปิดได้')>=0?'ปิดได้':'ดำเนินการ')+'</span></td>';
+      html += '<td><strong>'+c.plate+'</strong></td>';
+      html += '<td>'+maskName(c.name)+'</td>';
+      html += '<td>'+maskPhone(c.phone)+'</td>';
+      html += '<td>'+c.carType+'</td>';
+      html += '<td>'+c.coatingType+'</td>';
+      html += '<td>'+c.mr+'</td>';
+      html += '<td>'+c.appointmentDate+'</td>';
+      html += '<td>'+c.realDeliverDate+'</td>';
+      html += '<td>'+maintBadge;
+      if (hasPending) {
+        html += ' <button class="btn btn-sm btn-accent" style="font-size:9px;padding:1px 4px;" onclick="event.stopPropagation();quickNotifyFromDetail('+STATE.customers.indexOf(c)+','+( c.maintenance && c.maintenance.nextDueCycle ? c.maintenance.nextDueCycle : 1)+')">🔔</button>';
+        html += '<button class="btn btn-sm btn-primary" style="font-size:9px;padding:1px 4px;" onclick="event.stopPropagation();quickAptFromDetail('+STATE.customers.indexOf(c)+','+( c.maintenance && c.maintenance.nextDueCycle ? c.maintenance.nextDueCycle : 1)+')">📅</button>';
+      }
+      html += '</td>';
+      html += '</tr>';
+    });
+    document.getElementById('customersBody').innerHTML = html || '<tr><td colspan="10" style="text-align:center; color:var(--text-light);">ไม่มีข้อมูล</td></tr>';
+  }
+  
+  function searchCustomers() {
+    var q = document.getElementById('searchPlate').value.toUpperCase();
+    if (!q) { renderCustomers(STATE.customers); return; }
+    var filtered = STATE.customers.filter(function(c) {
+      return c.plate.toUpperCase().indexOf(q) >= 0 || c.name.toUpperCase().indexOf(q) >= 0;
+    });
+    renderCustomers(filtered);
+  }
+  
+  function showCustomerDetail(idx) {
+    var c = STATE.customers[idx];
+    if (!c) return;
+    
+    var html = '<div style="padding:8px;">';
+    html += '<p><strong>ทะเบียน:</strong> '+escHtml(c.plate)+'</p>';
+    html += '<p><strong>ชื่อ:</strong> '+maskName(c.name)+'</p>';
+    html += '<p><strong>เบอร์โทร:</strong> '+maskPhone(c.phone)+'</p>';
+    html += '<p><strong>ยี่ห้อ/รุ่น:</strong> '+escHtml(c.brand||'-')+' '+escHtml(c.model||'-')+'</p>';
+    html += '<p><strong>ประเภท:</strong> '+escHtml(c.carType)+'</p>';
+    html += '<p><strong>เคลือบแก้ว:</strong> '+escHtml(c.coatingType)+'</p>';
+    html += '<p><strong>วันนัดหมาย:</strong> '+c.appointmentDate+'</p>';
+    html += '<p><strong>วันส่งมอบ:</strong> '+c.realDeliverDate+'</p>';
+    
+    // Show maintenance cycles
+    if (c.maintenance && c.maintenance.services && c.maintenance.services.length > 0) {
+      // Build overall status summary
+      var modalDone = false, modalApt = false, modalAlert = false;
+      c.maintenance.services.forEach(function(svc) {
+        if (svc.maintenanceDate) modalDone = true;
+        if (svc.callStatus === 'นัดแล้ว') modalApt = true;
+        if (svc.callStatus === 'ส่ง SMS' || svc.callStatus === 'ส่งline' || svc.callStatus === 'ส่ง Line') modalAlert = true;
+      });
+      var modalStatusLine = '<div style="margin-bottom:8px; display:flex; flex-wrap:wrap; gap:4px;">';
+      if (modalDone) modalStatusLine += '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#e8f5e9;color:#2e7d32;">✅ บำรุงแล้ว</span>';
+      if (modalApt) modalStatusLine += '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#e3f2fd;color:#1565c0;">📅 นัดหมายแล้ว</span>';
+      if (modalAlert) modalStatusLine += '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fff3e0;color:#e65100;">🔔 แจ้งเตือนแล้ว</span>';
+      modalStatusLine += '</div>';
+
+      html += '<div style="margin-top:12px; padding-top:8px; border-top:1px solid var(--border);">';
+      html += '<h3 style="color:var(--primary); margin-bottom:6px;">🛡️ ประวัติบำรุงผิวแก้ว</h3>';
+      html += modalStatusLine;
+      c.maintenance.services.forEach(function(svc) {
+        var statusIcon = svc.maintenanceDate ? '✅' : '⏰';
+        var isDone = svc.maintenanceDate && svc.callStatus === 'เข้าใช้บริการแล้ว';
+        var isOverdue = !svc.maintenanceDate && svc.dueDate && parseThaiDate(svc.dueDate) && parseThaiDate(svc.dueDate) < new Date() ? ' style="color:var(--danger);"' : '';
+        html += '<div style="padding:6px 4px; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:flex-start;"'+isOverdue+'>';
+        html += '<div>';
+        html += statusIcon+' <strong>ครั้งที่ '+svc.cycle+'</strong><br>';
+        html += '&nbsp;&nbsp;📅 ครบกำหนด: '+(svc.dueDate||'-');
+        if (svc.callDate) html += '<br>&nbsp;&nbsp;📞 วันโทร: '+svc.callDate;
+        if (svc.maintenanceDate) html += '<br>&nbsp;&nbsp;🔧 เข้าบำรุง: '+svc.maintenanceDate;
+        if (svc.callStatus) html += '<br>&nbsp;&nbsp;📋 สถานะ: '+escHtml(svc.callStatus);
+        html += '</div>';
+        // Action buttons for pending cycles
+        if (!isDone) {
+          html += '<div style="display:flex; gap:4px; flex-shrink:0; align-items:center;">';
+          html += '<button class="btn btn-sm btn-accent" style="font-size:11px; padding:3px 8px;" onclick="event.stopPropagation();quickNotifyFromDetail('+STATE.customers.indexOf(c)+','+svc.cycle+')">🔔 แจ้งเตือน</button>';
+          html += '<button class="btn btn-sm btn-primary" style="font-size:11px; padding:3px 8px;" onclick="event.stopPropagation();quickAptFromDetail('+STATE.customers.indexOf(c)+','+svc.cycle+')">📅 ลงนัดหมาย</button>';
+          html += '</div>';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+    } else {
+      // Show reason when no maintenance data — clear explanation
+      var maintNote = c.maintenanceNote || (c.maintenance && c.maintenance.maintenanceNote ? c.maintenance.maintenanceNote : '');
+      html += '<div style="margin-top:12px; padding-top:8px; border-top:1px solid var(--border);">';
+      html += '<h3 style="color:var(--primary); margin-bottom:6px;">🛡️ บำรุงผิวแก้ว</h3>';
+      if (maintNote && maintNote.indexOf('ไม่แถม') >= 0) {
+        html += '<p style="color:var(--danger); background:#ffebee; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:600;">❌ '+maintNote+'</p>';
+      } else if (c.maintenance && c.maintenance.services && c.maintenance.services.length === 0) {
+        html += '<p style="color:var(--text-light); background:#f5f5f5; padding:8px 12px; border-radius:8px; font-size:13px;">⏳ ยังไม่ครบกำหนดบำรุง — ยังไม่ถึงรอบที่ต้องบำรุง</p>';
+      } else if (c.maintenance && !c.maintenance.services) {
+        html += '<p style="color:var(--text-light); background:#f5f5f5; padding:8px 12px; border-radius:8px; font-size:13px;">⏳ ยังไม่ครบกำหนดบำรุง — ยังไม่ถึงรอบที่ต้องบำรุง</p>';
+      } else if (!c.maintenance) {
+        html += '<p style="color:var(--danger); background:#ffebee; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:600;">❌ ไม่มีแถมบำรุงผิวแก้ว — ไม่ได้รับบริการบำรุงเป็นส่วนเติม</p>';
+      } else {
+        html += '<p style="color:var(--text-light); background:#f5f5f5; padding:8px 12px; border-radius:8px; font-size:13px;">— ไม่มีข้อมูลบำรุง</p>';
+      }
+      html += '</div>';
+    }
+    
+    html += '</div>';
+    
+    document.getElementById('customerModalTitle').textContent = '👤 ' + c.plate + ' — ' + maskName(c.name);
+    document.getElementById('customerModalBody').innerHTML = html;
+    document.getElementById('customerModal').classList.add('active');
+  }
+  
+  function closeCustomerModal() {
+    document.getElementById('customerModal').classList.remove('active');
+  }
+  
+  // Quick notify from customer detail
+  function quickNotifyFromDetail(idx, cycle) {
+    var c = STATE.customers[idx];
+    if (!c) return;
+    var dueDate = '';
+    if (c.maintenance && c.maintenance.services) {
+      for (var i = 0; i < c.maintenance.services.length; i++) {
+        if (c.maintenance.services[i].cycle === cycle) {
+          dueDate = c.maintenance.services[i].dueDate || '';
+          break;
+        }
+      }
+    }
+    var msg = '🔔 แจ้งเตือนบำรุงผิวแก้ว ครั้งที่ '+cycle+'\n🚗 ทะเบียน: '+c.plate+'\n👤 ชื่อ: '+maskName(c.name)+'\n📅 ครบกำหนด: '+dueDate;
+    apiPromise('sendNotification', {name:c.name, phone:c.phone, plate:c.plate, dueDate:dueDate, lineGroup:c.lineGroup||'', maintenanceCycle:cycle, type:'maintenance_reminder'}).then(function(result) {
+      if (result && result.success !== false) {
+        var detail = '✅ ส่งแจ้งเตือนสำเร็จ!\n';
+        if (result.line && result.line.sent) {
+          detail += '🔔 LINE ✅ กลุ่ม: '+(result.line.group||c.lineGroup||'-')+'\n';
+          detail += '💬 ข้อความ: '+(result.line.message||msg)+'\n';
+        }
+        if (result.sms && result.sms.sent) {
+          detail += '📱 SMS ✅ เบอร์: '+maskPhone(result.sms.phone||c.phone||'')+'\n';
+        }
+        showToast(detail, 'success');
+      } else {
+        showToast('❌ ส่งแจ้งเตือนไม่สำเร็จ: '+(result.error||''), 'error');
+      }
+    });
+  }
+  
+  // Quick appointment from customer detail
+  function quickAptFromDetail(idx, cycle) {
+    var c = STATE.customers[idx];
+    if (!c) return;
+    closeCustomerModal();
+    // Switch to appointment tab and pre-fill
+    document.querySelector('[data-tab="appointment"]').click();
+    setTimeout(function() {
+      document.getElementById('aptPlate').value = c.plate || '';
+      document.getElementById('aptName').value = c.name || '';
+      document.getElementById('aptPhone').value = c.phone || '';
+      document.getElementById('aptAddress').value = c.address || '';
+      // Store real (unmasked) data in hidden fields for saving
+      document.getElementById('aptRealName').value = c._realName || '';
+      document.getElementById('aptRealPhone').value = c._realPhone || '';
+      document.getElementById('aptRealAddress').value = c._realAddress || '';
+      // Auto-fill select dropdowns using setSelectValue (adds option if missing)
+      setSelectValue('aptBrand', c.brand);
+      document.getElementById('aptModel').value = c.model || '';
+      setSelectValue('aptCarType', c.carType);
+      setSelectValue('aptCoatingType', c.coatingType);
+      setSelectValue('aptChannel', c.channel);
+      setSelectValue('aptMember', c.member);
+      setSelectValue('aptMR', c.mr);
+      document.getElementById('aptPrice').value = c.price || '';
+      document.getElementById('aptLineGroup').value = c.lineGroup || '';
+      document.getElementById('aptType').value = 'maintenance';
+      if (c.maintenance && c.maintenance.services) {
+        for (var i = 0; i < c.maintenance.services.length; i++) {
+          if (c.maintenance.services[i].cycle === cycle && c.maintenance.services[i].dueDate) {
+            document.getElementById('aptDate').value = c.maintenance.services[i].dueDate;
+            break;
+          }
+        }
+      }
+    }, 300);
+  }
+  
+  // ═══ Maintenance ═══
+  function loadMaintenance(upcomingOnly) {
+    document.getElementById('maintenanceBody').innerHTML = '<tr><td colspan="8" class="loading"><div class="spinner"></div> กำลังโหลด...</td></tr>';
+    apiPromise('getMaintenance', {maxRows: 500, upcoming: upcomingOnly}).then(function(data) {
+      if (!data || !data.maintenance) return;
+      STATE.maintenance = data.maintenance;
+      renderMaintenance(data.maintenance);
+    });
+  }
+  
+  function renderMaintenance(items) {
+    var html = '';
+    items.forEach(function(m) {
+      var cycle = m.nextDueCycle || 1;
+      var dueDate = m.nextDueDate || '-';
+      var isOverdue = false;
+      if (dueDate && dueDate !== '-') {
+        var dd = parseThaiDate(dueDate);
+        isOverdue = dd && dd < new Date();
+      }
+      
+      // Build status badges — BIG and prominent upfront
+      var statusBadges = '';
+      var maintNote = m.maintenanceNote || '';
+      
+      // 1) Show maintenance note if present (e.g. "ไม่ได้แถมบำรุงผิวแก้ว") — BIG prominent badge
+      if (maintNote.indexOf('ไม่แถม') >= 0 || maintNote.indexOf('ไม่ได้แถม') >= 0) {
+        statusBadges += '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:800;color:#fff;background:#dc2626;margin:2px;white-space:nowrap;border:1.5px solid #b91c1c;">⛔ ' + escHtml(maintNote) + '</span>';
+      }
+      
+      // 2) Last contact status as BIG prominent badge — support all variants
+      var statusText = (m.lastContactStatus || '').trim();
+      var statusStyle = '';
+      var statusIcon = '';
+      if (statusText === 'นัดแล้ว' || statusText === 'นัดหมายแล้ว') { statusStyle = 'background:#bbdefb;color:#0d47a1;border:1.5px solid #2196f3;'; statusIcon = '📅 '; }
+      else if (statusText === 'ส่ง SMS' || statusText === 'ส่งline' || statusText === 'ส่ง Line' || statusText === 'แจ้งเตือนแล้ว' || statusText === 'แจ้งเตือน' || statusText === 'ส่งแล้ว') { statusStyle = 'background:#ffe0b2;color:#e65100;border:1.5px solid #ff9800;'; statusIcon = '🔔 '; }
+      else if (statusText === 'เข้าใช้บริการแล้ว') { statusStyle = 'background:#c8e6c9;color:#1b5e20;border:1.5px solid #4caf50;'; statusIcon = '✅ '; }
+      else if (statusText === 'ติดต่อได้') { statusStyle = 'background:#e0f2fe;color:#0369a1;border:1.5px solid #0ea5e9;'; statusIcon = '📞 '; }
+      else if (statusText === 'ติดต่อไม่ได้-ปิดเครื่อง' || statusText === 'ติดต่อไม่ได้-ไม่รับสาย' || statusText === 'ติดต่อไม่ได้') { statusStyle = 'background:#fecaca;color:#991b1b;border:1.5px solid #ef4444;'; statusIcon = '❌ '; }
+      else if (statusText.indexOf('ติดต่อครั้งหน้า') >= 0 || statusText.indexOf('ติดต่อคราวหน้า') >= 0) { statusStyle = 'background:#fef9c3;color:#854d0e;border:1.5px solid #eab308;'; statusIcon = '⏭️ '; }
+      else if (statusText) { statusStyle = 'background:#e2e8f0;color:#475569;border:1.5px solid #94a3b8;'; statusIcon = '📋 '; }
+      
+      if (statusText && statusStyle) {
+        statusBadges += '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:800;'+statusStyle+'margin:2px;white-space:nowrap;">'+statusIcon+escHtml(statusText)+'</span>';
+      }
+      
+      // 3) Show clear reason when status is empty and no maintenance note — EVERY blank must explain WHY
+      if (!statusText && !maintNote) {
+        if (!m.nextDueDate && m.status === 'done') {
+          // บำรุงครบทุกรอบแล้ว — ไม่มีรอบค้าง
+          statusBadges += '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:800;background:#c8e6c9;color:#1b5e20;margin:2px;white-space:nowrap;border:1.5px solid #4caf50;">✅ บำรุงครบแล้ว</span>';
+        } else if (!m.nextDueDate) {
+          // ไม่มีรอบบำรุงเลย — บอกเหตุผล
+          if (m.coatingType && m.coatingType.indexOf('บำรุง') < 0) {
+            statusBadges += '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:800;color:#fff;background:#ef4444;margin:2px;white-space:nowrap;border:1.5px solid #dc2626;">⛔ ไม่แถมบำรุงผิวแก้ว</span>';
+          } else {
+            statusBadges += '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:700;color:#64748b;background:#e2e8f0;margin:2px;white-space:nowrap;border:1.5px solid #94a3b8;">ไม่มีรอบบำรุง</span>';
+          }
+        } else {
+          // มีวันครบกำหนดแต่ยังไม่ติดต่อ
+          statusBadges += '<span style="display:inline-block;padding:4px 12px;border-radius:14px;font-size:13px;font-weight:700;color:#64748b;background:#e2e8f0;margin:2px;white-space:nowrap;border:1.5px solid #94a3b8;">⏳ รอติดต่อ</span>';
+        }
+      }
+      
+      html += '<tr>';
+      html += '<td><strong>'+m.plate+'</strong>'+(maintNote && (maintNote.indexOf('ไม่แถม')>=0 || maintNote.indexOf('ไม่ได้แถม')>=0) ? '<br><span style="font-size:10px;color:#dc2626;">⛔ '+escHtml(maintNote)+'</span>' : '')+'</td>';
+      html += '<td>'+maskName(m.name)+'</td>';
+      html += '<td>'+maskPhone(m.phone)+'</td>';
+      html += '<td>'+m.coatingType+'</td>';
+      html += '<td>'+cycle+'</td>';
+      html += '<td><span style="color:'+(isOverdue?'var(--danger)':'var(--warning)')+'; font-weight:600;">'+dueDate+'</span></td>';
+      html += '<td>'+statusBadges+'</td>';
+      html += '<td><button class="btn btn-sm btn-outline" onclick="openMaintModal('+m.row+','+cycle+',\''+escHtml(m.plate)+'\',\''+maskName(m.name||'')+'\')">📝 บันทึก</button></td>';
+      html += '</tr>';
+    });
+    document.getElementById('maintenanceBody').innerHTML = html || '<tr><td colspan="8" style="text-align:center; color:var(--text-light);">ไม่มีข้อมูล</td></tr>';
+  }
+  
+  function searchMaintenance() {
+    var q = document.getElementById('searchMaint').value.toUpperCase();
+    if (!q) { renderMaintenance(STATE.maintenance); return; }
+    var filtered = STATE.maintenance.filter(function(m) {
+      return m.plate.toUpperCase().indexOf(q) >= 0 || m.name.toUpperCase().indexOf(q) >= 0;
+    });
+    renderMaintenance(filtered);
+  }
+  
+  function openMaintModal(row, cycle, plate, name) {
+    STATE.currentMaintRow = row;
+    STATE.currentMaintCycle = cycle;
+    document.getElementById('maintModalInfo').innerHTML = 
+      '<strong>'+plate+'</strong> — '+name+' (ครั้งที่ '+cycle+')';
+    document.getElementById('maintCallDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('maintModal').classList.add('active');
+  }
+  
+  function closeMaintModal() {
+    document.getElementById('maintModal').classList.remove('active');
+  }
+  
+  function saveMaintNote() {
+    var params = {
+      row: STATE.currentMaintRow,
+      cycle: STATE.currentMaintCycle,
+      callDate: document.getElementById('maintCallDate').value,
+      caller: document.getElementById('maintCaller').value,
+      callStatus: document.getElementById('maintCallStatus').value,
+      callDetail: document.getElementById('maintCallDetail').value,
+      maintenanceDate: document.getElementById('maintDate').value
+    };
+    
+    apiPromise('saveMaintenanceNote', params).then(function(result) {
+      if (result && result.success) {
+        showToast('✅ บันทึกเรียบร้อย (ครั้งที่ '+result.cycle+')', 'success');
+        closeMaintModal();
+        loadMaintenance();
+      } else {
+        showToast('❌ ผิดพลาด: '+(result.error || 'Unknown'), 'error');
+      }
+    });
+  }
+  
+  // ═══ Calendar ═══
+  function loadCalendarEvents() {
+    var y = STATE.calYear;
+    var m = STATE.calMonth + 1;
+    apiPromise('getCalendar', {year: y, month: m}).then(function(data) {
+      if (!data || !data.events) return;
+      STATE.calendarEvents = data.events;
+      renderCalendar();
+    });
+  }
+  
+  function renderCalendar() {
+    var year = STATE.calYear;
+    var month = STATE.calMonth;
+    
+    var thMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                   'กรกฏาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    document.getElementById('calMonthYear').textContent = thMonths[month] + ' ' + (year + 543);
+    
+    var firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var today = new Date();
+    
+    var html = '';
+    // Day headers — start from Monday
+    var dayNames = ['จ','อ','พ','พฤ','ศ','ส','อา'];
+    for (var d = 0; d < 7; d++) {
+      html += '<div class="cal-day-header">'+dayNames[d]+'</div>';
+    }
+    
+    // Previous month padding (Monday-based)
+    var startDay = firstDay === 0 ? 6 : firstDay - 1; // Mon=0, Sun=6
+    var prevDays = new Date(year, month, 0).getDate();
+    for (var i = 0; i < startDay; i++) {
+      html += '<div class="cal-day other-month"><div class="day-num">'+(prevDays - startDay + 1 + i)+'</div></div>';
+    }
+    
+    // Current month days
+    for (var day = 1; day <= daysInMonth; day++) {
+      var dateObj = new Date(year, month, day);
+      var dateStr = String(day).padStart(2,'0') + '/' + String(month+1).padStart(2,'0') + '/' + year;
+      var isToday = dateObj.toDateString() === today.toDateString();
+      
+      var events = STATE.calendarEvents.filter(function(e) {
+        // Match dd/mm/yyyy
+        return e.date && (e.date === dateStr || e.date.indexOf(String(day).padStart(2,'0') + '/' + String(month+1).padStart(2,'0')) === 0);
+      });
+      
+      html += '<div class="cal-day'+(isToday?' today':'')+'" onclick="showDayEvents('+day+')">';
+      html += '<div class="day-num">'+day+'</div>';
+      
+      events.slice(0, 3).forEach(function(e) {
+        var cls = e.type === 'coating_appointment' ? 'coating' :
+                  e.type === 'maintenance_done' ? 'deliver' :
+                  e.type === 'maintenance_appointment' ? 'coating' :
+                  e.type === 'deliver_car' ? 'deliver' :
+                  e.type === 'maintenance_due' ? 'maintenance' : 'special';
+        // Check if overdue
+        if (cls === 'maintenance' && e.date) {
+          var ed = parseThaiDate(e.date);
+          if (ed && ed < today) cls = 'overdue';
+        }
+        html += '<div class="cal-event '+cls+'" title="'+escHtml(e.title)+'" onclick="event.stopPropagation(); showEventDetail('+STATE.calendarEvents.indexOf(e)+')">'+escHtml(e.plate || e.title.substring(0,12))+'</div>';
+      });
+      
+      if (events.length > 3) {
+        html += '<div style="font-size:10px; color:var(--text-light);">+'+(events.length-3)+' เพิ่ม</div>';
+      }
+      
+      html += '</div>';
+    }
+    
+    // Next month padding
+    var lastDay = new Date(year, month, daysInMonth).getDay();
+    var endPad = lastDay === 0 ? 0 : 7 - lastDay;
+    for (var i = 1; i <= endPad; i++) {
+      html += '<div class="cal-day other-month"><div class="day-num">'+i+'</div></div>';
+    }
+    
+    document.getElementById('calGrid').innerHTML = html;
+    
+    // Today's events
+    var todayStr = String(today.getDate()).padStart(2,'0') + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + today.getFullYear();
+    var todayEvents = STATE.calendarEvents.filter(function(e) {
+      return e.date === todayStr;
+    });
+    renderCalTodayList(todayEvents);
+  }
+  
+  function renderCalTodayList(events) {
+    var html = '';
+    if (events.length === 0) {
+      html = '<div style="text-align:center; color:var(--text-light); padding:20px;">ไม่มีนัดหมายวันนี้</div>';
+    } else {
+      events.forEach(function(e) {
+        var cls = e.type === 'coating_appointment' ? 'coating' :
+                  e.type === 'maintenance_done' ? 'deliver' :
+                  e.type === 'maintenance_appointment' ? 'coating' :
+                  e.type === 'deliver_car' ? 'deliver' : 'maintenance';
+        html += '<div class="notif-item">';
+        html += '<div class="notif-icon '+(cls==='maintenance'?'upcoming':'today')+'">📅</div>';
+        html += '<div class="notif-content"><strong>'+escHtml(e.title)+'</strong>';
+        html += '<div class="detail">'+escHtml(e.coatingType||'')+' • '+maskPhone(e.phone||'')+'</div>';
+        html += '</div></div>';
+      });
+    }
+    document.getElementById('calTodayList').innerHTML = html;
+  }
+  
+  function calPrev() { STATE.calMonth--; if(STATE.calMonth<0){STATE.calMonth=11;STATE.calYear--;} loadCalendarEvents(); }
+  function calNext() { STATE.calMonth++; if(STATE.calMonth>11){STATE.calMonth=0;STATE.calYear++;} loadCalendarEvents(); }
+  function calToday() { STATE.calMonth=new Date().getMonth(); STATE.calYear=new Date().getFullYear(); loadCalendarEvents(); }
+  
+  function showDayEvents(day) {
+    var month = STATE.calMonth + 1;
+    var year = STATE.calYear;
+    var prefix = String(day).padStart(2,'0') + '/' + String(month).padStart(2,'0');
+    var events = STATE.calendarEvents.filter(function(e) { return e.date && (e.date === prefix + '/' + year || e.date.indexOf(prefix) === 0); });
+    
+    var html = '<h3>วันที่ '+day+'/'+month+'/'+(year+543)+' ('+events.length+' รายการ)</h3>';
+    events.forEach(function(e) {
+      html += '<div style="padding:6px; margin:4px 0; border-radius:4px; background:#f5f5f5;">';
+      html += '<strong>'+escHtml(e.title)+'</strong><br>';
+      html += '<span style="font-size:12px; color:var(--text-light);">'+escHtml(e.coatingType||'')+' • '+maskPhone(e.phone||'')+'</span>';
+      html += '</div>';
+    });
+    
+    document.getElementById('eventModalTitle').textContent = '📅 วันที่ ' + day + '/' + month;
+    document.getElementById('eventModalBody').innerHTML = html;
+    document.getElementById('eventModalActions').innerHTML = '<button class="btn btn-outline" onclick="closeEventModal()">ปิด</button>';
+    document.getElementById('eventModal').classList.add('active');
+  }
+  
+  function showEventDetail(idx) {
+    var e = STATE.calendarEvents[idx];
+    if (!e) return;
+    
+    var html = '<div style="padding:8px;">';
+    html += '<p><strong>ทะเบียน:</strong> '+escHtml(e.plate)+'</p>';
+    html += '<p><strong>ชื่อ:</strong> '+maskName(e.name)+'</p>';
+    html += '<p><strong>วันที่:</strong> '+escHtml(e.date)+'</p>';
+    html += '<p><strong>ประเภท:</strong> '+escHtml(e.coatingType||'')+'</p>';
+    html += '<p><strong>เบอร์โทร:</strong> '+maskPhone(e.phone||'')+'</p>';
+    html += '<p><strong>Line:</strong> '+(e.lineGroup ? '<a href="'+escHtml(e.lineGroup)+'" target="_blank">เปิดกลุ่ม</a>' : '-')+'</p>';
+    html += '</div>';
+    
+    document.getElementById('eventModalTitle').textContent = e.title;
+    document.getElementById('eventModalBody').innerHTML = html;
+    document.getElementById('eventModalActions').innerHTML = 
+      '<button class="btn btn-outline" onclick="closeEventModal()">ปิด</button>';
+    document.getElementById('eventModal').classList.add('active');
+  }
+  
+  function closeEventModal() { document.getElementById('eventModal').classList.remove('active'); }
+  
+  // ═══ Queue ═══
+  var queueYear = new Date().getFullYear();
+  var queueMonth = new Date().getMonth();
+
+  function loadQueue() {
+    document.getElementById('queueGrid').innerHTML = '<div class="loading"><div class="spinner"></div> กำลังโหลด...</div>';
+    apiPromise('getQueue', {}).then(function(data) {
+      if (!data) return;
+      STATE.queueData = data;
+      renderQueueCalendar();
+    });
+  }
+  
+  function renderQueueCalendar() {
+    var data = STATE.queueData;
+    if (!data || !data.weeks) {
+      document.getElementById('queueGrid').innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">ไม่มีข้อมูลคิว</div>';
+      return;
+    }
+    
+    var year = queueYear;
+    var month = queueMonth;
+    var thMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                   'กรกฏาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    document.getElementById('queueMonthYear').textContent = thMonths[month] + ' ' + (year + 543);
+    
+    var firstDay = new Date(year, month, 1).getDay();
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var today = new Date();
+    var search = (document.getElementById('queueSearch')?.value || '').trim().toUpperCase();
+    
+    // Build a date → queue entries map
+    var dateMap = {};
+    var days = ['mon','tue','wed','thu','fri','sat'];
+    data.weeks.forEach(function(week) {
+      days.forEach(function(d) {
+        var dateStr = week.dates ? week.dates[d] : '';
+        if (!dateStr) return;
+        // Parse date like "4/1/2569" or "04/01/2026"
+        var parts = String(dateStr).split('/');
+        if (parts.length !== 3) return;
+        var day = parseInt(parts[0], 10);
+        var m = parseInt(parts[1], 10);
+        var y = parseInt(parts[2], 10);
+        if (y > 2500) y -= 543;
+        var key = y + '-' + String(m).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+        
+        var entries = [];
+        var q1 = week.queue1 ? (week.queue1[d] || '') : '';
+        var q2 = week.queue2 ? (week.queue2[d] || '') : '';
+        var sp = week.special ? (week.special[d] || '') : '';
+        if (q1) entries.push({slot: 'คิว 1 (09:00)', text: q1, cls: 'coating'});
+        if (q2) entries.push({slot: 'คิว 2 (13:00)', text: q2, cls: 'maintenance'});
+        if (sp) entries.push({slot: 'พิเศษ', text: sp, cls: 'special'});
+        if (entries.length > 0) dateMap[key] = entries;
+      });
+    });
+    
+    var html = '';
+    // Day headers — Mon to Sun
+    var dayNames = ['จ','อ','พ','พฤ','ศ','ส','อา'];
+    for (var i = 0; i < 7; i++) {
+      html += '<div class="cal-day-header">' + dayNames[i] + '</div>';
+    }
+    
+    // Previous month padding
+    var startDay = firstDay === 0 ? 6 : firstDay - 1;
+    var prevDays = new Date(year, month, 0).getDate();
+    for (var i = 0; i < startDay; i++) {
+      html += '<div class="cal-day other-month"><div class="day-num">' + (prevDays - startDay + 1 + i) + '</div></div>';
+    }
+    
+    // Current month days
+    for (var day = 1; day <= daysInMonth; day++) {
+      var key = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+      var isToday = year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
+      var entries = dateMap[key] || [];
+      
+      // Filter by search
+      if (search) {
+        entries = entries.filter(function(e) {
+          return e.text.toUpperCase().indexOf(search) >= 0;
+        });
+      }
+      
+      html += '<div class="cal-day' + (isToday ? ' today' : '') + '" onclick="showQueueDay(\'' + key + '\')">';
+      html += '<div class="day-num">' + day + '</div>';
+      
+      entries.slice(0, 3).forEach(function(e) {
+        html += '<div class="cal-event ' + e.cls + '" title="' + escHtml(e.slot + ': ' + e.text) + '">' + escHtml(e.text.substring(0, 15)) + '</div>';
+      });
+      
+      if (entries.length > 3) {
+        html += '<div style="font-size:10px; color:var(--text-light);">+' + (entries.length - 3) + ' เพิ่ม</div>';
+      }
+      
+      html += '</div>';
+    }
+    
+    // Next month padding
+    var lastDay = new Date(year, month, daysInMonth).getDay();
+    var endPad = lastDay === 0 ? 0 : 7 - lastDay;
+    for (var i = 1; i <= endPad; i++) {
+      html += '<div class="cal-day other-month"><div class="day-num">' + i + '</div></div>';
+    }
+    
+    document.getElementById('queueGrid').innerHTML = html;
+  }
+  
+  function showQueueDay(dateKey) {
+    var data = STATE.queueData;
+    if (!data || !data.weeks) return;
+    
+    var days = ['mon','tue','wed','thu','fri','sat'];
+    var dayEntries = [];
+    
+    data.weeks.forEach(function(week) {
+      days.forEach(function(d) {
+        var dateStr = week.dates ? week.dates[d] : '';
+        if (!dateStr) return;
+        var parts = String(dateStr).split('/');
+        if (parts.length !== 3) return;
+        var dd = parseInt(parts[0], 10);
+        var m = parseInt(parts[1], 10);
+        var y = parseInt(parts[2], 10);
+        if (y > 2500) y -= 543;
+        var key = y + '-' + String(m).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+        
+        if (key === dateKey) {
+          var q1 = week.queue1 ? (week.queue1[d] || '') : '';
+          var q2 = week.queue2 ? (week.queue2[d] || '') : '';
+          var sp = week.special ? (week.special[d] || '') : '';
+          if (q1) dayEntries.push({slot: 'คิว 1 (09:00)', text: q1, cls: 'coating'});
+          if (q2) dayEntries.push({slot: 'คิว 2 (13:00)', text: q2, cls: 'maintenance'});
+          if (sp) dayEntries.push({slot: 'พิเศษ (เข้าเช้ารับเย็น)', text: sp, cls: 'special'});
+        }
+      });
+    });
+    
+    if (dayEntries.length === 0) return;
+    
+    var parts = dateKey.split('-');
+    var thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    var title = '📅 ' + parseInt(parts[2]) + ' ' + thMonths[parseInt(parts[1]) - 1] + ' ' + (parseInt(parts[0]) + 543);
+    document.getElementById('queueDetailTitle').textContent = title;
+    
+    var html = '<div class="table-wrap"><table style="width:100%; font-size:13px;">';
+    html += '<thead><tr><th>คิว</th><th>รายละเอียด</th></tr></thead><tbody>';
+    dayEntries.forEach(function(e) {
+      var icon = e.cls === 'coating' ? '🔵' : e.cls === 'maintenance' ? '🟢' : '🟠';
+      html += '<tr><td style="white-space:nowrap;">' + icon + ' ' + escHtml(e.slot) + '</td>';
+      html += '<td>' + escHtml(e.text).replace(/\n/g, '<br>') + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    
+    document.getElementById('queueDetailContent').innerHTML = html;
+    document.getElementById('queueDetail').style.display = '';
+  }
+  
+  function closeQueueDetail() {
+    document.getElementById('queueDetail').style.display = 'none';
+  }
+  
+  function filterQueue() {
+    renderQueueCalendar();
+  }
+  
+  function queuePrev() { queueMonth--; if (queueMonth < 0) { queueMonth = 11; queueYear--; } renderQueueCalendar(); }
+  function queueNext() { queueMonth++; if (queueMonth > 11) { queueMonth = 0; queueYear++; } renderQueueCalendar(); }
+  function queueToday() { queueMonth = new Date().getMonth(); queueYear = new Date().getFullYear(); loadQueue(); }
+  
+  // ═══ Appointment ═══
+  var lookupTimeout;
+  function lookupPlate() {
+    clearTimeout(lookupTimeout);
+    var plate = document.getElementById('aptPlate').value.trim();
+    if (plate.length < 3) return;
+    
+    document.getElementById('aptLookupResult').textContent = '⏳ กำลังค้นหา...';
+    document.getElementById('aptLookupResult').style.color = 'var(--info, #2196F3)';
+    
+    lookupTimeout = setTimeout(function() {
+      apiPromise('getCustomerByPlate', {plate: plate}).then(function(result) {
+        console.log('[lookupPlate] result:', JSON.stringify(result));
+        if (result && result.found) {
+          document.getElementById('aptName').value = result.name || '';
+          document.getElementById('aptPhone').value = result.phone || '';
+          document.getElementById('aptAddress').value = result.address || '';
+          // Store real (unmasked) data in hidden fields for saving
+          document.getElementById('aptRealName').value = result._realName || '';
+          document.getElementById('aptRealPhone').value = result._realPhone || '';
+          document.getElementById('aptRealAddress').value = result._realAddress || '';
+          
+          // Auto-fill select dropdowns — add option if not exists
+          setSelectValue('aptBrand', result.brand);
+          document.getElementById('aptModel').value = result.model || '';
+          setSelectValue('aptCarType', result.carType, 'รถใหม่ PMS');
+          setSelectValue('aptCoatingType', result.coatingType, 'พ่น 1 ปี');
+          setSelectValue('aptChannel', result.channel);
+          setSelectValue('aptMember', result.member);
+          setSelectValue('aptMR', result.mr);
+          document.getElementById('aptPrice').value = result.price || '';
+          // Show detailed success message so user can verify all fields were filled
+          var filledFields = [];
+          if (result.brand) filledFields.push('ยี่ห้อ=' + result.brand);
+          if (result.model) filledFields.push('รุ่น=' + result.model);
+          if (result.carType) filledFields.push(result.carType);
+          if (result.coatingType) filledFields.push(result.coatingType);
+          if (result.channel) filledFields.push('ช่องทาง=' + result.channel);
+          if (result.member) filledFields.push('สมาชิก=' + result.member);
+          if (result.mr) filledFields.push('MR=' + result.mr);
+          if (result.price) filledFields.push('ราคา=' + result.price);
+          document.getElementById('aptLookupResult').textContent = '✅ พบข้อมูลลูกค้า (ทะเบียน ' + result.plate + ') — ' + filledFields.join(', ');
+          document.getElementById('aptLookupResult').style.color = 'var(--success)';
+        } else {
+          // Clear hidden fields when not found
+          document.getElementById('aptRealName').value = '';
+          document.getElementById('aptRealPhone').value = '';
+          document.getElementById('aptRealAddress').value = '';
+          document.getElementById('aptLookupResult').textContent = 'ℹ️ ไม่พบข้อมูล — กรุณากรอกใหม่';
+          document.getElementById('aptLookupResult').style.color = 'var(--warning)';
+        }
+      }).catch(function(err) {
+        console.error('[lookupPlate] error:', err);
+        document.getElementById('aptLookupResult').textContent = '❌ ผิดพลาด: ' + (err.message || err);
+        document.getElementById('aptLookupResult').style.color = 'var(--danger)';
+      });
+    }, 500);
+  }
+  
+  // Set select value — add option dynamically if value not in existing options
+  function setSelectValue(selectId, value, fallback) {
+    var sel = document.getElementById(selectId);
+    if (!sel || !value) {
+      if (fallback && sel) sel.value = fallback;
+      return;
+    }
+    // Try to find matching option (trim whitespace for comparison)
+    var found = false;
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value.trim() === value.trim() || sel.options[i].text.trim() === value.trim()) {
+        sel.selectedIndex = i;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      // Value not in options — add it as a new option
+      var opt = document.createElement('option');
+      opt.value = value;
+      opt.text = value;
+      sel.appendChild(opt);
+      sel.value = value;
+    }
+  }
+  
+  function saveAppointment(sendNotif) {
+    // Use real (unmasked) data for saving if available, otherwise fall back to visible input
+    var realName = document.getElementById('aptRealName').value.trim();
+    var realPhone = document.getElementById('aptRealPhone').value.trim();
+    var realAddress = document.getElementById('aptRealAddress').value.trim();
+    var params = {
+      plate: document.getElementById('aptPlate').value.trim(),
+      name: realName || document.getElementById('aptName').value.trim(),
+      phone: realPhone || document.getElementById('aptPhone').value.trim(),
+      address: realAddress || document.getElementById('aptAddress').value.trim(),
+      brand: document.getElementById('aptBrand').value,
+      model: document.getElementById('aptModel').value.trim(),
+      carType: document.getElementById('aptCarType').value,
+      coatingType: document.getElementById('aptCoatingType').value,
+      channel: document.getElementById('aptChannel').value,
+      member: document.getElementById('aptMember').value,
+      mr: document.getElementById('aptMR').value,
+      receiver: document.getElementById('aptReceiver').value.trim(),
+      price: document.getElementById('aptPrice').value,
+      appointmentDate: document.getElementById('aptDate').value,
+      deliverDate: document.getElementById('aptDeliverDate').value,
+      lineGroup: document.getElementById('aptLineGroup').value.trim(),
+      appointmentType: document.getElementById('aptType').value,
+      sendNotification: sendNotif || false
+    };
+    
+    if (!params.plate || !params.name || !params.appointmentDate) {
+      showToast('❌ กรุณาระบุทะเบียน ชื่อ และวันนัดหมาย', 'error');
+      return;
+    }
+    
+    document.getElementById('btnSaveApt').disabled = true;
+    
+    apiPromise('saveAppointment', params).then(function(result) {
+      document.getElementById('btnSaveApt').disabled = false;
+      
+      if (result && result.success) {
+        var msg = '✅ บันทึกนัดหมายสำเร็จ!';
+        var detailLines = [];
+        if (result.plate) detailLines.push('🚗 ทะเบียน: ' + result.plate);
+        if (result.name) detailLines.push('👤 ชื่อ: ' + maskName(result.name));
+        if (result.appointmentDate) detailLines.push('📅 วันนัด: ' + result.appointmentDate);
+        if (result.results) {
+          // B1: show skipped for maintenance type
+          if (result.results.b1) {
+            if (result.results.b1.status === 'skipped_maintenance') {
+              detailLines.push('📋 B1 ⏭️ ข้าม (บำรุงผิวแก้วไม่บันทึก B1)');
+            } else {
+              var b1info = '📋 B1 ✅';
+              if (result.results.b1.row) b1info += ' (แถว ' + result.results.b1.row + ')';
+              if (result.results.b1.plate) b1info += ' ' + result.results.b1.plate;
+              if (result.results.b1.status) b1info += ' ' + result.results.b1.status;
+              detailLines.push(b1info);
+            }
+          }
+          // B2: show cycle, row, and column details
+          if (result.results.b2) {
+            var b2info = '🔔 B2';
+            if (result.results.b2.status === 'not_found') {
+              b2info += ' ❌ ไม่พบทะเบียนใน B2';
+            } else {
+              b2info += ' ✅';
+              if (result.results.b2.cycleLabel) b2info += ' ' + result.results.b2.cycleLabel;
+              else if (result.results.b2.cycle && result.results.b2.cycle !== '-') b2info += ' ครั้งที่ ' + result.results.b2.cycle;
+              if (result.results.b2.row) b2info += ' (แถว ' + result.results.b2.row + ')';
+            }
+            detailLines.push(b2info);
+          }
+          // C2: show position and status details
+          if (result.results.c2) {
+            var c2info = '📅 C2 ';
+            if (result.results.c2.status === 'duplicate') {
+              c2info += '⚠️ ทะเบียนนี้มีในคิวแล้ว';
+            } else if (result.results.c2.status === 'skipped') {
+              c2info += '⏭️ ' + (result.results.c2.reason || 'ข้าม');
+            } else if (result.results.c2.error) {
+              c2info += '❌ ' + result.results.c2.error;
+            } else {
+              c2info += '✅ ' + result.results.c2.status;
+              if (result.results.c2.row) c2info += ' แถว ' + result.results.c2.row;
+              if (result.results.c2.col) c2info += ' คอลัมน์ ' + result.results.c2.col;
+              if (result.results.c2.date) c2info += ' วันที่ ' + result.results.c2.date;
+              if (result.results.c2.entry) c2info += '\n   📝 ' + result.results.c2.entry;
+            }
+            detailLines.push(c2info);
+          }
+          if (result.results.notification) {
+            var n = result.results.notification;
+            if (n.line && n.line.sent) {
+              var lineInfo = '📨 LINE ส่งแล้ว ✅';
+              lineInfo += '\n   🔗 กลุ่ม: ' + (n.line.group || '-');
+              if (n.line.message) lineInfo += '\n   💬 ข้อความ: ' + n.line.message;
+              detailLines.push(lineInfo);
+            } else if (n.line) {
+              detailLines.push('📨 LINE ❌ ' + (n.line.reason || n.line.error || 'ไม่สามารถส่งได้'));
+            }
+            if (n.sms && n.sms.sent) {
+              var smsInfo = '📱 SMS ส่งแล้ว ✅';
+              smsInfo += '\n   📞 เบอร์: ' + (n.sms.phone || params.phone || '-');
+              if (n.sms.message) smsInfo += '\n   💬 ข้อความ: ' + n.sms.message;
+              detailLines.push(smsInfo);
+            } else if (n.sms) {
+              detailLines.push('📱 SMS ❌ ' + (n.sms.reason || n.sms.error || 'ไม่สามารถส่งได้') + ' (เบอร์: ' + maskPhone(n.sms.phone || params.phone || '') + ')');
+            }
+            if (n.sentMessage) detailLines.push('💬 ข้อความเต็ม: ' + n.sentMessage);
+            // Email fallback
+            if (n.email && n.email.sent) {
+              detailLines.push('📧 อีเมลแจ้งเตือนส่งแล้ว ✅ → ' + (n.email.to || '-'));
+            } else if (n.email) {
+              detailLines.push('📧 อีเมล ❌ ' + (n.email.error || 'ส่งไม่ได้'));
+            }
+          }
+        }
+        showToast(msg, 'success');
+        var detailHtml = '<span style="color:var(--success); font-weight:600;">' + msg + '</span>';
+        if (detailLines.length) {
+          detailHtml += '<div style="margin-top:8px; font-size:0.85em; color:var(--text);">';
+          detailLines.forEach(function(line) { detailHtml += '<div>' + line + '</div>'; });
+          detailHtml += '</div>';
+        }
+        document.getElementById('aptResult').innerHTML = detailHtml;
+      } else {
+        showToast('❌ ผิดพลาด: ' + (result.error || 'Unknown'), 'error');
+      }
+    });
+  }
+  
+  function clearAptForm() {
+    ['aptPlate','aptName','aptPhone','aptAddress','aptModel','aptPrice','aptReceiver','aptLineGroup','aptDate','aptDeliverDate'].forEach(function(id) {
+      document.getElementById(id).value = '';
+    });
+    // Also clear hidden real-data fields
+    ['aptRealName','aptRealPhone','aptRealAddress'].forEach(function(id) {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('aptLookupResult').textContent = '';
+    document.getElementById('aptResult').innerHTML = '';
+  }
+  
+  // ═══ Notifications ═══
+  function loadNotifications() {
+    apiPromise('getMaintenance', {maxRows: 500, upcoming: true}).then(function(data) {
+      if (!data || !data.maintenance) return;
+      renderNotifications(data.maintenance);
+    });
+  }
+  
+  function renderNotifications(items) {
+    var html = '';
+    var today = new Date();
+    
+    items.forEach(function(m) {
+      var dueDate = m.nextDueDate ? parseThaiDate(m.nextDueDate) : null;
+      var daysLeft = dueDate ? Math.ceil((dueDate - today) / (1000*60*60*24)) : null;
+      
+      var iconClass = 'upcoming';
+      var iconText = '⏰';
+      if (daysLeft !== null) {
+        if (daysLeft < 0) { iconClass = 'overdue'; iconText = '🔴'; }
+        else if (daysLeft <= 7) { iconClass = 'today'; iconText = '🟡'; }
+      }
+      
+      html += '<div class="notif-item">';
+      html += '<div class="notif-icon '+iconClass+'">'+iconText+'</div>';
+      html += '<div class="notif-content">';
+      html += '<strong>'+escHtml(m.plate)+' — '+maskName(m.name)+'</strong>';
+      html += '<div class="detail">'+escHtml(m.coatingType)+' • ครั้งที่ '+m.nextDueCycle+' • ครบกำหนด: '+m.nextDueDate;
+      if (daysLeft !== null) {
+        html += ' (' + (daysLeft < 0 ? 'เกิน ' + Math.abs(daysLeft) + ' วัน' : 'อีก ' + daysLeft + ' วัน') + ')';
+      }
+      html += '</div>';
+      html += '<div class="detail">📱 '+maskPhone(m.phone||'')+' | 💬 '+(m.lineGroup ? '<a href="'+escHtml(m.lineGroup)+'" target="_blank">กลุ่ม Line</a>' : '-')+'</div>';
+      html += '<div class="notif-actions">';
+      html += '<button class="btn btn-sm btn-accent" onclick="sendQuickNotif(\''+escHtml(m.plate)+'\',\''+maskName(m.name)+'\',\''+maskPhone(m.phone||'')+'\',\''+escHtml(m.lineGroup||'')+'\')">📨 แจ้งเตือน</button>';
+      html += '<button class="btn btn-sm btn-outline" onclick="openMaintModal('+m.row+','+m.nextDueCycle+',\''+escHtml(m.plate)+'\',\''+maskName(m.name||'')+'\')">📝 บันทึก</button>';
+      html += '</div>';
+      html += '</div></div>';
+    });
+    
+    if (!html) {
+      html = '<div style="text-align:center; color:var(--text-light); padding:20px;">🎉 ไม่มีรายการที่ครบกำหนด</div>';
+    }
+    
+    document.getElementById('notifList').innerHTML = html;
+  }
+  
+  function sendQuickNotif(plate, name, phone, lineGroup) {
+    var params = {
+      type: 'maintenance_reminder',
+      plate: plate,
+      name: name,
+      phone: phone,
+      lineGroup: lineGroup,
+      dueDate: ''
+    };
+    
+    apiPromise('sendNotification', params).then(function(result) {
+      if (result) {
+        var msg = '✅ ส่งแจ้งเตือนแล้ว';
+        if (result.sentMessage) msg += '\n💬 ข้อความ: ' + result.sentMessage;
+        if (result.line && result.line.sent) {
+          msg += '\n📨 Line ส่งแล้ว → กลุ่ม: ' + (result.line.group || '-');
+          if (result.line.message) msg += ' | ข้อความ: ' + result.line.message;
+        } else if (result.line && result.line.note) {
+          msg += '\n⚠️ Line: ' + result.line.note;
+        }
+        if (result.sms && result.sms.sent) {
+          msg += '\n📱 SMS ส่งแล้ว → เบอร์: ' + (result.sms.phone || phone);
+          if (result.sms.message) msg += ' | ข้อความ: ' + result.sms.message;
+        } else if (result.sms && result.sms.reason) {
+          msg += '\n⚠️ SMS: ' + result.sms.reason;
+        }
+        // Email fallback
+        if (result.email && result.email.sent) {
+          msg += '\n📧 อีเมลแจ้งเตือนส่งแล้ว ✅ → ' + (result.email.to || '-');
+        } else if (result.email) {
+          msg += '\n📧 อีเมล ❌ ' + (result.email.error || 'ส่งไม่ได้');
+        }
+        showToast(msg, 'success');
+      }
+    });
+  }
+  
+  function sendManualNotification() {
+    var params = {
+      type: 'custom',
+      plate: document.getElementById('manualNotifPlate').value.trim(),
+      phone: document.getElementById('manualNotifPhone').value.trim(),
+      lineGroup: document.getElementById('manualNotifLine').value.trim(),
+      customMessage: document.getElementById('manualNotifMsg').value.trim()
+    };
+    
+    if (!params.customMessage) { showToast('❌ กรุณาระบุข้อความ', 'error'); return; }
+    
+    apiPromise('sendNotification', params).then(function(result) {
+      if (result) {
+        var msg = '✅ ส่งแจ้งเตือนสำเร็จ';
+        if (result.sentMessage) msg += '\n💬 ข้อความ: ' + result.sentMessage;
+        if (result.line && result.line.sent) {
+          msg += '\n📨 Line ส่งแล้ว → กลุ่ม: ' + (result.line.group || '-');
+          if (result.line.message) msg += ' | ข้อความ: ' + result.line.message;
+        } else if (result.line && result.line.note) {
+          msg += '\n⚠️ Line: ' + result.line.note;
+        }
+        if (result.sms && result.sms.sent) {
+          msg += '\n📱 SMS ส่งแล้ว → เบอร์: ' + (result.sms.phone || params.phone);
+          if (result.sms.message) msg += ' | ข้อความ: ' + result.sms.message;
+        } else if (result.sms && result.sms.reason) {
+          msg += '\n⚠️ SMS: ' + result.sms.reason;
+        }
+        // Email fallback
+        if (result.email && result.email.sent) {
+          msg += '\n📧 อีเมลแจ้งเตือนส่งแล้ว ✅ → ' + (result.email.to || '-');
+        } else if (result.email) {
+          msg += '\n📧 อีเมล ❌ ' + (result.email.error || 'ส่งไม่ได้');
+        }
+        showToast(msg, 'success');
+      }
+    });
+  }
+  
+  /* ─── Settings Panel ─── */
+  function loadConfigSettings() {
+    apiPromise('getConfigSettings', {}).then(function(cfg) {
+      if (!cfg) return;
+      // LINE Messaging API fields
+      document.getElementById('cfgLineChannelToken').value = '';
+      document.getElementById('cfgLineChannelTokenHint').textContent = cfg.lineChannelAccessToken ? 'Token ปัจจุบัน: ' + cfg.lineChannelAccessToken : 'ยังไม่ตั้งค่า';
+      document.getElementById('cfgLineGroupId').value = cfg.lineGroupId || '';
+      document.getElementById('cfgLineGroupIdHint').textContent = cfg.lineGroupId ? 'Group ID ปัจจุบัน: ' + cfg.lineGroupId : 'ยังไม่ตั้งค่า';
+      // LINE Notify (legacy)
+      document.getElementById('cfgLineToken').value = '';
+      document.getElementById('cfgLineTokenHint').textContent = cfg.lineNotifyToken ? 'Token ปัจจุบัน: ' + cfg.lineNotifyToken : 'ยังไม่ตั้งค่า';
+      // SMS
+      document.getElementById('cfgSmsUser').value = cfg.smsUsername || '';
+      document.getElementById('cfgSmsSender').value = cfg.smsSender || 'PRACHAKIJ';
+      document.getElementById('cfgSmsPass').value = '';
+      document.getElementById('cfgSmsPass').placeholder = cfg.hasSmsPass ? 'มีรหัสผ่านแล้ว (เว้นว่างถ้าไม่เปลี่ยน)' : 'กรอกรหัสผ่านใหม่';
+    });
+  }
+  
+  function saveConfigSettings() {
+    var params = {};
+    var lineChannelToken = document.getElementById('cfgLineChannelToken').value.trim();
+    if (lineChannelToken) params.lineChannelAccessToken = lineChannelToken;
+    var lineGroupId = document.getElementById('cfgLineGroupId').value.trim();
+    if (lineGroupId) params.lineGroupId = lineGroupId;
+    var lineToken = document.getElementById('cfgLineToken').value.trim();
+    if (lineToken) params.lineNotifyToken = lineToken;
+    var smsUser = document.getElementById('cfgSmsUser').value.trim();
+    if (smsUser) params.smsUsername = smsUser;
+    var smsPass = document.getElementById('cfgSmsPass').value;
+    if (smsPass) params.smsPassword = smsPass;
+    var smsSender = document.getElementById('cfgSmsSender').value.trim();
+    if (smsSender) params.smsSender = smsSender;
+    
+    if (Object.keys(params).length === 0) {
+      showToast('⚠️ ไม่มีข้อมูลที่จะบันทึก', 'error');
+      return;
+    }
+    
+    document.getElementById('cfgSaveStatus').textContent = '⏳ กำลังบันทึก...';
+    apiPromise('saveConfig', params).then(function(result) {
+      if (result && result.success) {
+        showToast('✅ บันทึกตั้งค่าสำเร็จ', 'success');
+        document.getElementById('cfgSaveStatus').textContent = '✅ บันทึกแล้ว';
+        loadConfigSettings();
+      } else {
+        showToast('❌ บันทึกไม่สำเร็จ', 'error');
+        document.getElementById('cfgSaveStatus').textContent = '';
+      }
+      setTimeout(function(){ document.getElementById('cfgSaveStatus').textContent = ''; }, 3000);
+    });
+  }
+  
+  // ═══ Utilities ═══
+  function formatNumber(n) {
+    if (!n) return '0';
+    return Number(n).toLocaleString('th-TH');
+  }
+  
+  function parseThaiDate(str) {
+    if (!str || str === '-') return null;
+    // Handle "dd/mm/yyyy" or "d/m/yyyy" format (CE or BE year)
+    var parts = String(str).split('/');
+    if (parts.length !== 3) {
+      // Try other common formats
+      var d = new Date(str);
+      if (!isNaN(d.getTime())) return d;
+      return null;
+    }
+    var day = Number(parts[0]);
+    var month = Number(parts[1]);
+    var year = Number(parts[2]);
+    if (!day || !month || !year) return null;
+    // Check if year is BE (543+)
+    if (year > 2500) year -= 543; // Convert BE to CE
+    var result = new Date(year, month - 1, day);
+    if (isNaN(result.getTime())) return null;
+    return result;
+  }
+  
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+  
+  /* ─── PDPA masking helpers ─── */
+  function maskName(name) {
+    if (!name) return '';
+    name = String(name).trim();
+    if (name.length <= 2) return name.charAt(0) + '●';
+    return name.split(' ').map(function(p) {
+      if (p.length <= 1) return p;
+      return p.charAt(0) + '●'.repeat(p.length - 1);
+    }).join(' ');
+  }
+  function maskPhone(phone) {
+    if (!phone) return '';
+    var p = String(phone).replace(/\D/g, '');
+    if (p.length < 7) return '●●●●●●';
+    return p.substring(0, 3) + '●'.repeat(p.length - 5) + p.substring(p.length - 2);
+  }
+  function maskAddress(addr) {
+    if (!addr) return '';
+    var a = String(addr).trim();
+    if (a.length <= 5) return '●●●●●';
+    return a.substring(0, 5) + '●'.repeat(Math.min(a.length - 5, 20));
+  }
+  
+  function showToast(msg, type) {
+    var toast = document.createElement('div');
+    toast.className = 'toast ' + (type || 'success');
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.remove(); }, 3000);
+  }
+</script>
+<div style="position:fixed;bottom:0;left:0;right:0;background:linear-gradient(90deg,#dc2626,#b91c1c);color:white;text-align:center;font-size:.7rem;padding:4px 0;font-weight:700;letter-spacing:1px;z-index:9999">⛔ ข้อมูลลับ — ห้ามเผยแพร่ หรือ ส่งออกโดยไม่ได้รับอนุญาต (PDPA)</div>
+</body>
+</html>

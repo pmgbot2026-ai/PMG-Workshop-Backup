@@ -1,0 +1,2098 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>360° Evaluation Dashboard — ผลการประเมิน 360 องศา</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f0f4f8;
+    --card:#ffffff;
+    --accent:#3b82f6;
+    --accent-dark:#1d4ed8;
+    --accent-light:#dbeafe;
+    --accent-50:#eff6ff;
+    --accent2:#8b5cf6;
+    --green:#10b981;
+    --green-bg:#d1fae5;
+    --green-text:#065f46;
+    --orange:#f59e0b;
+    --orange-bg:#fef3c7;
+    --orange-text:#92400e;
+    --red:#ef4444;
+    --red-bg:#fee2e2;
+    --red-text:#991b1b;
+    --pink:#ec4899;
+    --text:#1e293b;
+    --text2:#475569;
+    --text3:#94a3b8;
+    --border:#e2e8f0;
+    --shadow:0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md:0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg:0 10px 30px rgba(0,0,0,0.10);
+    --radius:12px;
+    --radius-sm:8px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Sarabun','Segoe UI',system-ui,-apple-system,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:14px;
+    line-height:1.5;
+    min-height:100vh;
+  }
+
+  /* ── Header ── */
+  .header{
+    background:linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%);
+    padding:18px 24px;
+    box-shadow:0 2px 10px rgba(59,130,246,0.15);
+  }
+  .header-inner{
+    max-width:1400px;margin:0 auto;
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:12px;
+  }
+  .header h1{
+    font-size:1.4rem;color:#fff;font-weight:700;
+    display:flex;align-items:center;gap:8px;
+  }
+  .header .subtitle{
+    font-size:0.82rem;color:rgba(255,255,255,0.85);margin-top:2px;
+  }
+  .header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .last-update{
+    font-size:0.75rem;color:rgba(255,255,255,0.9);
+    background:rgba(255,255,255,0.18);
+    padding:5px 12px;border-radius:var(--radius-sm);
+  }
+  .refresh-btn{
+    background:rgba(255,255,255,0.25);
+    border:1px solid rgba(255,255,255,0.4);
+    color:#fff;padding:6px 14px;border-radius:var(--radius-sm);
+    cursor:pointer;font-size:0.78rem;font-weight:600;
+    transition:background 0.2s;font-family:inherit;
+  }
+  .refresh-btn:hover{background:rgba(255,255,255,0.35);}
+
+  /* ── Tabs ── */
+  .tabs-bar{
+    background:#fff;padding:10px 24px;
+    border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:100;
+    box-shadow:var(--shadow);
+  }
+  .tabs-inner{
+    max-width:1400px;margin:0 auto;
+    display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;
+  }
+  .tabs-inner::-webkit-scrollbar{display:none;}
+  .tab-btn{
+    padding:8px 16px;border-radius:var(--radius-sm);
+    background:transparent;border:1px solid transparent;
+    color:var(--text2);cursor:pointer;
+    font-size:0.84rem;font-weight:600;
+    white-space:nowrap;transition:all 0.2s;font-family:inherit;
+  }
+  .tab-btn:hover{background:#f0f4f8;color:var(--accent);}
+  .tab-btn.active{
+    background:var(--accent);color:#fff;
+    box-shadow:0 2px 8px rgba(59,130,246,0.25);
+  }
+
+  /* ── Layout ── */
+  .container{max-width:1400px;margin:0 auto;padding:20px 24px 60px;}
+  .section{display:none;animation:fadeIn 0.3s ease;}
+  .section.active{display:block;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  /* ── Cards ── */
+  .card{
+    background:var(--card);border-radius:var(--radius);
+    padding:20px;box-shadow:var(--shadow);
+    border:1px solid var(--border);margin-bottom:18px;
+  }
+  .section-title{
+    font-size:1.1rem;font-weight:700;color:var(--text);
+    margin-bottom:16px;display:flex;align-items:center;gap:8px;
+  }
+  .section-title .icon{color:var(--accent);}
+
+  /* ── Stat cards (KPI) ── */
+  .stat-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:14px;margin-bottom:20px;
+  }
+  .stat-card{
+    background:var(--card);border-radius:var(--radius);
+    padding:18px;box-shadow:var(--shadow);
+    border:1px solid var(--border);
+    border-top:4px solid var(--accent);
+    transition:transform 0.2s,box-shadow 0.2s;
+  }
+  .stat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);}
+  .stat-card.s2{border-top-color:var(--green);}
+  .stat-card.s3{border-top-color:var(--accent2);}
+  .stat-card.s4{border-top-color:var(--red);}
+  .stat-card.s5{border-top-color:var(--orange);}
+  .stat-card.s6{border-top-color:var(--pink);}
+  .stat-card .stat-icon{font-size:1.6rem;margin-bottom:4px;}
+  .stat-card .stat-value{font-size:1.8rem;font-weight:800;color:var(--accent);line-height:1.1;}
+  .stat-card.s2 .stat-value{color:var(--green);}
+  .stat-card.s3 .stat-value{color:var(--accent2);}
+  .stat-card.s4 .stat-value{color:var(--red);}
+  .stat-card.s5 .stat-value{color:var(--orange);}
+  .stat-card.s6 .stat-value{color:var(--pink);}
+  .stat-card .stat-label{font-size:0.78rem;color:var(--text2);margin-top:4px;}
+  .stat-card .stat-sub{font-size:0.72rem;color:var(--text3);margin-top:3px;}
+
+  /* ── Company/dept cards (overview) ── */
+  .co-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:14px;margin-bottom:20px;
+  }
+  .co-card{
+    background:var(--card);border-radius:var(--radius);
+    padding:18px;box-shadow:var(--shadow);
+    border:1px solid var(--border);
+    border-top:4px solid var(--accent);
+    cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;
+  }
+  .co-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);}
+  .co-card .cc-name{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:6px;}
+  .co-card .cc-avg{
+    font-size:1.8rem;font-weight:800;line-height:1;
+    margin:8px 0 4px;
+  }
+  .co-card .cc-stats{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;}
+  .co-card .cc-stat{display:flex;flex-direction:column;}
+  .co-card .cc-stat-val{font-size:1.1rem;font-weight:700;line-height:1;}
+  .co-card .cc-stat-label{font-size:0.7rem;color:var(--text3);margin-top:3px;}
+  .co-card .cc-bar{margin-top:12px;height:6px;background:#e2e8f0;border-radius:4px;overflow:hidden;}
+  .co-card .cc-bar-fill{height:100%;border-radius:4px;transition:width 0.5s ease;}
+
+  /* ── Filters ── */
+  .filter-bar{
+    background:var(--card);border-radius:var(--radius);
+    padding:16px 18px;box-shadow:var(--shadow);
+    border:1px solid var(--border);
+    margin-bottom:18px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:14px 18px;align-items:end;
+  }
+  .filter-group{display:flex;flex-direction:column;gap:6px;}
+  .filter-label{
+    font-size:0.72rem;font-weight:700;color:var(--text3);
+    text-transform:uppercase;letter-spacing:0.5px;
+  }
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{
+    border:1.5px solid var(--border);background:#fff;color:var(--text);
+    padding:5px 12px;border-radius:20px;font-size:0.8rem;
+    font-weight:500;cursor:pointer;transition:all .15s ease;font-family:inherit;
+  }
+  .chip:hover{border-color:var(--accent);color:var(--accent);}
+  .chip.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  select,input[type='text']{
+    border:1.5px solid var(--border);border-radius:var(--radius-sm);
+    padding:7px 10px;font-size:0.86rem;font-family:inherit;
+    color:var(--text);background:#fff;width:100%;outline:none;
+    transition:border-color .15s;
+  }
+  select:focus,input[type='text']:focus{
+    border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light);
+  }
+
+  /* ── Table ── */
+  .table-wrap{
+    background:var(--card);border-radius:var(--radius);
+    box-shadow:var(--shadow);border:1px solid var(--border);
+    overflow-x:auto;margin-bottom:16px;
+  }
+  table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+  thead th{
+    background:#f8fafc;padding:10px 12px;text-align:left;
+    font-weight:700;color:var(--text2);
+    border-bottom:2px solid var(--border);white-space:nowrap;
+    font-size:0.78rem;position:sticky;top:0;
+  }
+  tbody td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+  tbody tr{cursor:pointer;transition:background .12s;}
+  tbody tr:hover{background:#f8fafc;}
+  tbody tr:nth-child(even){background:#fafbfc;}
+  tbody tr:nth-child(even):hover{background:#f0f4f8;}
+  tbody tr:last-child td{border-bottom:none;}
+  .rank{
+    font-weight:700;color:var(--accent);text-align:center;
+    width:48px;
+  }
+  .rank.top1{color:#d4a017;}
+  .rank.top2{color:#7c8a97;}
+  .rank.top3{color:#a87232;}
+  .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:500;}
+  .co-tag{
+    display:inline-block;padding:2px 8px;border-radius:6px;
+    background:var(--accent-light);color:var(--accent-dark);
+    font-size:0.7rem;font-weight:700;
+  }
+  .badge{
+    display:inline-block;padding:2px 9px;border-radius:12px;
+    font-size:0.72rem;font-weight:700;
+  }
+  .badge.green{background:var(--green-bg);color:var(--green-text);}
+  .badge.yellow{background:var(--orange-bg);color:var(--orange-text);}
+  .badge.red{background:var(--red-bg);color:var(--red-text);}
+  .badge.gray{background:#f1f5f9;color:var(--text3);}
+
+  /* ── Pagination ── */
+  .pager{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-top:14px;flex-wrap:wrap;gap:10px;
+  }
+  .pager-info{font-size:0.82rem;color:var(--text2);}
+  .pager-btns{display:flex;gap:6px;flex-wrap:wrap;}
+  .pg-btn{
+    border:1.5px solid var(--border);background:#fff;color:var(--text);
+    padding:5px 12px;border-radius:6px;font-size:0.82rem;cursor:pointer;
+    font-family:inherit;transition:all .15s;
+  }
+  .pg-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .pg-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .pg-btn:disabled{opacity:0.45;cursor:not-allowed;}
+
+  /* ── Charts ── */
+  .chart-box{position:relative;height:320px;width:100%;}
+  .chart-box.radar{height:400px;}
+  .chart-box.trend{height:300px;}
+  .grid-2{
+    display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;
+  }
+  @media (max-width:900px){.grid-2{grid-template-columns:1fr;}}
+
+  /* ── Person Detail ── */
+  .person-selector{
+    display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;
+  }
+  @media (max-width:720px){.person-selector{grid-template-columns:1fr;}}
+  .person-profile{
+    background:linear-gradient(135deg,#f0f7ff 0%,#ffffff 100%);
+    border:1px solid var(--border);
+    border-radius:var(--radius);padding:20px;
+    box-shadow:var(--shadow);
+  }
+  .person-profile .pp-name{
+    font-size:1.3rem;font-weight:800;color:var(--text);
+    margin-bottom:6px;
+  }
+  .person-profile .pp-meta{
+    font-size:0.84rem;color:var(--text2);margin-bottom:14px;
+  }
+  .person-profile .pp-meta span{margin-right:14px;}
+  .domain-score-card{
+    background:#fff;border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;
+  }
+  .domain-score-card .ds-head{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:8px;
+  }
+  .domain-score-card .ds-label{font-size:0.86rem;font-weight:600;color:var(--text);}
+  .domain-score-card .ds-value{font-size:1.2rem;font-weight:800;}
+  .progress-bar{
+    height:8px;border-radius:4px;background:#e2e8f0;overflow:hidden;
+  }
+  .progress-bar-fill{
+    height:100%;border-radius:4px;transition:width 0.6s ease;
+  }
+
+  /* ── Team grid ── */
+  .team-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+    gap:14px;
+  }
+  .team-block{
+    background:#fff;border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:14px;
+    box-shadow:var(--shadow);
+  }
+  .team-block h3{
+    font-size:0.92rem;font-weight:700;
+    margin-bottom:10px;padding-bottom:6px;
+    border-bottom:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .team-block h3 .count{font-size:0.74rem;font-weight:500;color:var(--text3);}
+  .team-item{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:6px 0;font-size:0.82rem;
+    border-bottom:1px dashed var(--border);
+  }
+  .team-item:last-child{border-bottom:none;}
+  .team-item .tn{
+    flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    padding-right:10px;
+  }
+  .team-item .ts{font-weight:700;font-variant-numeric:tabular-nums;}
+
+  /* ── Modal ── */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(15,23,42,0.55);
+    display:none;align-items:flex-start;justify-content:center;
+    z-index:1000;padding:30px 16px;overflow-y:auto;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal{
+    background:#fff;border-radius:var(--radius);
+    max-width:640px;width:100%;max-height:90vh;overflow:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,0.25);
+    animation:modalIn 0.25s ease;margin-bottom:40px;
+  }
+  @keyframes modalIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+  .modal-head{
+    background:linear-gradient(135deg,#3b82f6,#60a5fa);
+    color:#fff;padding:16px 20px;
+    border-radius:var(--radius) var(--radius) 0 0;
+    display:flex;justify-content:space-between;align-items:center;
+    position:sticky;top:0;z-index:1;
+  }
+  .modal-head h3{font-size:1.1rem;font-weight:700;}
+  .close-btn{
+    background:rgba(255,255,255,0.2);border:none;color:#fff;
+    width:32px;height:32px;border-radius:50%;cursor:pointer;
+    font-size:1.2rem;font-family:inherit;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .close-btn:hover{background:rgba(255,255,255,0.35);}
+  .modal-body{padding:20px 24px 24px;}
+  .detail-row{
+    display:flex;justify-content:space-between;
+    padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88rem;
+  }
+  .detail-row:last-child{border-bottom:none;}
+  .detail-row .dl{color:var(--text2);}
+  .detail-row .dv{font-weight:700;}
+
+  /* ── Loading ── */
+  .loader{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:80px 20px;color:var(--text2);gap:14px;
+  }
+  .spinner{
+    width:42px;height:42px;border:4px solid var(--accent-light);
+    border-top-color:var(--accent);border-radius:50%;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .error-box{
+    background:var(--red-bg);color:var(--red-text);
+    padding:14px 18px;border-radius:var(--radius-sm);font-size:0.86rem;
+  }
+  .hidden{display:none !important;}
+  .empty-hint{
+    padding:40px 20px;text-align:center;color:var(--text3);font-size:0.88rem;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width:720px){
+    .header h1{font-size:1.1rem;}
+    .container{padding:16px;}
+    .tabs-bar{padding:8px 12px;}
+    .tab-btn{padding:6px 12px;font-size:0.76rem;}
+  }
+</style>
+</head>
+<body>
+<div style="position:fixed;top:8px;right:8px;z-index:99999;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(220,38,38,0.3);cursor:default;font-family:system-ui,sans-serif;letter-spacing:0.3px" title="ข้อมูลส่วนบุคคล PDPA — ห้ามส่งออกหรือเผยแพร่โดยไม่ได้รับอนุญาต">🔒 ข้อมูลลับ PDPA</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <h1>📊 360° Evaluation Dashboard</h1>
+      <div class="subtitle" id="hdrSubtitle">ผลการประเมิน 360 องศา — ปี 2017 ครั้งที่ 2</div>
+    </div>
+    <div class="header-right">
+      <div class="last-update" id="lastUpdate">⏳ กำลังโหลด...</div>
+      <button class="refresh-btn" onclick="reloadData()">🔄 รีเฟรช</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs-bar">
+  <div class="tabs-inner" id="tabsInner"></div>
+</div>
+
+<div class="container">
+
+  <!-- Loading -->
+  <div id="loadingBox">
+    <div class="card">
+      <div class="loader">
+        <div class="spinner"></div>
+        <div>กำลังโหลดข้อมูลการประเมิน 360 องศา...</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="contentBox" class="hidden">
+
+    <!-- ══════ SECTION: Overview ══════ -->
+    <div class="section" id="section-overview">
+      <!-- KPI cards -->
+      <div class="stat-grid" id="overviewKPIs"></div>
+
+      <!-- Company comparison cards -->
+      <div class="card">
+        <div class="section-title"><span class="icon">🏢</span>เปรียบเทียบคะแนนเฉลี่ยรายบริษัท</div>
+        <div class="co-grid" id="companyCards"></div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Company bar chart -->
+        <div class="card">
+          <div class="section-title"><span class="icon">📈</span>คะแนนเฉลี่ยแยกตามด้าน (Bar Chart)</div>
+          <div class="chart-box"><canvas id="companyChart"></canvas></div>
+        </div>
+        <!-- Radar chart -->
+        <div class="card">
+          <div class="section-title"><span class="icon">🕸️</span>เปรียบเทียบ 3 ด้าน (Radar Chart)</div>
+          <div class="chart-box radar"><canvas id="radarChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Domain distribution -->
+      <div class="card">
+        <div class="section-title"><span class="icon">🎯</span>การกระจายคะแนนรวมเฉลี่ย (Histogram)</div>
+        <div class="chart-box"><canvas id="distChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ══════ SECTION: Ranking ══════ -->
+    <div class="section" id="section-ranking">
+      <div class="filter-bar">
+        <div class="filter-group">
+          <div class="filter-label">บริษัท</div>
+          <div class="chip-row" id="rankCompanyChips"></div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">ทีม</div>
+          <select id="rankTeam"><option value="All">ทุกทีม</option></select>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">ค้นหาชื่อ / ทีม / กลุ่มประเมิน</div>
+          <input type="text" id="rankSearch" placeholder="พิมพ์เพื่อค้นหา...">
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">เรียงลำดับ</div>
+          <select id="rankSort">
+            <option value="desc">คะแนนสูง → ต่ำ</option>
+            <option value="asc">คะแนนต่ำ → สูง</option>
+            <option value="name">ชื่อ A → Z</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">แสดงคะแนนต่ำกว่า</div>
+          <select id="rankThreshold">
+            <option value="0">ทั้งหมด</option>
+            <option value="9">≥ 9.0</option>
+            <option value="8.5">≥ 8.5</option>
+            <option value="8">≥ 8.0</option>
+            <option value="7.5">≥ 7.5</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:center;">ลำดับ</th>
+              <th style="text-align:center;">รหัส</th>
+              <th>ชื่อ</th>
+              <th>บริษัท</th>
+              <th>ทีม</th>
+              <th>กลุ่มประเมิน</th>
+              <th class="num" style="text-align:right;">พฤติกรรม</th>
+              <th class="num" style="text-align:right;">ทุนองค์กร</th>
+              <th class="num" style="text-align:right;">ภาวะผู้นำ</th>
+              <th class="num" style="text-align:right;">รวมเฉลี่ย</th>
+              <th class="num" style="text-align:right;">รวมคะแนน</th>
+              <th class="num" style="text-align:right;">จำนวนคำถาม</th>
+            </tr>
+          </thead>
+          <tbody id="rankTableBody"></tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <div class="pager-info" id="rankPagerInfo"></div>
+        <div class="pager-btns" id="rankPagerBtns"></div>
+      </div>
+    </div>
+
+    <!-- ══════ SECTION: Person Detail ══════ -->
+    <div class="section" id="section-person">
+      <div class="filter-bar">
+        <div class="filter-group">
+          <div class="filter-label">เลือกบุคคล</div>
+          <select id="personSelect"><option value="">— เลือกผู้รับการประเมิน —</option></select>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">หรือค้นหาชื่อ</div>
+          <input type="text" id="personSearch" placeholder="พิมพ์ชื่อเพื่อค้นหา...">
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">บริษัท</div>
+          <select id="personCompanyFilter"><option value="All">ทุกบริษัท</option></select>
+        </div>
+      </div>
+
+      <div id="personEmpty" class="card">
+        <div class="empty-hint">👤 เลือกผู้รับการประเมินจากรายการด้านบน หรือค้นหาชื่อเพื่อดูรายละเอียด</div>
+      </div>
+
+      <div id="personDetailBox" class="hidden">
+        <!-- Profile card -->
+        <div class="person-profile" style="margin-bottom:18px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+            <div>
+              <div class="pp-name" id="ppName">—</div>
+              <div class="pp-meta" id="ppMeta"></div>
+              <div class="pp-meta" id="ppMemberId" style="margin-top:6px;font-size:0.84rem;color:var(--text3);"></div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.72rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">คะแนนรวมเฉลี่ย</div>
+              <div id="ppOverall" style="font-size:2.2rem;font-weight:800;color:var(--accent);line-height:1.1;">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Domain score cards -->
+        <div class="grid-2">
+          <div class="card">
+            <div class="section-title"><span class="icon">📋</span>คะแนนรายด้านการประเมิน</div>
+            <div id="ppDomainScores"></div>
+          </div>
+          <div class="card">
+            <div class="section-title"><span class="icon">🕸️</span>ภาพรวม 3 ด้าน (Radar)</div>
+            <div class="chart-box radar"><canvas id="personRadarChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Year-by-year history -->
+        <div class="card">
+          <div class="section-title"><span class="icon">📅</span>ประวัติคะแนนรายปี (Multi-year History)</div>
+          <div class="table-wrap">
+            <table id="historyTable">
+              <thead>
+                <tr>
+                  <th>ปี</th>
+                  <th>บริษัท</th>
+                  <th>ทีม</th>
+                  <th class="num" style="text-align:right;">พฤติกรรม</th>
+                  <th class="num" style="text-align:right;">ทุนองค์กร</th>
+                  <th class="num" style="text-align:right;">ภาวะผู้นำ</th>
+                  <th class="num" style="text-align:right;">รวมเฉลี่ย</th>
+                  <th class="num" style="text-align:right;">จำนวนคำถาม</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody"></tbody>
+            </table>
+          </div>
+          <div style="font-size:0.78rem;color:var(--text3);margin-top:8px;">
+            ℹ️ ปัจจุบันมีข้อมูลเฉพาะปี 2017 — โครงสร้างตารางนี้พร้อมรองรับข้อมูลหลายปีในอนาคต
+          </div>
+        </div>
+
+        <!-- Trend chart -->
+        <div class="card">
+          <div class="section-title"><span class="icon">📈</span>แนวโน้มคะแนนรายปี (Score Trend)</div>
+          <div class="chart-box trend"><canvas id="personTrendChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ SECTION: Team Analysis ══════ -->
+    <div class="section" id="section-team">
+      <div class="filter-bar">
+        <div class="filter-group">
+          <div class="filter-label">บริษัท</div>
+          <div class="chip-row" id="teamCompanyChips"></div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">ด้านการประเมิน</div>
+          <select id="teamDomain">
+            <option value="o">รวมเฉลี่ย (Overall)</option>
+            <option value="b">พฤติกรรม (บุคคล)</option>
+            <option value="ca">ทุนองค์กร</option>
+            <option value="l">ภาวะผู้นำ</option>
+          </select>
+        </div>
+      </div>
+      <div class="team-grid" id="teamGrid"></div>
+    </div>
+
+    <!-- ══════ SECTION: Company View ══════ -->
+    <div class="section" id="section-company">
+      <div class="filter-bar">
+        <div class="filter-group">
+          <div class="filter-label">เลือกบริษัท</div>
+          <div class="chip-row" id="coViewChips"></div>
+        </div>
+      </div>
+
+      <div class="stat-grid" id="coViewKPIs"></div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title"><span class="icon">📊</span>คะแนนเฉลี่ยรายทีม</div>
+          <div class="chart-box"><canvas id="coTeamChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="section-title"><span class="icon">🎯</span>การกระจายคะแนนรวม</div>
+          <div class="chart-box"><canvas id="coDistChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title"><span class="icon">🏆</span>Top 10 ผู้รับการประเมินในบริษัท</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align:center;">ลำดับ</th>
+                <th style="text-align:center;">รหัส</th>
+                <th>ชื่อ</th>
+                <th>ทีม</th>
+                <th>กลุ่มประเมิน</th>
+                <th class="num" style="text-align:right;">พฤติกรรม</th>
+                <th class="num" style="text-align:right;">ทุนองค์กร</th>
+                <th class="num" style="text-align:right;">ภาวะผู้นำ</th>
+                <th class="num" style="text-align:right;">รวมเฉลี่ย</th>
+              </tr>
+            </thead>
+            <tbody id="coTopTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">รายละเอียดผู้รับการประเมิน</h3>
+      <button class="close-btn" onclick="closeModal()" aria-label="ปิด">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ── OFFLINE MODE STUB ──────────────────────────────────────
+// Mock google.script.run + fetch for standalone HTML (no server)
+if (typeof window !== 'undefined') {
+  if (typeof window.google === 'undefined') {
+    window.google = { script: { run: {} } };
+  }
+  var _gsrTarget = window.google.script.run;
+  _gsrTarget._success = null;
+  _gsrTarget._failure = null;
+  _gsrTarget.withSuccessHandler = function(fn){ this._success = fn; return _proxyRef; };
+  _gsrTarget.withFailureHandler  = function(fn){ this._failure = fn; return _proxyRef; };
+  _gsrTarget.withUserObject      = function(o){ return _proxyRef; };
+  var _proxyRef = new Proxy(_gsrTarget, {
+    get: function(target, prop, receiver) {
+      if (prop === '_success' || prop === '_failure') return target[prop];
+      if (typeof target[prop] === 'function') return target[prop];
+      // Unknown property = a server function name → return stub function
+      return function() {
+        console.log('[Offline] google.script.run.' + String(prop) + ' called (stubbed)', arguments);
+        var self = target;
+        setTimeout(function(){
+          if (typeof self._success === 'function') {
+            try { self._success([]); } catch(e){ console.warn('[Offline] success handler error:', e); }
+          }
+        }, 50);
+        return _proxyRef;
+      };
+    }
+  });
+  window.google.script.run = _proxyRef;
+  // Mock fetch() to return empty data (avoids CORS/network errors offline)
+  if (typeof window.fetch === 'function' && !window._fetchStubbed) {
+    window._origFetch = window.fetch;
+    window.fetch = function(url, opts) {
+      console.log('[Offline] fetch() stubbed:', url);
+      return Promise.resolve({
+        ok: true, status: 200, redirected: false,
+        text:  function(){ return Promise.resolve(''); },
+        json:  function(){ return Promise.resolve({}); },
+        blob:  function(){ return Promise.resolve(new Blob([''])); },
+        clone: function(){ return this; },
+        headers: { get: function(){ return null; } }
+      });
+    };
+    window._fetchStubbed = true;
+  }
+}
+// ── END OFFLINE MODE STUB ──────────────────────────────────
+
+
+
+// Server-side injected data (via HtmlService template) — kept for backward compat
+// Primary loading is now via google.script.run in loadData()
+window.__EVAL360_DATA__ = null;
+</script>
+
+<script>
+'use strict';
+
+/* ============================================================
+   360° Evaluation Dashboard
+   - Data via google.script.run.getEval360Data()
+   - Multi-year ready (structure supports adding more years)
+   - All JS uses single quotes only
+   ============================================================ */
+
+/* ==================== State ==================== */
+var STATE = {
+  allPersons: [],          // [{c,n,t,g,b,ca,l,o,ot,q,y}]
+  byName: {},              // name -> [person records by year] (multi-year ready)
+  stats: {},
+  companyStats: {},
+  companies: [],
+  domains: [],
+  years: [2017],           // available years (multi-year ready)
+
+  // Filters
+  rankCompany: 'All',
+  rankTeam: 'All',
+  rankSearch: '',
+  rankSort: 'desc',
+  rankThreshold: 0,
+  rankPage: 1,
+  rankPerPage: 50,
+
+  teamCompany: 'All',
+  teamDomain: 'o',
+
+  coView: 'AAMgr',
+
+  personSelected: null,
+  personCompanyFilter: 'All',
+
+  // Charts
+  charts: {}
+};
+
+var COMPANY_COLORS = {
+  AAMgr:   '#3b82f6',
+  PGHgr:   '#10b981',
+  PMSgr:   '#f59e0b',
+  RPLCgr:  '#8b5cf6',
+  ADM:     '#ec4899'
+};
+
+var DOMAIN_KEYS = [
+  { key: 'b',  label: 'พฤติกรรม (บุคคล)', color: '#3b82f6' },
+  { key: 'ca', label: 'ทุนองค์กร',        color: '#10b981' },
+  { key: 'l',  label: 'ภาวะผู้นำ',         color: '#f59e0b' }
+];
+
+var TABS = [
+  { id: 'overview', label: 'Overview',     icon: '📊' },
+  { id: 'ranking',  label: 'Ranking',       icon: '🏆' },
+  { id: 'person',   label: 'Person Detail', icon: '👤' },
+  { id: 'team',     label: 'Team Analysis', icon: '👥' },
+  { id: 'company',  label: 'Company View',  icon: '🏢' }
+];
+
+/* ==================== Utilities ==================== */
+function fmt(num, dec) {
+  if (num === null || num === undefined || isNaN(num)) return '—';
+  var d = dec === undefined ? 2 : dec;
+  return Number(num).toFixed(d);
+}
+function fmtInt(num) {
+  if (num === null || num === undefined || isNaN(num)) return '—';
+  return Number(num).toLocaleString('en-US');
+}
+function scoreClass(v) {
+  if (v === null || v === undefined || isNaN(v)) return 'gray';
+  if (v >= 9) return 'green';
+  if (v >= 8) return 'yellow';
+  return 'red';
+}
+function scoreColor(v) {
+  if (v === null || v === undefined || isNaN(v)) return '#94a3b8';
+  if (v >= 9) return '#10b981';
+  if (v >= 8) return '#f59e0b';
+  return '#ef4444';
+}
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+function coColor(c) {
+  return COMPANY_COLORS[c] || '#64748b';
+}
+function avg(arr, key) {
+  if (!arr || arr.length === 0) return 0;
+  var s = 0, n = 0;
+  arr.forEach(function(x) {
+    var v = key ? x[key] : x;
+    if (v !== null && v !== undefined && !isNaN(v)) { s += v; n++; }
+  });
+  return n === 0 ? 0 : s / n;
+}
+
+/* ==================== Data Loading ==================== */
+function loadData() {
+  document.getElementById('lastUpdate').textContent = '⏳ กำลังโหลด...';
+  
+  // Method 1: Check if data was injected via template (persons + stats + company_stats only)
+  if (typeof window.__EVAL360_DATA__ !== 'undefined' && window.__EVAL360_DATA__) {
+    try {
+      onDataLoaded(window.__EVAL360_DATA__);
+      // Load summary separately via google.script.run
+      loadSummaryData();
+      return;
+    } catch(e) {
+      console.warn('Injected data parse failed', e);
+    }
+  }
+  
+  // Method 2: Load via google.script.run in stages
+  // Stage A: stats + company_stats (small, ~2KB)
+  // Stage B: persons in batches (510 people, ~328KB total, split into ~100KB chunks)
+  // Stage C: summary in batches (1528 records, ~956KB total, split into 200-record batches)
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    try {
+      loadEval360Staged();
+      return;
+    } catch (e) {
+      console.warn('google.script.run failed', e);
+    }
+  }
+  
+  onDataError('ไม่สามารถโหลดข้อมูลได้ — กรุณารีเฟรชหน้านี้อีกครั้ง');
+}
+
+// Staged loading: stats first, then persons in batches, then summary in batches
+function loadEval360Staged() {
+  var stageData = { stats: null, company_stats: null, persons: [] };
+  
+  // Stage A: Get stats + company_stats (tiny, ~2KB)
+  google.script.run
+    .withSuccessHandler(function(statsData) {
+      if (statsData && !statsData.error) {
+        stageData.stats = statsData.stats || {};
+        stageData.company_stats = statsData.company_stats || {};
+        // Stage B: Load persons in batches
+        loadPersonsBatched(stageData);
+      } else {
+        onDataError(statsData && statsData.error ? statsData.error : 'No stats data');
+      }
+    })
+    .withFailureHandler(function(err) {
+      onDataError('Stage A failed: ' + String(err));
+    })
+    .getEval360Stats();
+}
+
+function loadPersonsBatched(stageData) {
+  var BATCH_SIZE = 150;
+  var allPersons = [];
+  var total = 0;
+  
+  function fetchPersonsBatch(start) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.records) {
+          allPersons = allPersons.concat(res.records);
+          total = res.total || allPersons.length;
+          if (start + BATCH_SIZE < total) {
+            // Update loading progress
+            document.getElementById('lastUpdate').textContent = 
+              '⏳ โหลดข้อมูลสมาชิก... (' + allPersons.length + '/' + total + ')';
+            fetchPersonsBatch(start + BATCH_SIZE);
+          } else {
+            // All persons loaded — now call onDataLoaded
+            stageData.persons = allPersons;
+            document.getElementById('lastUpdate').textContent = 
+              '⏳ กำลังเรนเดอร์...';
+            onDataLoaded(stageData);
+            // Stage C: Load summary in background
+            loadSummaryData();
+          }
+        } else {
+          // Fallback: if batch fails, try full load
+          onDataLoaded({ stats: stageData.stats, company_stats: stageData.company_stats, persons: allPersons });
+          loadSummaryData();
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.warn('Persons batch failed at ' + start, err);
+        // Use what we have
+        onDataLoaded({ stats: stageData.stats, company_stats: stageData.company_stats, persons: allPersons });
+        loadSummaryData();
+      })
+      .getEval360PersonsBatch(start, BATCH_SIZE);
+  }
+  fetchPersonsBatch(0);
+}
+
+// Load summary records in batches via google.script.run
+function loadSummaryData() {
+  if (typeof google === 'undefined' || !google.script || !google.script.run) return;
+  STATE.allSummary = [];
+  var BATCH = 200;
+  var loaded = 0;
+  
+  function fetchBatch(start) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (res && res.records) {
+        // Map summary fields to short keys
+        res.records.forEach(function(s) {
+          if (s.company !== undefined && s.c === undefined) s.c = s.company;
+          if (s.name !== undefined && s.n === undefined) s.n = s.name;
+          if (s.surname !== undefined && s.s === undefined) s.s = s.surname;
+          if (s.full_name !== undefined && s.fn === undefined) s.fn = s.full_name;
+          if (s.team !== undefined && s.t === undefined) s.t = s.team;
+          if (s.group_eval !== undefined && s.g === undefined) s.g = s.group_eval;
+          if (s.domain !== undefined && s.d === undefined) s.d = s.domain;
+          if (s.avg_score !== undefined && s.a === undefined) s.a = s.avg_score;
+          if (s.total_score !== undefined && s.ts === undefined) s.ts = s.total_score;
+          if (s.question_count !== undefined && s.q === undefined) s.q = s.question_count;
+          if (s.round !== undefined && s.r === undefined) s.r = s.round;
+          if (s.year !== undefined && s.y === undefined) s.y = s.year;
+        });
+        STATE.allSummary = STATE.allSummary.concat(res.records);
+        loaded += res.records.length;
+        if (start + BATCH < res.total) {
+          fetchBatch(start + BATCH);
+        } else {
+          // All summary loaded — re-render if on person detail
+          STATE.summaryLoaded = true;
+          if (STATE.currentTab === 'person') renderPersonTab();
+        }
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.warn('Summary batch failed at ' + start, err);
+    })
+    .getEval360SummaryBatch(start, BATCH);
+  }
+  fetchBatch(0);
+}
+
+function reloadData() { loadData(); }
+
+function onDataLoaded(data) {
+  if (!data) { onDataError('No data returned'); return; }
+  if (data.persons) STATE.allPersons = data.persons;
+  if (data.stats) STATE.stats = data.stats;
+  if (data.company_stats) STATE.companyStats = data.company_stats;
+
+  // ═══ Field mapping: normalize person keys to short form used by UI ═══
+  // Source data uses: company, name, team, group_eval, member_id, behavior_avg, capital_avg, leadership_avg, overall_avg, behavior_total, capital_total, leadership_total, overall_total, total_questions
+  // UI code uses: c, n, t, g, m, b, ca, l, o, bt, ct, lt, ot, q
+  STATE.allPersons.forEach(function(p) {
+    if (p.company !== undefined && p.c === undefined) p.c = p.company;
+    if (p.name !== undefined && p.n === undefined) p.n = p.name;
+    if (p.team !== undefined && p.t === undefined) p.t = p.team;
+    if (p.group_eval !== undefined && p.g === undefined) p.g = p.group_eval;
+    if (p.member_id !== undefined && p.m === undefined) p.m = p.member_id;
+    if (p.behavior_avg !== undefined && p.b === undefined) p.b = p.behavior_avg;
+    if (p.capital_avg !== undefined && p.ca === undefined) p.ca = p.capital_avg;
+    if (p.leadership_avg !== undefined && p.l === undefined) p.l = p.leadership_avg;
+    if (p.overall_avg !== undefined && p.o === undefined) p.o = p.overall_avg;
+    if (p.behavior_total !== undefined && p.bt === undefined) p.bt = p.behavior_total;
+    if (p.capital_total !== undefined && p.ct === undefined) p.ct = p.capital_total;
+    if (p.leadership_total !== undefined && p.lt === undefined) p.lt = p.leadership_total;
+    if (p.overall_total !== undefined && p.ot === undefined) p.ot = p.overall_total;
+    if (p.total_questions !== undefined && p.q === undefined) p.q = p.total_questions;
+    if (p.round !== undefined && p.r === undefined) p.r = p.round;
+    if (p.year !== undefined && p.y === undefined) p.y = p.year;
+  });
+
+  // Determine companies & domains
+  STATE.companies = (STATE.stats.companies && STATE.stats.companies.length)
+    ? STATE.stats.companies
+    : Object.keys(STATE.companyStats || {});
+  if (STATE.companies.length === 0) {
+    var set = {};
+    STATE.allPersons.forEach(function(p) { if (p.c) set[p.c] = 1; });
+    STATE.companies = Object.keys(set);
+  }
+  STATE.domains = (STATE.stats.domains && STATE.stats.domains.length)
+    ? STATE.stats.domains
+    : DOMAIN_KEYS.map(function(d) { return d.label; });
+
+  // Add ADM as a virtual "company" — members stay in their original company too
+  if (STATE.companies.indexOf('ADM') === -1) {
+    var admMembers = STATE.allPersons.filter(function(p) { return p.t === 'ADM'; });
+    if (admMembers.length > 0) {
+      STATE.companies.push('ADM');
+    }
+  }
+
+  // Compute company stats for ADM if not already present
+  if (STATE.companyStats && !STATE.companyStats['ADM']) {
+    var admPeople = STATE.allPersons.filter(function(p) { return p.t === 'ADM'; });
+    if (admPeople.length > 0) {
+      var admSum = { b: 0, ca: 0, l: 0, o: 0 };
+      admPeople.forEach(function(p) {
+        admSum.b += (p.b || 0);
+        admSum.ca += (p.ca || 0);
+        admSum.l += (p.l || 0);
+        admSum.o += (p.o || 0);
+      });
+      STATE.companyStats['ADM'] = {
+        people: admPeople.length,
+        avg_behavior: admSum.b / admPeople.length,
+        avg_capital: admSum.ca / admPeople.length,
+        avg_leadership: admSum.l / admPeople.length,
+        avg_overall: admSum.o / admPeople.length
+      };
+    }
+  }
+
+  // Assign year (default 2017 if not present) — multi-year ready
+  STATE.allPersons.forEach(function(p) {
+    if (!p.y) p.y = (STATE.stats.year || 2017);
+  });
+
+  // Build byName index (multi-year ready: name -> array of records)
+  STATE.byName = {};
+  STATE.allPersons.forEach(function(p) {
+    var key = p.n || '';
+    if (!key) return;
+    if (!STATE.byName[key]) STATE.byName[key] = [];
+    STATE.byName[key].push(p);
+  });
+
+  // Collect years present
+  var ySet = {};
+  STATE.allPersons.forEach(function(p) { if (p.y) ySet[p.y] = 1; });
+  STATE.years = Object.keys(ySet).map(Number).sort();
+
+  document.getElementById('loadingBox').classList.add('hidden');
+  document.getElementById('contentBox').classList.remove('hidden');
+
+  var now = new Date();
+  var ts = now.toLocaleString('th-TH');
+  document.getElementById('lastUpdate').textContent = '✅ อัปเดต: ' + ts;
+
+  // Update header subtitle
+  var yr = (STATE.stats.year || (STATE.years.length ? STATE.years[STATE.years.length - 1] : 2017));
+  var rd = STATE.stats.round || '?';
+  document.getElementById('hdrSubtitle').textContent =
+    'ผลการประเมิน 360 องศา — ปี ' + yr + ' ครั้งที่ ' + rd;
+
+  initTabs();
+  renderAllFilters();
+  switchTab('overview', null);
+}
+
+function onDataError(msg) {
+  var box = document.getElementById('loadingBox');
+  box.innerHTML = '<div class="card"><div class="error-box">โหลดข้อมูลไม่สำเร็จ: ' +
+    escapeHtml(String(msg)) +
+    '<br><br>หากรันบน Google Apps Script ตรวจสอบว่าฟังก์ชัน <b>getEval360Data</b> มีอยู่ใน server-side แล้ว</div></div>';
+  document.getElementById('lastUpdate').textContent = '❌ โหลดล้มเหลว';
+  console.error('Data load error:', msg);
+}
+
+/* ==================== Tabs ==================== */
+function initTabs() {
+  var html = '';
+  TABS.forEach(function(t, i) {
+    html += '<button class="tab-btn' + (i === 0 ? ' active' : '') +
+      '" onclick="switchTab(\'' + t.id + '\', this)">' + t.icon + ' ' + t.label + '</button>';
+  });
+  document.getElementById('tabsInner').innerHTML = html;
+}
+
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.section').forEach(function(s) {
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(function(t) {
+    t.classList.remove('active');
+  });
+  var section = document.getElementById('section-' + tabId);
+  if (section) {
+    section.style.display = 'block';
+    section.classList.add('active');
+  }
+  if (btn) btn.classList.add('active');
+  else {
+    var first = document.querySelector('.tab-btn');
+    if (first) first.classList.add('active');
+  }
+
+  // Lazy render
+  if (tabId === 'overview') renderOverview();
+  if (tabId === 'ranking') renderRanking();
+  if (tabId === 'person') renderPersonTab();
+  if (tabId === 'team') renderTeamTab();
+  if (tabId === 'company') renderCompanyTab();
+}
+
+/* ==================== All Filters ==================== */
+
+// Helper: check if person matches a "company" filter (ADM is a virtual company = team filter)
+function companyMatch(p, company) {
+  if (company === 'ADM') return p.t === 'ADM';
+  return p.c === company;
+}
+
+function renderAllFilters() {
+  // Ranking company chips
+  renderCompanyChips('rankCompanyChips', STATE.rankCompany, function(c) {
+    STATE.rankCompany = c;
+    STATE.rankTeam = 'All';
+    STATE.rankPage = 1;
+    renderAllFilters();
+    renderRanking();
+  });
+  // Ranking team dropdown (populated by updateTeamDropdown below)
+  updateTeamDropdown();
+  // Team company chips
+  renderCompanyChips('teamCompanyChips', STATE.teamCompany, function(c) {
+    STATE.teamCompany = c;
+    renderAllFilters();
+    renderTeamTab();
+  });
+  // Company view chips
+  renderCompanyChips('coViewChips', STATE.coView, function(c) {
+    STATE.coView = c;
+    renderAllFilters();
+    renderCompanyTab();
+  });
+
+  // Person tab: company filter dropdown + person select
+  var pcFilter = document.getElementById('personCompanyFilter');
+  var pcHtml = '<option value="All">ทุกบริษัท</option>';
+  STATE.companies.forEach(function(c) {
+    pcHtml += '<option value="' + escapeHtml(c) + '"' +
+      (STATE.personCompanyFilter === c ? ' selected' : '') + '>' + escapeHtml(c) + '</option>';
+  });
+  pcFilter.innerHTML = pcHtml;
+
+  buildPersonSelect();
+}
+
+function renderCompanyChips(containerId, current, onClick) {
+  var html = '<button class="chip ' + (current === 'All' ? 'active' : '') + '" data-co="All">All</button>';
+  STATE.companies.forEach(function(c) {
+    html += '<button class="chip ' + (current === c ? 'active' : '') +
+      '" data-co="' + escapeHtml(c) + '">' + escapeHtml(c) + '</button>';
+  });
+  var container = document.getElementById(containerId);
+  container.innerHTML = html;
+  container.querySelectorAll('.chip').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      onClick(this.getAttribute('data-co'));
+    });
+  });
+}
+
+function updateTeamDropdown() {
+  var sel = document.getElementById('rankTeam');
+  if (!sel) return;
+  // Collect unique teams based on selected company
+  var set = {};
+  STATE.allPersons.forEach(function(p) {
+    if (STATE.rankCompany !== 'All' && !companyMatch(p, STATE.rankCompany)) return;
+    var t = p.t || '(ไม่ระบุทีม)';
+    set[t] = 1;
+  });
+  var teams = Object.keys(set).sort(function(a, b) {
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
+  var html = '<option value="All"' + (STATE.rankTeam === 'All' ? ' selected' : '') + '>ทุกทีม</option>';
+  teams.forEach(function(t) {
+    html += '<option value="' + escapeHtml(t) + '"' +
+      (STATE.rankTeam === t ? ' selected' : '') + '>' + escapeHtml(t) + '</option>';
+  });
+  sel.innerHTML = html;
+}
+
+function buildPersonSelect() {
+  var sel = document.getElementById('personSelect');
+  // Group names by company filter
+  var names = Object.keys(STATE.byName).sort();
+  if (STATE.personCompanyFilter !== 'All') {
+    names = names.filter(function(n) {
+      return STATE.byName[n].some(function(r) { return companyMatch(r, STATE.personCompanyFilter); });
+    });
+  }
+  var html = '<option value="">— เลือกผู้รับการประเมิน (' + names.length + ' คน) —</option>';
+  names.forEach(function(n) {
+    var recs = STATE.byName[n];
+    var first = recs[0];
+    var label = n + ' (' + (first.c || '?') + ')';
+    html += '<option value="' + escapeHtml(n) + '">' + escapeHtml(label) + '</option>';
+  });
+  sel.innerHTML = html;
+}
+
+/* ==================== Overview Tab ==================== */
+function renderOverview() {
+  renderOverviewKPIs();
+  renderCompanyCards();
+  renderCompanyChart();
+  renderRadarChart();
+  renderDistChart();
+}
+
+function renderOverviewKPIs() {
+  var list = STATE.allPersons;
+  var totalPeople = list.length;
+  var totalRecords = STATE.stats.total_records || list.length;
+  var totalQ = STATE.stats.total_questions || 0;
+  var avgOverall = avg(list, 'o');
+  var maxP = null, minP = null;
+  list.forEach(function(p) {
+    if (!maxP || (p.o || 0) > (maxP.o || 0)) maxP = p;
+    if (!minP || (p.o || 0) < (minP.o || 0)) minP = p;
+  });
+
+  var avgRecordsPerPerson = totalPeople > 0 ? (totalRecords / totalPeople).toFixed(1) : 0;
+  var avgQPerPerson = totalPeople > 0 ? (totalQ / totalPeople).toFixed(1) : 0;
+
+  var html = '';
+  html += kpiCard('s1', '👥', fmtInt(totalPeople), 'ผู้รับการประเมิน', 'คน');
+  html += kpiCard('s2', '📝', fmtInt(totalRecords), 'รายการประเมิน', 'เฉลี่ย ' + avgRecordsPerPerson + ' รายการ/คน');
+  html += kpiCard('s3', '❓', fmtInt(totalQ), 'คำถามทั้งหมด', 'เฉลี่ย ' + avgQPerPerson + ' คำถาม/คน');
+  html += kpiCard('s1', '📊', fmt(avgOverall), 'คะแนนเฉลี่ยรวม', 'จาก 3 ด้าน');
+  html += kpiCard('s5', '🏢', fmtInt(STATE.companies.length), 'บริษัท', 'companies');
+  html += kpiCard('s2', '🏆', fmt(maxP ? maxP.o : 0), 'คะแนนสูงสุด', maxP ? maxP.n : '—');
+  html += kpiCard('s4', '📉', fmt(minP ? minP.o : 0), 'คะแนนต่ำสุด', minP ? minP.n : '—');
+
+  // Add explanation section
+  html += '<div class="kpi-explanation" style="grid-column:1/-1;margin-top:8px;padding:12px 16px;background:rgba(59,130,246,0.06);border-radius:10px;border-left:3px solid #3b82f6;font-size:13px;line-height:1.8;color:#475569;">' +
+    '<div style="margin-bottom:6px;"><strong style="color:#1e40af;">📝 รายการประเมิน</strong> = จำนวนครั้งที่มีการประเมินทั้งหมดในระบบ แต่ละคนอาจถูกประเมินหลายครั้ง (เช่น ประเมินโดยผู้บังคับบัญชา, เพื่อนร่วมงาน, ผู้ใต้บังคับบัญชา) จึงมีได้หลายรายการต่อคน — <strong>เฉลี่ย ' + avgRecordsPerPerson + ' รายการ/คน</strong> (รวม ' + fmtInt(totalRecords) + ' รายการ จาก ' + fmtInt(totalPeople) + ' คน)</div>' +
+    '<div><strong style="color:#1e40af;">❓ คำถามทั้งหมด</strong> = จำนวนคำถามที่ตอบทั้งหมด (รายการประเมิน × จำนวนคำถามต่อรายการ) — <strong>เฉลี่ย ' + avgQPerPerson + ' คำถาม/คน</strong> (รวม ' + fmtInt(totalQ) + ' คำถาม จาก ' + fmtInt(totalPeople) + ' คน)</div>' +
+    '</div>';
+
+  document.getElementById('overviewKPIs').innerHTML = html;
+}
+
+function kpiCard(cls, icon, value, label, sub) {
+  return '<div class="stat-card ' + cls + '">' +
+    '<div class="stat-icon">' + icon + '</div>' +
+    '<div class="stat-value">' + value + '</div>' +
+    '<div class="stat-label">' + escapeHtml(label) + '</div>' +
+    '<div class="stat-sub">' + escapeHtml(sub || '') + '</div>' +
+    '</div>';
+}
+
+function renderCompanyCards() {
+  var html = '';
+  STATE.companies.forEach(function(c) {
+    var cs = STATE.companyStats[c] || {};
+    var people = cs.people || 0;
+    var avgO = cs.avg_overall || 0;
+    var color = coColor(c);
+    var pct = (avgO / 10) * 100;
+    html += '<div class="co-card" style="border-top-color:' + color + ';" onclick="jumpToCompany(\'' + escapeHtml(c) + '\')">' +
+      '<div class="cc-name">' + escapeHtml(c) + '</div>' +
+      '<div class="cc-avg" style="color:' + color + ';">' + fmt(avgO) + '</div>' +
+      '<div style="font-size:0.72rem;color:var(--text3);">คะแนนเฉลี่ยรวม</div>' +
+      '<div class="cc-stats">' +
+        '<div class="cc-stat"><span class="cc-stat-val">' + fmtInt(people) + '</span><span class="cc-stat-label">คน</span></div>' +
+        '<div class="cc-stat"><span class="cc-stat-val">' + fmt(cs.avg_behavior || 0) + '</span><span class="cc-stat-label">พฤติกรรม</span></div>' +
+        '<div class="cc-stat"><span class="cc-stat-val">' + fmt(cs.avg_capital || 0) + '</span><span class="cc-stat-label">ทุนองค์กร</span></div>' +
+        '<div class="cc-stat"><span class="cc-stat-val">' + fmt(cs.avg_leadership || 0) + '</span><span class="cc-stat-label">ภาวะผู้นำ</span></div>' +
+      '</div>' +
+      '<div class="cc-bar"><div class="cc-bar-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>' +
+    '</div>';
+  });
+  document.getElementById('companyCards').innerHTML = html;
+}
+
+function jumpToCompany(c) {
+  STATE.coView = c;
+  switchTab('company', null);
+  // Manually set active tab button
+  document.querySelectorAll('.tab-btn').forEach(function(t) { t.classList.remove('active'); });
+  var btns = document.querySelectorAll('.tab-btn');
+  btns.forEach(function(b) {
+    if (b.textContent.indexOf('Company View') !== -1) b.classList.add('active');
+  });
+}
+
+function renderCompanyChart() {
+  var ctx = document.getElementById('companyChart');
+  if (!ctx) return;
+  var labels = STATE.companies.slice();
+  var behavior = [], capital = [], leadership = [];
+  STATE.companies.forEach(function(c) {
+    var cs = STATE.companyStats[c] || {};
+    behavior.push(cs.avg_behavior || 0);
+    capital.push(cs.avg_capital || 0);
+    leadership.push(cs.avg_leadership || 0);
+  });
+  var datasets = [
+    { label: 'พฤติกรรม (บุคคล)', data: behavior,  backgroundColor: '#3b82f6', borderRadius: 4 },
+    { label: 'ทุนองค์กร',       data: capital,   backgroundColor: '#10b981', borderRadius: 4 },
+    { label: 'ภาวะผู้นำ',        data: leadership, backgroundColor: '#f59e0b', borderRadius: 4 }
+  ];
+  if (STATE.charts.companyChart) STATE.charts.companyChart.destroy();
+  STATE.charts.companyChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { family: 'Sarabun', size: 12 } } },
+        tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + fmt(c.parsed.x); } } }
+      },
+      scales: {
+        x: { min: 7, max: 10, grid: { color: '#f1f5f9' }, ticks: { font: { family: 'Sarabun' } } },
+        y: { grid: { display: false }, ticks: { font: { family: 'Sarabun', weight: '600' } } }
+      }
+    }
+  });
+}
+
+function renderRadarChart() {
+  var ctx = document.getElementById('radarChart');
+  if (!ctx) return;
+  var labels = ['พฤติกรรม (บุคคล)', 'ทุนองค์กร', 'ภาวะผู้นำ'];
+  var datasets = STATE.companies.map(function(c) {
+    var cs = STATE.companyStats[c] || {};
+    var color = coColor(c);
+    return {
+      label: c,
+      data: [cs.avg_behavior || 0, cs.avg_capital || 0, cs.avg_leadership || 0],
+      backgroundColor: color + '22',
+      borderColor: color,
+      borderWidth: 2,
+      pointBackgroundColor: color,
+      pointRadius: 4
+    };
+  });
+  if (STATE.charts.radarChart) STATE.charts.radarChart.destroy();
+  STATE.charts.radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { family: 'Sarabun', size: 12 } } },
+        tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + fmt(c.parsed.r); } } }
+      },
+      scales: {
+        r: {
+          min: 7, max: 10,
+          ticks: { stepSize: 0.5, font: { family: 'Sarabun' } },
+          pointLabels: { font: { family: 'Sarabun', size: 12, weight: '600' } }
+        }
+      }
+    }
+  });
+}
+
+function renderDistChart() {
+  var ctx = document.getElementById('distChart');
+  if (!ctx) return;
+  // Build histogram buckets of overall avg
+  var buckets = [0,0,0,0,0,0,0,0]; // <7,7-7.5,7.5-8,8-8.5,8.5-9,9-9.5,9.5-10, =10
+  var labels = ['<7.0','7.0-7.5','7.5-8.0','8.0-8.5','8.5-9.0','9.0-9.5','9.5-10.0','=10.0'];
+  STATE.allPersons.forEach(function(p) {
+    var v = p.o || 0;
+    if (v < 7) buckets[0]++;
+    else if (v < 7.5) buckets[1]++;
+    else if (v < 8) buckets[2]++;
+    else if (v < 8.5) buckets[3]++;
+    else if (v < 9) buckets[4]++;
+    else if (v < 9.5) buckets[5]++;
+    else if (v < 10) buckets[6]++;
+    else buckets[7]++;
+  });
+  // Color per bucket
+  var colors = ['#ef4444','#f59e0b','#f59e0b','#fbbf24','#84cc16','#10b981','#10b981','#059669'];
+  if (STATE.charts.distChart) STATE.charts.distChart.destroy();
+  STATE.charts.distChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ label: 'จำนวนคน', data: buckets, backgroundColor: colors, borderRadius: 6 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(c) { return c.parsed.y + ' คน'; } } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'Sarabun' } } },
+        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { family: 'Sarabun' } } }
+      }
+    }
+  });
+}
+
+/* ==================== Ranking Tab ==================== */
+function renderRanking() {
+  var list = STATE.allPersons.slice();
+  // Company filter
+  if (STATE.rankCompany !== 'All') {
+    list = list.filter(function(p) { return companyMatch(p, STATE.rankCompany); });
+  }
+  // Team filter
+  if (STATE.rankTeam !== 'All') {
+    list = list.filter(function(p) {
+      return (p.t || '(ไม่ระบุทีม)') === STATE.rankTeam;
+    });
+  }
+  // Search
+  if (STATE.rankSearch) {
+    var q = STATE.rankSearch.toLowerCase();
+    list = list.filter(function(p) {
+      return (p.n || '').toLowerCase().indexOf(q) !== -1 ||
+             (p.t || '').toLowerCase().indexOf(q) !== -1 ||
+             (p.g || '').toLowerCase().indexOf(q) !== -1;
+    });
+  }
+  // Threshold
+  if (STATE.rankThreshold > 0) {
+    var th = Number(STATE.rankThreshold);
+    list = list.filter(function(p) { return (p.o || 0) >= th; });
+  }
+  // Sort
+  if (STATE.rankSort === 'desc') {
+    list.sort(function(a, b) { return (b.o || 0) - (a.o || 0); });
+  } else if (STATE.rankSort === 'asc') {
+    list.sort(function(a, b) { return (a.o || 0) - (b.o || 0); });
+  } else if (STATE.rankSort === 'name') {
+    list.sort(function(a, b) {
+      var na = (a.n || '').toLowerCase(), nb = (b.n || '').toLowerCase();
+      return na < nb ? -1 : na > nb ? 1 : 0;
+    });
+  }
+
+  var tbody = document.getElementById('rankTableBody');
+  var total = list.length;
+  var pages = Math.max(1, Math.ceil(total / STATE.rankPerPage));
+  if (STATE.rankPage > pages) STATE.rankPage = pages;
+  var start = (STATE.rankPage - 1) * STATE.rankPerPage;
+  var end = Math.min(start + STATE.rankPerPage, total);
+  var pageItems = list.slice(start, end);
+
+  var html = '';
+  pageItems.forEach(function(p, i) {
+    var idx = start + i + 1;
+    var rankCls = '';
+    if (idx === 1) rankCls = 'top1';
+    else if (idx === 2) rankCls = 'top2';
+    else if (idx === 3) rankCls = 'top3';
+    var globalIdx = STATE.allPersons.indexOf(p);
+    html += '<tr data-gidx="' + globalIdx + '">' +
+      '<td class="rank ' + rankCls + '">' + idx + '</td>' +
+      '<td style="text-align:center;font-size:0.82rem;color:var(--text3);">' + escapeHtml(p.m || '') + '</td>' +
+      '<td><b>' + escapeHtml(p.n || '') + '</b></td>' +
+      '<td><span class="co-tag" style="background:' + coColor(p.c) + '22;color:' + coColor(p.c) + ';">' + escapeHtml(p.c || '') + '</span></td>' +
+      '<td>' + escapeHtml(p.t || '') + '</td>' +
+      '<td>' + escapeHtml(p.g || '') + '</td>' +
+      '<td class="num"><span class="badge ' + scoreClass(p.b) + '">' + fmt(p.b) + '</span></td>' +
+      '<td class="num"><span class="badge ' + scoreClass(p.ca) + '">' + fmt(p.ca) + '</span></td>' +
+      '<td class="num"><span class="badge ' + scoreClass(p.l) + '">' + fmt(p.l) + '</span></td>' +
+      '<td class="num"><span class="badge ' + scoreClass(p.o) + '"><b>' + fmt(p.o) + '</b></span></td>' +
+      '<td class="num">' + fmtInt(p.ot) + '</td>' +
+      '<td class="num">' + fmtInt(p.q) + '</td>' +
+      '</tr>';
+  });
+  if (total === 0) {
+    html = '<tr><td colspan="12" style="text-align:center;padding:30px;color:var(--text3);">ไม่พบข้อมูลที่ตรงเงื่อนไข</td></tr>';
+  }
+  tbody.innerHTML = html;
+
+  // Row click -> jump to person detail
+  tbody.querySelectorAll('tr[data-gidx]').forEach(function(tr) {
+    tr.addEventListener('click', function() {
+      var gi = parseInt(this.getAttribute('data-gidx'), 10);
+      var p = STATE.allPersons[gi];
+      if (p) selectPerson(p.n);
+    });
+  });
+
+  // Pager
+  document.getElementById('rankPagerInfo').textContent =
+    'แสดง ' + (total === 0 ? 0 : start + 1) + '–' + end + ' จาก ' + fmtInt(total) + ' คน';
+  renderPager('rankPagerBtns', STATE.rankPage, pages, function(pg) {
+    STATE.rankPage = pg;
+    renderRanking();
+  });
+}
+
+function renderPager(containerId, current, pages, onClick) {
+  var btns = document.getElementById(containerId);
+  var html = '';
+  html += '<button class="pg-btn" ' + (current === 1 ? 'disabled' : '') + ' data-pg="prev">« ก่อนหน้า</button>';
+  var showPages = [];
+  if (pages <= 7) {
+    for (var i1 = 1; i1 <= pages; i1++) showPages.push(i1);
+  } else {
+    showPages.push(1);
+    if (current > 3) showPages.push('…');
+    for (var i2 = Math.max(2, current - 1); i2 <= Math.min(pages - 1, current + 1); i2++) showPages.push(i2);
+    if (current < pages - 2) showPages.push('…');
+    showPages.push(pages);
+  }
+  showPages.forEach(function(pg) {
+    if (pg === '…') {
+      html += '<span style="padding:5px 8px;color:var(--text3);">…</span>';
+    } else {
+      html += '<button class="pg-btn ' + (pg === current ? 'active' : '') + '" data-pg="' + pg + '">' + pg + '</button>';
+    }
+  });
+  html += '<button class="pg-btn" ' + (current === pages ? 'disabled' : '') + ' data-pg="next">ถัดไป »</button>';
+  btns.innerHTML = html;
+  btns.querySelectorAll('.pg-btn').forEach(function(b) {
+    b.addEventListener('click', function() {
+      if (this.disabled) return;
+      var p = this.getAttribute('data-pg');
+      if (p === 'prev') onClick(Math.max(1, current - 1));
+      else if (p === 'next') onClick(Math.min(pages, current + 1));
+      else onClick(parseInt(p, 10));
+    });
+  });
+}
+
+/* ==================== Person Detail Tab ==================== */
+function renderPersonTab() {
+  // If a person is selected, render their detail
+  if (STATE.personSelected) {
+    showPersonDetail(STATE.personSelected);
+  } else {
+    document.getElementById('personEmpty').classList.remove('hidden');
+    document.getElementById('personDetailBox').classList.add('hidden');
+  }
+}
+
+function selectPerson(name) {
+  STATE.personSelected = name;
+  // Switch to person tab
+  switchTab('person', null);
+  // Set the select value
+  var sel = document.getElementById('personSelect');
+  sel.value = name;
+  showPersonDetail(name);
+}
+
+function showPersonDetail(name) {
+  if (!name) {
+    document.getElementById('personEmpty').classList.remove('hidden');
+    document.getElementById('personDetailBox').classList.add('hidden');
+    return;
+  }
+  var records = STATE.byName[name] || [];
+  if (records.length === 0) {
+    document.getElementById('personEmpty').classList.remove('hidden');
+    document.getElementById('personDetailBox').classList.add('hidden');
+    return;
+  }
+
+  document.getElementById('personEmpty').classList.add('hidden');
+  document.getElementById('personDetailBox').classList.remove('hidden');
+
+  // Use the latest record (highest year)
+  var latest = records[0];
+  records.forEach(function(r) {
+    if ((r.y || 0) > (latest.y || 0)) latest = r;
+  });
+
+  // Profile
+  document.getElementById('ppName').textContent = latest.n || '—';
+  var metaHtml = '<span>🏢 ' + escapeHtml(latest.c || '—') + '</span>' +
+    '<span>👥 ' + escapeHtml(latest.t || '—') + '</span>' +
+    '<span>📋 ' + escapeHtml(latest.g || '—') + '</span>' +
+    '<span>📅 ปี ' + (latest.y || 2017) + '</span>';
+  document.getElementById('ppMeta').innerHTML = metaHtml;
+  document.getElementById('ppMemberId').innerHTML =
+    '🆔 รหัสสมาชิก: <b style="color:var(--text2);">' + escapeHtml(latest.m || '—') + '</b>';
+  document.getElementById('ppOverall').textContent = fmt(latest.o);
+  document.getElementById('ppOverall').style.color = scoreColor(latest.o);
+
+  // Domain score cards with progress bars
+  var dHtml = '';
+  DOMAIN_KEYS.forEach(function(d) {
+    var val = latest[d.key];
+    var pct = val ? (val / 10 * 100) : 0;
+    var color = d.color;
+    dHtml += '<div class="domain-score-card">' +
+      '<div class="ds-head"><span class="ds-label">' + escapeHtml(d.label) + '</span>' +
+      '<span class="ds-value" style="color:' + scoreColor(val) + ';">' + fmt(val) + '</span></div>' +
+      '<div class="progress-bar"><div class="progress-bar-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>' +
+      '<div style="font-size:0.72rem;color:var(--text3);margin-top:4px;">คิดเป็น ' + fmt(pct, 1) + '% ของคะแนนเต็ม</div>' +
+      '</div>';
+  });
+  // Add total questions & total score info
+  dHtml += '<div class="domain-score-card" style="background:#f8fafc;">' +
+    '<div class="ds-head"><span class="ds-label">รวมคะแนนทั้งหมด</span>' +
+    '<span class="ds-value">' + fmtInt(latest.ot) + '</span></div>' +
+    '<div style="font-size:0.78rem;color:var(--text2);">จาก ' + fmtInt(latest.q) + ' คำถาม</div>' +
+    '</div>';
+  document.getElementById('ppDomainScores').innerHTML = dHtml;
+
+  // Person radar chart
+  renderPersonRadar(latest);
+
+  // History table (multi-year ready)
+  renderPersonHistory(records);
+
+  // Trend chart (multi-year ready)
+  renderPersonTrend(records);
+}
+
+function renderPersonRadar(p) {
+  var ctx = document.getElementById('personRadarChart');
+  if (!ctx) return;
+  // Compare this person vs company average
+  var cs = STATE.companyStats[p.c] || {};
+  var datasets = [
+    {
+      label: p.n + ' (' + (p.y || 2017) + ')',
+      data: [p.b || 0, p.ca || 0, p.l || 0],
+      backgroundColor: 'rgba(59,130,246,0.2)',
+      borderColor: '#3b82f6',
+      borderWidth: 2,
+      pointBackgroundColor: '#3b82f6',
+      pointRadius: 5
+    },
+    {
+      label: 'ค่าเฉลี่ย ' + (p.c || ''),
+      data: [cs.avg_behavior || 0, cs.avg_capital || 0, cs.avg_leadership || 0],
+      backgroundColor: 'rgba(148,163,184,0.15)',
+      borderColor: '#94a3b8',
+      borderWidth: 2, borderDash: [5, 4],
+      pointBackgroundColor: '#94a3b8',
+      pointRadius: 4
+    }
+  ];
+  if (STATE.charts.personRadar) STATE.charts.personRadar.destroy();
+  STATE.charts.personRadar = new Chart(ctx, {
+    type: 'radar',
+    data: { labels: ['พฤติกรรม (บุคคล)', 'ทุนองค์กร', 'ภาวะผู้นำ'], datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { family: 'Sarabun', size: 12 } } },
+        tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + fmt(c.parsed.r); } } }
+      },
+      scales: {
+        r: {
+          min: 7, max: 10,
+          ticks: { stepSize: 0.5, font: { family: 'Sarabun' } },
+          pointLabels: { font: { family: 'Sarabun', size: 12, weight: '600' } }
+        }
+      }
+    }
+  });
+}
+
+function renderPersonHistory(records) {
+  // Sort records by year ascending
+  var sorted = records.slice().sort(function(a, b) { return (a.y || 0) - (b.y || 0); });
+  var html = '';
+  if (sorted.length === 0) {
+    html = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text3);">ไม่มีข้อมูลประวัติ</td></tr>';
+  }
+  sorted.forEach(function(r) {
+    html += '<tr>' +
+      '<td><b>' + (r.y || 2017) + '</b></td>' +
+      '<td><span class="co-tag" style="background:' + coColor(r.c) + '22;color:' + coColor(r.c) + ';">' + escapeHtml(r.c || '—') + '</span></td>' +
+      '<td>' + escapeHtml(r.t || '—') + '</td>' +
+      '<td class="num"><span class="badge ' + scoreClass(r.b) + '">' + fmt(r.b) + '</span></td>' +
+      '<td class="num"><span class="badge ' + scoreClass(r.ca) + '">' + fmt(r.ca) + '</span></td>' +
+      '<td class="num"><span class="badge ' + scoreClass(r.l) + '">' + fmt(r.l) + '</span></td>' +
+      '<td class="num"><span class="badge ' + scoreClass(r.o) + '"><b>' + fmt(r.o) + '</b></span></td>' +
+      '<td class="num">' + fmtInt(r.q) + '</td>' +
+      '</tr>';
+  });
+  document.getElementById('historyTableBody').innerHTML = html;
+}
+
+function renderPersonTrend(records) {
+  var ctx = document.getElementById('personTrendChart');
+  if (!ctx) return;
+  var sorted = records.slice().sort(function(a, b) { return (a.y || 0) - (b.y || 0); });
+  var labels = sorted.map(function(r) { return String(r.y || 2017); });
+  var bData = sorted.map(function(r) { return r.b || 0; });
+  var caData = sorted.map(function(r) { return r.ca || 0; });
+  var lData = sorted.map(function(r) { return r.l || 0; });
+  var oData = sorted.map(function(r) { return r.o || 0; });
+
+  var datasets = [
+    { label: 'พฤติกรรม (บุคคล)', data: bData,  borderColor: '#3b82f6', backgroundColor: 'transparent', tension: 0.3, pointRadius: 5 },
+    { label: 'ทุนองค์กร',        data: caData, borderColor: '#10b981', backgroundColor: 'transparent', tension: 0.3, pointRadius: 5 },
+    { label: 'ภาวะผู้นำ',         data: lData,  borderColor: '#f59e0b', backgroundColor: 'transparent', tension: 0.3, pointRadius: 5 },
+    { label: 'รวมเฉลี่ย',        data: oData,  borderColor: '#8b5cf6', backgroundColor: 'transparent', tension: 0.3, borderDash: [5,4], pointRadius: 5 }
+  ];
+  if (STATE.charts.personTrend) STATE.charts.personTrend.destroy();
+  STATE.charts.personTrend = new Chart(ctx, {
+    type: 'line',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { family: 'Sarabun', size: 12 } } },
+        tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + fmt(c.parsed.y); } } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'Sarabun' } } },
+        y: { min: 7, max: 10, grid: { color: '#f1f5f9' }, ticks: { font: { family: 'Sarabun' } } }
+      }
+    }
+  });
+}
+
+/* ==================== Team Analysis Tab ==================== */
+function renderTeamTab() {
+  var companies = STATE.companies.slice();
+  if (STATE.teamCompany !== 'All') companies = [STATE.teamCompany];
+  var domKey = STATE.teamDomain;
+
+  var html = '';
+  companies.forEach(function(c) {
+    var teams = {};
+    STATE.allPersons.forEach(function(p) {
+      if (!companyMatch(p, c)) return;
+      var t = p.t || '(ไม่ระบุทีม)';
+      if (!teams[t]) teams[t] = { sum: 0, count: 0, people: 0, bSum: 0, caSum: 0, lSum: 0 };
+      teams[t].sum += (p[domKey] || 0);
+      teams[t].count += 1;
+      teams[t].people += 1;
+      teams[t].bSum += (p.b || 0);
+      teams[t].caSum += (p.ca || 0);
+      teams[t].lSum += (p.l || 0);
+    });
+    var teamArr = Object.keys(teams).map(function(name) {
+      var t = teams[name];
+      return {
+        name: name,
+        avg: t.count ? t.sum / t.count : 0,
+        people: t.people,
+        bAvg: t.count ? t.bSum / t.count : 0,
+        caAvg: t.count ? t.caSum / t.count : 0,
+        lAvg: t.count ? t.lSum / t.count : 0
+      };
+    });
+    teamArr.sort(function(a, b) { return b.avg - a.avg; });
+    var color = coColor(c);
+    var items = '';
+    if (teamArr.length === 0) {
+      items = '<div style="padding:10px 0;color:var(--text3);font-size:0.84rem;">ไม่มีข้อมูลทีม</div>';
+    } else {
+      teamArr.forEach(function(t) {
+        items += '<div class="team-item" onclick="toggleTeamMembers(this)" data-company="' + escapeHtml(c) + '" data-team="' + escapeHtml(t.name) + '" style="cursor:pointer;">' +
+          '<span class="tn">' + escapeHtml(t.name) + '</span>' +
+          '<span style="margin:0 8px;font-size:0.72rem;color:var(--text3);">(' + t.people + ' คน)</span>' +
+          '<span class="badge ' + scoreClass(t.avg) + '">' + fmt(t.avg) + '</span>' +
+          '<span style="margin-left:auto;font-size:0.72rem;color:var(--accent);">▼ ดูสมาชิก</span>' +
+          '</div>' +
+          '<div class="team-members" style="display:none;"></div>';
+      });
+    }
+    html += '<div class="team-block" style="border-top:3px solid ' + color + ';">' +
+      '<h3 style="color:' + color + ';">' + escapeHtml(c) +
+      ' <span class="count">' + teamArr.length + ' ทีม · ' + teamArr.reduce(function(s,t){return s+t.people;},0) + ' คน</span></h3>' +
+      items +
+      '</div>';
+  });
+  document.getElementById('teamGrid').innerHTML = html;
+}
+
+function toggleTeamMembers(el) {
+  var membersDiv = el.nextElementSibling;
+  if (membersDiv.style.display === 'block') {
+    membersDiv.style.display = 'none';
+    el.querySelector('span:last-child').textContent = '▼ ดูสมาชิก';
+    return;
+  }
+  var company = el.getAttribute('data-company');
+  var team = el.getAttribute('data-team');
+  var members = STATE.allPersons.filter(function(p) {
+    return companyMatch(p, company) && (p.t || '(ไม่ระบุทีม)') === team;
+  });
+  members.sort(function(a, b) { return (b.o || 0) - (a.o || 0); });
+  var html = '<table style="width:100%;font-size:0.82rem;margin-top:6px;border-collapse:collapse;">' +
+    '<thead><tr style="background:var(--bg);">' +
+    '<th style="text-align:left;padding:6px;">รหัส</th>' +
+    '<th style="text-align:left;padding:6px;">ชื่อ</th>' +
+    '<th style="text-align:right;padding:6px;">พฤติกรรม</th>' +
+    '<th style="text-align:right;padding:6px;">ทุนองค์กร</th>' +
+    '<th style="text-align:right;padding:6px;">ภาวะผู้นำ</th>' +
+    '<th style="text-align:right;padding:6px;">รวมเฉลี่ย</th>' +
+    '</tr></thead><tbody>';
+  members.forEach(function(p) {
+    html += '<tr style="border-bottom:1px solid var(--border);">' +
+      '<td style="padding:6px;color:var(--text3);">' + escapeHtml(p.m || '') + '</td>' +
+      '<td style="padding:6px;"><b>' + escapeHtml(p.n || '') + '</b></td>' +
+      '<td style="text-align:right;padding:6px;"><span class="badge ' + scoreClass(p.b) + '">' + fmt(p.b) + '</span></td>' +
+      '<td style="text-align:right;padding:6px;"><span class="badge ' + scoreClass(p.ca) + '">' + fmt(p.ca) + '</span></td>' +
+      '<td style="text-align:right;padding:6px;"><span class="badge ' + scoreClass(p.l) + '">' + fmt(p.l) + '</span></td>' +
+      '<td style="text-align:right;padding:6px;"><span class="badge ' + scoreClass(p.o) + '"><b>' + fmt(p.o) + '</b></span></td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>';
+  membersDiv.innerHTML = html;
+  membersDiv.style.display = 'block';
+  el.querySelector('span:last-child').textContent = '▲ ซ่อนสมาชิก';
+}
+window.toggleTeamMembers = toggleTeamMembers;
+
+/* ==================== Company View Tab ==================== */
+function renderCompanyTab() {
+  var c = STATE.coView;
+  var cs = STATE.companyStats[c] || {};
+  var people = STATE.allPersons.filter(function(p) { return companyMatch(p, c); });
+
+  // KPIs
+  var html = '';
+  html += kpiCard('s1', '🏢', escapeHtml(c), 'บริษัท', '');
+  html += kpiCard('s2', '👥', fmtInt(cs.people || people.length), 'ผู้รับการประเมิน', 'คน');
+  html += kpiCard('s3', '📊', fmt(cs.avg_overall || avg(people, 'o')), 'คะแนนเฉลี่ยรวม', 'overall');
+  html += kpiCard('s1', '📋', fmt(cs.avg_behavior || avg(people, 'b')), 'พฤติกรรม (บุคคล)', 'behavior');
+  html += kpiCard('s2', '💰', fmt(cs.avg_capital || avg(people, 'ca')), 'ทุนองค์กร', 'capital');
+  html += kpiCard('s5', '👑', fmt(cs.avg_leadership || avg(people, 'l')), 'ภาวะผู้นำ', 'leadership');
+  document.getElementById('coViewKPIs').innerHTML = html;
+
+  // Team chart
+  renderCoTeamChart(c, people);
+  // Distribution chart
+  renderCoDistChart(c, people);
+  // Top 10 table
+  renderCoTopTable(people);
+}
+
+function renderCoTeamChart(c, people) {
+  var ctx = document.getElementById('coTeamChart');
+  if (!ctx) return;
+  var teams = {};
+  people.forEach(function(p) {
+    var t = p.t || '(ไม่ระบุ)';
+    if (!teams[t]) teams[t] = { sum: 0, count: 0 };
+    teams[t].sum += (p.o || 0);
+    teams[t].count += 1;
+  });
+  var arr = Object.keys(teams).map(function(n) {
+    return { name: n, avg: teams[n].count ? teams[n].sum / teams[n].count : 0, count: teams[n].count };
+  }).sort(function(a, b) { return b.avg - a.avg; }).slice(0, 15);
+
+  if (STATE.charts.coTeamChart) STATE.charts.coTeamChart.destroy();
+  STATE.charts.coTeamChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: arr.map(function(t) { return t.name; }),
+      datasets: [{
+        label: 'คะแนนเฉลี่ยรวม',
+        data: arr.map(function(t) { return t.avg; }),
+        backgroundColor: coColor(c),
+        borderRadius: 4
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(x) { return fmt(x.parsed.x) + ' (' + arr[x.dataIndex].count + ' คน)'; } } }
+      },
+      scales: {
+        x: { min: 7, max: 10, grid: { color: '#f1f5f9' }, ticks: { font: { family: 'Sarabun' } } },
+        y: { grid: { display: false }, ticks: { font: { family: 'Sarabun' } } }
+      }
+    }
+  });
+}
+
+function renderCoDistChart(c, people) {
+  var ctx = document.getElementById('coDistChart');
+  if (!ctx) return;
+  var buckets = [0,0,0,0,0,0,0,0];
+  var labels = ['<7.0','7.0-7.5','7.5-8.0','8.0-8.5','8.5-9.0','9.0-9.5','9.5-10.0','=10.0'];
+  people.forEach(function(p) {
+    var v = p.o || 0;
+    if (v < 7) buckets[0]++;
+    else if (v < 7.5) buckets[1]++;
+    else if (v < 8) buckets[2]++;
+    else if (v < 8.5) buckets[3]++;
+    else if (v < 9) buckets[4]++;
+    else if (v < 9.5) buckets[5]++;
+    else if (v < 10) buckets[6]++;
+    else buckets[7]++;
+  });
+  var color = coColor(c);
+  if (STATE.charts.coDistChart) STATE.charts.coDistChart.destroy();
+  STATE.charts.coDistChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ label: 'จำนวนคน', data: buckets, backgroundColor: color, borderRadius: 6 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(x) { return x.parsed.y + ' คน'; } } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'Sarabun' } } },
+        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { family: 'Sarabun' } } }
+      }
+    }
+  });
+}
+
+function renderCoTopTable(people) {
+  var sorted = people.slice().sort(function(a, b) { return (b.o || 0) - (a.o || 0); }).slice(0, 10);
+  var html = '';
+  sorted.forEach(function(p, i) {
+    var rankCls = '';
+    if (i === 0) rankCls = 'top1';
+    else if (i === 1) rankCls = 'top2';
+    else if (i === 2) rankCls = 'top3';
+    var gi = STATE.allPersons.indexOf(p);
+    html += '<tr data-gidx="' + gi + '">' +
+      '<td class="rank ' + rankCls + '">' + (i + 1) + '</td>' +
+      '<td style="text-align:center;font-size:0.82rem;color:var(--text3);">' + escapeHtml(p.m || '') + '</td>' +
+      '<td><b>' + escapeHtml(p.n || '') + '</b></td>' +
+      '<td>' + escapeHtml(p.t || '') + '</td>' +
+      '<td>' + escapeHtml(p.g || '') + '</td>' +
+      '<td class="num"><span class="badge ' + scoreClass(p.b) + '">' + fmt(p.b) + '</span></td>' +
+      '<td class="num"><span class="badge ' + scoreClass(p.ca) + '">' + fmt(p.ca) + '</span></td>' +
+      '<td class="num"><span class="badge ' + scoreClass(p.l) + '">' + fmt(p.l) + '</span></td>' +
+      '<td class="num"><span class="badge ' + scoreClass(p.o) + '"><b>' + fmt(p.o) + '</b></span></td>' +
+      '</tr>';
+  });
+  if (sorted.length === 0) {
+    html = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text3);">ไม่มีข้อมูล</td></tr>';
+  }
+  document.getElementById('coTopTable').innerHTML = html;
+  document.getElementById('coTopTable').querySelectorAll('tr[data-gidx]').forEach(function(tr) {
+    tr.addEventListener('click', function() {
+      var gi = parseInt(this.getAttribute('data-gidx'), 10);
+      var p = STATE.allPersons[gi];
+      if (p) selectPerson(p.n);
+    });
+  });
+}
+
+/* ==================== Modal (legacy detail) ==================== */
+function showDetail(p) {
+  if (!p) return;
+  document.getElementById('modalTitle').textContent = p.n || 'รายละเอียด';
+  var html = '';
+  var rows = [
+    ['บริษัท', p.c],
+    ['ทีม', p.t],
+    ['กลุ่มผู้ประเมิน', p.g],
+    ['คะแนนรวมเฉลี่ย', fmt(p.o)],
+    ['คะแนนรวมทั้งหมด', fmtInt(p.ot)],
+    ['จำนวนคำถาม', fmtInt(p.q)]
+  ];
+  rows.forEach(function(r) {
+    html += '<div class="detail-row"><span class="dl">' + escapeHtml(r[0]) +
+      '</span><span class="dv">' + escapeHtml(String(r[1] === undefined ? '—' : r[1])) + '</span></div>';
+  });
+  html += '<div style="margin:14px 0 8px;font-weight:700;color:var(--accent-dark);font-size:0.92rem;">คะแนนรายด้าน</div>';
+  DOMAIN_KEYS.forEach(function(d) {
+    var val = p[d.key];
+    var pct = val ? (val / 10 * 100) : 0;
+    html += '<div style="margin-bottom:10px;">' +
+      '<div style="display:flex;justify-content:space-between;font-size:0.84rem;margin-bottom:4px;">' +
+      '<span>' + escapeHtml(d.label) + '</span>' +
+      '<span class="badge ' + scoreClass(val) + '">' + fmt(val) + '</span>' +
+      '</div>' +
+      '<div class="progress-bar"><div class="progress-bar-fill" style="width:' + pct + '%;background:' + d.color + ';"></div></div>' +
+      '</div>';
+  });
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+/* ==================== Event Listeners ==================== */
+document.getElementById('rankSearch').addEventListener('input', function() {
+  STATE.rankSearch = this.value.trim();
+  STATE.rankPage = 1;
+  renderRanking();
+});
+document.getElementById('rankSort').addEventListener('change', function() {
+  STATE.rankSort = this.value;
+  STATE.rankPage = 1;
+  renderRanking();
+});
+document.getElementById('rankThreshold').addEventListener('change', function() {
+  STATE.rankThreshold = Number(this.value);
+  STATE.rankPage = 1;
+  renderRanking();
+});
+document.getElementById('rankTeam').addEventListener('change', function() {
+  STATE.rankTeam = this.value;
+  STATE.rankPage = 1;
+  renderRanking();
+});
+
+document.getElementById('personSelect').addEventListener('change', function() {
+  STATE.personSelected = this.value;
+  showPersonDetail(this.value);
+});
+document.getElementById('personSearch').addEventListener('input', function() {
+  var q = this.value.trim().toLowerCase();
+  var sel = document.getElementById('personSelect');
+  var opts = sel.querySelectorAll('option');
+  var matched = null;
+  opts.forEach(function(o) {
+    if (!o.value) return;
+    if (o.textContent.toLowerCase().indexOf(q) !== -1) {
+      o.style.display = '';
+      if (!matched) matched = o.value;
+    } else {
+      o.style.display = 'none';
+    }
+  });
+  // If exactly one match or user pressed enter-like, auto-select first match
+  // (we don't auto-select to avoid surprise; user picks from filtered list)
+});
+document.getElementById('personCompanyFilter').addEventListener('change', function() {
+  STATE.personCompanyFilter = this.value;
+  buildPersonSelect();
+});
+
+document.getElementById('teamDomain').addEventListener('change', function() {
+  STATE.teamDomain = this.value;
+  renderTeamTab();
+});
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+/* ==================== Init ==================== */
+loadData();
+</script>
+</body>
+</html>
