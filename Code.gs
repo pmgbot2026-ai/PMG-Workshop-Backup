@@ -1468,27 +1468,20 @@ function doGet(e) {
     // ใช้เฉพาะ known results (hardcoded) เพื่อความเร็ว — ไม่เรียก API ภายนอก
     try {
       var ceoActualsData = { items: [], count: 0, timestamp: new Date().toISOString() };
-      // CBNP
       ceoActualsData.items.push({ krText: 'บรรลุรายได้ CBNP PMSG 38.5 ล้านบาท และ CBNP PMS 29 ล้านบาท (ปี 69) — สรุปเป้า PMSgr', currentValue: '23.48 ลบ.', targetValue: '38.50 ลบ.', status: 'at-risk', progressPct: 61, source: 'CEO KPI Dashboard', sourceDetail: 'สรุปเป้า PMSgr · 23.48/38.50 ลบ · 61% · เสี่ยง' });
-      // GM
       ceoActualsData.items.push({ krText: 'GM > 9.5 ลบ/เดือน — GM Dashboard', currentValue: '10.3 ลบ.', targetValue: '10 ลบ.', status: 'on-track', progressPct: 103, source: 'CEO KPI Dashboard', sourceDetail: 'GM Dashboard · 10.3/10 ลบ · 103% · ทะลุเป้า' });
-      // เคลือบแก้ว
       ceoActualsData.items.push({ krText: 'เคลือบแก้ว 30 คันต่อเดือน — War Room', currentValue: '58 คัน/เดือน', targetValue: '50 คัน/เดือน', status: 'on-track', progressPct: 116, source: 'CEO KPI Dashboard', sourceDetail: 'เคลือบแก้ว · 58/50 คัน · 116% · เกินเป้า' });
-      // ศูนย์สี
       ceoActualsData.items.push({ krText: 'บริหารจัดการยอดรถเข้าศูนย์สี 3,400 คัน/ปี — War Room', currentValue: '1,619 คัน', targetValue: '3,400 คัน', status: 'behind', progressPct: 48, source: 'CEO KPI Dashboard', sourceDetail: 'ศูนย์สี · 1,619/3,400 คัน · 48% · ล้าหลัง' });
-      // Productivity
       ceoActualsData.items.push({ krText: 'Productivity ค่าแรง+อะไหล่/คัน — War Room', currentValue: '20,132 บาท', targetValue: '23,145 บาท', status: 'behind', progressPct: 87, source: 'CEO KPI Dashboard', sourceDetail: 'Productivity · 20,132/23,145 · 87% · ลดลง' });
-      // เชียร์เคลม
       ceoActualsData.items.push({ krText: 'เชียร์เคลม 240,000 บาท — SC Dashboard', currentValue: '234,349 บาท', targetValue: '240,000 บาท', status: 'at-risk', progressPct: 98, source: 'CEO KPI Dashboard', sourceDetail: 'เชียร์เคลม · 234,349/240,000 · 98% · ใกล้เป้า' });
-      // QC
       ceoActualsData.items.push({ krText: 'QC ตรวจสอบคุณภาพ ประจำปี', currentValue: '4,206', targetValue: '4,632', status: 'on-track', progressPct: 91, source: 'CEO KPI Dashboard', sourceDetail: 'QC · 4,206/4,632 · 91% · ผ่าน' });
-      // GM ผลิตภัณฑ์เสริม
       ceoActualsData.items.push({ krText: 'สร้าง GM จากผลิตภัณฑ์เสริมเฉลี่ย 280,000 บาท/เดือน', currentValue: '281,552 บาท', targetValue: '280,000 บาท', status: 'on-track', progressPct: 101, source: 'CEO KPI Dashboard', sourceDetail: 'GM ผลิตภัณฑ์เสริม · 281,552/280,000 · 101% · ทะลุเป้า' });
-      // GM อะไหล่ทางเลือก PMGI
       ceoActualsData.items.push({ krText: 'ผลักดัน GM อะไหล่ทางเลือก PMGI 300,000 บาท/เดือน', currentValue: '226,549 บาท', targetValue: '300,000 บาท', status: 'at-risk', progressPct: 76, source: 'CEO KPI Dashboard', sourceDetail: 'GM PMGI · 226,549/300,000 · 76% · ใกล้เป้า' });
       ceoActualsData.count = ceoActualsData.items.length;
-      var ceoActualsStr = JSON.stringify(ceoActualsData).replace(/</g, '\\u003c').replace(/'/g, "\\'");
-      allContent = allContent.split("'CEO_ACTUALS_PLACEHOLDER'").join("'" + ceoActualsStr + "'");
+      // Inject as <script> tag — ไม่มีปัญหา escape
+      var ceoJson = JSON.stringify(ceoActualsData);
+      var ceoScriptTag = '<script>window.CEO_KPI_INJECTED=' + ceoJson.replace(/</g, '\\u003c') + ';<\/script>';
+      allContent = allContent.replace('<!--CEO_ACTUALS_INJECT-->', ceoScriptTag);
     } catch(e) {}
 
     // NOTE: Do NOT embed OKR data in the HTML — it's 1.5MB+ and causes blank page

@@ -831,6 +831,7 @@
   </style>
 </head>
 <body>
+<!--CEO_ACTUALS_INJECT-->
 <div style="position:fixed;top:8px;right:8px;z-index:99999;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(220,38,38,0.3);cursor:default;font-family:system-ui,sans-serif;letter-spacing:0.3px" title="ข้อมูลส่วนบุคคล PDPA — ห้ามส่งออกหรือเผยแพร่โดยไม่ได้รับอนุญาต">🔒 ข้อมูลลับ PDPA</div>
 
   <!-- ═════════ Header ═════════ -->
@@ -1357,16 +1358,20 @@ function refreshCascadeStatus_(keyBase, keywords) {
 function renderBusinessPlan() {
   var html = '';
 
-  // ── CEO KPI actual results — อ่านจาก server-side injection (ไม่ async) ──
+  // ── CEO KPI actual results — hardcoded ใน client โดยตรง ──
+  //   ข้อมูลจาก CEO KPI Dashboard จริง (สมศักดิ์ ธัมมะปาละ)
   if (typeof CEO_KPI_ACTUALS === 'undefined' || CEO_KPI_ACTUALS.length === 0) {
-    CEO_KPI_ACTUALS = [];
-    try {
-      var injectedData = 'CEO_ACTUALS_PLACEHOLDER';
-      if (injectedData && injectedData !== 'CEO_ACTUALS_PLACEHOLDER') {
-        var parsed = JSON.parse(injectedData);
-        CEO_KPI_ACTUALS = parsed.items || [];
-      }
-    } catch(e) {}
+    CEO_KPI_ACTUALS = [
+      { krText: 'บรรลุรายได้ CBNP PMSG 38.5 ล้านบาท และ CBNP PMS 29 ล้านบาท (ปี 69) — สรุปเป้า PMSgr', currentValue: '23.48 ลบ.', targetValue: '38.50 ลบ.', status: 'at-risk', progressPct: 61, source: 'CEO KPI Dashboard', sourceDetail: 'สรุปเป้า PMSgr · 23.48/38.50 ลบ · 61% · เสี่ยง' },
+      { krText: 'GM > 9.5 ลบ/เดือน — GM Dashboard', currentValue: '10.3 ลบ.', targetValue: '10 ลบ.', status: 'on-track', progressPct: 103, source: 'CEO KPI Dashboard', sourceDetail: 'GM Dashboard · 10.3/10 ลบ · 103% · ทะลุเป้า' },
+      { krText: 'เคลือบแก้ว 30 คันต่อเดือน — War Room', currentValue: '58 คัน/เดือน', targetValue: '50 คัน/เดือน', status: 'on-track', progressPct: 116, source: 'CEO KPI Dashboard', sourceDetail: 'เคลือบแก้ว · 58/50 คัน · 116% · เกินเป้า' },
+      { krText: 'บริหารจัดการยอดรถเข้าศูนย์สี 3,400 คัน/ปี — War Room', currentValue: '1,619 คัน', targetValue: '3,400 คัน', status: 'behind', progressPct: 48, source: 'CEO KPI Dashboard', sourceDetail: 'ศูนย์สี · 1,619/3,400 คัน · 48% · ล้าหลัง' },
+      { krText: 'Productivity ค่าแรง+อะไหล่/คัน — War Room', currentValue: '20,132 บาท', targetValue: '23,145 บาท', status: 'behind', progressPct: 87, source: 'CEO KPI Dashboard', sourceDetail: 'Productivity · 20,132/23,145 · 87% · ลดลง' },
+      { krText: 'เชียร์เคลม 240,000 บาท — SC Dashboard', currentValue: '234,349 บาท', targetValue: '240,000 บาท', status: 'at-risk', progressPct: 98, source: 'CEO KPI Dashboard', sourceDetail: 'เชียร์เคลม · 234,349/240,000 · 98% · ใกล้เป้า' },
+      { krText: 'QC ตรวจสอบคุณภาพ ประจำปี', currentValue: '4,206', targetValue: '4,632', status: 'on-track', progressPct: 91, source: 'CEO KPI Dashboard', sourceDetail: 'QC · 4,206/4,632 · 91% · ผ่าน' },
+      { krText: 'สร้าง GM จากผลิตภัณฑ์เสริมเฉลี่ย 280,000 บาท/เดือน', currentValue: '281,552 บาท', targetValue: '280,000 บาท', status: 'on-track', progressPct: 101, source: 'CEO KPI Dashboard', sourceDetail: 'GM ผลิตภัณฑ์เสริม · 281,552/280,000 · 101% · ทะลุเป้า' },
+      { krText: 'ผลักดัน GM อะไหล่ทางเลือก PMGI 300,000 บาท/เดือน', currentValue: '226,549 บาท', targetValue: '300,000 บาท', status: 'at-risk', progressPct: 76, source: 'CEO KPI Dashboard', sourceDetail: 'GM PMGI · 226,549/300,000 · 76% · ใกล้เป้า' }
+    ];
   }
 
   // ── Hero ──
@@ -1696,30 +1701,19 @@ function renderBusinessPlan() {
         '<div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap">'+
           '<strong style="color:'+color+';flex-shrink:0">KR-'+num+':</strong>'+
           '<span style="flex:1;min-width:200px;color:#475569">'+esc(text)+'</span>'+
-          (isEdited ? '<span style="font-size:9px;color:#f59e0b;font-weight:700;flex-shrink:0" title="แก้ไขแล้ว">●edited</span>' : '')+
+          (isEdited ? '<span style="font-size:9px;color:#f59e0b;font-weight:700;flex-shrink:0" title="แก้ไขแล้ว">●</span>' : '')+
           editBtn+
         '</div>';
 
-      // แสดงเป้าหมายจาก CEO
-      if (target) {
-        html_ += '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">'+
-          '<span style="font-size:10px;color:#64748b">🎯 เป้า (CEO):</span>'+
-          '<span style="font-size:11px;font-weight:700;color:'+color+';background:'+color+'15;padding:2px 8px;border-radius:6px">'+esc(target)+'</span>';
-        if (ceoSource) {
-          // ceoSource เป็น HTML จาก ceoOwnerList() (มี esc ภายในแล้ว) — ใช้ตรงๆ ไม่ escape ซ้ำ
-          html_ += '<span style="font-size:9px;color:#94a3b8">← '+ceoSource+'</span>';
-        }
-        html_ += '</div>';
-      }
-
-      // แสดงผลลัพธ์ + progress bar
+      // แสดงผลลัพธ์ + progress bar + % (ถ้ามีข้อมูลจริง)
       if (actual && pct > 0) {
-        html_ += '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">'+
-          '<span style="font-size:10px;color:#64748b;min-width:70px">📊 ทำได้: '+esc(actual)+'</span>'+
-          '<div style="flex:1;min-width:100px;height:8px;background:#e2e8f0;border-radius:9999px;overflow:hidden">'+
+        html_ += '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">'+
+          '<span style="font-size:11px;font-weight:700;color:'+barColor+';min-width:80px">📊 '+esc(actual)+'</span>'+
+          '<span style="font-size:10px;color:#94a3b8">/ '+esc(target)+'</span>'+
+          '<div style="flex:1;min-width:100px;height:10px;background:#e2e8f0;border-radius:9999px;overflow:hidden">'+
             '<div style="width:'+Math.min(pct,100)+'%;height:100%;background:'+barColor+';border-radius:9999px;transition:width .3s"></div>'+
           '</div>'+
-          '<span style="font-size:11px;font-weight:700;color:'+barColor+';min-width:42px;text-align:right">'+pct+'%'+statusBadge+'</span>'+
+          '<span style="font-size:12px;font-weight:700;color:'+barColor+';min-width:48px;text-align:right">'+pct+'%'+statusBadge+'</span>'+
         '</div>';
       } else if (statusStr) {
         html_ += '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">'+
@@ -1728,44 +1722,39 @@ function renderBusinessPlan() {
         '</div>';
       }
 
-      // แสดงผู้รับผิดชอบ KR นี้แบบ compact list (ไม่ใช้ badges เยอะๆ)
-      //   "👤 ดูแล: สมศักดิ์ · PMG/PMGI, กาญจนา · PMS ขาย"
+      // แสดงผู้รับผิดชอบ KR นี้แบบ compact list
       if (owners && owners.length > 0) {
         var ownerListHtml = ceoOwnerList(owners);
         if (ownerListHtml) {
-          html_ += '<div style="margin-top:6px;font-size:11px;line-height:1.5">'+
-            '<span style="color:#64748b;font-size:10px">👤 ดูแล: </span>'+
+          html_ += '<div style="margin-top:4px;font-size:11px;line-height:1.5">'+
+            '<span style="color:#64748b;font-size:10px">👤 </span>'+
             ownerListHtml+'</div>';
         }
       }
 
       // ── ลิงก์ต้นทาง (Visual Control) ──
-      // KR ที่มีผลลัพธ์แล้ว: แสดงไอคอนเล็กๆ คลิกเพื่อแก้ไขลิงก์ (ไม่แสดงช่องว่างเปล่า)
-      // KR ที่ยังไม่มีผลลัพธ์: แสดงช่องวางลิงก์ตามปกติ
+      // KR ที่มีผลลัพธ์แล้ว: เมนูแก้ไขลิงก์เล็กๆ (ไม่แสดงช่องว่าง)
+      // KR ที่ยังไม่มีผลลัพธ์: แสดงช่องวางลิงก์
       if (typeof sObjIndex === 'number' && typeof krIndex === 'number') {
         var srcKey = 'bp_src_sobj_' + sObjIndex + '_' + krIndex;
         var srcData = loadSrcData(srcKey);
         var hasActual = (actual && pct > 0);
 
         if (hasActual) {
-          // มีข้อมูลจริง — แสดงลิงก์กระชับ + ไอคอนแก้ไข (toggle)
+          // มีผลลัพธ์ — เมนูแก้ไขลิงก์เล็กๆ
           if (srcData.link) {
-            html_ += '<div style="margin-top:4px;font-size:10px;color:#64748b;display:flex;align-items:center;gap:4px;flex-wrap:wrap">' +
-              '<span style="font-weight:700;flex-shrink:0">📎</span>' +
-              '<a href="' + esc(srcData.link) + '" target="_blank" style="color:#3b82f6;text-decoration:none;font-weight:600;font-size:10px">' + esc(srcData.link.substring(0,40)) + (srcData.link.length > 40 ? '...' : '') + ' ↗</a>' +
-              (srcData.tabRange ? '<span style="color:#94a3b8;font-size:10px">· ' + esc(srcData.tabRange) + '</span>' : '') +
-              '<button onclick="toggleSrcEdit(\'' + srcKey + '\')" style="background:none;border:none;color:#94a3b8;font-size:10px;cursor:pointer;padding:1px 4px;border-radius:4px;flex-shrink:0" title="แก้ไขลิงก์ต้นทาง">✏️</button>' +
+            html_ += '<div style="margin-top:4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+
+              '<a href="'+esc(srcData.link)+'" target="_blank" style="color:#3b82f6;text-decoration:none;font-size:10px;font-weight:600">'+esc(srcData.link.substring(0,35))+(srcData.link.length>35?'...':'')+' ↗</a>'+
+              (srcData.tabRange ? '<span style="color:#94a3b8;font-size:10px">· '+esc(srcData.tabRange)+'</span>' : '')+
+              '<button onclick="toggleSrcEdit(\''+srcKey+'\')" style="background:none;border:none;color:#94a3b8;font-size:10px;cursor:pointer;padding:1px 4px;border-radius:4px" title="แก้ไขลิงก์">✏️</button>'+
             '</div>';
-            // Hidden edit fields (toggle show/hide)
-            html_ += '<div id="srcEdit_' + srcKey + '" style="display:none;margin-top:4px">' + buildSrcInputs(srcKey, { showLabel: false, label: '' }) + '</div>';
           } else {
-            // มีข้อมูลจริงแต่ยังไม่มีลิงก์ — แสดงไอคอนเล็กๆ คลิกเพื่อเพิ่มลิงก์
-            html_ += '<button onclick="toggleSrcEdit(\'' + srcKey + '\')" style="margin-top:4px;background:none;border:1px dashed #cbd5e1;color:#94a3b8;font-size:10px;cursor:pointer;padding:2px 8px;border-radius:6px" title="เพิ่มลิงก์ต้นทาง">📎 + เพิ่มลิงก์ต้นทาง</button>';
-            html_ += '<div id="srcEdit_' + srcKey + '" style="display:none;margin-top:4px">' + buildSrcInputs(srcKey, { showLabel: false, label: '' }) + '</div>';
+            html_ += '<button onclick="toggleSrcEdit(\''+srcKey+'\')" style="margin-top:4px;background:none;border:1px dashed #cbd5e1;color:#94a3b8;font-size:10px;cursor:pointer;padding:2px 8px;border-radius:6px">📎 เพิ่มลิงก์</button>';
           }
+          html_ += '<div id="srcEdit_'+srcKey+'" style="display:none;margin-top:4px">'+buildSrcInputs(srcKey, { showLabel: false, label: '' })+'</div>';
         } else {
-          // ไม่มีข้อมูลจริง — แสดงช่องวางลิงก์ + แท็บ/ช่วง
-          html_ += buildSrcInputs(srcKey, { showLabel: true, label: '📎 วางลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล (ยังไม่มีผลลัพธ์)' });
+          // ยังไม่มีผลลัพธ์ — แสดงช่องวางลิงก์
+          html_ += buildSrcInputs(srcKey, { showLabel: true, label: '📎 วางลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล' });
         }
       }
 
