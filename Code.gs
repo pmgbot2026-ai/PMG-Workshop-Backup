@@ -579,7 +579,7 @@ function doGet(e) {
     // fall through ไปทำงานต่อ
   }
   // ── API endpoints ไม่ต้อง login ──
-  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action)) || p.pmwi === '1' || p.stdtime === '1' || p.envr === '1' || p.parts === '1' || p.pmgi === '1' || p.finance === '1' || p.supplement === '1' || p.pr === '1' || p.course === '1' || p.billing === '1' || p.gm === '1' || p.rf === '1' || p.bct === 'ui' || p.bct === '1' || p.eval360 === '1') {
+  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action)) || p.pmwi === '1' || p.stdtime === '1' || p.envr === '1' || p.parts === '1' || p.pmgi === '1' || p.finance === '1' || p.supplement === '1' || p.pr === '1' || p.prapi === '1' || p.course === '1' || p.courseapi === '1' || p.billing === '1' || p.gm === '1' || p.gmapi === '1' || p.rf === '1' || p.bct === 'ui' || p.bct === '1' || p.eval360 === '1') {
     // fall through — API/embed bypass
   }
   // ── ถ้าไม่มี session และไม่ใช่ API — แสดงหน้า login ──
@@ -1357,12 +1357,13 @@ function doGet(e) {
   }
 
   // ═══ Course — AI for Dashboard Creation (16 โมดูล) ═══
+  // courseapi=1: removed — course now uses shell+chunk approach
+  // course=1: แสดง shell (CSS+HTML) แล้วโหลด JS แบบ chunk ผ่าน google.script.run
   if (p.course === '1') {
-    var scriptUrl = ScriptApp.getService().getUrl();
-    var courseContent = HtmlService.createHtmlOutputFromFile('Course').getContent();
-    courseContent = courseContent.replace('SCRIPT_API_URL_PLACEHOLDER', scriptUrl);
-    return ContentService.createTextOutput(courseContent)
-      .setMimeType(ContentService.MimeType.HTML);
+    return HtmlService.createHtmlOutputFromFile('CourseShell')
+      .setTitle('AI for Dashboard Creation — หลักสูตร')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
 
   // ═══ Finance P&L Dashboard ═══  
@@ -14645,6 +14646,38 @@ function testSupplementData() {
 }
 
 // ════════════════════════════════════════════════════════════════════════
+// Course HTML getter — ส่ง HTML ของ Course.html ผ่าน google.script.run
+// ════════════════════════════════════════════════════════════════════════
+
+function getCourseHtml() {
+  // Return only the JS portion of Course.html (not the full HTML document)
+  // The CSS and HTML body are already in CourseShell.html
+  var full = HtmlService.createHtmlOutputFromFile('Course').getContent();
+  var scriptStart = full.indexOf('<script>');
+  var scriptEnd = full.lastIndexOf('</script>');
+  if (scriptStart < 0 || scriptEnd < 0) return { totalChunks: 0, chunk0: '' };
+  var jsCode = full.substring(scriptStart + 8, scriptEnd);
+  // Split into chunks of ~100KB to stay under google.script.run limit
+  var chunks = [];
+  var chunkSize = 50000;
+  for (var i = 0; i < jsCode.length; i += chunkSize) {
+    chunks.push(jsCode.substring(i, i + chunkSize));
+  }
+  return { totalChunks: chunks.length, chunk0: chunks[0] || '' };
+}
+
+function getCourseChunk(idx) {
+  var full = HtmlService.createHtmlOutputFromFile('Course').getContent();
+  var scriptStart = full.indexOf('<script>');
+  var scriptEnd = full.lastIndexOf('</script>');
+  if (scriptStart < 0 || scriptEnd < 0) return '';
+  var jsCode = full.substring(scriptStart + 8, scriptEnd);
+  var chunkSize = 50000;
+  var start = idx * chunkSize;
+  return jsCode.substring(start, start + chunkSize);
+}
+
+// ════════════════════════════════════════════════════════════════════════
 // PR Dashboard — เป้าขายผลิตภัณฑ์เสริม 4 สาขา ประจำเดือน กรกฎาคม 2569
 // Sheet: 1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds
 // Tabs: "PR เป้าขายรวมเดือน กรกฎาคม 69" (A3:AU34), "สรุป รายได้ ยอดรถ GM"
@@ -14656,7 +14689,7 @@ function fetchPRDashboardData() {
 
 function fetchPRDashboardData_() {
   var SHEET_ID = '1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds';
-  var cacheKey = 'prdash_data_v5';
+  var cacheKey = 'prdash_data_v9';
   var cached = CacheService.getScriptCache().get(cacheKey);
   if (cached) {
     try { return JSON.parse(cached); } catch(e) {}
@@ -14665,7 +14698,7 @@ function fetchPRDashboardData_() {
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var result = {
     title: 'PR Dashboard | เป้าขายผลิตภัณฑ์เสริม 4 สาขา',
-    desc: 'ประจำเดือน กรกฎาคม 2569 — วิเคราะห์แนวโน้มสู่เป้า GM 2.5 ล้านบาท',
+    desc: 'ประจำเดือน กรกฎาคม 2569 — วิเคราะห์แนวโน้มสู่เป้า GM 2.25 ล้านบาท',
     sheetName: 'PR เป้าขายรวมเดือน กรกฎาคม 69',
     timestamp: new Date().toISOString(),
     timestampStr: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm'),
@@ -14754,8 +14787,8 @@ function fetchPRDashboardData_() {
     result.summary.revenue = Math.round(revenue);
     result.summary.gm = Math.round(gm);
     result.summary.gmPerItem = Math.round(gmPerItem);
-    result.summary.gmTarget = 2500000;
-    result.summary.gmPct = Math.round(gm / 2500000 * 100);
+    result.summary.gmTarget = 2250000;
+    result.summary.gmPct = Math.round(gm / 2250000 * 100);
     result.summary.revenueTarget = 0;
     result.summary.revenuePct = 0;
 
@@ -14809,23 +14842,52 @@ function fetchPRDashboardData_() {
     result.productData = prodList;
   }
 
-  // ── Monthly trend data (from Supplement data for 6 months) ──
-  // Use known historical GM data from supplement dashboard
-  var monthlyNames = ['ม.ค. 69', 'ก.พ. 69', 'มี.ค. 69', 'เม.ย. 69', 'พ.ค. 69', 'มิ.ย. 69', 'ก.ค. 69'];
-  var monthlyGM = [1530000, 1490000, 1630000, 1490000, 1790000, 2070000, 1038000];
-  var monthlyRev = [2859000, 2691000, 2809000, 2643000, 3142000, 3206000, 2055000];
-  var monthlyCars = [2859, 2691, 2809, 2643, 3142, 3206, 1881];
-  var monthlyTarget = [3295, 3295, 3295, 3295, 3295, 3295, 3295];
-
+  // ── Monthly trend data — ดึงจาก Sheet "เปรียบเทียบ GM/ปี" จริง ──
+  var trendSheet = ss.getSheetByName('เปรียบเทียบ GM/ปี');
   var monthlyArr = [];
-  for (var m = 0; m < monthlyNames.length; m++) {
-    monthlyArr.push({
-      month: monthlyNames[m],
-      gm: monthlyGM[m],
-      revenue: monthlyRev[m],
-      carCount: monthlyCars[m],
-      carTarget: monthlyTarget[m]
-    });
+  if (trendSheet) {
+    var trendData = trendSheet.getDataRange().getValues();
+    var validMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    for (var ti = 1; ti < trendData.length; ti++) {
+      var trow = trendData[ti];
+      var tMonth = trow[0];
+      if (!tMonth || String(tMonth).trim() === '' || String(tMonth).indexOf('ปี') >= 0) continue;
+      tMonth = String(tMonth).trim();
+      // กรองเฉพาะชื่อเดือนจริง (เริ่มด้วยชื่อเดือนไทย)
+      var isRealMonth = false;
+      for (var vm = 0; vm < validMonths.length; vm++) {
+        if (tMonth.indexOf(validMonths[vm]) === 0) { isRealMonth = true; break; }
+      }
+      if (!isRealMonth) continue;
+      var tCars = Number(trow[1]) || 0;
+      var tRev = Number(trow[2]) || 0;
+      var tGmTarget = Number(trow[3]) || 0;
+      var tGmActual = Number(trow[4]) || 0;
+      // เฉพาะแถวที่มี GM จริง (ปี 69) และมีจำนวนรถมากกว่า 500 (กรองข้อมูลปีเก่า/สาขาเดียว)
+      if (tGmActual > 100000 && tCars > 500) {
+        monthlyArr.push({
+          month: tMonth,
+          gm: Math.round(tGmActual),
+          revenue: Math.round(tRev),
+          carCount: Math.round(tCars),
+          carTarget: Math.round(tGmTarget)
+        });
+      }
+    }
+  }
+  // Fallback ถ้าไม่มี Sheet หรือไม่มีข้อมูล
+  if (monthlyArr.length === 0) {
+    var monthlyNames = ['ม.ค. 69', 'ก.พ. 69', 'มี.ค. 69', 'เม.ย. 69', 'พ.ค. 69', 'มิ.ย. 69', 'ก.ค. 69'];
+    var monthlyGM = [1530000, 1490000, 1630000, 1490000, 1790000, 2070000, 1038000];
+    var monthlyRev = [2859000, 2691000, 2809000, 2643000, 3142000, 3206000, 2055000];
+    var monthlyCars = [2859, 2691, 2809, 2643, 3142, 3206, 1881];
+    var monthlyTarget = [3295, 3295, 3295, 3295, 3295, 3295, 3295];
+    for (var m = 0; m < monthlyNames.length; m++) {
+      monthlyArr.push({
+        month: monthlyNames[m], gm: monthlyGM[m], revenue: monthlyRev[m],
+        carCount: monthlyCars[m], carTarget: monthlyTarget[m]
+      });
+    }
   }
   result.monthlyData = monthlyArr;
 
@@ -14836,7 +14898,7 @@ function fetchPRDashboardData_() {
 }
 
 // ════════════════════════════════════════════════════════════════════════
-// GM Dashboard — เปรียบเทียบ GM/ปี + ผลงาน SA + เป้า GM 2.5M
+// GM Dashboard — เปรียบเทียบ GM/ปี + ผลงาน SA + เป้า GM 2.25M
 // Sheet: 1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds
 // ════════════════════════════════════════════════════════════════════════
 
@@ -14846,7 +14908,7 @@ function fetchGMDashboardData() {
 
 function fetchGMDashboardData_() {
   var SHEET_ID = '1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds';
-  var cacheKey = 'gmdash_data_v2';
+  var cacheKey = 'gmdash_data_v3';
   var cached = CacheService.getScriptCache().get(cacheKey);
   if (cached) {
     try { return JSON.parse(cached); } catch(e) {}
@@ -14855,7 +14917,7 @@ function fetchGMDashboardData_() {
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var result = {
     title: 'GM Dashboard | เปรียบเทียบ GM ผลิตภัณฑ์เสริม ปี 69 vs 67',
-    desc: 'วิเคราะห์ผลงาน GM รายเดือน ราย SA และแนวโน้มสู่เป้า GM 2.5 ล้านบาท/เดือน',
+    desc: 'วิเคราะห์ผลงาน GM รายเดือน ราย SA และแนวโน้มสู่เป้า GM 2.25 ล้านบาท/เดือน',
     sheetName: 'เปรียบเทียบ GM/ปี',
     timestampStr: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm'),
     summary: {},

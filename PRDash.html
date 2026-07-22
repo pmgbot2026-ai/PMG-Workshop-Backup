@@ -304,7 +304,7 @@
         </div>
       </div>
 
-      <!-- Tab: GM Goal 2.5M -->
+      <!-- Tab: GM Goal 2.25M -->
       <div id='section-gm-goal' class='section' style='display:none;'>
         <div id='gmGoalContent'></div>
       </div>
@@ -379,7 +379,7 @@
       { id: 'overview',  icon: '📊', label: 'ภาพรวม' },
       { id: 'sa',        icon: '👥', label: 'ผลงาน SA' },
       { id: 'products',  icon: '📦', label: '32 ผลิตภัณฑ์เสริม' },
-      { id: 'gm-goal',   icon: '🎯', label: 'เป้า GM 2.5M' },
+      { id: 'gm-goal',   icon: '🎯', label: 'เป้า GM 2.25M' },
       { id: 'compare',   icon: '🔄', label: 'เปรียบเทียบ' }
     ];
 
@@ -891,7 +891,7 @@
       var s = DATA.summary || {};
       var monthly = DATA.monthlyData || [];
       var currentGM = s.gm || 0;
-      var targetGM = 2500000;
+      var targetGM = 2250000;
       var gap = targetGM - currentGM;
       var gapPct = gap / targetGM * 100;
       var avgGMPerItem = s.gmPerItem || 0;
@@ -912,16 +912,16 @@
 
       // Goal card
       html += '<div class="goal-card">' +
-        '<h2>🎯 เป้าหมาย GM 2.5 ล้านบาท/เดือน — วิเคราะห์แนวโน้ม</h2>' +
+        '<h2>🎯 เป้าหมาย GM 2.25 ล้านบาท/เดือน — วิเคราะห์แนวโน้ม</h2>' +
         '<div class="goal-grid">' +
           '<div class="goal-item"><div class="label">GM ปัจจุบัน</div><div class="value">' + fmtMoney(currentGM) + ' บาท</div>' +
             '<div class="delta ' + (currentGM >= targetGM ? 'up' : 'down') + '">' + (currentGM >= targetGM ? '✅ บรรลุเป้า!' : '⏳ ยังขาดอีก ' + fmtMoney(gap) + ' บาท') + '</div></div>' +
-          '<div class="goal-item"><div class="label">เป้าหมาย GM</div><div class="value">2.5M บาท</div>' +
+          '<div class="goal-item"><div class="label">เป้าหมาย GM</div><div class="value">2.25M บาท</div>' +
             '<div class="delta ' + (gap <= 0 ? 'up' : 'down') + '">' + (gap <= 0 ? 'ทำได้เกินเป้า ' + fmtMoney(-gap) : 'ขาด ' + Math.round(gapPct) + '%') + '</div></div>' +
           '<div class="goal-item"><div class="label">GM เฉลี่ย/เดือน</div><div class="value">' + fmtMoney(avgGM) + ' บาท</div>' +
             '<div class="delta ' + (avgGM >= targetGM ? 'up' : 'down') + '">' + (avgGM >= targetGM ? '✅ เฉลี่ยถึงเป้า' : 'ต้องเพิ่ม ' + Math.round(trendToTarget) + '%') + '</div></div>' +
           '<div class="goal-item"><div class="label">GM/รายการ</div><div class="value">' + fmt(avgGMPerItem) + ' บาท</div>' +
-            '<div class="delta">ต้องขาย ' + fmt(itemsNeeded) + ' รายการ ถึง 2.5M</div></div>' +
+            '<div class="delta">ต้องขาย ' + fmt(itemsNeeded) + ' รายการ ถึง 2.25M</div></div>' +
           '<div class="goal-item"><div class="label">ปิดได้ปัจจุบัน</div><div class="value">' + fmt(s.closeCount) + ' รายการ</div>' +
             '<div class="delta ' + (moreItemsNeeded > 0 ? 'down' : 'up') + '">' + (moreItemsNeeded > 0 ? 'ต้องเพิ่มอีก ' + fmt(moreItemsNeeded) + ' รายการ' : 'เพียงพอ') + '</div></div>' +
           '<div class="goal-item"><div class="label">%GM การขาย</div><div class="value">' + Math.round(s.gmPctSales || 0) + '%</div>' +
@@ -930,7 +930,7 @@
 
       // Strategy section
       html += '<div class="card">' +
-        '<div class="card-title"><span class="icon">💡</span>กลยุทธ์เพื่อบรรลุเป้า GM 2.5M</div>' +
+        '<div class="card-title"><span class="icon">💡</span>กลยุทธ์เพื่อบรรลุเป้า GM 2.25M</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">' +
           '<div><h3 style="font-size:1rem;font-weight:700;margin-bottom:12px;">🏆 Top 3 SA (ตัวอย่างที่ดี)</h3>' +
             topSA.map(function(s) {
@@ -960,7 +960,7 @@
 
       // Recommendations
       html += '<div class="card">' +
-        '<div class="card-title"><span class="icon">🎯</span>ข้อเสนอแนะเพื่อให้ถึงเป้า GM 2.5M</div>' +
+        '<div class="card-title"><span class="icon">🎯</span>ข้อเสนอแนะเพื่อให้ถึงเป้า GM 2.25M</div>' +
         '<div style="display:grid;grid-template-columns:1fr;gap:12px;">' +
           '<div style="padding:16px;background:var(--blue-bg);border-radius:8px;"><strong>1. เพิ่มจำนวนรายการปิดการขาย</strong><br>' +
             'ปัจจุบันปิดได้ ' + fmt(s.closeCount) + ' รายการ ต้องเพิ่มอีก ' + fmt(moreItemsNeeded) + ' รายการ (GM/รายการ ' + fmt(avgGMPerItem) + ' บาท)</div>' +

@@ -433,15 +433,28 @@ body{font-family:'Sarabun','Segoe UI',system-ui,-apple-system,sans-serif;backgro
 </div>
 
 <!-- Module content renders here -->
-<div id="moduleContainer"></div>
+<div id="moduleContainer"><div style="padding:40px;text-align:center;color:#64748b;font-size:18px">⏳ กำลังโหลดหลักสูตร...</div></div>
 
 </div>
 </main>
 </div>
 
 <script>
+// Error handler — แสดง error บนหน้าจอแทนหน้าขาว
+window.onerror = function(msg, url, line, col, err) {
+  var d = document.getElementById('moduleContainer');
+  if (d) {
+    d.innerHTML = '<div style="padding:30px;background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;margin:20px;color:#991b1b;font-family:sans-serif">'+
+      '<h2 style="margin:0 0 10px">⚠️ JavaScript Error</h2>'+
+      '<p style="margin:4px 0"><b>Message:</b> '+msg+'</p>'+
+      '<p style="margin:4px 0"><b>Line:</b> '+line+' (col '+col+')</p>'+
+      '<p style="margin:4px 0"><b>Error:</b> '+(err&&err.stack?err.stack:String(err))+'</p>'+
+      '</div>';
+  }
+  return true;
+};
 // Injected by server — API URL for fetch() calls (replaced at serve time)
-var SCRIPT_API_URL = 'SCRIPT_API_URL_PLACEHOLDER';
+var SCRIPT_API_URL = 'https://script.google.com/macros/s/AKfycbwTLVuAmLnTsmu4vQvC5sMen1waYYRgb-1OC4GH7N2CKk5WHZl62IW_orepaM0m0mg6/exec';
 
 // ── ลิงก์ตัวอย่างเฉพาะหน้า (Sample project URLs) ──
 var URL_WAR_ROOM    = 'https://script.google.com/macros/s/AKfycbyqPhGrk9706lZ5H0rOlNDDR1xPvW9aiIFpDILEZAQZB_7uzRAhE5JcJTaLeZ93SG-EAA/exec';
@@ -3640,20 +3653,28 @@ function renderCapstone(){
 // ═══════════════════════════════════════════════════
 // INTERACTION
 // ═══════════════════════════════════════════════════
-document.querySelectorAll('.mod-item').forEach(function(el){
-  el.addEventListener('click', function(){
-    var id = this.getAttribute('data-mod');
-    document.querySelectorAll('.mod-item').forEach(function(e){e.classList.remove('active')});
-    this.classList.add('active');
-    this.classList.add('done');
-    var chk = this.querySelector('.m-check');
-    if(chk) chk.textContent = '✓';
-    renderModule(id);
+try {
+  document.querySelectorAll('.mod-item').forEach(function(el){
+    el.addEventListener('click', function(){
+      var id = this.getAttribute('data-mod');
+      document.querySelectorAll('.mod-item').forEach(function(e){e.classList.remove('active')});
+      this.classList.add('active');
+      this.classList.add('done');
+      var chk = this.querySelector('.m-check');
+      if(chk) chk.textContent = '✓';
+      renderModule(id);
+    });
   });
-});
+} catch(e) {
+  document.body.innerHTML = '<div style="padding:20px;color:red;font-family:sans-serif">JS Error (interaction): ' + e.message + '</div>';
+}
 
 // Initial render
-renderModule('m1');
+try {
+  renderModule('m1');
+} catch(e) {
+  document.body.innerHTML = '<div style="padding:20px;color:red;font-family:sans-serif">JS Error (render): ' + e.message + '<br><br>Stack: ' + (e.stack||'') + '</div>';
+}
 </script>
 </body>
 </html>
