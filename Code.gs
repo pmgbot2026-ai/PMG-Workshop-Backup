@@ -579,7 +579,7 @@ function doGet(e) {
     // fall through ไปทำงานต่อ
   }
   // ── API endpoints ไม่ต้อง login ──
-  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action)) || p.pmwi === '1' || p.stdtime === '1' || p.envr === '1' || p.parts === '1' || p.pmgi === '1' || p.finance === '1' || p.supplement === '1' || p.pr === '1' || p.prapi === '1' || p.course === '1' || p.courseapi === '1' || p.billing === '1' || p.gm === '1' || p.gmapi === '1' || p.rf === '1' || p.bct === 'ui' || p.bct === '1' || p.eval360 === '1' || p.ceoactuals === '1') {
+  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action)) || p.prapi === '1' || p.courseapi === '1' || p.gmapi === '1' || p.ceoactuals === '1' || p.bct === '1') {
     // fall through — API/embed bypass
   }
   // ── ถ้าไม่มี session และไม่ใช่ API — แสดงหน้า login ──
@@ -612,11 +612,29 @@ function doGet(e) {
 
     // GET: serve data
     if (p.api === '1') {
-      // Warmup action: pre-populate separate caches
+      // Warmup action: pre-populate caches
       if (p.action === 'warmup') {
         var warmupResult = warmupEval360Caches();
+        // Also warm OKR cache
+        try {
+          var okrData = getMultiOKRData_();
+          warmupResult.okr = { departments: okrData.departments.length, success: true };
+        } catch(e) {
+          warmupResult.okr = { error: String(e) };
+        }
         return ContentService.createTextOutput(JSON.stringify(warmupResult))
           .setMimeType(ContentService.MimeType.JSON);
+      }
+      // OKR warmup
+      if (p.action === 'okrwarmup') {
+        try {
+          var okrWarmData = getMultiOKRData_();
+          return ContentService.createTextOutput(JSON.stringify({ success: true, departments: okrWarmData.departments.length, timestamp: new Date().toISOString() }))
+            .setMimeType(ContentService.MimeType.JSON);
+        } catch(e) {
+          return ContentService.createTextOutput(JSON.stringify({ error: String(e) }))
+            .setMimeType(ContentService.MimeType.JSON);
+        }
       }
       var cached = CacheService.getScriptCache().get('EVAL360_DATA');
       if (cached) {
@@ -1463,6 +1481,13 @@ function doGet(e) {
     var allContent = allHtml.getContent();
     // Use replaceAll in case placeholder appears multiple times after escaping
     allContent = allContent.split('SCRIPT_URL_PLACEHOLDER').join(allUrl);
+    
+    // Inject session token so client-side fetch can bypass PDPA
+    if (p.st) {
+      allContent = allContent.split('SESSION_TOKEN_PLACEHOLDER').join(p.st);
+    } else {
+      allContent = allContent.split('SESSION_TOKEN_PLACEHOLDER').join('');
+    }
 
     // Inject CEO actuals data (server-side, no async needed)
     // ใช้เฉพาะ known results (hardcoded) เพื่อความเร็ว — ไม่เรียก API ภายนอก
@@ -1480,7 +1505,7 @@ function doGet(e) {
       ceoActualsData.count = ceoActualsData.items.length;
       // Inject as <script> tag — ไม่มีปัญหา escape
       var ceoJson = JSON.stringify(ceoActualsData);
-      var ceoScriptTag = '<script>window.CEO_KPI_INJECTED=' + ceoJson.replace(/</g, '\\u003c') + ';<\/script>';
+      var ceoScriptTag = '<script>window.CEO_KPI_ACTUALS=' + ceoJson.replace(/</g, '\\u003c') + ';<\/script>';
       allContent = allContent.replace('<!--CEO_ACTUALS_INJECT-->', ceoScriptTag);
     } catch(e) {}
 

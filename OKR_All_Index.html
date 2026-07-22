@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PMS/PMG OKR Dashboard — 5 กลุ่มงาน | CEO Contract 2.0</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
   <style>
     :root {
       --bg: #f0f4f8;
@@ -889,6 +889,7 @@
    PMS/PMG Multi-Department OKR Dashboard — Client logic
    ═══════════════════════════════════════════════════ */
 var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
+var SESSION_TOKEN = 'SESSION_TOKEN_PLACEHOLDER';
 // Fallback: if placeholder wasn't replaced by server (local testing), use window.location
 if (SCRIPT_URL === 'SCRIPT_URL_PLACEHOLDER' || !SCRIPT_URL) {
   SCRIPT_URL = window.location.origin + window.location.pathname;
@@ -969,10 +970,26 @@ function init() {
 }
 
 function loadData() {
+  // Check sessionStorage cache first (instant load on revisits)
+  try {
+    var ssCache = sessionStorage.getItem('okr_data_cache');
+    if (ssCache) {
+      var cached = JSON.parse(ssCache);
+      if (cached && cached.departments && cached.departments.length > 0) {
+        D = cached;
+        onLoaded();
+        // Refresh in background (silent)
+        setTimeout(function(){ _refreshDataSilent(); }, 2000);
+        return;
+      }
+    }
+  } catch(e) {}
+  
   // Check if server embedded cached data directly in the page
   if (EMBEDDED_DATA && EMBEDDED_DATA.departments) {
     D = EMBEDDED_DATA;
     EMBEDDED_DATA = null; // free memory
+    try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
     onLoaded();
     return;
   }
@@ -1081,6 +1098,7 @@ function loadDataViaFetch(progressTimer) {
   var url = SCRIPT_URL;
   if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
   else url += '?okrall=1&view=data';
+  if (SESSION_TOKEN) url += '&st=' + SESSION_TOKEN;
   
   var controller = new AbortController();
   var timeoutId = setTimeout(function() { controller.abort(); }, 300000);
@@ -1106,6 +1124,7 @@ function refreshUrl() {
   var t = '_t=' + Date.now();
   if (url.indexOf('?') > -1) url += '&okrall=1&view=data&' + t;
   else url += '?okrall=1&view=data&' + t;
+  if (SESSION_TOKEN) url += '&st=' + SESSION_TOKEN;
   return url;
 }
 
@@ -1120,6 +1139,9 @@ function onLoadError(msg) {
 }
 
 function onLoaded() {
+  // Save to sessionStorage for instant reload
+  try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
+  
   document.getElementById('loadingScreen').style.display = 'none';
   document.getElementById('section-overview').style.display = 'block';
   document.getElementById('section-overview').classList.add('active');
@@ -1136,6 +1158,26 @@ function onLoaded() {
 
   // Lazy render: only render overview on load, others on tab click
   renderOverview();
+}
+
+// Silent background refresh — updates data without UI disruption
+function _refreshDataSilent() {
+  try {
+    var url = SCRIPT_URL || '';
+    if (!url) return;
+    if (url.indexOf('?') > -1) url += '&okrall=1&view=data&_t=' + Date.now();
+    else url += '?okrall=1&view=data&_t=' + Date.now();
+    if (SESSION_TOKEN) url += '&st=' + SESSION_TOKEN;
+    fetch(url).then(function(r){ return r.json(); }).then(function(data){
+      if (data && data.departments && data.departments.length > 0) {
+        D = data;
+        try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
+        // Re-render current tab silently
+        var activeTab = document.querySelector('.tab-btn.active');
+        if (activeTab) activeTab.click();
+      }
+    }).catch(function(e){ /* silent fail */ });
+  } catch(e) {}
 }
 
 function refreshData() {
