@@ -1358,15 +1358,11 @@ function doGet(e) {
 
   // ═══ Course — AI for Dashboard Creation (16 โมดูล) ═══
   if (p.course === '1') {
-    var courseHtml = HtmlService.createHtmlOutputFromFile('Course');
     var scriptUrl = ScriptApp.getService().getUrl();
-    var courseContent = courseHtml.getContent();
-    // Inject the script URL so fetch() can call the API directly
+    var courseContent = HtmlService.createHtmlOutputFromFile('Course').getContent();
     courseContent = courseContent.replace('SCRIPT_API_URL_PLACEHOLDER', scriptUrl);
-    return HtmlService.createHtmlOutput(courseContent)
-      .setTitle('AI for Dashboard Creation — หลักสูตร')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    return ContentService.createTextOutput(courseContent)
+      .setMimeType(ContentService.MimeType.HTML);
   }
 
   // ═══ Finance P&L Dashboard ═══  
