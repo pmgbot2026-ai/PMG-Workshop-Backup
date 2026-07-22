@@ -1357,27 +1357,15 @@ function refreshCascadeStatus_(keyBase, keywords) {
 function renderBusinessPlan() {
   var html = '';
 
-  // ── โหลด CEO KPI actual results แบบ async ──
-  if (typeof CEO_KPI_ACTUALS === 'undefined') {
+  // ── CEO KPI actual results — อ่านจาก server-side injection (ไม่ async) ──
+  if (typeof CEO_KPI_ACTUALS === 'undefined' || CEO_KPI_ACTUALS.length === 0) {
     CEO_KPI_ACTUALS = [];
-    // โหลด KPI items ที่มีข้อมูลจริงจาก CEO 3 คนหลัก (รวมในคำขอเดียว)
     try {
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result && result.items) {
-            CEO_KPI_ACTUALS = result.items;
-          }
-          // Re-render business plan section
-          var bpSection = document.querySelector('[data-tab="businessplan"]');
-          if (bpSection) {
-            bpSection.dataset.rendered = '';
-            renderBusinessPlan();
-          }
-        })
-        .withFailureHandler(function() {
-          // ไม่สำเร็จ — แสดงผลลัพธ์ว่าง แต่ยังแสดงเป้าหมายได้
-        })
-        .gsGetCEOActuals();
+      var injectedData = 'CEO_ACTUALS_PLACEHOLDER';
+      if (injectedData && injectedData !== 'CEO_ACTUALS_PLACEHOLDER') {
+        var parsed = JSON.parse(injectedData);
+        CEO_KPI_ACTUALS = parsed.items || [];
+      }
     } catch(e) {}
   }
 
@@ -1751,26 +1739,30 @@ function renderBusinessPlan() {
         }
       }
 
-      // ── ช่องลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล (ทุก KR ใน S-Objectives) ──
-      //   localStorage key: bp_src_sobj_<sIdx>_<krIdx>
-      //   ถ้ามีข้อมูลจริง (actual + pct) → แสดงข้อมูลจริง + ลิงก์ที่วางไว้
-      //   ถ้าไม่มีข้อมูลจริง → แสดงช่องวางลิงก์ + แท็บ/ช่วง
+      // ── ลิงก์ต้นทาง (Visual Control) ──
+      // KR ที่มีผลลัพธ์แล้ว: แสดงไอคอนเล็กๆ คลิกเพื่อแก้ไขลิงก์ (ไม่แสดงช่องว่างเปล่า)
+      // KR ที่ยังไม่มีผลลัพธ์: แสดงช่องวางลิงก์ตามปกติ
       if (typeof sObjIndex === 'number' && typeof krIndex === 'number') {
         var srcKey = 'bp_src_sobj_' + sObjIndex + '_' + krIndex;
         var srcData = loadSrcData(srcKey);
         var hasActual = (actual && pct > 0);
 
         if (hasActual) {
-          // มีข้อมูลจริง — แสดงลิงก์ต้นทางที่วางไว้ (ถ้ามี) + ช่องแก้ไข
-          var srcLinkHtml = '';
+          // มีข้อมูลจริง — แสดงลิงก์กระชับ + ไอคอนแก้ไข (toggle)
           if (srcData.link) {
-            srcLinkHtml = '<div style="margin-top:4px;font-size:10px;color:#64748b">'+
-              '<span style="font-weight:700">📎 ลิงก์ต้นทาง: </span>'+
-              '<a href="' + esc(srcData.link) + '" target="_blank" style="color:#3b82f6;text-decoration:none;font-weight:600">' + esc(srcData.link.substring(0,45)) + (srcData.link.length > 45 ? '...' : '') + ' ↗</a>'+
-              (srcData.tabRange ? ' <span style="color:#94a3b8;margin-left:6px">📌 ' + esc(srcData.tabRange) + '</span>' : '')+
+            html_ += '<div style="margin-top:4px;font-size:10px;color:#64748b;display:flex;align-items:center;gap:4px;flex-wrap:wrap">' +
+              '<span style="font-weight:700;flex-shrink:0">📎</span>' +
+              '<a href="' + esc(srcData.link) + '" target="_blank" style="color:#3b82f6;text-decoration:none;font-weight:600;font-size:10px">' + esc(srcData.link.substring(0,40)) + (srcData.link.length > 40 ? '...' : '') + ' ↗</a>' +
+              (srcData.tabRange ? '<span style="color:#94a3b8;font-size:10px">· ' + esc(srcData.tabRange) + '</span>' : '') +
+              '<button onclick="toggleSrcEdit(\'' + srcKey + '\')" style="background:none;border:none;color:#94a3b8;font-size:10px;cursor:pointer;padding:1px 4px;border-radius:4px;flex-shrink:0" title="แก้ไขลิงก์ต้นทาง">✏️</button>' +
             '</div>';
+            // Hidden edit fields (toggle show/hide)
+            html_ += '<div id="srcEdit_' + srcKey + '" style="display:none;margin-top:4px">' + buildSrcInputs(srcKey, { showLabel: false, label: '' }) + '</div>';
+          } else {
+            // มีข้อมูลจริงแต่ยังไม่มีลิงก์ — แสดงไอคอนเล็กๆ คลิกเพื่อเพิ่มลิงก์
+            html_ += '<button onclick="toggleSrcEdit(\'' + srcKey + '\')" style="margin-top:4px;background:none;border:1px dashed #cbd5e1;color:#94a3b8;font-size:10px;cursor:pointer;padding:2px 8px;border-radius:6px" title="เพิ่มลิงก์ต้นทาง">📎 + เพิ่มลิงก์ต้นทาง</button>';
+            html_ += '<div id="srcEdit_' + srcKey + '" style="display:none;margin-top:4px">' + buildSrcInputs(srcKey, { showLabel: false, label: '' }) + '</div>';
           }
-          html_ += srcLinkHtml + buildSrcInputs(srcKey, { showLabel: !srcData.link, label: '📎 ลิงก์ต้นทาง / แท็บ / ช่วงข้อมูล (แก้ไขได้)' });
         } else {
           // ไม่มีข้อมูลจริง — แสดงช่องวางลิงก์ + แท็บ/ช่วง
           html_ += buildSrcInputs(srcKey, { showLabel: true, label: '📎 วางลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล (ยังไม่มีผลลัพธ์)' });
@@ -2601,6 +2593,16 @@ function buildSrcInputs(keyBase, opts) {
     '</div>';
 }
 
+/* toggleSrcEdit(key) — เปิด/ปิดช่องแก้ไขลิงก์ต้นทาง (Visual Control toggle)
+   - ใช้กับ KR ที่มีข้อมูลจริงแล้ว เพื่อซ่อนช่องวางลิงก์จนกว่าจะคลิก ✏️
+*/
+function toggleSrcEdit(key) {
+  var el = document.getElementById('srcEdit_' + key);
+  if (el) {
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
 function getDeptColor(name) {
   var c = DEPT_COLORS[name];
   return c ? c.color : '#64748b';
@@ -2999,6 +3001,75 @@ function normKR(text) {
 
   // A15. GM ของสาขา — fix double-งาน typo "จากงานงานบริการ" → "จากงานบริการ"
   cleaned = cleaned.replace(/จากงานงานบริการ/gi, 'จากงานบริการ');
+
+  // ── ADDITIONAL DEEP SEMANTIC MERGES (batch 3) ──
+
+  // B1. GM รวม — merge "GM รวมเฉลี่ย", "GM รวมของสาขา", "GM รวมไม่ต่ำกว่า" → "สร้างกำไร รวม"
+  cleaned = cleaned.replace(/^GM\s*รวมเฉลี่ย.*/gi, 'สร้างกำไร รวม');
+  cleaned = cleaned.replace(/^GM\s*รวมของสาขา.*/gi, 'สร้างกำไร รวม');
+  cleaned = cleaned.replace(/^GM\s*รวมไม่ต่ำกว่า.*/gi, 'สร้างกำไร รวม');
+  cleaned = cleaned.replace(/^GM\s*รวม.*/gi, 'สร้างกำไร รวม');
+  // "กำไรขั้นต้น GM รวม" → same
+  cleaned = cleaned.replace(/^กำไรขั้นต้น\s*GM\s*รวม/gi, 'สร้างกำไร รวม');
+
+  // B2. GM รถ — merge "GM รถเข้าใช้บริการ", "GM จากรถเข้า", "GM รถ" → "สร้างกำไร รถเข้าบริการ"
+  cleaned = cleaned.replace(/^GM\s*รถเข้าใช้บริการ.*/gi, 'สร้างกำไร รถเข้าบริการ');
+  cleaned = cleaned.replace(/^GM\s*จากรถเข้า.*/gi, 'สร้างกำไร รถเข้าบริการ');
+  cleaned = cleaned.replace(/^กำไรขั้นต้น\s*\(GM\)\s*จากรถเข้า.*/gi, 'สร้างกำไร รถเข้าบริการ');
+
+  // B3. ส่งมอบ — merge "ส่งมอบรถ", "ปิดงานส่งมอบ", "ส่งมอบงาน" → "ส่งมอบรถ"
+  cleaned = cleaned.replace(/ปิดงานส่งมอบรถ/gi, 'ส่งมอบรถ');
+  cleaned = cleaned.replace(/ส่งมอบงานรถ/gi, 'ส่งมอบรถ');
+  cleaned = cleaned.replace(/ส่งมอบรถเข้าศูนย์บริการ.*/gi, 'ส่งมอบรถ');
+  cleaned = cleaned.replace(/ส่งมอบรถใหม่.*/gi, 'ส่งมอบรถ');
+  cleaned = cleaned.replace(/^ปิดงาน\s*รถ.*/gi, 'ส่งมอบรถ');
+
+  // B4. ค่าแรง — merge remaining variants
+  // "ผลงานค่าแรง", "รายได้ค่าแรง" already handled above; add more
+  cleaned = cleaned.replace(/^ผลงานค่าแรง\s*/gi, 'บรรลุค่าแรงต่อเดือน ');
+  cleaned = cleaned.replace(/^รายได้ค่าแรงรวม.*/gi, 'บรรลุค่าแรงต่อเดือน');
+  cleaned = cleaned.replace(/^บรรลุเป้าค่าแรง.*/gi, 'บรรลุค่าแรงต่อเดือน');
+  cleaned = cleaned.replace(/^ค่าแรง\s*ไม่ต่ำกว่า.*/gi, 'บรรลุค่าแรงต่อเดือน');
+
+  // B5. รายได้ — merge "รายได้รวม", "บรรลุรายได้", "สร้างรายได้" about same source
+  // Already have CBNP PMSG/PMS merge above; add general ones
+  cleaned = cleaned.replace(/^รายได้รวม\s*/gi, 'บรรลุรายได้ ');
+  cleaned = cleaned.replace(/^สร้างรายได้\s+จาก.*/gi, 'บรรลุรายได้');
+  // "รายได้จากการขาย" → "บรรลุรายได้ การขาย"
+  cleaned = cleaned.replace(/^รายได้จากการขาย.*/gi, 'บรรลุรายได้ การขาย');
+
+  // B6. อบรม/เรียนรู้/พัฒนา/training — merge if same topic
+  // "อบรมพนักงานใหม่" / "เรียนรู้พนักงานใหม่" / "พัฒนาพนักงานใหม่" → "พัฒนาพนักงานใหม่"
+  cleaned = cleaned.replace(/^(อบรม|เรียนรู้|training)\s*(พนักงานใหม่).*/gi, 'พัฒนา$2');
+  cleaned = cleaned.replace(/^(อบรม|เรียนรู้|training)\s*(พนักงาน).*/gi, 'พัฒนา$2');
+  // "อบรม 4C" / "เรียนรู้ 4C" / "พัฒนา 4C" → "พัฒนา 4C"
+  cleaned = cleaned.replace(/^(อบรม|เรียนรู้|training)\s*(4C).*/gi, 'พัฒนา$2');
+  // "อบรม PMSG" / "เรียนรู้ PMSG" / "พัฒนา PMSG" → "พัฒนา PMSG"
+  cleaned = cleaned.replace(/^(อบรม|เรียนรู้|training)\s*(PMSG).*/gi, 'พัฒนา$2');
+  // "อบรม AI" / "เรียนรู้ AI" / "พัฒนา AI" → "พัฒนา AI"
+  cleaned = cleaned.replace(/^(อบรม|เรียนรู้|training)\s*(AI).*/gi, 'พัฒนา$2');
+
+  // B7. บุคลากร/ทีม — merge team building, hiring, retention variants
+  // "สร้างทีมงาน" / "สร้างทีม" / "บริหารทีม" → "สร้างทีม"
+  cleaned = cleaned.replace(/^บริหารทีมงาน.*/gi, 'สร้างทีม');
+  cleaned = cleaned.replace(/^บริหารทีม.*/gi, 'สร้างทีม');
+  // "รับสมัครพนักงาน" / "จ้างพนักงาน" / "คัดเลือกพนักงาน" → "รับสมัครพนักงาน"
+  cleaned = cleaned.replace(/^(จ้าง|คัดเลือก)\s*(พนักงาน).*/gi, 'รับสมัคร$2');
+  // "รักษาพนักงาน" / "รักษาบุคลากร" / "ลดอัตราลาออก" → "รักษาบุคลากร"
+  cleaned = cleaned.replace(/^รักษาพนักงาน.*/gi, 'รักษาบุคลากร');
+  cleaned = cleaned.replace(/^ลดอัตราลาออก.*/gi, 'รักษาบุคลากร');
+  cleaned = cleaned.replace(/^ลดคนลาออก.*/gi, 'รักษาบุคลากร');
+
+  // B8. CSI/SSI — additional variants
+  // "ความพึงพอใจ CSI" / "ความพึงพอใจ SSI" → "คะแนน csi/ssi"
+  cleaned = cleaned.replace(/^ความพึงพอใจ\s*(CSI|SSI).*/gi, 'คะแนน csi/ssi');
+  // "CSI ภายนอกไม่ต่ำกว่า #%" → "csi ภายนอก #"
+  cleaned = cleaned.replace(/^csi\s*ภายนอกไม่ต่ำกว่า.*/gi, 'csi ภายนอก #');
+  // "SSI ภายนอก" → "csi/ssi ภายนอก"
+  cleaned = cleaned.replace(/^ssi\s*ภายนอก/gi, 'csi/ssi ภายนอก');
+  // "คะแนน CSI" → "คะแนน csi/ssi"
+  cleaned = cleaned.replace(/^คะแนน\s*csi\s*$/gi, 'คะแนน csi/ssi');
+  cleaned = cleaned.replace(/^คะแนน\s*ssi\s*$/gi, 'คะแนน csi/ssi');
 
   // ── STRUCTURAL NORMALIZATION ──
   // Replace all numbers with #
@@ -4100,7 +4171,56 @@ function renderKPITable(deptIdx) {
   mergedArr.forEach(function(m) { totalOwners += m.owners.length; m.owners.forEach(function(o) { ownerSet[o.person + '|' + o.dept] = true; }); });
   var totalUniqueOwners = Object.keys(ownerSet).length;
 
+  // ── Per-group counts (before & after merge) ──
+  var groupOrder = ['Business Growth', 'Team Growth', 'Personal Growth', 'Community'];
+  var groupBeforeMerge = {};  // count from allKRs (before merge)
+  var groupAfterMerge = {};   // count from mergedArr (after merge)
+  groupOrder.forEach(function(t) { groupBeforeMerge[t] = 0; groupAfterMerge[t] = 0; });
+  allKRs.forEach(function(k) {
+    var t = k.type || 'Other';
+    groupBeforeMerge[t] = (groupBeforeMerge[t] || 0) + 1;
+  });
+  mergedArr.forEach(function(m) {
+    var t = m.type || 'Other';
+    groupAfterMerge[t] = (groupAfterMerge[t] || 0) + 1;
+  });
+  var totalBeforeMerge = allKRs.length;
+  var totalAfterMerge = mergedArr.length;
+  var totalMerged = totalBeforeMerge - totalAfterMerge;
+
   var html = '';
+  // ── Per-group summary card (count per group after merge) ──
+  html += '<div class="card" style="margin-bottom:12px;padding:14px 18px">';
+  html += '<div style="font-weight:700;font-size:0.85rem;color:var(--text);margin-bottom:10px">📊 สรุปจำนวนตัววัดผลแยกตามกลุ่ม (หลังรวมข้อมูลซ้ำ)</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">';
+  var groupIcons = { 'Business Growth': '💰', 'Team Growth': '👥', 'Personal Growth': '🎓', 'Community': '🤝', 'Other': '📋' };
+  var groupColors = { 'Business Growth': '#10b981', 'Team Growth': '#3b82f6', 'Personal Growth': '#f59e0b', 'Community': '#ec4899', 'Other': '#64748b' };
+  groupOrder.concat('Other').forEach(function(t) {
+    var after = groupAfterMerge[t] || 0;
+    if (after === 0 && !(groupBeforeMerge[t] > 0)) return;
+    var before = groupBeforeMerge[t] || 0;
+    var mergedCount = before - after;
+    var icon = groupIcons[t] || '📋';
+    var color = groupColors[t] || '#64748b';
+    html += '<div style="display:flex;align-items:center;gap:6px">';
+    html += '<span style="font-size:0.95rem">' + icon + '</span>';
+    html += '<div>';
+    html += '<div style="font-size:0.78rem;color:var(--text2)">' + esc(t) + '</div>';
+    html += '<div style="font-size:1.1rem;font-weight:700;color:' + color + '">' + after + ' ตัววัดผล' + (mergedCount > 0 ? ' <span style="font-size:0.72rem;color:var(--text3);font-weight:400">(จาก ' + before + ')</span>' : '') + '</div>';
+    html += '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  // Total row
+  html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:24px;flex-wrap:wrap;align-items:center">';
+  html += '<div style="text-align:center"><span style="font-size:1.3rem;font-weight:800;color:var(--accent)">' + totalAfterMerge + '</span> <span style="font-size:0.78rem;color:var(--text2)">ตัววัดผลไม่ซ้ำ (หลังรวม)</span></div>';
+  html += '<div style="text-align:center"><span style="font-size:1.3rem;font-weight:800;color:var(--text2)">' + totalBeforeMerge + '</span> <span style="font-size:0.78rem;color:var(--text2)">ตัววัดผลก่อนรวม</span></div>';
+  if (totalMerged > 0) {
+    html += '<div style="text-align:center"><span style="font-size:1.3rem;font-weight:800;color:var(--green)">-' + totalMerged + '</span> <span style="font-size:0.78rem;color:var(--text2)">รวมข้อมูลซ้ำแล้ว</span></div>';
+  }
+  html += '</div>';
+  html += '</div>';
+
   html += '<div class="card" style="margin-bottom:16px;display:flex;gap:24px;flex-wrap:wrap;align-items:center">';
   html += '<div style="text-align:center"><div style="font-size:1.6rem;font-weight:800;color:var(--accent)">' + totalUnique + '</div><div style="font-size:0.78rem;color:var(--text2)">ตัววัดผลไม่ซ้ำ</div></div>';
   html += '<div style="width:1px;height:36px;background:var(--border)"></div>';
@@ -4138,7 +4258,7 @@ function renderKPITable(deptIdx) {
     html += '<div style="font-weight:700;font-size:0.9rem;color:' + color + ';margin-bottom:12px;display:flex;align-items:center;gap:8px">';
     html += '<span>' + icon + '</span>';
     html += '<span>' + esc(label) + '</span>';
-    html += '<span style="font-size:0.78rem;color:var(--text3);font-weight:400">— ' + krs.length + ' ตัววัดผล</span>';
+    html += '<span style="font-size:0.78rem;color:var(--text3);font-weight:400">— ' + krs.length + ' ตัววัดผล' + ((groupBeforeMerge[type] || 0) > krs.length ? ' (รวมจาก ' + (groupBeforeMerge[type] || 0) + ' ตัววัดผลเดิม)' : '') + '</span>';
     html += '</div>';
 
     krs.forEach(function(m, idx) {
@@ -4197,7 +4317,7 @@ function renderKPITable(deptIdx) {
     if (typeOrder.indexOf(type) !== -1) return;
     var krs = types[type];
     html += '<div class="card" style="margin-bottom:16px;border-left:4px solid #64748b">';
-    html += '<div style="font-weight:700;font-size:0.9rem;color:#64748b;margin-bottom:12px">📋 ' + esc(type) + ' — ' + krs.length + ' ตัววัดผล</div>';
+    html += '<div style="font-weight:700;font-size:0.9rem;color:#64748b;margin-bottom:12px">📋 ' + esc(type) + ' — ' + krs.length + ' ตัววัดผล' + ((groupBeforeMerge[type] || 0) > krs.length ? ' (รวมจาก ' + (groupBeforeMerge[type] || 0) + ' ตัววัดผลเดิม)' : '') + '</div>';
     krs.forEach(function(m, idx) {
       var ks2 = m.kpiScore;
       html += '<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:' + (idx < krs.length - 1 ? '1px solid var(--border)' : 'none') + '">';

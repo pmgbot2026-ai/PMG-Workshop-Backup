@@ -248,7 +248,19 @@
 
       <!-- Tab: Overview -->
       <div id='section-overview' class='section'>
-        <div class='kpi-grid' id='overviewKPIs'></div>
+        <!-- Key Results Section -->
+        <div id='keyResultsSection' class='card' style='margin-bottom:16px;padding:20px;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#2563eb 100%);border:none;border-radius:16px;color:#fff'>
+          <div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px'>
+            <div>
+              <div style='font-size:20px;font-weight:700'>🎯 Key Results — วัดผลเป้าหมาย</div>
+              <div style='font-size:12px;opacity:.8;margin-top:2px'>จากชีทต้นทาง: แท็บ "PR เป้าขายรวมเดือน กรกฎาคม 69" ช่วง B40:P61</div>
+            </div>
+            <div id='krDataDate' style='font-size:11px;opacity:.7;background:rgba(255,255,255,.1);padding:4px 12px;border-radius:20px'></div>
+          </div>
+          <div id='keyResultsGrid' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px'></div>
+          <div id='krCarBreakdown' style='margin-top:16px'></div>
+          <div id='additionalMetrics' style='margin-top:16px'></div>
+        </div>
         <div class='chart-grid'>
           <div class='card'>
             <div class='card-title'><span class='icon'>📊</span>รายได้ vs GM ผลิตภัณฑ์เสริมรายเดือน</div>
@@ -304,7 +316,7 @@
         </div>
       </div>
 
-      <!-- Tab: GM Goal 2.25M -->
+      <!-- Tab: GM Goal 2.2M -->
       <div id='section-gm-goal' class='section' style='display:none;'>
         <div id='gmGoalContent'></div>
       </div>
@@ -379,7 +391,7 @@
       { id: 'overview',  icon: '📊', label: 'ภาพรวม' },
       { id: 'sa',        icon: '👥', label: 'ผลงาน SA' },
       { id: 'products',  icon: '📦', label: '32 ผลิตภัณฑ์เสริม' },
-      { id: 'gm-goal',   icon: '🎯', label: 'เป้า GM 2.25M' },
+      { id: 'gm-goal',   icon: '🎯', label: 'เป้า GM 2.2M' },
       { id: 'compare',   icon: '🔄', label: 'เปรียบเทียบ' }
     ];
 
@@ -510,19 +522,46 @@
       if (DATA.desc) document.getElementById('dashDesc').textContent = DATA.desc;
       if (DATA.timestampStr) {
         document.getElementById('infoRow').innerHTML =
-          '<span class="info-pill">อัปเดต: ' + esc(DATA.timestampStr) + '</span>' +
-          '<span class="info-pill">ข้อมูล ณ ' + esc(DATA.dataDate || '') + '</span>' +
-          '<span class="info-pill">SA: ' + (DATA.saData ? DATA.saData.length : 0) + ' คน</span>' +
-          '<span class="info-pill">ผลิตภัณฑ์: ' + (DATA.productData ? DATA.productData.length : 0) + ' รายการ</span>';
+          '<span class="info-pill">🕒 อัปเดต: ' + esc(DATA.timestampStr) + '</span>' +
+          '<span class="info-pill">📅 ข้อมูล ณ ' + esc(DATA.dataDate || '') + '</span>' +
+          '<span class="info-pill">👤 SA: ' + (DATA.saData ? DATA.saData.length : 0) + ' คน</span>' +
+          '<span class="info-pill">📦 ผลิตภัณฑ์: ' + (DATA.productData ? DATA.productData.length : 0) + ' รายการ</span>' +
+          '<button class="refresh-btn" onclick="refreshData()" id="updateBtn">🔄 อัปเดตข้อมูล</button>';
       }
       var metaEl = document.getElementById('footerMeta');
       if (metaEl) metaEl.textContent = 'Sheet: ' + esc(DATA.sheetName || '') + ' | อัปเดตอัตโนมัติ';
       initTabs();
+      renderKeyResults();
       renderOverview();
       renderSA();
       renderProducts();
       renderGMGoal();
       renderCompare();
+    }
+    
+    // ── Refresh data: เรียก prapi=1 เพื่อดึงข้อมูลใหม่ ──
+    function refreshData() {
+      var btn = document.getElementById('updateBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังอัปเดต...'; }
+      
+      // ใช้ google.script.run เพื่อเรียก refreshPRData
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result && result.success) {
+            DATA = result.data;
+            render();
+            if (btn) { btn.disabled = false; btn.textContent = '✅ อัปเดตแล้ว'; }
+            setTimeout(function() { if (btn) btn.textContent = '🔄 อัปเดตข้อมูล'; }, 2000);
+          } else {
+            if (btn) { btn.disabled = false; btn.textContent = '❌ ไม่สำเร็จ'; }
+            setTimeout(function() { if (btn) btn.textContent = '🔄 อัปเดตข้อมูล'; }, 2000);
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (btn) { btn.disabled = false; btn.textContent = '❌ Error'; }
+          setTimeout(function() { if (btn) btn.textContent = '🔄 อัปเดตข้อมูล'; }, 2000);
+        })
+        .refreshPRData();
     }
 
     /* ==================== Tabs ==================== */
@@ -546,33 +585,125 @@
     window.switchTab = switchTab;
 
     /* ==================== Overview Tab ==================== */
-    function renderOverview() {
-      var s = DATA.summary || {};
-      var kpis = [
-        { icon: '🎯', cls: 'blue', label: 'เป้าปิดการขาย', value: s.targetCount, unit: 'รายการ', target: 0, pct: 0 },
-        { icon: '✅', cls: pctColor(s.closePct), label: 'ปิดได้', value: s.closeCount, unit: 'รายการ', target: s.targetCount, pct: s.closePct },
-        { icon: '💰', cls: pctColor(s.gmPct), label: 'GM ผลิตภัณฑ์เสริม', value: s.gm, unit: 'บาท', target: s.gmTarget, pct: s.gmPct, isMoney: true },
-        { icon: '📈', cls: 'blue', label: 'GM/รายการ', value: s.gmPerItem, unit: 'บาท', target: 0, pct: 0, isMoney: true },
-        { icon: '📊', cls: pctColor(s.gmPctSales/50*100), label: '%GM การขาย', value: s.gmPctSales, unit: '%', target: 50, pct: s.gmPctSales/50*100 },
-        { icon: '🚗', cls: 'purple', label: 'เป้ายอดรถ', value: s.carTarget, unit: 'คัน', target: 0, pct: 0 },
-        { icon: '🚙', cls: pctColor(s.carPct), label: 'รับรถ', value: s.carCount, unit: 'คัน', target: s.carTarget, pct: s.carPct },
-        { icon: '💵', cls: 'green', label: 'รายได้ผลิตภัณฑ์เสริม', value: s.revenue, unit: 'บาท', target: 0, pct: 0, isMoney: true },
-        { icon: '🏦', cls: 'pink', label: 'รายได้รวม', value: s.totalRevenue, unit: 'บาท', target: 0, pct: 0, isMoney: true }
-      ];
+    // ── Render Key Results Section ──
+    function renderKeyResults() {
+      var krs = DATA.keyResults || [];
+      var cb = DATA.carBreakdown || null;
+      if (krs.length === 0) return;
+      
+      // Data date
+      var ddEl = document.getElementById('krDataDate');
+      if (ddEl) ddEl.textContent = '📅 ' + esc(DATA.dataDate || '');
+      
+      var grid = document.getElementById('keyResultsGrid');
+      if (!grid) return;
+      
       var html = '';
-      kpis.forEach(function(k) {
-        var v = k.isMoney ? fmtMoney(k.value) : (k.unit === '%' ? Math.round(k.value||0) + '%' : fmt(k.value));
-        var bw = Math.min(k.pct || 0, 100);
-        html += '<div class="stat-card ' + (k.cls || 'blue') + '">' +
-          '<div class="stat-icon">' + (k.icon || '📊') + '</div>' +
-          '<div class="stat-value">' + v + ' <span class="unit">' + k.unit + '</span></div>' +
-          '<div class="stat-label">' + esc(k.label) + '</div>' +
-          (k.target ? '<div class="stat-sub">เป้า: ' + (k.isMoney ? fmtMoney(k.target) : fmt(k.target)) + ' ' + k.unit + '</div>' : '') +
-          (k.pct ? '<div class="stat-pct ' + (k.cls || 'blue') + '">' + Math.round(k.pct) + '%</div>' : '') +
-          '<div class="progress-bar"><div class="progress-fill ' + (k.cls || 'blue') + '" style="width:' + bw + '%"></div></div>' +
-          '</div>';
+      krs.forEach(function(kr) {
+        var pct = kr.pct || 0;
+        var statusColor = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+        var statusText = pct >= 80 ? '🟢 On-track' : pct >= 50 ? '🟡 At-risk' : '🔴 Behind';
+        var bgColor = pct >= 80 ? 'rgba(16,185,129,.15)' : pct >= 50 ? 'rgba(245,158,11,.15)' : 'rgba(239,68,68,.15)';
+        var isMoney = kr.unit === 'บาท';
+        var actualStr = isMoney ? fmtMoney(kr.actual) : fmt(kr.actual);
+        var targetStr = kr.target > 0 ? (isMoney ? fmtMoney(kr.target) : fmt(kr.target)) : '—';
+        
+        html += '<div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px;backdrop-filter:blur(4px)">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+            '<span style="font-size:11px;font-weight:700;color:#fbbf24;background:rgba(251,191,36,.15);padding:2px 8px;border-radius:10px">' + kr.id + '</span>' +
+            '<span style="font-size:10px;font-weight:600;color:' + statusColor + '">' + statusText + '</span>' +
+          '</div>' +
+          '<div style="font-size:12px;color:#cbd5e1;margin-bottom:6px">' + esc(kr.label) + '</div>' +
+          '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">' +
+            '<span style="font-size:22px;font-weight:700;color:' + statusColor + '">' + actualStr + '</span>' +
+            '<span style="font-size:11px;opacity:.7">/ ' + targetStr + ' ' + kr.unit + '</span>' +
+          '</div>' +
+          '<div style="background:rgba(255,255,255,.1);height:8px;border-radius:4px;overflow:hidden;margin-bottom:4px">' +
+            '<div style="height:100%;width:' + Math.min(pct,100) + '%;background:' + statusColor + ';border-radius:4px;transition:width .5s"></div>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;font-size:11px">' +
+            '<span style="color:' + statusColor + ';font-weight:700">' + pct + '%</span>' +
+            '<span style="opacity:.6">' + (kr.target > 0 ? 'เป้า ' + targetStr + ' ' + kr.unit : 'ไม่มีเป้า') + '</span>' +
+          '</div>' +
+        '</div>';
       });
-      document.getElementById('overviewKPIs').innerHTML = html;
+      grid.innerHTML = html;
+      
+      // Car breakdown
+      if (cb && (cb.near.cars > 0 || cb.far.cars > 0)) {
+        var cbEl = document.getElementById('krCarBreakdown');
+        if (cbEl) {
+          cbEl.innerHTML = 
+            '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;margin-top:12px">' +
+              '<div style="font-size:13px;font-weight:700;margin-bottom:10px">🚗 แยกการขาย: รถในระยะ vs รถนอกระยะ</div>' +
+              '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+                '<div style="background:rgba(37,99,235,.15);border:1px solid rgba(37,99,235,.3);border-radius:10px;padding:12px">' +
+                  '<div style="font-size:12px;color:#93c5fd;margin-bottom:6px">🚘 รถในระยะ</div>' +
+                  '<div style="font-size:18px;font-weight:700;color:#fff">' + fmt(cb.near.cars) + ' คัน</div>' +
+                  '<div style="font-size:11px;opacity:.8;margin-top:4px">📦 ' + fmt(cb.near.items) + ' รายการ</div>' +
+                  '<div style="font-size:11px;opacity:.8">💸 รายได้ ' + fmtMoney(cb.near.revenue) + ' บาท</div>' +
+                  '<div style="font-size:11px;opacity:.8">💰 GM ' + fmtMoney(cb.near.gm) + ' บาท</div>' +
+                '</div>' +
+                '<div style="background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);border-radius:10px;padding:12px">' +
+                  '<div style="font-size:12px;color:#c4b5fd;margin-bottom:6px">🚖 รถนอกระยะ</div>' +
+                  '<div style="font-size:18px;font-weight:700;color:#fff">' + fmt(cb.far.cars) + ' คัน</div>' +
+                  '<div style="font-size:11px;opacity:.8;margin-top:4px">📦 ' + fmt(cb.far.items) + ' รายการ</div>' +
+                  '<div style="font-size:11px;opacity:.8">💸 รายได้ ' + fmtMoney(cb.far.revenue) + ' บาท</div>' +
+                  '<div style="font-size:11px;opacity:.8">💰 GM ' + fmtMoney(cb.far.gm) + ' บาท</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+        }
+      }
+    }
+
+    function renderAdditionalMetrics() {
+      var s = DATA.summary || {};
+      var el = document.getElementById('additionalMetrics');
+      if (!el) return;
+      var gmPctSalesPct = (s.gmPctSales || 0) / 50 * 100;
+      var carPct = s.carPct || 0;
+      var items = [
+        { icon: '📊', id: 'AM1', label: '%GM การขาย', actual: s.gmPctSales || 0, target: 50, unit: '%', pct: gmPctSalesPct, isMoney: false, isPct: true },
+        { icon: '🚗', id: 'AM2', label: 'เป้ายอดรถ', actual: s.carTarget || 0, target: 0, unit: 'คัน', pct: 0, isMoney: false },
+        { icon: '🚙', id: 'AM3', label: 'รับรถ', actual: s.carCount || 0, target: s.carTarget || 0, unit: 'คัน', pct: carPct, isMoney: false },
+        { icon: '🏦', id: 'AM4', label: 'รายได้รวม', actual: s.totalRevenue || 0, target: 0, unit: 'บาท', pct: 0, isMoney: true }
+      ];
+      var html = '<div style="font-size:14px;font-weight:700;margin-bottom:12px;color:#e2e8f0">📊 ตัวชี้วัดเพิ่มเติม</div>';
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">';
+      items.forEach(function(it) {
+        var pct = it.pct || 0;
+        var statusColor = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+        var statusText = it.target > 0 ? (pct >= 80 ? '🟢 On-track' : pct >= 50 ? '🟡 At-risk' : '🔴 Behind') : '📌 ข้อมูล';
+        var actualStr = it.isMoney ? fmtMoney(it.actual) : (it.isPct ? Math.round(it.actual) + '%' : fmt(it.actual));
+        var targetStr = it.target > 0 ? (it.isMoney ? fmtMoney(it.target) : (it.isPct ? it.target + '%' : fmt(it.target))) : '—';
+        html += '<div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px;backdrop-filter:blur(4px)">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+            '<span style="font-size:18px">' + it.icon + '</span>' +
+            '<span style="font-size:10px;font-weight:600;color:' + statusColor + '">' + statusText + '</span>' +
+          '</div>' +
+          '<div style="font-size:12px;color:#cbd5e1;margin-bottom:6px">' + esc(it.label) + '</div>' +
+          '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">' +
+            '<span style="font-size:22px;font-weight:700;color:' + statusColor + '">' + actualStr + '</span>' +
+            '<span style="font-size:11px;opacity:.7">/ ' + targetStr + ' ' + it.unit + '</span>' +
+          '</div>' +
+          (it.target > 0 ?
+            '<div style="background:rgba(255,255,255,.1);height:8px;border-radius:4px;overflow:hidden;margin-bottom:4px">' +
+              '<div style="height:100%;width:' + Math.min(pct,100) + '%;background:' + statusColor + ';border-radius:4px;transition:width .5s"></div>' +
+            '</div>' +
+            '<div style="display:flex;justify-content:space-between;font-size:11px">' +
+              '<span style="color:' + statusColor + ';font-weight:700">' + Math.round(pct) + '%</span>' +
+              '<span style="opacity:.6">เป้า ' + targetStr + ' ' + it.unit + '</span>' +
+            '</div>'
+          : '<div style="font-size:11px;opacity:.6">เป้า ' + targetStr + ' ' + it.unit + '</div>') +
+        '</div>';
+      });
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    function renderOverview() {
+      renderAdditionalMetrics();
       renderRevenueGMChart();
       renderCarTargetChart();
       renderSARankingChart();
@@ -912,16 +1043,16 @@
 
       // Goal card
       html += '<div class="goal-card">' +
-        '<h2>🎯 เป้าหมาย GM 2.25 ล้านบาท/เดือน — วิเคราะห์แนวโน้ม</h2>' +
+        '<h2>🎯 เป้าหมาย GM 2.2 ล้านบาท/เดือน — วิเคราะห์แนวโน้ม</h2>' +
         '<div class="goal-grid">' +
           '<div class="goal-item"><div class="label">GM ปัจจุบัน</div><div class="value">' + fmtMoney(currentGM) + ' บาท</div>' +
             '<div class="delta ' + (currentGM >= targetGM ? 'up' : 'down') + '">' + (currentGM >= targetGM ? '✅ บรรลุเป้า!' : '⏳ ยังขาดอีก ' + fmtMoney(gap) + ' บาท') + '</div></div>' +
-          '<div class="goal-item"><div class="label">เป้าหมาย GM</div><div class="value">2.25M บาท</div>' +
+          '<div class="goal-item"><div class="label">เป้าหมาย GM</div><div class="value">' + fmtB(DATA.summary.gmTarget || 2200000) + '</div>' +
             '<div class="delta ' + (gap <= 0 ? 'up' : 'down') + '">' + (gap <= 0 ? 'ทำได้เกินเป้า ' + fmtMoney(-gap) : 'ขาด ' + Math.round(gapPct) + '%') + '</div></div>' +
           '<div class="goal-item"><div class="label">GM เฉลี่ย/เดือน</div><div class="value">' + fmtMoney(avgGM) + ' บาท</div>' +
             '<div class="delta ' + (avgGM >= targetGM ? 'up' : 'down') + '">' + (avgGM >= targetGM ? '✅ เฉลี่ยถึงเป้า' : 'ต้องเพิ่ม ' + Math.round(trendToTarget) + '%') + '</div></div>' +
           '<div class="goal-item"><div class="label">GM/รายการ</div><div class="value">' + fmt(avgGMPerItem) + ' บาท</div>' +
-            '<div class="delta">ต้องขาย ' + fmt(itemsNeeded) + ' รายการ ถึง 2.25M</div></div>' +
+            '<div class="delta">ต้องขาย ' + fmt(itemsNeeded) + ' รายการ ถึง 2.2M</div></div>' +
           '<div class="goal-item"><div class="label">ปิดได้ปัจจุบัน</div><div class="value">' + fmt(s.closeCount) + ' รายการ</div>' +
             '<div class="delta ' + (moreItemsNeeded > 0 ? 'down' : 'up') + '">' + (moreItemsNeeded > 0 ? 'ต้องเพิ่มอีก ' + fmt(moreItemsNeeded) + ' รายการ' : 'เพียงพอ') + '</div></div>' +
           '<div class="goal-item"><div class="label">%GM การขาย</div><div class="value">' + Math.round(s.gmPctSales || 0) + '%</div>' +
@@ -930,7 +1061,7 @@
 
       // Strategy section
       html += '<div class="card">' +
-        '<div class="card-title"><span class="icon">💡</span>กลยุทธ์เพื่อบรรลุเป้า GM 2.25M</div>' +
+        '<div class="card-title"><span class="icon">💡</span>กลยุทธ์เพื่อบรรลุเป้า GM 2.2M</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">' +
           '<div><h3 style="font-size:1rem;font-weight:700;margin-bottom:12px;">🏆 Top 3 SA (ตัวอย่างที่ดี)</h3>' +
             topSA.map(function(s) {
@@ -960,7 +1091,7 @@
 
       // Recommendations
       html += '<div class="card">' +
-        '<div class="card-title"><span class="icon">🎯</span>ข้อเสนอแนะเพื่อให้ถึงเป้า GM 2.25M</div>' +
+        '<div class="card-title"><span class="icon">🎯</span>ข้อเสนอแนะเพื่อให้ถึงเป้า GM 2.2M</div>' +
         '<div style="display:grid;grid-template-columns:1fr;gap:12px;">' +
           '<div style="padding:16px;background:var(--blue-bg);border-radius:8px;"><strong>1. เพิ่มจำนวนรายการปิดการขาย</strong><br>' +
             'ปัจจุบันปิดได้ ' + fmt(s.closeCount) + ' รายการ ต้องเพิ่มอีก ' + fmt(moreItemsNeeded) + ' รายการ (GM/รายการ ' + fmt(avgGMPerItem) + ' บาท)</div>' +
