@@ -890,6 +890,7 @@
    ═══════════════════════════════════════════════════ */
 var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
 var SESSION_TOKEN = 'SESSION_TOKEN_PLACEHOLDER';
+var CACHE_STATUS = 'CACHE_STATUS_PLACEHOLDER'; // 'cold' or 'warm'
 // Fallback: if placeholder wasn't replaced by server (local testing), use window.location
 if (SCRIPT_URL === 'SCRIPT_URL_PLACEHOLDER' || !SCRIPT_URL) {
   SCRIPT_URL = window.location.origin + window.location.pathname;
@@ -994,104 +995,107 @@ function loadData() {
     return;
   }
   
-  // Show loading with progress message — user sees the page immediately
+  // ⚡ FAST MODE: Show skeleton immediately, load depts progressively
+  // Build skeleton with dept names (no data yet)
+  var deptNames = ['PMG/PMGI', 'PMS ช่าง 4 สาขา', 'PMS ขาย', 'PMS ศูนย์บริการ', 'PMS/PMG Backoffice'];
+  D = {
+    departments: deptNames.map(function(nm) {
+      return { name: nm, ssid: '', teams: [], sheetNames: [], people: [], kpiSummary: [], summary: [], _loaded: false };
+    }),
+    lastUpdate: new Date().toISOString(),
+    _skeleton: true
+  };
+  
+  // Show skeleton immediately — user sees tabs + dept names
+  onLoaded();
+  
+  // Now load each dept in background (progressive)
   var ls = document.getElementById('loadingScreen');
   if (ls) {
-    ls.innerHTML = '<div style="text-align:center;padding:40px">' +
-      '<div style="font-size:1.4rem;margin-bottom:12px">📊 กำลังโหลดข้อมูล OKR...</div>' +
-      '<div style="font-size:0.85rem;color:var(--text3);margin-bottom:16px" id="loadProgress">กรุณารอสักครู่ — อ่านข้อมูลจาก 5 กลุ่มงาน</div>' +
-      '<div class="spinner"></div>' +
+    ls.innerHTML = '<div style="text-align:center;padding:20px;background:rgba(37,99,235,.08);border-radius:10px;margin:10px 0">' +
+      '<div style="font-size:1rem;margin-bottom:8px">⚡ กำลังโหลดข้อมูล...</div>' +
+      '<div style="font-size:0.8rem;color:var(--text3)" id="loadProgress">เริ่มต้น...</div>' +
+      '<div style="margin-top:10px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div id="progBar" style="height:6px;background:linear-gradient(90deg,#2563eb,#10b981);border-radius:3px;width:0%;transition:width .5s"></div></div>' +
       '</div>';
   }
-
-  // Progress timer
-  var elapsed = 0;
-  var progressTimer = setInterval(function() {
-    elapsed += 10;
-    var pe = document.getElementById('loadProgress');
-    if (pe) {
-      if (elapsed < 30) pe.textContent = 'กรุณารอสักครู่ — อ่านข้อมูลจาก 5 กลุ่มงาน (' + elapsed + ' วินาที)';
-      else if (elapsed < 60) pe.textContent = 'กำลังประมวลผลข้อมูล... (' + elapsed + ' วินาที)';
-      else if (elapsed < 120) pe.textContent = 'เกือบเสร็จแล้ว กรุณารออีกสักครู่... (' + elapsed + ' วินาที)';
-      else pe.textContent = 'ใช้เวลานานกว่าปกติ — กรุณารอต่อ... (' + elapsed + ' วินาที)';
+  
+  // Load depts one by one (faster than all at once on cold cache)
+  var totalDepts = D.departments.length;
+  var loadedCount = 0;
+  
+  function loadNextDept(idx) {
+    if (idx >= totalDepts) {
+      // All done
+      var pe = document.getElementById('loadProgress');
+      if (pe) pe.textContent = '✅ โหลดครบแล้ว';
+      var pb = document.getElementById('progBar');
+      if (pb) pb.style.width = '100%';
+      try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
+      // Re-render with full data
+      D._skeleton = false;
+      onLoaded();
+      return;
     }
-  }, 10000);
-
-  // Use google.script.run — load all departments in PARALLEL for speed
-  if (typeof google !== 'undefined' && google.script && google.script.run) {
-    // Step 1: Get department count (instant — no sheet reads)
-    google.script.run
-      .withSuccessHandler(function(meta) {
-        if (meta && meta.count && meta.names) {
-          // Build skeleton from dept names
-          D = {
-            departments: meta.names.map(function(nm) {
-              return {
-                name: nm,
-                ssid: OKR_SS_IDS_CLIENT[nm] || '',
-                teams: [],
-                sheetNames: [],
-                people: [],
-                kpiSummary: [],
-                summary: [],
-                _loaded: false
-              };
-            }),
-            lastUpdate: meta.lastUpdate || new Date().toISOString()
-          };
-          // Step 2: Load ALL departments in parallel (each google.script.run is independent)
-          var loadedCount = 0;
-          var totalDepts = meta.count;
-          for (var di = 0; di < totalDepts; di++) {
-            (function(idx) {
-              google.script.run
-                .withSuccessHandler(function(deptData) {
-                  if (deptData && !deptData.error && D.departments[idx]) {
-                    D.departments[idx].people = deptData.people || [];
-                    D.departments[idx].kpiSummary = deptData.kpiSummary || [];
-                    D.departments[idx].summary = deptData.summary || [];
-                    D.departments[idx].teams = deptData.teams || [];
-                    D.departments[idx].sheetNames = deptData.sheetNames || [];
-                    D.departments[idx]._loaded = true;
-                  }
-                  loadedCount++;
-                  var pe = document.getElementById('loadProgress');
-                  if (pe) {
-                    pe.textContent = 'โหลดแล้ว ' + loadedCount + '/' + totalDepts + ' กลุ่มงาน';
-                  }
-                  // When all loaded, render
-                  if (loadedCount >= totalDepts) {
-                    clearInterval(progressTimer);
-                    onLoaded();
-                  }
-                })
-                .withFailureHandler(function(err) {
-                  console.warn('Dept ' + idx + ' failed', err);
-                  loadedCount++;
-                  if (loadedCount >= totalDepts) {
-                    clearInterval(progressTimer);
-                    onLoaded();
-                  }
-                })
-                .gsGetOKRDeptData(idx);
-            })(di);
+    
+    var pe = document.getElementById('loadProgress');
+    if (pe) pe.textContent = 'กำลังโหลด ' + (idx+1) + '/' + totalDepts + ' — ' + D.departments[idx].name;
+    var pb = document.getElementById('progBar');
+    if (pb) pb.style.width = Math.round((idx / totalDepts) * 100) + '%';
+    
+    // Use google.script.run for sandbox, fetch for non-sandbox
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(function(deptData) {
+          if (deptData && !deptData.error && D.departments[idx]) {
+            D.departments[idx].people = deptData.people || [];
+            D.departments[idx].kpiSummary = deptData.kpiSummary || [];
+            D.departments[idx].summary = deptData.summary || [];
+            D.departments[idx].teams = deptData.teams || [];
+            D.departments[idx].sheetNames = deptData.sheetNames || [];
+            D.departments[idx]._loaded = true;
+            // Re-render after each dept loads (progressive)
+            onLoaded();
           }
-        } else {
-          clearInterval(progressTimer);
-          onLoadError('No departments found');
-        }
-      })
-      .withFailureHandler(function(err) {
-        clearInterval(progressTimer);
-        // Try fetch as fallback
-        loadDataViaFetch(progressTimer);
-      })
-      .gsGetOKRDeptCount();
-    return;
+          loadedCount++;
+          loadNextDept(idx + 1);
+        })
+        .withFailureHandler(function(err) {
+          console.warn('Dept ' + idx + ' failed', err);
+          loadedCount++;
+          loadNextDept(idx + 1);
+        })
+        .gsGetOKRDeptData(idx);
+    } else {
+      // Fallback: fetch API
+      var url = SCRIPT_URL;
+      if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
+      else url += '?okrall=1&view=data';
+      if (SESSION_TOKEN) url += '&st=' + SESSION_TOKEN;
+      
+      fetch(url, { cache: 'no-store' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data && data.departments) {
+            D = data;
+            D._skeleton = false;
+            try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
+          }
+          var pe2 = document.getElementById('loadProgress');
+          if (pe2) pe2.textContent = '✅ โหลดครบแล้ว';
+          var pb2 = document.getElementById('progBar');
+          if (pb2) pb2.style.width = '100%';
+          onLoaded();
+        })
+        .catch(function(err) {
+          console.warn('Fetch failed', err);
+          // Try loading depts individually via fetch
+          loadNextDept(idx + 1);
+        });
+    }
   }
-
-  // Fallback: fetch (for non-sandbox environments)
-  loadDataViaFetch(progressTimer);
+  
+  // Start loading first dept immediately
+  loadNextDept(0);
 }
 
 function loadDataViaFetch(progressTimer) {

@@ -1458,6 +1458,26 @@ function doGet(e) {
     }
     if (p.view === 'data') {
       var allData = getMultiOKRData_();
+      // ⚡ Slim down response — remove large text fields to reduce payload from 1.5MB → ~400KB
+      if (allData && allData.departments) {
+        allData.departments.forEach(function(dept) {
+          if (dept.people) {
+            dept.people.forEach(function(person) {
+              delete person.accountability;
+              delete person.purpose;
+              delete person.vision;
+              delete person.buPurpose;
+              delete person.buVision;
+              delete person.teamPurpose;
+              delete person.teamVision;
+              delete person.personalPurpose;
+              delete person.personalVision;
+              delete person.kpiOwnership;
+              delete person.mentors;
+            });
+          }
+        });
+      }
       return ContentService.createTextOutput(JSON.stringify(allData)).setMimeType(ContentService.MimeType.JSON);
     }
     if (p.view === 'refresh') {
@@ -1487,6 +1507,22 @@ function doGet(e) {
       allContent = allContent.split('SESSION_TOKEN_PLACEHOLDER').join(p.st);
     } else {
       allContent = allContent.split('SESSION_TOKEN_PLACEHOLDER').join('');
+    }
+
+    // ⚡ PRE-WARM CACHE: Read first dept in background (non-blocking)
+    // This starts filling cache while user sees the HTML shell
+    try {
+      // Check if cache is cold — if so, trigger async warmup
+      var warmKey = 'okrall_data_v8';
+      var warmCached = CacheService.getScriptCache().get(warmKey);
+      if (!warmCached) {
+        // Cache is cold — inject a flag so client knows to show skeleton
+        allContent = allContent.split('CACHE_STATUS_PLACEHOLDER').join('cold');
+      } else {
+        allContent = allContent.split('CACHE_STATUS_PLACEHOLDER').join('warm');
+      }
+    } catch(e2) {
+      allContent = allContent.split('CACHE_STATUS_PLACEHOLDER').join('unknown');
     }
 
     // Inject CEO actuals data (server-side, no async needed)
@@ -13320,7 +13356,23 @@ function gsGetOKRDeptData(deptIndex) {
     try {
       var sharedData = JSON.parse(sharedCached);
       if (sharedData.departments && sharedData.departments[deptIndex]) {
-        var deptFromShared = sharedData.departments[deptIndex];
+        var deptFromShared = JSON.parse(JSON.stringify(sharedData.departments[deptIndex]));
+        // ⚡ Slim down
+        if (deptFromShared.people) {
+          deptFromShared.people.forEach(function(person) {
+            delete person.accountability;
+            delete person.purpose;
+            delete person.vision;
+            delete person.buPurpose;
+            delete person.buVision;
+            delete person.teamPurpose;
+            delete person.teamVision;
+            delete person.personalPurpose;
+            delete person.personalVision;
+            delete person.kpiOwnership;
+            delete person.mentors;
+          });
+        }
         // Cache it per-department for next time
         cacheDeptData_(deptCacheKey, deptFromShared);
         return deptFromShared;
@@ -13409,7 +13461,23 @@ function gsGetOKRDeptData(deptIndex) {
   } catch(err) {
     deptData.error = err.toString();
   }
-  // Cache the result
+  // ⚡ Slim down — remove large text fields before returning
+  if (deptData && deptData.people) {
+    deptData.people.forEach(function(person) {
+      delete person.accountability;
+      delete person.purpose;
+      delete person.vision;
+      delete person.buPurpose;
+      delete person.buVision;
+      delete person.teamPurpose;
+      delete person.teamVision;
+      delete person.personalPurpose;
+      delete person.personalVision;
+      delete person.kpiOwnership;
+      delete person.mentors;
+    });
+  }
+  // Cache the slimmed result
   cacheDeptData_(deptCacheKey, deptData);
   return deptData;
 }
