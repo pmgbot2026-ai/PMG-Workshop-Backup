@@ -579,7 +579,7 @@ function doGet(e) {
     // fall through ไปทำงานต่อ
   }
   // ── API endpoints ไม่ต้อง login (data fetch + refresh only) ──
-  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || p.prapi === '1' || p.courseapi === '1' || p.gmapi === '1' || p.ceoactuals === '1' || p.bct === '1' || (p.allproject === '1') || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action))) {
+  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || p.prapi === '1' || p.courseapi === '1' || p.gmapi === '1' || p.ceoactuals === '1' || p.bct === '1' || p.bctsaleapi === '1' || (p.allproject === '1') || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action))) {
     // fall through — API/embed bypass
   }
   // ── ถ้าไม่มี session และไม่ใช่ API — แสดงหน้า login ──
@@ -1391,6 +1391,22 @@ function doGet(e) {
       .setTitle('🏆 All Project Portal — PMSG')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
+  // ═══ BCT Sale Report Dashboard ═══
+  if (p.bctsale === '1') {
+    var bsrHtml = HtmlService.createHtmlOutputFromFile('BCTSaleDash');
+    return HtmlService.createHtmlOutput(bsrHtml.getContent())
+      .setTitle('BCT Sale Report 2569 | รายงานยอดขายผลิตภัณฑ์เสริม')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
+  // ═══ BCT Sale Report data API ═══
+  if (p.bctsaleapi === '1') {
+    var bsrData = getBCTSaleData_();
+    return ContentService.createTextOutput(JSON.stringify(bsrData))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 
   // ═══ Finance P&L Dashboard ═══  
@@ -14920,6 +14936,109 @@ function getCourseChunk(idx) {
 // Sheet: 1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds
 // Tabs: "PR เป้าขายรวมเดือน กรกฎาคม 69" (A3:AU34), "สรุป รายได้ ยอดรถ GM"
 // ════════════════════════════════════════════════════════════════════════
+
+// ═══ BCT Sale Report Data ═══
+var BCT_SALE_SHEET_ID = '1BpvNBZZmYkYsllWyew-kutUTYD8DPhmSXL_nlRUYZdI';
+var BCT_SALE_GID = 1704645624;
+
+function getBCTSaleDataForClient(forceRefresh) {
+  if (forceRefresh) {
+    CacheService.getScriptCache().remove('bctsale_data_v2');
+    CacheService.getScriptCache().remove('bctsale_data_v3');
+  }
+  return getBCTSaleData_();
+}
+
+function getBCTSaleData_() {
+  var cacheKey = 'bctsale_data_v3';
+  var cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+  
+  try {
+    // Read sheet directly via SpreadsheetApp (works with private sheets if shared with GAS account)
+    var ss = SpreadsheetApp.openById(BCT_SALE_SHEET_ID);
+    var sheets = ss.getSheets();
+    var sheet = null;
+    
+    // Find sheet by gid
+    for (var si = 0; si < sheets.length; si++) {
+      if (sheets[si].getSheetId() == BCT_SALE_GID) {
+        sheet = sheets[si];
+        break;
+      }
+    }
+    
+    // Fallback: use first sheet or sheet by name
+    if (!sheet) {
+      // Try to find a sheet with "DTA" or "เป้า" in the name
+      for (var si2 = 0; si2 < sheets.length; si2++) {
+        var name = sheets[si2].getName();
+        if (name.indexOf('DTA') !== -1 || name.indexOf('เป้า') !== -1 || name.indexOf('PR') !== -1) {
+          sheet = sheets[si2];
+          break;
+        }
+      }
+    }
+    
+    // Last resort: use first sheet
+    if (!sheet && sheets.length > 0) {
+      sheet = sheets[0];
+    }
+    
+    if (!sheet) {
+      return { error: 'No sheet found', success: false };
+    }
+    
+    var data = sheet.getDataRange().getValues();
+    if (!data || data.length < 2) {
+      return { error: 'No data rows', success: false };
+    }
+    
+    // List all sheet names for debugging
+    var sheetNames = sheets.map(function(s) { return s.getName() + ' (gid:' + s.getSheetId() + ')'; });
+    
+    // Parse data — convert all values to strings for JSON
+    var allRows = [];
+    for (var ri = 0; ri < data.length; ri++) {
+      var row = [];
+      for (var ci = 0; ci < data[ri].length; ci++) {
+        var val = data[ri][ci];
+        if (val instanceof Date) {
+          row.push(Utilities.formatDate(val, 'Asia/Bangkok', 'dd/MM/yyyy'));
+        } else if (typeof val === 'number') {
+          row.push(val);
+        } else {
+          row.push(val ? val.toString() : '');
+        }
+      }
+      allRows.push(row);
+    }
+    
+    var result = {
+      success: true,
+      sheetName: sheet.getName(),
+      sheetNames: sheetNames,
+      rowCount: data.length,
+      colCount: data[0] ? data[0].length : 0,
+      timestamp: new Date().toISOString(),
+      allRows: allRows
+    };
+    
+    // Cache for 10 minutes
+    try {
+      var jsonStr = JSON.stringify(result);
+      if (jsonStr.length < 90000) {
+        CacheService.getScriptCache().put(cacheKey, jsonStr, 600);
+      }
+    } catch(e) {}
+    
+    return result;
+  } catch(err) {
+    return { error: err.toString(), success: false };
+  }
+}
 
 function fetchPRDashboardData() {
   return fetchPRDashboardData_();

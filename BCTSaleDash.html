@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📊 BCT Sale Report 2569 — War Room Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#10b981; --green-d:#059669; --green-bg:#d1fae5;
+  --yellow:#f59e0b; --yellow-d:#d97706; --yellow-bg:#fef3c7;
+  --red:#ef4444; --red-d:#dc2626; --red-bg:#fee2e2;
+  --blue:#2563eb; --blue-d:#1d4ed8; --blue-bg:#dbeafe;
+  --purple:#7c3aed; --purple-d:#6d28d9; --purple-bg:#ede9fe;
+  --sidebar:#0f172a; --sidebar-2:#1e293b; --sidebar-hi:#334155;
+  --bg:#f8fafc; --card:#ffffff; --border:#e2e8f0;
+  --text:#1e293b; --text-muted:#64748b; --text-light:#94a3b8;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{font-family:'Sarabun','Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:#f1f5f9}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+
+/* ===== Layout ===== */
+.app{display:flex;min-height:100vh}
+
+/* ===== Sidebar ===== */
+.sidebar{
+  width:240px;background:linear-gradient(180deg,var(--sidebar) 0%,var(--sidebar-2) 100%);
+  color:#cbd5e1;position:fixed;top:0;left:0;bottom:0;z-index:200;
+  display:flex;flex-direction:column;box-shadow:4px 0 12px rgba(0,0,0,.15);
+  transition:transform .3s ease;
+}
+.sidebar-brand{padding:20px 18px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+.sidebar-brand .logo{width:40px;height:40px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.sidebar-brand .brand-text{font-size:15px;font-weight:700;color:#fff;line-height:1.2}
+.sidebar-brand .brand-sub{font-size:11px;color:#64748b;margin-top:2px}
+.nav-items{padding:14px 10px;flex:1;overflow-y:auto}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;
+  cursor:pointer;font-size:14px;font-weight:500;color:#94a3b8;
+  transition:all .2s;margin-bottom:4px;border:1px solid transparent;
+}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#e2e8f0}
+.nav-item.active{background:linear-gradient(90deg,rgba(37,99,235,.25),rgba(124,58,237,.15));color:#fff;border-color:rgba(37,99,235,.3)}
+.nav-item .icon{font-size:18px;width:22px;text-align:center;flex-shrink:0}
+.nav-item .badge-count{margin-left:auto;background:var(--blue);color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600}
+.sidebar-footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:#64748b}
+.sidebar-footer .live-dot{display:inline-block;width:8px;height:8px;background:var(--green);border-radius:50%;margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ===== Main Area ===== */
+.main{margin-left:240px;flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* ===== Header ===== */
+.header{
+  background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 40%,#2563eb 100%);
+  color:#fff;padding:18px 28px;display:flex;align-items:center;gap:20px;
+  position:sticky;top:0;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,.15);
+  flex-wrap:wrap;
+}
+.header .title-block{flex:1;min-width:200px}
+.header h1{font-size:22px;font-weight:700;display:flex;align-items:center;gap:8px}
+.header .sub{font-size:13px;opacity:.8;margin-top:3px}
+.header .header-info{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.header .info-chip{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);padding:6px 14px;border-radius:10px;font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.header .info-chip b{color:#fff}
+.header .refresh-btn{background:linear-gradient(135deg,var(--green),var(--green-d));color:#fff;border:none;padding:8px 18px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;transition:.2s;box-shadow:0 2px 8px rgba(16,185,129,.3)}
+.header .refresh-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,185,129,.4)}
+.header .refresh-btn:active{transform:translateY(0)}
+.header .refresh-btn.spinning .refresh-icon{animation:spin 1s linear infinite}
+
+/* ===== Content ===== */
+.content{padding:22px;flex:1;max-width:1500px;width:100%;margin:0 auto}
+.tab-panel{display:none;animation:fadeIn .3s ease}
+.tab-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== Cards / Sections ===== */
+.section{background:var(--card);border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.03)}
+.section-title{font-size:17px;font-weight:700;color:#1e3a5f;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #f1f5f9;display:flex;align-items:center;gap:8px}
+.section-title .count-badge{font-size:12px;font-weight:600;background:var(--blue-bg);color:var(--blue);padding:3px 10px;border-radius:10px;margin-left:auto}
+
+/* ===== KPI Grid ===== */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.kpi-card{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;
+  transition:all .25s;position:relative;overflow:hidden;cursor:default;
+}
+.kpi-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.08);transform:translateY(-3px)}
+.kpi-card .kpi-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.kpi-card .kpi-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.kpi-card .kpi-id{font-size:11px;font-weight:700;color:var(--text-light);background:#f1f5f9;padding:2px 8px;border-radius:6px}
+.kpi-card .label{font-size:12px;color:var(--text-muted);line-height:1.3;margin-bottom:6px;min-height:32px}
+.kpi-card .value{font-size:26px;font-weight:700;line-height:1}
+.kpi-card .unit{font-size:12px;color:var(--text-light);font-weight:400;margin-left:3px}
+.kpi-card .target{font-size:11px;color:var(--text-light);margin-top:4px}
+.kpi-card .bar{height:7px;background:#f1f5f9;border-radius:4px;margin-top:10px;overflow:hidden}
+.kpi-card .bar-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.kpi-card .pct-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.kpi-card .pct{font-size:14px;font-weight:700}
+.kpi-card .status-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px}
+.kpi-card .accent-line{position:absolute;top:0;left:0;right:0;height:3px}
+
+/* Status colors */
+.text-green{color:var(--green)}.text-yellow{color:var(--yellow)}.text-red{color:var(--red)}.text-blue{color:var(--blue)}.text-purple{color:var(--purple)}
+.bg-green{background:var(--green)}.bg-yellow{background:var(--yellow)}.bg-red{background:var(--red)}.bg-blue{background:var(--blue)}.bg-purple{background:var(--purple)}
+.bg-green-light{background:var(--green-bg)}.bg-yellow-light{background:var(--yellow-bg)}.bg-red-light{background:var(--red-bg)}
+.badge-green{background:var(--green-bg);color:var(--green-d)}.badge-yellow{background:var(--yellow-bg);color:var(--yellow-d)}.badge-red{background:var(--red-bg);color:var(--red-d)}
+
+/* ===== Summary Box ===== */
+.summary-box{margin-top:20px;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border-radius:14px;padding:20px;border:1px solid #bfdbfe}
+.summary-box h3{font-size:15px;font-weight:700;color:#1e3a5f;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.summary-item{background:rgba(255,255,255,.7);border-radius:10px;padding:12px 14px;border:1px solid rgba(191,219,254,.5)}
+.summary-item .s-label{font-size:11px;color:var(--text-muted);margin-bottom:4px}
+.summary-item .s-value{font-size:20px;font-weight:700}
+.summary-item .s-sub{font-size:11px;color:var(--text-light);margin-top:2px}
+
+/* ===== Health Score Gauge ===== */
+.health-gauge-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.health-gauge{position:relative;width:220px;height:130px;flex-shrink:0}
+.health-gauge svg{width:100%;height:100%}
+.health-gauge .gauge-value{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);text-align:center}
+.health-gauge .gauge-value .gv-num{font-size:34px;font-weight:700;line-height:1}
+.health-gauge .gauge-value .gv-label{font-size:11px;color:var(--text-muted);margin-top:2px}
+.health-info{flex:1;min-width:200px}
+.health-info h4{font-size:14px;font-weight:700;margin-bottom:8px}
+.health-info p{font-size:12px;color:var(--text-muted);line-height:1.6}
+.health-bar{height:8px;background:#f1f5f9;border-radius:4px;margin-top:8px;overflow:hidden}
+.health-bar-fill{height:100%;border-radius:4px;transition:width 1s ease}
+
+/* ===== Smart Insights ===== */
+.insights-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.insight-card{border-radius:12px;padding:16px;border:1px solid;position:relative;overflow:hidden}
+.insight-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.insight-card.critical{background:#fef2f2;border-color:#fecaca}
+.insight-card.critical::before{background:var(--red)}
+.insight-card.best{background:#f0fdf4;border-color:#bbf7d0}
+.insight-card.best::before{background:var(--green)}
+.insight-card.warning{background:#fffbeb;border-color:#fde68a}
+.insight-card.warning::before{background:var(--yellow)}
+.insight-card.quickwin{background:#eff6ff;border-color:#bfdbfe}
+.insight-card.quickwin::before{background:var(--blue)}
+.insight-card .ic-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.insight-card .ic-icon{font-size:20px}
+.insight-card .ic-title{font-size:14px;font-weight:700}
+.insight-card .ic-list{list-style:none;padding:0}
+.insight-card .ic-list li{font-size:12px;padding:5px 0;border-bottom:1px dashed rgba(0,0,0,.06);display:flex;align-items:flex-start;gap:6px}
+.insight-card .ic-list li:last-child{border-bottom:none}
+.insight-card .ic-list li .li-dot{flex-shrink:0;margin-top:5px}
+
+/* ===== Tables ===== */
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+thead th{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:11px 8px;text-align:center;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0}
+thead th:first-child{border-radius:0}
+tbody td{padding:9px 8px;text-align:center;border-bottom:1px solid #f1f5f9}
+tbody tr:hover{background:#f8fafc}
+tbody tr.subtotal{background:linear-gradient(90deg,#eff6ff,#dbeafe);font-weight:700}
+tbody tr.subtotal td{border-bottom:2px solid #bfdbfe}
+tbody tr.branch-total{background:linear-gradient(90deg,#f0fdf4,#dcfce7);font-weight:700}
+tbody tr.sc-new-row{background:#fffbeb}
+tbody tr.sc-new-row:hover{background:#fef3c7}
+.text-left{text-align:left!important}
+.text-right{text-align:right!important}
+
+/* ===== Branch Bar Chart (CSS) ===== */
+.bar-chart{display:flex;flex-direction:column;gap:14px;margin-top:8px}
+.bar-chart-row{display:flex;align-items:center;gap:12px}
+.bar-chart-row .bc-label{width:120px;font-size:13px;font-weight:600;text-align:right;flex-shrink:0}
+.bar-chart-row .bc-track{flex:1;height:28px;background:#f1f5f9;border-radius:8px;overflow:hidden;position:relative;min-width:200px}
+.bar-chart-row .bc-fill{height:100%;border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;color:#fff;font-size:12px;font-weight:600;transition:width 1s cubic-bezier(.4,0,.2,1);min-width:30px}
+.bar-chart-row .bc-value{width:70px;font-size:12px;font-weight:600;flex-shrink:0}
+
+/* ===== Donut Chart (SVG) ===== */
+.donut-wrap{display:flex;align-items:center;gap:24px;flex-wrap:wrap;justify-content:center}
+.donut-chart{position:relative;width:200px;height:200px;flex-shrink:0}
+.donut-chart svg{transform:rotate(-90deg)}
+.donut-chart .donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.donut-chart .donut-center .dc-num{font-size:28px;font-weight:700;line-height:1}
+.donut-chart .donut-center .dc-label{font-size:11px;color:var(--text-muted);margin-top:2px}
+.donut-legend{display:flex;flex-direction:column;gap:8px}
+.donut-legend .dl-item{display:flex;align-items:center;gap:8px;font-size:13px}
+.donut-legend .dl-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.donut-legend .dl-val{font-weight:700;margin-left:auto;padding-left:12px}
+
+/* ===== Analysis Sections ===== */
+.al-section{background:var(--card);border-radius:12px;padding:18px;margin-bottom:14px;border-left:5px solid;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.al-section h3{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.al-section p{font-size:13px;line-height:1.8;color:#475569;white-space:pre-line}
+.al-section.al-blue{border-left-color:var(--blue)}
+.al-section.al-green{border-left-color:var(--green)}
+.al-section.al-red{border-left-color:var(--red)}
+.al-section.al-purple{border-left-color:var(--purple)}
+.al-section.al-yellow{border-left-color:var(--yellow)}
+
+/* ===== AP Table (5W2H) ===== */
+.ap-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.ap-table th{background:#f1f5f9;color:var(--text);padding:8px;font-size:11px;font-weight:600;text-align:left;border-bottom:2px solid var(--border)}
+.ap-table td{padding:8px;border-bottom:1px solid #f1f5f9;text-align:left;vertical-align:top}
+.ap-table tr:hover{background:#f8fafc}
+.ap-table .ap-no{width:30px;text-align:center;font-weight:700;color:var(--blue)}
+.ap-table .ap-owner{font-weight:600;color:var(--purple-d)}
+.ap-table .ap-due{white-space:nowrap;color:var(--text-muted)}
+
+/* ===== SC Search Filter ===== */
+.sc-controls{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.sc-search{flex:1;min-width:200px;padding:10px 16px;border:2px solid var(--border);border-radius:10px;font-size:14px;font-family:'Sarabun',sans-serif;transition:.2s}
+.sc-search:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.sc-sort-btn{padding:8px 16px;border:2px solid var(--border);border-radius:10px;background:var(--card);cursor:pointer;font-size:13px;font-family:'Sarabun',sans-serif;font-weight:600;color:var(--text-muted);transition:.2s;display:flex;align-items:center;gap:6px}
+.sc-sort-btn:hover{border-color:var(--blue);color:var(--blue)}
+.sc-sort-btn.active{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-d)}
+.sc-legend{font-size:12px;color:var(--text-muted);display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.sc-legend .lg-item{display:flex;align-items:center;gap:6px}
+.sc-legend .lg-dot{width:14px;height:14px;border-radius:4px}
+
+/* ===== Loading ===== */
+.loading-overlay{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;color:var(--text-muted)}
+.loading-overlay .spinner{width:52px;height:52px;border:4px solid #dbeafe;border-top-color:var(--blue);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:18px}
+.loading-overlay .loading-text{font-size:15px;font-weight:600}
+.loading-overlay .loading-sub{font-size:12px;color:var(--text-light);margin-top:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== Mobile Sidebar Toggle ===== */
+.mobile-toggle{display:none;position:fixed;bottom:20px;right:20px;width:50px;height:50px;background:var(--blue);color:#fff;border:none;border-radius:50%;font-size:22px;cursor:pointer;z-index:201;box-shadow:0 4px 16px rgba(37,99,235,.4);align-items:center;justify-content:center}
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199}
+
+/* ===== Responsive ===== */
+@media(max-width:1024px){
+  .kpi-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);width:260px}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-backdrop.open{display:block}
+  .main{margin-left:0}
+  .mobile-toggle{display:flex}
+  .header{padding:14px 16px}
+  .header h1{font-size:18px}
+  .content{padding:14px}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .insights-grid{grid-template-columns:1fr}
+  .bar-chart-row .bc-label{width:80px;font-size:12px}
+  .summary-grid{grid-template-columns:repeat(2,1fr)}
+  .health-gauge-wrap{justify-content:center}
+}
+@media(max-width:480px){
+  .kpi-grid{grid-template-columns:1fr}
+  .header .info-chip{font-size:11px;padding:5px 10px}
+  .header .refresh-btn{padding:6px 14px;font-size:12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ===== Sidebar ===== -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo">📊</div>
+    <div>
+      <div class="brand-text">BCT Dashboard</div>
+      <div class="brand-sub">Sale Report 2569</div>
+    </div>
+  </div>
+  <nav class="nav-items">
+    <div class="nav-item active" data-tab="kpi" onclick="switchTab('kpi',this)">
+      <span class="icon">🏆</span><span>KPI / OKRs</span>
+      <span class="badge-count">15</span>
+    </div>
+    <div class="nav-item" data-tab="branch" onclick="switchTab('branch',this)">
+      <span class="icon">🏢</span><span>สาขา</span>
+      <span class="badge-count">6</span>
+    </div>
+    <div class="nav-item" data-tab="sc" onclick="switchTab('sc',this)">
+      <span class="icon">👤</span><span>SC รายบุคคล</span>
+      <span class="badge-count" id="scNavCount">17</span>
+    </div>
+    <div class="nav-item" data-tab="analysis" onclick="switchTab('analysis',this)">
+      <span class="icon">📋</span><span>วิเคราะห์</span>
+    </div>
+    <div class="nav-item" data-tab="insights" onclick="switchTab('insights',this)">
+      <span class="icon">💡</span><span>Smart Insights</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <span class="live-dot"></span>Auto-update ทุก 10 นาที<br>
+    <span style="opacity:.6">v2.0 · War Room Edition</span>
+  </div>
+</aside>
+<div class="sidebar-backdrop" id="backdrop" onclick="closeSidebar()"></div>
+
+<!-- ===== Main ===== -->
+<div class="main">
+
+<!-- Header -->
+<header class="header">
+  <div class="title-block">
+    <h1>📊 BCT Sale Report 2569</h1>
+    <div class="sub">รายงานสรุปสถานะผลงานการขายรถใหม่ ปี 2569 — 4 สาขา + รถใหญ่</div>
+  </div>
+  <div class="header-info">
+    <span class="info-chip">🕒 อัปเดต: <b id="updateTime">—</b></span>
+    <span class="info-chip">📅 ข้อมูล ณ: <b id="dataDate">—</b></span>
+    <span class="info-chip">👤 SC: <b id="scCount">—</b> คน</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">
+      <span class="refresh-icon">🔄</span> อัปเดตข้อมูล
+    </button>
+  </div>
+</header>
+
+<!-- Content -->
+<div class="content">
+
+  <!-- Loading -->
+  <div id="loading" class="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text">⏳ กำลังดึงข้อมูล...</div>
+    <div class="loading-sub">โหลดจาก Google Sheet ต้นทาง</div>
+  </div>
+
+  <!-- ===== Tab: KPI/OKRs ===== -->
+  <div id="tab-kpi" class="tab-panel" style="display:none">
+    <div class="section">
+      <div class="section-title">🏆 KPI / ตัวชี้วัดหลัก <span class="count-badge" id="kpiCountBadge">— KPI</span></div>
+      <div id="kpiGrid" class="kpi-grid"></div>
+    </div>
+    <div class="section" id="healthSection">
+      <div class="section-title">💚 Health Score — คะแนนสุขภาพองค์กร</div>
+      <div id="healthGauge"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">📋 สรุปภาพรวม</div>
+      <div id="summaryBox"></div>
+    </div>
+  </div>
+
+  <!-- ===== Tab: สาขา ===== -->
+  <div id="tab-branch" class="tab-panel" style="display:none">
+    <div class="section">
+      <div class="section-title">🏢 ตารางเปรียบเทียบสาขา — เป้า vs ผลงาน</div>
+      <div id="branchTable" class="table-wrap"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">📊 Bar Chart — % บรรลุเป้าตามสาขา</div>
+      <div id="branchBarChart" class="bar-chart"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">🍩 Donut Chart — สัดส่วน GM รวมตามสาขา</div>
+      <div id="branchDonut" class="donut-wrap"></div>
+    </div>
+  </div>
+
+  <!-- ===== Tab: SC รายบุคคล ===== -->
+  <div id="tab-sc" class="tab-panel" style="display:none">
+    <div class="section">
+      <div class="section-title">👤 SC รายบุคคล — ผลงานยอดขาย GM <span class="count-badge" id="scTableCount">17 คน</span></div>
+      <div class="sc-controls">
+        <input type="text" class="sc-search" id="scSearch" placeholder="🔍 ค้นหาชื่อ SC หรือสาขา..." oninput="renderSC()">
+        <button class="sc-sort-btn active" data-sort="branch" onclick="sortSC('branch',this)">🏗️ สาขา</button>
+        <button class="sc-sort-btn" data-sort="pct" onclick="sortSC('pct',this)">📊 % มาก→น้อย</button>
+        <button class="sc-sort-btn" data-sort="gm" onclick="sortSC('gm',this)">💰 GM มาก→น้อย</button>
+        <button class="sc-sort-btn" data-sort="name" onclick="sortSC('name',this)">🔤 ชื่อ</button>
+      </div>
+      <div id="scTable" class="table-wrap"></div>
+      <div class="sc-legend">
+        <div class="lg-item"><span class="lg-dot" style="background:#fef3c7;border:1px solid #fde68a"></span> SC เริ่มใหม่</div>
+        <div class="lg-item"><span class="lg-dot" style="background:#dbeafe"></span> แถวรวมสาขา (Subtotal)</div>
+        <div class="lg-item"><span class="lg-dot" style="background:var(--green)"></span> ≥100% ทะลุเป้า</div>
+        <div class="lg-item"><span class="lg-dot" style="background:var(--yellow)"></span> 75-99% ใกล้เป้า</div>
+        <div class="lg-item"><span class="lg-dot" style="background:var(--red)"></span> &lt;75% ล้าหลัง</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Tab: วิเคราะห์ ===== -->
+  <div id="tab-analysis" class="tab-panel" style="display:none">
+    <div id="analysisContent"></div>
+  </div>
+
+  <!-- ===== Tab: Smart Insights ===== -->
+  <div id="tab-insights" class="tab-panel" style="display:none">
+    <div class="section">
+      <div class="section-title">💡 Smart Insights — วิเคราะห์อัตโนมัติจาก KR Data</div>
+      <div id="insightsContent" class="insights-grid"></div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- Mobile toggle -->
+<button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+
+<script>
+/* ========================================
+   DATA — Fetched from /api/data (real Google Sheet data)
+   ======================================== */
+var API_URL = '';  // Using google.script.run
+var REFRESH_URL = '/api/refresh';
+var apiData = null;       // raw API response
+var currentSort = 'branch';
+
+// These get populated from API data
+var KR_DATA = [];
+var BRANCH_DATA = [];
+var SC_DATA = [];
+var ANALYSIS = { al:'', bp:[], ll:[], ii:'', ap:[], xp:'' };
+var sheetTitle = '';
+var sheetDate = '';
+var lastUpdated = '';
+
+/* ========================================
+   KPI Icons mapping
+   ======================================== */
+var KR_ICONS = {
+  'KPI1':'🎯','KPI2':'💰','KPI3':'💎','KPI4':'🏦',
+  'สำนักงานให':'🏢','สอยดาว':'🌿','นายายอาม':'🌊','ขลุง':'🌳','รถใหญ่':'🚛'
+};
+var KPI_FALLBACK_ICONS = ['🎯','📝','🚗','💰','🚙','🔧','💎','🔩','🏦','📦','👥','📱','🌐','⭐','🖥️'];
+
+/* ========================================
+   Utility Functions
+   ======================================== */
+function fmtNum(n){
+  if(n === null || n === undefined || isNaN(n)) return '0';
+  if(n >= 1000000) return (n/1000000).toFixed(2)+'M';
+  if(n >= 10000) return n.toLocaleString();
+  return n;
+}
+
+function fmtNumFull(n){
+  if(n === null || n === undefined || isNaN(n)) return '0';
+  return n.toLocaleString('th-TH');
+}
+
+function getStatus(pct){
+  if(pct >= 100) return {cls:'text-green',bg:'bg-green',badge:'badge-green',text:'ทะลุเป้า',icon:'🟢',hex:'#10b981'};
+  if(pct >= 75)  return {cls:'text-yellow',bg:'bg-yellow',badge:'badge-yellow',text:'ใกล้เป้า',icon:'🟡',hex:'#f59e0b'};
+  if(pct > 0)    return {cls:'text-red',bg:'bg-red',badge:'badge-red',text:'ล้าหลัง',icon:'🔴',hex:'#ef4444'};
+  return {cls:'text-red',bg:'bg-red',badge:'badge-red',text:'ยังไม่เริ่ม',icon:'⚫',hex:'#94a3b8'};
+}
+
+function pctColor(pct){
+  if(pct >= 100) return '#10b981';
+  if(pct >= 75) return '#f59e0b';
+  if(pct > 0) return '#ef4444';
+  return '#94a3b8';
+}
+
+/* ========================================
+   Map API data to internal structures
+   ======================================== */
+function mapApiData(d){
+  if(!d || !d.success) return false;
+
+  // Get month from row 36 col 6 (index 5)
+  var rows = d.allRows || [];
+  var monthCol = '';
+  if(rows.length > 35 && rows[35].length > 6) monthCol = rows[35][6] || '';
+  if(rows.length > 35 && rows[35].length > 4) monthCol = monthCol || rows[35][4] || '';
+
+  sheetTitle = 'BCT Sale Report 2569';
+  sheetDate = monthCol ? 'เดือน' + monthCol + ' 2569' : '';
+  lastUpdated = d.timestamp ? new Date(d.timestamp).toLocaleString('th-TH') : new Date().toLocaleString('th-TH');
+
+  // Parse KR data from rows 8-22 (index 7-21)
+  // Structure: col 0 = KR ID, col 4 = label, col 6 = target, col 8 = actual
+  KR_DATA = [];
+  var krStart = 7, krEnd = 22;
+  for(var ri = krStart; ri < krEnd && ri < rows.length; ri++){
+    var r = rows[ri];
+    var krId = (r[0] || '').toString().replace(/.*KR/i, 'KR').trim();
+    var label = (r[4] || '').toString().trim();
+    if(!krId || krId.indexOf('KR') === -1) continue;
+    var target = parseFloat(r[6]) || 0;
+    var actual = parseFloat(r[8]) || 0;
+    var pct = target > 0 ? Math.round(actual / target * 100) : 0;
+    var unit = '';
+    if(label.indexOf('GM') !== -1) unit = 'บาท';
+    else if(label.indexOf('คัน') !== -1 || label.indexOf('ลูกค้า') !== -1) unit = 'คัน';
+    else if(label.indexOf('%') !== -1) unit = '%';
+    KR_DATA.push({ kr: krId, label: label, target: target, actual: actual, unit: unit, pct: pct });
+  }
+
+  // Parse branch and SC data from rows 40-67 (index 39-66)
+  // Structure: col 0 = NO, col 1 = branch/start date, col 2 = SC name, col 4 = target, col 6 = actual
+  BRANCH_DATA = [];
+  SC_DATA = [];
+  var currentBranch = '';
+  var branchTargets = {};
+  var branchActuals = {};
+  var scNo = 0;
+
+  for(var si = 39; si < 68 && si < rows.length; si++){
+    var sr = rows[si];
+    var col0 = (sr[0] || '').toString().trim();
+    var col1 = (sr[1] || '').toString().trim();
+    var col2 = (sr[2] || '').toString().trim();
+    var col4 = parseFloat(sr[4]) || 0;
+    var col6 = parseFloat(sr[6]) || 0;
+
+    // Skip header rows
+    if(col0 === 'NO' || col0 === '') continue;
+
+    // Branch subtotal row
+    if(col0.indexOf('รวมสาขา') !== -1 || col0.indexOf('รวม') !== -1){
+      if(currentBranch){
+        var bt = branchTargets[currentBranch] || 0;
+        var ba = branchActuals[currentBranch] || 0;
+        BRANCH_DATA.push({
+          name: currentBranch,
+          target_muh: bt, actual_muh: ba,
+          target_jong: 0, actual_jong: 0,
+          target_sale: bt, actual_sale: ba,
+          gm_avg: 0, gm_total: 0,
+          pct: bt > 0 ? Math.round(ba / bt * 100) : 0,
+          gm_target: 0, gm_actual: 0, gm_pct: 0,
+          gm_total_vehicle: 0, gm_total_all: 0
+        });
+      }
+      currentBranch = '';
+      continue;
+    }
+
+    // Branch header row (col0 starts with "4 สาขา" or has branch name in col1)
+    if(col0.indexOf('สาขา') !== -1 || (col1 && col1.indexOf('สาขา') !== -1)){
+      currentBranch = col1 || col0;
+      branchTargets[currentBranch] = col4;
+      branchActuals[currentBranch] = col6;
+      continue;
+    }
+
+    // Check if col1 has branch name (first SC of branch)
+    if(col1 && col1 !== '' && col1.indexOf('เริ่ม') === -1 && col1 !== 'สาขาในบ้าน'){
+      currentBranch = col1;
+      branchTargets[currentBranch] = 0;
+      branchActuals[currentBranch] = 0;
+    }
+
+    // SC row (has name in col2)
+    if(col2 && col2 !== '' && col2 !== 'รวมสาขา'){
+      scNo++;
+      var isNew = col1.indexOf('เริ่ม') !== -1;
+      var startDate = '';
+      if(isNew) startDate = col1.replace('เริ่ม', '').trim();
+
+      SC_DATA.push({
+        no: scNo,
+        branch: currentBranch || (col1 && col1 !== '' ? col1 : ''),
+        name: col2,
+        target: col4,
+        actual: col6,
+        muh: 0, jong: 0,
+        sale: col6,
+        gm_avg: 0, gm_total: 0,
+        pct: col4 > 0 ? Math.round(col6 / col4 * 100) : 0,
+        isNew: isNew,
+        startDate: startDate
+      });
+    }
+  }
+
+  // Parse analysis from rows 69+ (index 68+)
+  ANALYSIS = { al: '', bp: [], ll: [], ii: '', ap: [], xp: '' };
+  var currentSection = '';
+  for(var ai = 68; ai < rows.length; ai++){
+    var ar = rows[ai];
+    var ac0 = (ar[0] || '').toString().trim();
+    var ac1 = (ar[1] || '').toString().trim();
+    var ac2 = (ar[2] || '').toString().trim();
+
+    if(ac0.indexOf('AL') !== -1) currentSection = 'al';
+    else if(ac0.indexOf('BP') !== -1) currentSection = 'bp';
+    else if(ac0.indexOf('LL') !== -1) currentSection = 'll';
+    else if(ac0.indexOf('II') !== -1) currentSection = 'ii';
+    else if(ac0.indexOf('AP') !== -1) currentSection = 'ap';
+    else if(ac0.indexOf('XP') !== -1 || ac0.indexOf('สรุป') !== -1) currentSection = 'xp';
+
+    if(currentSection === 'al' && ac1) ANALYSIS.al += (ANALYSIS.al ? '\n' : '') + ac1;
+    else if(currentSection === 'bp' && ac1) ANALYSIS.bp.push(ac1);
+    else if(currentSection === 'll' && ac1) ANALYSIS.ll.push(ac1);
+    else if(currentSection === 'ii' && ac1) ANALYSIS.ii += (ANALYSIS.ii ? '\n' : '') + ac1;
+    else if(currentSection === 'ap' && ac1) ANALYSIS.ap.push(ac1);
+    else if(currentSection === 'xp' && ac1) ANALYSIS.xp += (ANALYSIS.xp ? '\n' : '') + ac1;
+  }
+
+  return true;
+}
+
+/* ========================================
+   Render: KPI Cards
+   ======================================== */
+function renderKPI(){
+  var html = '';
+  KR_DATA.forEach(function(kr, idx){
+    var st = getStatus(kr.pct);
+    var icon = KR_ICONS[kr.kr] || KPI_FALLBACK_ICONS[idx % KPI_FALLBACK_ICONS.length] || '📊';
+    var remaining = kr.target - kr.actual;
+    var remText = remaining > 0 ? 'คงเหลือ '+fmtNum(Math.abs(remaining)) : (kr.target > 0 ? 'เกิน '+fmtNum(Math.abs(remaining)) : 'ไม่มีเป้าหมาย');
+    var iconBg = st.cls === 'text-green' ? 'bg-green-light' : st.cls === 'text-yellow' ? 'bg-yellow-light' : 'bg-red-light';
+
+    html += '<div class="kpi-card">';
+    html += '<div class="accent-line" style="background:'+st.hex+'"></div>';
+    html += '<div class="kpi-top">';
+    html += '<div class="kpi-icon '+iconBg+'">'+icon+'</div>';
+    html += '<span class="kpi-id">'+kr.kr+'</span>';
+    html += '</div>';
+    html += '<div class="label">'+kr.label+'</div>';
+    html += '<div class="value '+st.cls+'">'+fmtNum(kr.actual)+'<span class="unit">'+kr.unit+'</span></div>';
+    html += '<div class="target">เป้า: '+fmtNum(kr.target)+' '+kr.unit+' · '+remText+'</div>';
+    html += '<div class="bar"><div class="bar-fill '+st.bg+'" style="width:'+Math.min(kr.pct,100)+'%"></div></div>';
+    html += '<div class="pct-row">';
+    html += '<span class="pct '+st.cls+'">'+kr.pct+'%</span>';
+    html += '<span class="status-badge '+st.badge+'">'+st.text+'</span>';
+    html += '</div>';
+    html += '</div>';
+  });
+  document.getElementById('kpiGrid').innerHTML = html;
+
+  // Count badge
+  var kpiBadge = document.getElementById('kpiCountBadge');
+  if(kpiBadge) kpiBadge.textContent = KR_DATA.length + ' KPI';
+
+  renderHealthGauge();
+  renderSummaryBox();
+}
+
+/* ========================================
+   Render: Health Score Gauge (Semicircle SVG)
+   ======================================== */
+function renderHealthGauge(){
+  var totalPct = 0;
+  KR_DATA.forEach(function(kr){ totalPct += kr.pct; });
+  var avgPct = Math.round(totalPct / KR_DATA.length);
+  var score = Math.min(avgPct, 100);
+
+  // Semicircle gauge: 180deg arc, radius=90, center=(110,115)
+  var r = 90, cx = 110, cy = 115;
+  var angle = (score / 100) * 180; // 0 to 180
+  var rad = (180 - angle) * Math.PI / 180;
+  var endX = cx + r * Math.cos(rad);
+  var endY = cy - r * Math.sin(rad);
+  var largeArc = angle > 180 ? 1 : 0;
+
+  var st = getStatus(score);
+  var color = st.hex;
+
+  // Background arc (full semicircle)
+  var bgPath = 'M '+(cx-r)+','+cy+' A '+r+','+r+' 0 0 1 '+(cx+r)+','+cy;
+  // Progress arc
+  var progPath = 'M '+(cx-r)+','+cy+' A '+r+','+r+' 0 '+largeArc+' 1 '+endX+','+endY;
+
+  var html = '<div class="health-gauge-wrap">';
+  html += '<div class="health-gauge">';
+  html += '<svg viewBox="0 0 220 130">';
+  html += '<path d="'+bgPath+'" fill="none" stroke="#f1f5f9" stroke-width="14" stroke-linecap="round"/>';
+  html += '<path d="'+progPath+'" fill="none" stroke="'+color+'" stroke-width="14" stroke-linecap="round" style="transition:stroke-dasharray 1s ease"/>';
+  html += '</svg>';
+  html += '<div class="gauge-value">';
+  html += '<div class="gv-num '+st.cls+'">'+score+'</div>';
+  html += '<div class="gv-label">จาก 100 คะแนน</div>';
+  html += '</div>';
+  html += '</div>';
+  html += '<div class="health-info">';
+  html += '<h4>สถานะ: <span class="'+st.cls+'">'+st.text+'</span></h4>';
+  html += '<p>คะแนนเฉลี่ยจาก '+KR_DATA.length+' ตัวชี้วัด KR — คำนวณจากเปอร์เซ็นต์เฉลี่ยของทุก KR</p>';
+  html += '<div class="health-bar"><div class="health-bar-fill" style="width:'+score+'%;background:'+color+'"></div></div>';
+  html += '<div style="margin-top:10px;font-size:12px;color:var(--text-muted)">เกณฑ์: ≥100 ทะลุเป้า · 75-99 ใกล้เป้า · &lt;75 ล้าหลัง</div>';
+  html += '</div>';
+  html += '</div>';
+
+  document.getElementById('healthGauge').innerHTML = html;
+}
+
+/* ========================================
+   Render: Summary Box
+   ======================================== */
+function renderSummaryBox(){
+  var green = 0, yellow = 0, red = 0;
+  KR_DATA.forEach(function(kr){
+    if(kr.pct >= 100) green++;
+    else if(kr.pct >= 75) yellow++;
+    else red++;
+  });
+
+  // Use real summary from first branch (รวม 4 สาขา) or fallback
+  var s = BRANCH_DATA[0] || {};
+  var totalTarget = s.gm_total_all || 0;
+  var totalActual = s.gm_total_vehicle || 0;
+  var totalPct = s.pct || 0;
+  var krLen = KR_DATA.length || 1;
+
+  var html = '<div class="summary-grid">';
+  html += summaryItem('🎯 ยอดขายเป้าหมาย', fmtNum(s.target || 0)+' คัน', 'รวม 4 สาขา', 'text-blue');
+  html += summaryItem('🚗 ยอดขายทำได้', fmtNum(s.actual || 0)+' คัน', 'ปัจจุบัน', 'text-green');
+  html += summaryItem('📊 บรรลุเป้า', (s.pct || 0)+'%', 'ของเป้าหมาย', (s.pct>=100?'text-green':'text-yellow'));
+  html += summaryItem('💰 GM เฉลี่ย/คัน', fmtNum(s.gm_actual || 0)+' บาท', 'เป้า '+(s.gm_target||0)+' บาท', 'text-blue');
+  html += summaryItem('💎 GM รวม (ตัวรถ)', fmtNum(s.gm_total_vehicle || 0)+' บาท', 'GM ตัวรถ', 'text-purple');
+  html += summaryItem('🏦 GM รวม (ทั้งหมด)', fmtNum(s.gm_total_all || 0)+' บาท', 'รวมประดับยนต์', 'text-blue');
+  html += summaryItem('🟢 ทะลุเป้า', green+' / '+krLen, 'KPI', 'text-green');
+  html += summaryItem('🟡 ใกล้เป้า', yellow+' / '+krLen, 'KPI', 'text-yellow');
+  html += summaryItem('🔴 ล้าหลัง', red+' / '+krLen, 'KPI', 'text-red');
+  html += '</div>';
+
+  document.getElementById('summaryBox').innerHTML = html;
+}
+
+function summaryItem(label, value, sub, cls){
+  return '<div class="summary-item"><div class="s-label">'+label+'</div><div class="s-value '+cls+'">'+value+'</div><div class="s-sub">'+sub+'</div></div>';
+}
+
+/* ========================================
+   Render: Branch Table
+   ======================================== */
+function renderBranch(){
+  var html = '<table><thead><tr><th>สาขา</th><th>เป้าขาย</th><th>ทำได้</th><th>%</th><th>GMเป้า/คัน</th><th>GMทำได้/คัน</th><th>GM%</th><th>GMรวม(ตัวรถ)</th><th>GMรวม(ทั้งหมด)</th><th>สถานะ</th></tr></thead><tbody>';
+  BRANCH_DATA.forEach(function(b, i){
+    var rowClass = i === 0 ? 'branch-total' : '';
+    var st = getStatus(b.pct);
+    var gmSt = getStatus(b.gm_pct || 0);
+    html += '<tr class="'+rowClass+'">';
+    html += '<td class="text-left" style="font-weight:600">'+b.name+'</td>';
+    html += '<td>'+b.target+'</td><td>'+b.actual+'</td>';
+    html += '<td class="'+(b.pct>=100?'text-green':b.pct>=75?'text-yellow':'text-red')+'" style="font-weight:700">'+b.pct+'%</td>';
+    html += '<td>'+fmtNum(b.gm_target)+'</td>';
+    html += '<td>'+fmtNum(b.gm_actual)+'</td>';
+    html += '<td class="'+(b.gm_pct>=100?'text-green':b.gm_pct>=75?'text-yellow':'text-red')+'">'+(b.gm_pct||0)+'%</td>';
+    html += '<td>'+fmtNum(b.gm_total_vehicle)+'</td>';
+    html += '<td>'+fmtNum(b.gm_total_all)+'</td>';
+    html += '<td><span class="status-badge '+st.badge+'">'+st.text+'</span></td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('branchTable').innerHTML = html;
+
+  renderBranchBarChart();
+  renderBranchDonut();
+}
+
+/* ========================================
+   Render: Branch Bar Chart (CSS-based)
+   ======================================== */
+function renderBranchBarChart(){
+  var maxPct = 120; // scale max
+  var html = '';
+  BRANCH_DATA.forEach(function(b, i){
+    var color = pctColor(b.pct);
+    var width = Math.min(b.pct / maxPct * 100, 100);
+    var labelClass = i === 0 ? 'text-blue' : '';
+    html += '<div class="bar-chart-row">';
+    html += '<div class="bc-label '+labelClass+'">'+b.name+'</div>';
+    html += '<div class="bc-track"><div class="bc-fill" style="width:'+width+'%;background:'+color+'">'+b.pct+'%</div></div>';
+    html += '<div class="bc-value" style="color:'+color+'">'+b.pct+'%</div>';
+    html += '</div>';
+  });
+  document.getElementById('branchBarChart').innerHTML = html;
+}
+
+/* ========================================
+   Render: Branch Donut Chart (SVG)
+   ======================================== */
+function renderBranchDonut(){
+  // Use individual branches (skip "รวม 4 สาขา")
+  var branches = BRANCH_DATA.slice(1);
+  var total = 0;
+  branches.forEach(function(b){ total += (b.gm_total_vehicle || b.gm_total || 0); });
+
+  var colors = ['#2563eb','#10b981','#f59e0b','#ef4444','#7c3aed'];
+  var r = 70, cx = 100, cy = 100, sw = 22;
+  var circumference = 2 * Math.PI * r;
+  var offset = 0;
+
+  var html = '<div class="donut-wrap">';
+  html += '<div class="donut-chart">';
+  html += '<svg viewBox="0 0 200 200" width="200" height="200">';
+  html += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="#f1f5f9" stroke-width="'+sw+'"/>';
+  branches.forEach(function(b, i){
+    var gmVal = b.gm_total_vehicle || b.gm_total || 0;
+    var pct = total > 0 ? gmVal / total : 0;
+    var dash = pct * circumference;
+    html += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+colors[i]+'" stroke-width="'+sw+'" ';
+    html += 'stroke-dasharray="'+dash+' '+(circumference-dash)+'" stroke-dashoffset="-'+offset+'" style="transition:stroke-dasharray 1s ease"/>';
+    offset += dash;
+  });
+  html += '</svg>';
+  html += '<div class="donut-center"><div class="dc-num">'+fmtNum(total)+'</div><div class="dc-label">GM รวม (บาท)</div></div>';
+  html += '</div>';
+
+  html += '<div class="donut-legend">';
+  branches.forEach(function(b, i){
+    var gmVal = b.gm_total_vehicle || b.gm_total || 0;
+    var pct = total > 0 ? Math.round(gmVal / total * 100) : 0;
+    html += '<div class="dl-item">';
+    html += '<span class="dl-dot" style="background:'+colors[i]+'"></span>';
+    html += '<span>'+b.name+'</span>';
+    html += '<span class="dl-val">'+pct+'% · '+fmtNum(gmVal)+'</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '</div>';
+
+  document.getElementById('branchDonut').innerHTML = html;
+}
+
+/* ========================================
+   Render: SC Table (with search, sort, subtotals)
+   ======================================== */
+function sortSC(field, btn){
+  currentSort = field;
+  document.querySelectorAll('.sc-sort-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderSC();
+}
+
+function renderSC(){
+  var search = (document.getElementById('scSearch').value || '').toLowerCase().trim();
+  var data = SC_DATA.slice();
+
+  // Filter
+  if(search){
+    data = data.filter(function(sc){
+      return sc.name.toLowerCase().indexOf(search) >= 0 ||
+             sc.branch.toLowerCase().indexOf(search) >= 0;
+    });
+  }
+
+  // Sort
+  if(currentSort === 'pct'){
+    data.sort(function(a,b){ return b.pct - a.pct; });
+  } else if(currentSort === 'gm'){
+    data.sort(function(a,b){ return b.gm_total - a.gm_total; });
+  } else if(currentSort === 'name'){
+    data.sort(function(a,b){ return a.name.localeCompare(b.name, 'th'); });
+  } else {
+    // branch: group by branch, keep original order within branch
+    data.sort(function(a,b){
+      if(a.branch === b.branch) return a.no - b.no;
+      return a.branch.localeCompare(b.branch, 'th');
+    });
+  }
+
+  var html = '<table><thead><tr><th>NO</th><th>สาขา</th><th>SC</th><th>เป้า</th><th>ทำได้</th><th>GMเฉลี่ย</th><th>GMรวม</th><th>%</th><th>สถานะ</th></tr></thead><tbody>';
+
+  if(currentSort === 'branch'){
+    // Render with subtotals
+    var currentBranch = '';
+    var branchTotals = {};
+    data.forEach(function(sc){
+      if(sc.branch !== currentBranch){
+        if(currentBranch !== ''){
+          html += renderSCSubtotal(currentBranch, branchTotals[currentBranch]);
+        }
+        currentBranch = sc.branch;
+        branchTotals[currentBranch] = {target:0, actual:0, gm_total:0, count:0};
+      }
+      var bt = branchTotals[currentBranch];
+      bt.target += sc.target; bt.actual += sc.actual;
+      bt.gm_total += sc.gm_total; bt.count++;
+      html += renderSCRow(sc);
+    });
+    if(currentBranch !== ''){
+      var bt = branchTotals[currentBranch];
+      bt.gm_avg = bt.count > 0 ? Math.round(bt.gm_total / bt.count) : 0;
+      bt.pct = bt.target > 0 ? Math.round(bt.actual / bt.target * 100) : 0;
+      html += renderSCSubtotal(currentBranch, bt);
+    }
+  } else {
+    // No subtotals when sorted by other fields
+    data.forEach(function(sc){ html += renderSCRow(sc); });
+  }
+
+  html += '</tbody></table>';
+  document.getElementById('scTable').innerHTML = html;
+  document.getElementById('scTableCount').textContent = data.length + ' คน';
+}
+
+function renderSCRow(sc){
+  var st = getStatus(sc.pct);
+  var newTag = sc.isNew ? ' <span style="font-size:10px;color:#92400e;background:#fef3c7;padding:2px 6px;border-radius:6px;font-weight:600">🆕 ยังไม่เริ่มขาย</span>' : '';
+  var rowClass = sc.isNew ? 'sc-new-row' : '';
+  var html = '<tr class="'+rowClass+'">';
+  html += '<td>'+sc.no+'</td>';
+  html += '<td class="text-left">'+sc.branch+'</td>';
+  html += '<td class="text-left" style="font-weight:600">'+sc.name+newTag+'</td>';
+  html += '<td>'+sc.target+'</td><td>'+sc.actual+'</td>';
+  html += '<td>'+fmtNum(sc.gm_avg)+'</td><td>'+fmtNum(sc.gm_total)+'</td>';
+  html += '<td class="'+st.cls+'" style="font-weight:700">'+sc.pct+'%</td>';
+  html += '<td><span class="status-badge '+st.badge+'">'+st.text+'</span></td>';
+  html += '</tr>';
+  return html;
+}
+
+function renderSCSubtotal(branchName, bt){
+  var gmAvg = bt.gm_avg || (bt.count > 0 ? Math.round(bt.gm_total / bt.count) : 0);
+  var pct = bt.pct || (bt.target > 0 ? Math.round(bt.actual / bt.target * 100) : 0);
+  var st = getStatus(pct);
+  var html = '<tr class="subtotal">';
+  html += '<td colspan="3" class="text-left">📋 รวม '+branchName+'</td>';
+  html += '<td>'+bt.target+'</td><td>'+bt.actual+'</td>';
+  html += '<td>'+fmtNum(gmAvg)+'</td><td>'+fmtNum(bt.gm_total)+'</td>';
+  html += '<td class="'+st.cls+'" style="font-weight:700">'+pct+'%</td>';
+  html += '<td><span class="status-badge '+st.badge+'">'+st.text+'</span></td>';
+  html += '</tr>';
+  return html;
+}
+
+/* ========================================
+   Render: Analysis Tab
+   ======================================== */
+function renderAnalysis(){
+  var html = '';
+
+  // AL section (text)
+  html += '<div class="al-section al-blue"><h3>📊 AL — วิเคราะห์สถานการณ์</h3><p>'+escapeHtml(ANALYSIS.al)+'</p></div>';
+
+  // BP section (numbered items)
+  html += '<div class="al-section al-green"><h3>✅ BP — ทำได้ดีและต้องทำต่อ</h3>';
+  if(Array.isArray(ANALYSIS.bp) && ANALYSIS.bp.length > 0){
+    html += '<ol style="padding-left:20px;font-size:13px;line-height:1.8;color:#475569">';
+    ANALYSIS.bp.forEach(function(item){ html += '<li style="margin-bottom:6px">'+escapeHtml(item.text)+'</li>'; });
+    html += '</ol>';
+  } else {
+    html += '<p>'+escapeHtml(ANALYSIS.bp)+'</p>';
+  }
+  html += '</div>';
+
+  // LL section (numbered items)
+  html += '<div class="al-section al-red"><h3>⚠️ LL — ล้มเหลว / ปัญหา</h3>';
+  if(Array.isArray(ANALYSIS.ll) && ANALYSIS.ll.length > 0){
+    html += '<ol style="padding-left:20px;font-size:13px;line-height:1.8;color:#475569">';
+    ANALYSIS.ll.forEach(function(item){ html += '<li style="margin-bottom:6px">'+escapeHtml(item.text)+'</li>'; });
+    html += '</ol>';
+  } else {
+    html += '<p>'+escapeHtml(ANALYSIS.ll)+'</p>';
+  }
+  html += '</div>';
+
+  // II section (text)
+  html += '<div class="al-section al-purple"><h3>💡 II — ไอเดียปรับปรุง</h3><p>'+escapeHtml(ANALYSIS.ii)+'</p></div>';
+
+  // AP section (numbered items as table)
+  html += '<div class="al-section al-yellow"><h3>📝 AP — แผนงาน 5W2H</h3>';
+  if(Array.isArray(ANALYSIS.ap) && ANALYSIS.ap.length > 0){
+    html += '<div class="table-wrap"><table class="ap-table"><thead><tr><th>#</th><th>แผนงาน</th></tr></thead><tbody>';
+    ANALYSIS.ap.forEach(function(a){
+      html += '<tr><td class="ap-no">'+a.no+'</td><td>'+escapeHtml(a.text)+'</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += '<p>'+escapeHtml(ANALYSIS.ap)+'</p>';
+  }
+  html += '<div style="margin-top:12px;font-size:12px;color:var(--text-muted);padding:10px;background:#fffbeb;border-radius:8px">';
+  html += '<b>5W2H:</b> What (แผนงาน) · Why (เหตุผลใน AL) · Where (สาขา/ทีม) · How (วิธีใน II) · How much (GM ใน KPI)';
+  html += '</div>';
+  html += '</div>';
+
+  // XP section (text)
+  if(ANALYSIS.xp){
+    html += '<div class="al-section al-blue"><h3>🚀 XP — Execution Plan</h3><p>'+escapeHtml(ANALYSIS.xp)+'</p></div>';
+  }
+
+  document.getElementById('analysisContent').innerHTML = html;
+}
+
+function escapeHtml(str){
+  if(!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ========================================
+   Render: Smart Insights (auto-generated)
+   ======================================== */
+function renderInsights(){
+  var critical = [], best = [], warning = [], quickwin = [];
+
+  KR_DATA.forEach(function(kr){
+    if(kr.pct < 50){
+      critical.push({text: kr.kr+' '+kr.label+': '+kr.pct+'% (เป้า '+fmtNum(kr.target)+' ทำได้ '+fmtNum(kr.actual)+')', pct: kr.pct});
+    }
+    if(kr.pct >= 100){
+      best.push({text: kr.kr+' '+kr.label+': '+kr.pct+'% ทะลุเป้า!', pct: kr.pct});
+    }
+    if(kr.pct >= 75 && kr.pct < 100){
+      warning.push({text: kr.kr+' '+kr.label+': '+kr.pct+'% ใกล้เป้า ต้องเร่งอีก '+(100-kr.pct)+'%', pct: kr.pct});
+    }
+    if(kr.pct >= 90 && kr.pct < 100){
+      quickwin.push({text: kr.kr+' '+kr.label+': อีกนิดเดียว! เหลืออีก '+fmtNum(kr.target-kr.actual)+' '+kr.unit, pct: kr.pct});
+    }
+  });
+
+  // Branch insights
+  BRANCH_DATA.forEach(function(b, i){
+    if(i > 0 && b.pct < 75){
+      critical.push({text: 'สาขา '+b.name+': ทำได้เพียง '+b.pct+'% ต้องเร่งด่วน!', pct: b.pct});
+    }
+    if(i > 0 && b.pct >= 100){
+      best.push({text: 'สาขา '+b.name+': ทะลุเป้า '+b.pct+'%', pct: b.pct});
+    }
+  });
+
+  // SC insights
+  var zeroSC = SC_DATA.filter(function(sc){ return sc.pct === 0; });
+  if(zeroSC.length > 0){
+    critical.push({text: 'มี SC ที่ยังไม่เริ่มขาย จำนวน '+zeroSC.length+' คน ('+zeroSC.map(function(s){return s.name;}).join(', ')+')', pct: 0});
+  }
+  var topSC = SC_DATA.filter(function(sc){ return sc.pct >= 100; });
+  if(topSC.length > 0){
+    best.push({text: 'SC ทะลุเป้า '+topSC.length+' คน: '+topSC.map(function(s){return s.name+' ('+s.pct+'%)';}).join(', '), pct: 100});
+  }
+
+  var html = '';
+  html += insightCard('critical', '🔴 Critical — ต้องเร่งด่วน', critical);
+  html += insightCard('best', '🟢 Best Practice — ทำได้ดี', best);
+  html += insightCard('warning', '🟡 Warning — ใกล้เป้า ต้องเร่ง', warning);
+  html += insightCard('quickwin', '🔵 Quick Win — อีกนิดเดียว', quickwin);
+  document.getElementById('insightsContent').innerHTML = html;
+}
+
+function insightCard(type, title, items){
+  if(items.length === 0) items = [{text: 'ไม่มีรายการในหมวดนี้', pct: 0}];
+  var icons = {critical:'🔴', best:'🟢', warning:'🟡', quickwin:'⚡'};
+  var dots = {critical:'🔴', best:'🟢', warning:'🟡', quickwin:'🔵'};
+  var html = '<div class="insight-card '+type+'">';
+  html += '<div class="ic-header"><span class="ic-icon">'+icons[type]+'</span><span class="ic-title">'+title+'</span></div>';
+  html += '<ul class="ic-list">';
+  items.forEach(function(item){
+    html += '<li><span class="li-dot">'+dots[type]+'</span><span>'+item.text+'</span></li>';
+  });
+  html += '</ul></div>';
+  return html;
+}
+
+/* ========================================
+   Tab Navigation
+   ======================================== */
+function switchTab(tabId, el){
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  if(el){ el.classList.add('active'); }
+  else {
+    var navItem = document.querySelector('.nav-item[data-tab="'+tabId+'"]');
+    if(navItem) navItem.classList.add('active');
+  }
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.style.display = 'none'; });
+  var panel = document.getElementById('tab-'+tabId);
+  if(panel) panel.style.display = 'block';
+  closeSidebar();
+}
+
+/* ========================================
+   Sidebar Mobile Toggle
+   ======================================== */
+function toggleSidebar(){
+  var sb = document.getElementById('sidebar');
+  var bd = document.getElementById('backdrop');
+  sb.classList.toggle('open');
+  bd.classList.toggle('open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('backdrop').classList.remove('open');
+}
+
+/* ========================================
+   Data Loading & Auto-Update (from /api/data)
+   ======================================== */
+function refreshData(){
+  var loading = document.getElementById('loading');
+  var btn = document.getElementById('refreshBtn');
+  loading.style.display = 'flex';
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.style.display = 'none'; });
+  btn.classList.add('spinning');
+  loadData(true);  // true = force refresh
+}
+
+function loadData(forceRefresh){
+  google.script.run
+    .withSuccessHandler(function(d){
+      if(d && d.success){
+        apiData = d;
+        mapApiData(d);
+        renderAll();
+      } else {
+        console.error('API error:', d);
+        showLoadError(d && d.error ? d.error : 'ไม่สามารถดึงข้อมูลได้');
+      }
+    })
+    .withFailureHandler(function(err){
+      console.error('Error:', err);
+      showLoadError('การเชื่อมต่อผิดพลาด: ' + (err.message || err));
+    })
+    .getBCTSaleDataForClient(forceRefresh);
+}
+
+function showLoadError(msg){
+  var loading = document.getElementById('loading');
+  loading.innerHTML = '<div style="font-size:48px;margin-bottom:12px">❌</div><div class="loading-text" style="color:var(--red)">'+msg+'</div><div class="loading-sub">กรุณากดปุ่มอัปเดตข้อมูลอีกครั้ง</div>';
+  loading.style.display = 'flex';
+  document.getElementById('refreshBtn').classList.remove('spinning');
+}
+
+function renderAll(){
+  renderKPI();
+  renderBranch();
+  renderSC();
+  renderAnalysis();
+  renderInsights();
+
+  // Update header info
+  var scCount = SC_DATA.length;
+  document.getElementById('scCount').textContent = scCount;
+  document.getElementById('scNavCount').textContent = scCount;
+
+  // Update timestamp from API
+  if(lastUpdated){
+    document.getElementById('updateTime').textContent = lastUpdated;
+  } else {
+    document.getElementById('updateTime').textContent = new Date().toLocaleString('th-TH');
+  }
+  document.getElementById('dataDate').textContent = sheetDate || '—';
+
+  // Update title and subtitle from real data
+  var h1 = document.querySelector('.header h1');
+  if(h1 && sheetTitle) h1.textContent = '📊 ' + sheetTitle;
+  var sub = document.querySelector('.header .sub');
+  if(sub && sheetTitle) sub.textContent = sheetTitle + (sheetDate ? ' — ข้อมูล ณ ' + sheetDate : '');
+
+  // Update sidebar nav badges
+  var branchBadge = document.querySelector('.nav-item[data-tab="branch"] .badge-count');
+  if(branchBadge) branchBadge.textContent = BRANCH_DATA.length;
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('refreshBtn').classList.remove('spinning');
+
+  // Show KPI tab by default
+  switchTab('kpi');
+}
+
+/* ========================================
+   Init
+   ======================================== */
+loadData();
+setInterval(function(){ loadData(false); }, 600000); // Auto-refresh every 10 minutes
+</script>
+</body>
+</html>
