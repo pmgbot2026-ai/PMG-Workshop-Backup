@@ -579,7 +579,7 @@ function doGet(e) {
     // fall through ไปทำงานต่อ
   }
   // ── API endpoints ไม่ต้อง login ──
-  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action)) || p.prapi === '1' || p.courseapi === '1' || p.gmapi === '1' || p.ceoactuals === '1' || p.bct === '1') {
+  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || (p.okrall === '1') || p.prapi === '1' || p.courseapi === '1' || p.gmapi === '1' || p.ceoactuals === '1' || p.bct === '1') {
     // fall through — API/embed bypass
   }
   // ── ถ้าไม่มี session และไม่ใช่ API — แสดงหน้า login ──
@@ -1509,18 +1509,24 @@ function doGet(e) {
       allContent = allContent.split('SESSION_TOKEN_PLACEHOLDER').join('');
     }
 
-    // ⚡ PRE-WARM CACHE: Read first dept in background (non-blocking)
-    // This starts filling cache while user sees the HTML shell
+    var allHtml = HtmlService.createHtmlOutputFromFile('OKR_All_Index');
+    var allUrl = ScriptApp.getService().getUrl();
+    var allContent = allHtml.getContent();
+    // Use replaceAll in case placeholder appears multiple times after escaping
+    allContent = allContent.split('SCRIPT_URL_PLACEHOLDER').join(allUrl);
+    
+    // Inject session token so client-side fetch can bypass PDPA
+    if (p.st) {
+      allContent = allContent.split('SESSION_TOKEN_PLACEHOLDER').join(p.st);
+    } else {
+      allContent = allContent.split('SESSION_TOKEN_PLACEHOLDER').join('');
+    }
+
+    // ⚡ Return HTML immediately — no background warmup (it blocks the response)
     try {
-      // Check if cache is cold — if so, trigger async warmup
       var warmKey = 'okrall_data_v8';
       var warmCached = CacheService.getScriptCache().get(warmKey);
-      if (!warmCached) {
-        // Cache is cold — inject a flag so client knows to show skeleton
-        allContent = allContent.split('CACHE_STATUS_PLACEHOLDER').join('cold');
-      } else {
-        allContent = allContent.split('CACHE_STATUS_PLACEHOLDER').join('warm');
-      }
+      allContent = allContent.split('CACHE_STATUS_PLACEHOLDER').join(warmCached ? 'warm' : 'cold');
     } catch(e2) {
       allContent = allContent.split('CACHE_STATUS_PLACEHOLDER').join('unknown');
     }
