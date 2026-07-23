@@ -220,6 +220,25 @@ tbody tr.sc-new-row:hover{background:#fef3c7}
 .sc-legend .lg-dot{width:14px;height:14px;border-radius:4px}
 
 /* ===== Loading ===== */
+.tbl-scroll{overflow-x:auto;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.sc-rank-table{width:100%;border-collapse:collapse;font-size:12px;min-width:1400px}
+.sc-rank-table thead th{position:sticky;top:0;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:8px 6px;text-align:center;font-size:11px;font-weight:600;z-index:10;cursor:pointer;white-space:nowrap;transition:background .2s}
+.sc-rank-table thead th:hover{background:linear-gradient(135deg,#2563eb,#1d4ed8)}
+.sc-rank-table tbody tr{border-bottom:1px solid #e2e8f0;transition:background .15s}
+.sc-rank-table tbody tr:hover{background:#f0f9ff}
+.sc-rank-table tbody tr.subtotal{background:#eff6ff;font-weight:700;border-top:2px solid #2563eb}
+.sc-rank-table tbody tr.sc-new-row{background:#fffbeb}
+.sc-rank-table td{padding:8px 6px;text-align:center;white-space:nowrap}
+.sc-rank-table td.text-left{text-align:left}
+.rank-cell{width:40px;text-align:center}
+.rank-badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-weight:700;font-size:12px;color:#fff}
+.rank-badge.rank-top{background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 2px 4px rgba(245,158,11,.3)}
+.rank-badge.rank-mid{background:linear-gradient(135deg,#2563eb,#1d4ed8)}
+.rank-badge.rank-low{background:linear-gradient(135deg,#94a3b8,#64748b)}
+.mini-bar{width:60px;height:4px;background:#e2e8f0;border-radius:2px;margin:2px auto}
+.mini-bar-fill{height:4px;border-radius:2px;transition:width .3s}
+.sortable{user-select:none}
+.sortable:hover::after{content:' ↕';opacity:.5}
 .loading-overlay{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;color:var(--text-muted)}
 .loading-overlay .spinner{width:52px;height:52px;border:4px solid #dbeafe;border-top-color:var(--blue);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:18px}
 .loading-overlay .loading-text{font-size:15px;font-weight:600}
@@ -815,7 +834,12 @@ function renderBranchDonut(){
 function sortSC(field, btn){
   currentSort = field;
   document.querySelectorAll('.sc-sort-btn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
+  if(btn) btn.classList.add('active');
+  renderSC();
+}
+
+function sortSCTable(field){
+  currentSort = field;
   renderSC();
 }
 
@@ -834,10 +858,30 @@ function renderSC(){
   // Sort
   if(currentSort === 'pct'){
     data.sort(function(a,b){ return b.pct - a.pct; });
-  } else if(currentSort === 'gm'){
+  } else if(currentSort === 'gm' || currentSort === 'gmTotal'){
     data.sort(function(a,b){ return b.gm_total - a.gm_total; });
   } else if(currentSort === 'name'){
     data.sort(function(a,b){ return a.name.localeCompare(b.name, 'th'); });
+  } else if(currentSort === 'target'){
+    data.sort(function(a,b){ return b.target - a.target; });
+  } else if(currentSort === 'actual'){
+    data.sort(function(a,b){ return b.actual - a.actual; });
+  } else if(currentSort === 'gmAvg'){
+    data.sort(function(a,b){ return b.gm_avg - a.gm_avg; });
+  } else if(currentSort === 'gmPct'){
+    data.sort(function(a,b){ return (b.gm_pct||0) - (a.gm_pct||0); });
+  } else if(currentSort === 'bookingTarget'){
+    data.sort(function(a,b){ return (b.bookingTarget||0) - (a.bookingTarget||0); });
+  } else if(currentSort === 'bookingDone'){
+    data.sort(function(a,b){ return (b.bookingDone||0) - (a.bookingDone||0); });
+  } else if(currentSort === 'saleTarget'){
+    data.sort(function(a,b){ return (b.saleTarget||0) - (a.saleTarget||0); });
+  } else if(currentSort === 'saleDone'){
+    data.sort(function(a,b){ return (b.saleDone||0) - (a.saleDone||0); });
+  } else if(currentSort === 'no'){
+    data.sort(function(a,b){ return a.no - b.no; });
+  } else if(currentSort === 'rank'){
+    data.sort(function(a,b){ return b.pct - a.pct; });
   } else {
     // branch: group by branch, keep original order within branch
     data.sort(function(a,b){
@@ -846,24 +890,43 @@ function renderSC(){
     });
   }
 
-  var html = '<table><thead><tr><th>NO</th><th>สาขา</th><th>SC</th><th>เป้า</th><th>ทำได้</th><th>GMเฉลี่ย</th><th>GMรวม</th><th>%</th><th>สถานะ</th></tr></thead><tbody>';
+  var html = '<div class="tbl-scroll"><table class="sc-rank-table"><thead><tr>'+
+    '<th class="sortable" onclick="sortSCTable(\'rank\')">Rank</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'no\')">ลำดับ</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'branch\')">สาขา</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'name\')">SC</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'target\')">เป้า<br>(คัน)</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'actual\')">มุ่งหวัง<br>ทำได้</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'pct\')">%</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'bookingTarget\')">เป้าจอง<br>(คัน)</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'bookingDone\')">จอง<br>ทำได้</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'saleTarget\')">เป้าขาย<br>(คัน)</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'saleDone\')">ขาย<br>ทำได้</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'gmAvg\')">GMเฉลี่ย<br>(บาท)</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'gmTotal\')">GMรวม<br>(บาท)</th>'+
+    '<th class="sortable" onclick="sortSCTable(\'gmPct\')">GM%<br>vs เป้า</th>'+
+    '<th>สถานะ</th>'+
+    '</tr></thead><tbody>';
 
   if(currentSort === 'branch'){
     // Render with subtotals
     var currentBranch = '';
     var branchTotals = {};
+    var rank = 1;
     data.forEach(function(sc){
       if(sc.branch !== currentBranch){
         if(currentBranch !== ''){
           html += renderSCSubtotal(currentBranch, branchTotals[currentBranch]);
         }
         currentBranch = sc.branch;
-        branchTotals[currentBranch] = {target:0, actual:0, gm_total:0, count:0};
+        branchTotals[currentBranch] = {target:0, actual:0, gm_total:0, count:0, bookingTarget:0, bookingDone:0, saleTarget:0, saleDone:0};
       }
       var bt = branchTotals[currentBranch];
       bt.target += sc.target; bt.actual += sc.actual;
       bt.gm_total += sc.gm_total; bt.count++;
-      html += renderSCRow(sc);
+      bt.bookingTarget += (sc.bookingTarget||0); bt.bookingDone += (sc.bookingDone||0);
+      bt.saleTarget += (sc.saleTarget||0); bt.saleDone += (sc.saleDone||0);
+      html += renderSCRow(sc, rank++);
     });
     if(currentBranch !== ''){
       var bt = branchTotals[currentBranch];
@@ -872,26 +935,40 @@ function renderSC(){
       html += renderSCSubtotal(currentBranch, bt);
     }
   } else {
-    // No subtotals when sorted by other fields
-    data.forEach(function(sc){ html += renderSCRow(sc); });
+    // Ranking mode - no subtotals, show rank
+    var rank = 1;
+    data.forEach(function(sc){ html += renderSCRow(sc, rank++); });
   }
 
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
   document.getElementById('scTable').innerHTML = html;
   document.getElementById('scTableCount').textContent = data.length + ' คน';
 }
 
-function renderSCRow(sc){
+function renderSCRow(sc, rank){
   var st = getStatus(sc.pct);
-  var newTag = sc.isNew ? ' <span style="font-size:10px;color:#92400e;background:#fef3c7;padding:2px 6px;border-radius:6px;font-weight:600">🆕 ยังไม่เริ่มขาย</span>' : '';
+  var newTag = sc.isNew ? ' <span style="font-size:10px;color:#92400e;background:#fef3c7;padding:2px 6px;border-radius:6px;font-weight:600">🆕</span>' : '';
   var rowClass = sc.isNew ? 'sc-new-row' : '';
+  var rankBadge = rank ? '<span class="rank-badge rank-'+(rank<=3?'top':rank<=10?'mid':'low')+'">'+rank+'</span>' : '';
+  var pctBar = '<div class="mini-bar"><div class="mini-bar-fill" style="width:'+Math.min(sc.pct,100)+'%;background:'+st.color+'"></div></div>';
+  var gmPct = sc.gm_pct || 0;
+  var gmSt = gmPct >= 100 ? 'green' : gmPct >= 75 ? 'yellow' : 'red';
+  var gmPctBar = '<div class="mini-bar"><div class="mini-bar-fill" style="width:'+Math.min(gmPct,100)+'%;background:var(--'+gmSt+')"></div></div>';
   var html = '<tr class="'+rowClass+'">';
+  html += '<td class="rank-cell">'+rankBadge+'</td>';
   html += '<td>'+sc.no+'</td>';
   html += '<td class="text-left">'+sc.branch+'</td>';
-  html += '<td class="text-left" style="font-weight:600">'+sc.name+newTag+'</td>';
-  html += '<td>'+sc.target+'</td><td>'+sc.actual+'</td>';
-  html += '<td>'+fmtNum(sc.gm_avg)+'</td><td>'+fmtNum(sc.gm_total)+'</td>';
-  html += '<td class="'+st.cls+'" style="font-weight:700">'+sc.pct+'%</td>';
+  html += '<td class="text-left" style="font-weight:600">'+sc.name+newTag+(sc.startDate?'<br><span style="font-size:10px;color:#92400e">เริ่ม '+sc.startDate+'</span>':'')+'</td>';
+  html += '<td>'+sc.target+'</td>';
+  html += '<td>'+sc.actual+'</td>';
+  html += '<td><div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span class="'+st.cls+'" style="font-weight:700;font-size:12px">'+sc.pct+'%</span>'+pctBar+'</div></td>';
+  html += '<td>'+(sc.bookingTarget||0)+'</td>';
+  html += '<td>'+(sc.bookingDone||0)+'</td>';
+  html += '<td>'+(sc.saleTarget||0)+'</td>';
+  html += '<td>'+(sc.saleDone||0)+'</td>';
+  html += '<td>'+fmtNum(sc.gm_avg)+'</td>';
+  html += '<td style="font-weight:600">'+fmtNum(sc.gm_total)+'</td>';
+  html += '<td><div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-weight:700;font-size:12px;color:var(--'+gmSt+')">'+gmPct+'%</span>'+gmPctBar+'</div></td>';
   html += '<td><span class="status-badge '+st.badge+'">'+st.text+'</span></td>';
   html += '</tr>';
   return html;
@@ -903,9 +980,13 @@ function renderSCSubtotal(branchName, bt){
   var st = getStatus(pct);
   var html = '<tr class="subtotal">';
   html += '<td colspan="3" class="text-left">📋 รวม '+branchName+'</td>';
+  html += '<td class="text-left">รวม '+bt.count+' คน</td>';
   html += '<td>'+bt.target+'</td><td>'+bt.actual+'</td>';
-  html += '<td>'+fmtNum(gmAvg)+'</td><td>'+fmtNum(bt.gm_total)+'</td>';
   html += '<td class="'+st.cls+'" style="font-weight:700">'+pct+'%</td>';
+  html += '<td>'+(bt.bookingTarget||0)+'</td><td>'+(bt.bookingDone||0)+'</td>';
+  html += '<td>'+(bt.saleTarget||0)+'</td><td>'+(bt.saleDone||0)+'</td>';
+  html += '<td>'+fmtNum(gmAvg)+'</td><td>'+fmtNum(bt.gm_total)+'</td>';
+  html += '<td>—</td>';
   html += '<td><span class="status-badge '+st.badge+'">'+st.text+'</span></td>';
   html += '</tr>';
   return html;

@@ -579,7 +579,7 @@ function doGet(e) {
     // fall through ไปทำงานต่อ
   }
   // ── API endpoints ไม่ต้อง login (data fetch + refresh only) ──
-  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || p.prapi === '1' || p.courseapi === '1' || p.gmapi === '1' || p.ceoactuals === '1' || p.bct === '1' || p.bctsaleapi === '1' || p.orgcustapi === '1' || p.orgcustdebug === '1' || (p.allproject === '1') || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action))) {
+  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || p.prapi === '1' || p.courseapi === '1' || p.gmapi === '1' || p.ceoactuals === '1' || p.bct === '1' || p.bctsaleapi === '1' || p.orgcustapi === '1' || (p.allproject === '1') || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action))) {
     // fall through — API/embed bypass
   }
   // ── ถ้าไม่มี session และไม่ใช่ API — แสดงหน้า login ──
@@ -1420,15 +1420,8 @@ function doGet(e) {
 
   // ═══ Organizational Customer Data API ═══
   if (p.orgcustapi === '1') {
-    var ocForce = (p.refresh === '1');
-    var ocData = getOrgCustData_(ocForce);
+    var ocData = getOrgCustData_();
     return ContentService.createTextOutput(JSON.stringify(ocData))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-  // ═══ Organizational Customer Debug API (raw sheet dump) ═══
-  if (p.orgcustdebug === '1') {
-    var ocDbg = getOrgCustDebug_();
-    return ContentService.createTextOutput(JSON.stringify(ocDbg))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -15928,355 +15921,85 @@ function fetchGMDashboardData_() {
 // ═══════════════════════════════════════════════════════════════
 var ORG_CUST_SHEET_ID = '14cTe13-Rxmz2z7pl6Sj-zj2LtapXuQ8XBHFL_F88SDk';
 
-// ── helpers for reading sheet ranges safely ──
-function ocReadSheet_(ss, tabName, maxRows, maxCols) {
-  var s = ss.getSheetByName(tabName);
-  if (!s) return null;
-  var lastRow = s.getLastRow();
-  var lastCol = s.getLastColumn();
-  if (lastRow === 0 || lastCol === 0) return { name: tabName, rows: [], headers: [], rowCount: 0, colCount: 0 };
-  var rowsToRead = maxRows ? Math.min(lastRow, maxRows) : lastRow;
-  var colsToRead = maxCols ? Math.min(lastCol, maxCols) : lastCol;
-  var range = s.getRange(1, 1, rowsToRead, colsToRead);
-  var data = range.getValues();
-  var rows = [];
-  for (var r = 0; r < data.length; r++) {
-    var row = [];
-    for (var c = 0; c < data[r].length; c++) {
-      var v = data[r][c];
-      if (v instanceof Date) {
-        v = Utilities.formatDate(v, 'GMT+7', 'yyyy-MM-dd');
-      }
-      row.push(v);
-    }
-    rows.push(row);
-  }
-  return {
-    name: tabName,
-    rows: rows,
-    headers: rows[0] || [],
-    rowCount: lastRow,
-    colCount: lastCol
-  };
-}
-
-function ocNum(v) {
-  if (typeof v === 'number') return v;
-  if (typeof v === 'string') {
-    var n = parseFloat(v.replace(/[^0-9.\-]/g, ''));
-    return isNaN(n) ? 0 : n;
-  }
-  return 0;
-}
-
-function ocFindCol(headers, keywords) {
-  for (var i = 0; i < headers.length; i++) {
-    var h = String(headers[i] || '').toLowerCase();
-    for (var k = 0; k < keywords.length; k++) {
-      if (h.indexOf(keywords[k]) >= 0) return i;
-    }
-  }
-  return -1;
-}
-
 function getOrgCustData_(forceRefresh) {
-  var cacheKey = 'orgcust_data_v2';
+  var cacheKey = 'orgcust_data_v1';
   if (!forceRefresh) {
     try {
       var cached = CacheService.getScriptCache().get(cacheKey);
       if (cached) return JSON.parse(cached);
-    } catch (e) {}
+    } catch(e) {}
   }
 
-  var result = {
-    success: true,
-    summary: {},
-    dailyResults: null,
-    shortSummary: null,
-    holdReport: null,
-    yearComparison: null,
-    pendingRepairs: null,
-    supplementProducts: null,
-    monthlyCars: null,
-    orgSummary: null,
-    customerList: null,
-    revenueReport: null,
-    dailyAppointments: null,
-    records: null,
-    tabs: {},
-    sourceUrl: 'https://docs.google.com/spreadsheets/d/' + ORG_CUST_SHEET_ID + '/edit',
-    lastUpdate: new Date().toISOString()
-  };
+  var result = { success: true, tabs: {}, summary: {} };
 
   try {
     var ss = SpreadsheetApp.openById(ORG_CUST_SHEET_ID);
+    var allSheets = ss.getSheets();
 
-    // ─────────────────────────────────────────────
-    // 1. C2_สรุปผลงานรายวัน (117r×104c)
-    // ─────────────────────────────────────────────
-    var c2 = ocReadSheet_(ss, 'C2_สรุปผลงานรายวัน', 117, 104);
-    if (c2) {
-      result.dailyResults = c2;
-      result.tabs.c2_daily = c2;
-      // R1: เป้าแสวงหา
-      if (c2.rows.length > 1) {
-        var targetRow = c2.rows[1];
-        result.summary.targetSeek = ocNum(targetRow[0]) || 135;
-      }
-      // R3: headers for daily, R4: sub-headers
-      if (c2.rows.length > 3) {
-        result.dailyResults.dailyHeaders = c2.rows[3];
-        result.dailyResults.subHeaders = c2.rows.length > 4 ? c2.rows[4] : [];
-      }
-    }
-
-    // ─────────────────────────────────────────────
-    // 2. C3_ส่งสรุปสั้นเดิม (125r×32c)
-    // ─────────────────────────────────────────────
-    var c3 = ocReadSheet_(ss, 'C3_ส่งสรุปสั้นเดิม', 125, 32);
-    if (c3) {
-      result.shortSummary = c3;
-      result.tabs.c3_summary = c3;
-      // R1: เดือน=7, R2: ปี=2026, เป้านัดหมาย=60, นัดได้=75, คิดเป็น=1.25
-      if (c3.rows.length > 2) {
-        result.summary.monthNum = ocNum(c3.rows[1][8]) || 7;
-        result.summary.yearNum = ocNum(c3.rows[2][8]) || 2026;
-        // R4 has: col 9=เป้านัดหมาย 60, col 10=นัดได้ 75, col 11=คิดเป็น 1.25
-        var r4 = c4 && c4.rows[4] ? c4.rows[4] : [];
-        if (c3.rows.length > 4) {
-          var dRow = c3.rows[4];
-          result.summary.appointmentTarget = ocNum(dRow[9]) || 60;
-          result.summary.appointmentAchieved = ocNum(dRow[10]) || 75;
-          result.summary.appointmentRatio = ocNum(dRow[11]) || 1.25;
-        }
-      }
-    }
-
-    // ─────────────────────────────────────────────
-    // 3. C4_รายงานกัดไม่ปล่อย (35r×62c)
-    // ─────────────────────────────────────────────
-    var c4 = ocReadSheet_(ss, 'C4_รายงานกัดไม่ปล่อย', 35, 62);
-    if (c4) {
-      result.holdReport = c4;
-      result.tabs.c4_hold = c4;
-      // R0: เดือน, R1: headers, R3: summary stats
-      if (c4.rows.length > 0) result.summary.holdMonth = c4.rows[0][0];
-      if (c4.rows.length > 1) result.holdReport.dataHeaders = c4.rows[1];
-      if (c4.rows.length > 3) {
-        var hrow = c4.rows[3];
-        result.summary.holdBaseTotal = ocNum(hrow[0]) || 91;
-        result.summary.holdContactable = ocNum(hrow[1]) || 84;
-        result.summary.holdClosed = ocNum(hrow[2]) || 68;
-      }
-    }
-
-    // ─────────────────────────────────────────────
-    // 4. C5_เปรียบเทียบเดือน/ปี (107r×24c)
-    // ─────────────────────────────────────────────
-    var c5 = ocReadSheet_(ss, 'C5_เปรียบเทียบเดือน/ปี', 107, 24);
-    if (c5) {
-      result.yearComparison = c5;
-      result.tabs.c5_compare = c5;
-      // R3 has all data: col 1=ปี68คัน, col 2=ปี69คัน, col 5=ปี68รายได้, col 6=ปี69รายได้, col 9=ปี68GM, col 10=ปี69GM
-      if (c5.rows.length > 3) {
-        var yrow = c5.rows[3];
-        result.summary.prevYear = {
-          cars: ocNum(yrow[1]) || 106,
-          revenue: ocNum(yrow[5]) || 886000,
-          gm: ocNum(yrow[9]) || 397000
-        };
-        result.summary.curYear = {
-          cars: ocNum(yrow[2]) || 118,
-          revenue: ocNum(yrow[6]) || 906000,
-          gm: ocNum(yrow[10]) || 430713
-        };
-      }
-    }
-
-    // ─────────────────────────────────────────────
-    // 5. B1_บันทึกข้อมูล (1104r×97c) — read 50 rows
-    // ─────────────────────────────────────────────
-    var b1 = ocReadSheet_(ss, 'B1_บันทึกข้อมูล', 51, 97);
-    if (b1) {
-      result.records = b1;
-      result.tabs.b1_records = b1;
-    }
-
-    // ─────────────────────────────────────────────
-    // 6. B2_กัดไม่ปล่อยยังไม่ซ่อม (104r×86c) — read 50 rows
-    // ─────────────────────────────────────────────
-    var b2 = ocReadSheet_(ss, 'B2_กัดไม่ปล่อยยังไม่ซ่อม', 51, 86);
-    if (b2) {
-      result.pendingRepairs = b2;
-      result.tabs.b2_pending = b2;
-    }
-
-    // ─────────────────────────────────────────────
-    // 7. สรุปผลิตภัณฑ์เสริม/ปี (32r×27c)
-    // ─────────────────────────────────────────────
-    var supp = ocReadSheet_(ss, 'สรุปผลิตภัณฑ์เสริม/ปี', 32, 27);
-    if (supp) {
-      result.supplementProducts = supp;
-      result.tabs.supplement = supp;
-      // R2: headers, R3: มกราคม GM=32725
-      if (supp.rows.length > 2) result.supplementProducts.headers = supp.rows[2];
-      if (supp.rows.length > 3) {
-        // R2: headers (เดือน/เป้าหมาย/รายได้/ต้นทุน/GM/%GM/ยอดรถ/GM-คัน)
-        // R3: มกราคม, 45000, 56962, 24237, 32725, 0.727, 110, 297.5
-        // col 1=เดือน, col 2=เป้าGM, col 3=รายได้, col 4=ต้นทุน, col 5=GM, col 6=%GM, col 7=ยอดรถ, col 8=GM/คัน
-        if (supp.rows.length > 3) {
-          var srow = supp.rows[3];
-          result.summary.supplementGM = ocNum(srow[5]) || 32725;
-          result.summary.supplementRevenue = ocNum(srow[3]) || 56962;
-          result.summary.supplementCost = ocNum(srow[4]) || 24237;
-          result.summary.supplementCars = ocNum(srow[7]) || 110;
-          result.summary.supplementGmPerCar = ocNum(srow[8]) || 297;
-        }
-        result.summary.supplementCars = ocNum(supp.rows[3][6]) || 110;
-        result.summary.supplementGmPerCar = ocNum(supp.rows[3][8]) || 297.5;
-      }
-    }
-
-    // ─────────────────────────────────────────────
-    // 8. สรุปยอดรถรายเดือน (148r×33c)
-    // ─────────────────────────────────────────────
-    var mc = ocReadSheet_(ss, 'สรุปยอดรถรายเดือน', 148, 33);
-    if (mc) {
-      result.monthlyCars = mc;
-      result.tabs.monthly_cars = mc;
-      // R4: headers
-      if (mc.rows.length > 4) result.monthlyCars.headers = mc.rows[4];
-    }
-
-    // ─────────────────────────────────────────────
-    // 9. สรุปฐานลูกค้าองค์กร (999r×22c) — read 200 rows
-    // ─────────────────────────────────────────────
-    var org = ocReadSheet_(ss, 'สรุปฐานลูกค้าองค์กร', 200, 22);
-    if (org) {
-      result.orgSummary = org;
-      result.tabs.org_summary = org;
-      // R2: 41องค์กร 165คัน 33ลูกค้าองค์กร
-      if (org.rows.length > 2) {
-        var orow = org.rows[2];
-        result.summary.orgCount = ocNum(orow[0]) || 41;
-        result.summary.orgCars = ocNum(orow[1]) || 165;
-        result.summary.orgCustomers = ocNum(orow[2]) || 33;
-      }
-    }
-
-    // ─────────────────────────────────────────────
-    // 10. รายชื่อลูกค้าองค์กร (233r×9c) — read 100 rows
-    // ─────────────────────────────────────────────
-    var cl = ocReadSheet_(ss, 'รายชื่อลูกค้าองค์กร', 100, 9);
-    if (cl) {
-      result.customerList = cl;
-      result.tabs.customer_list = cl;
-      // R2: headers
-      if (cl.rows.length > 2) result.customerList.headers = cl.rows[2];
-    }
-
-    // ─────────────────────────────────────────────
-    // 11. รายได้ของพี่วันชัย (56r×15c)
-    // ─────────────────────────────────────────────
-    var rev = ocReadSheet_(ss, 'รายได้ของพี่วันชัย', 56, 15);
-    if (rev) {
-      result.revenueReport = rev;
-      result.tabs.revenue = rev;
-      // R4: ปิดได้ 118 (ซ่อมทันที 50 + กัดไม่ปล่อย 68)
-      if (rev.rows.length > 4) {
-        var rrow = rev.rows[4];
-        result.summary.totalClosed = ocNum(rrow[2]) || 118;
-        result.summary.immediateRepair = ocNum(rrow[3]) || 50;
-        result.summary.holdRepair = ocNum(rrow[8]) || 68;
-      }
-    }
-
-    // ─────────────────────────────────────────────
-    // 12. A4_นัดหมายประจำวัน (16r×17c)
-    // ─────────────────────────────────────────────
-    var appt = ocReadSheet_(ss, 'A4_นัดหมายประจำวัน', 16, 17);
-    if (appt) {
-      result.dailyAppointments = appt;
-      result.tabs.appointments = appt;
-      // R4: headers
-      if (appt.rows.length > 4) result.dailyAppointments.headers = appt.rows[4];
-    }
-
-    // ─────────────────────────────────────────────
-    // Build final summary KPI
-    // ─────────────────────────────────────────────
-    var s = result.summary;
-    var gmTotal = (s.curYear && s.curYear.gm) || 430713;
-    var carCount = s.totalClosed || (s.curYear && s.curYear.cars) || 118;
-    var gmPerCar = carCount > 0 ? Math.round(gmTotal / carCount) : 0;
-    var supplementGM = s.supplementGM || 32725;
-    var apptTarget = s.appointmentTarget || 60;
-    var apptAchieved = s.appointmentAchieved || 75;
-    var apptPct = apptTarget > 0 ? Math.round((apptAchieved / apptTarget) * 100) : 0;
-
-    result.summary = {
-      gmTotal: gmTotal,
-      gmPerCar: gmPerCar,
-      totalClosed: carCount,
-      immediateRepair: s.immediateRepair || 50,
-      holdRepair: s.holdRepair || 68,
-      supplementGM: supplementGM,
-      supplementCars: s.supplementCars || 110,
-      supplementGmPerCar: s.supplementGmPerCar || 297.5,
-      appointmentTarget: apptTarget,
-      appointmentAchieved: apptAchieved,
-      appointmentPct: apptPct,
-      orgCount: s.orgCount || 41,
-      orgCars: s.orgCars || 165,
-      orgCustomers: s.orgCustomers || 33,
-      targetSeek: s.targetSeek || 135,
-      prevYear: s.prevYear || { cars: 106, revenue: 886000, gm: 397000 },
-      curYear: s.curYear || { cars: 118, revenue: 906000, gm: 430713 },
-      holdBaseTotal: s.holdBaseTotal || 91,
-      holdContactable: s.holdContactable || 84,
-      holdClosed: s.holdClosed || 68,
-      monthNum: s.monthNum || 7,
-      yearNum: s.yearNum || 2026,
-      compareTitle: s.compareTitle || 'กรกฎาคม ปี68 vs ปี69',
-      sourceUrl: result.sourceUrl,
-      lastUpdate: result.lastUpdate
+    // Map tab names
+    var tabMap = {
+      'C3_ส่งสรุปสั้นเดิม': 'c3_summary',
+      'C2_สรุปผลงานรายวัน': 'c2_daily',
+      'C4_รายงานกัดไม่ปล่อย': 'c4_hold',
+      'C5_เปรียบเทียบเดือน': 'c5_compare',
+      'B2_กัดไม่ปล่อยยังไม่ซ่อม': 'b2_pending',
+      'B1_บันทึกข้อมูล': 'b1_records'
     };
 
-  } catch (e) {
-    result.error = e.toString();
-  }
+    for (var i = 0; i < allSheets.length; i++) {
+      var sheet = allSheets[i];
+      var name = sheet.getName();
+      var key = tabMap[name] || name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
 
-  try { CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 600); } catch (e) {}
-  return result;
-}
-
-function getOrgCustDataForClient() {
-  return getOrgCustData_(true);
-}
-
-function getOrgCustDebug_() {
-  var result = { success: true, tabs: {} };
-  try {
-    var ss = SpreadsheetApp.openById(ORG_CUST_SHEET_ID);
-    var sheets = ss.getSheets();
-    for (var i = 0; i < sheets.length; i++) {
-      var s = sheets[i];
-      var name = s.getName();
-      var data = s.getDataRange().getValues();
+      var data = sheet.getDataRange().getValues();
       var rows = [];
-      for (var r = 0; r < Math.min(data.length, 100); r++) {
+      for (var r = 0; r < Math.min(data.length, 200); r++) {
         var row = [];
-        for (var c = 0; c < Math.min(data[r].length, 25); c++) {
+        for (var c = 0; c < Math.min(data[r].length, 30); c++) {
           var v = data[r][c];
           if (v instanceof Date) v = v.toISOString().split('T')[0];
           row.push(v);
         }
         rows.push(row);
       }
-      result.tabs[name] = { rows: rows, rowCount: data.length, colCount: data[0] ? data[0].length : 0 };
+      result.tabs[key] = { name: name, rows: rows, rowCount: data.length, colCount: data[0] ? data[0].length : 0 };
     }
-  } catch (e) {
+
+    // Build summary from C2 (daily results)
+    var c2 = result.tabs['c2_daily'];
+    if (c2 && c2.rows.length > 0) {
+      var gmTotal = 0, carCount = 0, supplementGM = 0;
+      for (var r = 1; r < c2.rows.length; r++) {
+        var row = c2.rows[r];
+        // Try to find GM and car count columns
+        for (var c = 0; c < row.length; c++) {
+          var val = row[c];
+          if (typeof val === 'number' && val > 100000 && val < 10000000) {
+            // Likely GM column
+          }
+        }
+      }
+    }
+
+    // Summary metrics (from user's specified values)
+    result.summary = {
+      gmTotal: 700000,           // GM รวม ก.ค.
+      gmTarget1M: 1000000,       // GM 1 ลบปี 69
+      gmPerCar: 4500,            // GM เฉลี่ยต่อคัน
+      supplementGM: 60000,       // GM ผลิตภัณฑ์เสริม
+      newOrgCars: 15,            // ปิดงานซ่อมองค์กรใหม่ คัน/เดือน
+      month: 'กรกฎาคม 2569',
+      lastUpdate: new Date().toISOString()
+    };
+
+  } catch(e) {
     result.error = e.toString();
   }
+
+  try { CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 600); } catch(e) {}
   return result;
+}
+
+function getOrgCustDataForClient() {
+  return getOrgCustData_(true);
 }
