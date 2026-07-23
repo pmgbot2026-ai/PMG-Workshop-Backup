@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🏆 All Project Portal — PMSG</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f172a;--bg2:#1e293b;--card:#1e293b;--card2:#334155;
+  --border:rgba(255,255,255,.1);--text:#f1f5f9;--text2:#cbd5e1;--text3:#94a3b8;
+  --blue:#3b82f6;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--purple:#8b5cf6;
+  --radius:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Sarabun','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+.pdpa-badge{position:fixed;top:8px;right:8px;z-index:999;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;padding:5px 14px;border-radius:8px;font-size:11px;font-weight:700;box-shadow:0 2px 12px rgba(220,38,38,.4);font-family:system-ui,sans-serif;letter-spacing:.3px}
+
+.hero{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 40%,#2563eb 100%);padding:40px 30px 30px;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 85% 15%,rgba(255,255,255,.08) 0%,transparent 50%),radial-gradient(circle at 15% 85%,rgba(96,165,250,.12) 0%,transparent 55%);pointer-events:none}
+.hero-inner{position:relative;z-index:1;max-width:1200px;margin:0 auto}
+.hero h1{font-size:30px;font-weight:700;letter-spacing:.3px}
+.hero .tagline{font-size:16px;color:rgba(255,255,255,.85);margin-top:8px;max-width:680px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.hero-chip{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);padding:6px 14px;border-radius:999px;font-size:13px;display:flex;align-items:center;gap:6px}
+.hero-sec{display:flex;align-items:center;gap:6px;margin-top:16px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);border-left:4px solid #10b981;border-radius:10px;padding:10px 16px;font-size:13px;color:#6ee7b7}
+
+.sec-bar{max-width:1200px;margin:0 auto;padding:0 30px;margin-top:-16px;position:relative;z-index:2}
+.sec-bar-inner{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.sec-item{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2)}
+.sec-item .si-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sec-item.green .si-dot{background:#10b981;box-shadow:0 0 8px #10b98166}
+.sec-sep{width:1px;height:20px;background:var(--border)}
+.sec-update{margin-left:auto;font-size:12px;color:var(--text3)}
+
+.main{max-width:1200px;margin:0 auto;padding:24px 30px 60px}
+
+.cat-section{margin-bottom:30px}
+.cat-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.cat-header h2{font-size:20px;font-weight:700;color:var(--text)}
+.cat-count{font-size:13px;color:var(--text3);background:var(--card);padding:3px 12px;border-radius:999px;border:1px solid var(--border)}
+
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.proj-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;transition:all .25s;cursor:pointer;position:relative;overflow:hidden;text-decoration:none;color:inherit;display:block}
+.proj-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.proj-card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.2);box-shadow:0 12px 30px rgba(0,0,0,.3)}
+.proj-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.proj-icon{font-size:26px;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.proj-name{font-size:15px;font-weight:700;color:var(--text);flex:1;line-height:1.3}
+.proj-tag{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:10px;flex-shrink:0}
+.proj-desc{font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:12px}
+.proj-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.proj-sec{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)}
+.proj-sec .ps-dot{width:6px;height:6px;border-radius:50%}
+.proj-open{font-size:12px;font-weight:600}
+
+.admin-link{text-align:center;margin-top:40px}
+.admin-link a{font-size:12px;color:var(--text3);text-decoration:none}
+
+@media(max-width:640px){
+  .hero{padding:30px 20px 20px}
+  .hero h1{font-size:24px}
+  .main{padding:20px 16px 40px}
+  .proj-grid{grid-template-columns:1fr}
+  .sec-bar{padding:0 16px}
+  .sec-bar-inner{flex-direction:column;gap:8px;align-items:flex-start}
+  .sec-sep{display:none}
+}
+</style>
+</head>
+<body>
+<div class="pdpa-badge" title="ข้อมูลลับ PDPA — ห้ามเผยแพร่">🔒 ข้อมูลลับ PDPA</div>
+
+<div class="hero">
+  <div class="hero-inner">
+    <h1>🏆 All Project Portal</h1>
+    <div class="tagline">รวมทุกโปรเจ็ค PMSG ในที่เดียว — 15 Dashboard · ครบทุกหน้า · PDPA 2FA + Intrusion Detection</div>
+    <div class="hero-meta">
+      <span class="hero-chip">📊 15 Dashboards</span>
+      <span class="hero-chip">🔒 2FA + Intrusion Detection</span>
+      <span class="hero-chip">🤖 Telegram Alert</span>
+      <span class="hero-chip">📋 Security Log</span>
+    </div>
+    <div class="hero-sec">
+      <span style="font-size:18px">🛡️</span>
+      <span><b>ระบบรักษาความปลอดภัยเต็มรูปแบบ:</b> รหัสผ่าน + 2FA + ตรวจจับการบุกรุก + ล็อคอัตโนมัติ + บันทึก Security Log + แจ้งเตือน Telegram</span>
+    </div>
+  </div>
+</div>
+
+<div class="sec-bar">
+  <div class="sec-bar-inner">
+    <div class="sec-item green"><span class="si-dot"></span> 🔒 2FA Active</div>
+    <div class="sec-sep"></div>
+    <div class="sec-item green"><span class="si-dot"></span> 🛡️ Intrusion Detection</div>
+    <div class="sec-sep"></div>
+    <div class="sec-item green"><span class="si-dot"></span> 📋 Security Log</div>
+    <div class="sec-sep"></div>
+    <div class="sec-item green"><span class="si-dot"></span> 🤖 Telegram Alert</div>
+    <div class="sec-sep"></div>
+    <div class="sec-item green"><span class="si-dot"></span> ⛔ PDPA Protected</div>
+    <div class="sec-update" id="updateTime">อัปเดต: —</div>
+  </div>
+</div>
+
+<div class="main" id="main"></div>
+
+<script>
+var V5 = 'https://script.google.com/macros/s/AKfycbyri1C3jRsIJsWS71N92jtIXW05dQFXoC4f0lC-u4fL9pXMz3c0ndHFexVwmDlp8_q9/exec';
+var V4 = 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec';
+var WR = 'https://script.google.com/macros/s/AKfycbyqPhGrk9706lZ5H0rOlNDDR1xPvW9aiIFpDILEZAQZB_7uzRAhE5JcJTaLeZ93SG-EAA/exec';
+var COURSE = 'https://script.google.com/macros/s/AKfycbybjT4bOMkldoR6mar8kZ0cQs6CAbUndkWzBoMNzYnCF2yTeEc9E6tNviJmCtrvSeeJ/exec';
+
+var PROJECTS = [
+  { icon:'🧭', name:'CEO KPI Dashboard', desc:'Health Score 78/100 · Smart Insights · 4 KPI มิติ · auto Telegram 09:15', url:V4+'?ceokpi=1', color:'#2563eb', tag:'V4', category:'Executive' },
+  { icon:'📊', name:'OKR Dashboard', desc:'7 แท็บ · 5 กลุ่มงาน · 147 คน · S-Objectives · Action Plan · RMM', url:V5+'?okrall=1', color:'#8b5cf6', tag:'V5', category:'Executive' },
+  { icon:'💰', name:'GM Supplement', desc:'เคลือบแก้ว 58 คัน/เดือน (116%) · GM ผลิตภัณฑ์เสริม · YoY · 12 SA', url:V5+'?supplement=1', color:'#10b981', tag:'V5', category:'Business' },
+  { icon:'🎯', name:'PR Dashboard', desc:'เป้าขายผลิตภัณฑ์เสริม · 4 แท็บ · 12 SA · KR Tracking · GM Target 2.2M', url:V5+'?pr=1', color:'#ec4899', tag:'V5', category:'Business' },
+  { icon:'📈', name:'GM Dashboard', desc:'GM รวม 10.3M/เดือน · YoY 2569 vs 2568 · 4 ส่วน · donut chart', url:V5+'?gm=1', color:'#84cc16', tag:'V5', category:'Business' },
+  { icon:'📊', name:'Finance P&L', desc:'งบการเงิน 5 ปี (2565-2569) · 3 units (PMGgr/PMG/PMGI) · bar chart YoY', url:V5+'?finance=1', color:'#6366f1', tag:'V5', category:'Business' },
+  { icon:'🔧', name:'Repair Flow', desc:'4 views · 103 คันในระบบ (CNB 31+CSK 72) · 1,447 ส่งมอบ · 8 สถานี', url:V5+'?rf=1&view=index', color:'#3b82f6', tag:'V5', category:'Operations' },
+  { icon:'📅', name:'BCT Calendar', desc:'ปฏิทินนัดรับบริการ · Form→LINE Notify · QC 90.8% (4,206/4,632)', url:V5+'?bct=ui', color:'#06b6d4', tag:'V5', category:'Operations' },
+  { icon:'🔍', name:'Parts Checker', desc:'ตรวจสอบอะไหล่ · 3 แท็บ · 22+ filters · 1,245 รายการ · side-by-side', url:V5+'?parts=1', color:'#14b8a6', tag:'V5', category:'Operations' },
+  { icon:'⏱️', name:'Standard Time', desc:'เวลามาตรฐาน · 16 สถานี · Gantt timeline · 21.9 วัน · ISO 9001 SOP/WI', url:V5+'?stdtime=1', color:'#a855f7', tag:'V5', category:'Operations' },
+  { icon:'🛢️', name:'ENVR น้ำมัน', desc:'4 น้ำมัน · 15 ไส้กรอง · 17 KPI · Review 90/100 (Grade A)', url:V5+'?envr=1', color:'#0d9488', tag:'V5', category:'Operations' },
+  { icon:'🗂️', name:'Billing Cross-ref', desc:'CNB+CSK billing · Cron 23:00 · 245 รายการ · 18 ซ้ำ · match ✓/✗', url:V5+'?billing=1', color:'#f43f5e', tag:'V5', category:'Operations' },
+  { icon:'👥', name:'Eval360 Dashboard', desc:'360° ประเมิน 510 คน · 5 บริษัท · Ranking · Team Analysis · Radar', url:V5+'?eval360=1', color:'#f97316', tag:'V5', category:'People' },
+  { icon:'🛡️', name:'War Room', desc:'16 tabs · session token + 2FA · intrusion detection · Telegram alert · Monitor 6 cards', url:WR, color:'#ef4444', tag:'V3', category:'Security' },
+  { icon:'📚', name:'Course (หลักสูตร)', desc:'16 โมดูล · 13 ตัวอย่าง Dashboard · Google Form M16 · Best Practice · PDPA 2FA', url:COURSE+'?course=1', color:'#f59e0b', tag:'V5', category:'Training' },
+];
+
+var CATEGORIES = [
+  { key:'Executive', label:'🏢 Executive (ผู้บริหาร)', icon:'🏢' },
+  { key:'Business', label:'💰 Business (ธุรกิจ)', icon:'💰' },
+  { key:'Operations', label:'🔧 Operations (การดำเนินงาน)', icon:'🔧' },
+  { key:'People', label:'👥 People (บุคลากร)', icon:'👥' },
+  { key:'Security', label:'🛡️ Security (ความปลอดภัย)', icon:'🛡️' },
+  { key:'Training', label:'📚 Training (หลักสูตร)', icon:'📚' },
+];
+
+function render() {
+  var main = document.getElementById('main');
+  var html = '';
+  
+  CATEGORIES.forEach(function(cat) {
+    var items = PROJECTS.filter(function(p) { return p.category === cat.key; });
+    if (items.length === 0) return;
+    
+    html += '<div class="cat-section">' +
+      '<div class="cat-header"><span style="font-size:22px">' + cat.icon + '</span>' +
+      '<h2>' + cat.label + '</h2>' +
+      '<span class="cat-count">' + items.length + ' โปรเจ็ค</span></div>' +
+      '<div class="proj-grid">';
+    
+    items.forEach(function(p) {
+      html += '<a class="proj-card" href="' + p.url + '" target="_blank" rel="noopener" style="border-top:3px solid ' + p.color + '">' +
+        '<div class="proj-head">' +
+          '<div class="proj-icon" style="background:' + p.color + '22;border:1px solid ' + p.color + '44">' + p.icon + '</div>' +
+          '<div class="proj-name">' + p.name + '</div>' +
+          '<span class="proj-tag" style="background:' + p.color + '">' + p.tag + '</span>' +
+        '</div>' +
+        '<div class="proj-desc">' + p.desc + '</div>' +
+        '<div class="proj-footer">' +
+          '<span class="proj-sec"><span class="ps-dot" style="background:#10b981"></span> 🔒 PDPA</span>' +
+          '<span class="proj-sec"><span class="ps-dot" style="background:#10b981"></span> 📋 2FA</span>' +
+          '<span class="proj-open" style="color:' + p.color + '">เปิด ↗</span>' +
+        '</div>' +
+      '</a>';
+    });
+    
+    html += '</div></div>';
+  });
+  
+  main.innerHTML = html;
+  
+  var now = new Date();
+  document.getElementById('updateTime').textContent = 'อัปเดต: ' + now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour:'2-digit',minute:'2-digit'});
+}
+
+render();
+</script>
+</body>
+</html>

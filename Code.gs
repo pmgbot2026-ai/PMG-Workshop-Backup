@@ -578,8 +578,8 @@ function doGet(e) {
   if (hasSession) {
     // fall through ไปทำงานต่อ
   }
-  // ── API endpoints ไม่ต้อง login ──
-  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || (p.okrall === '1') || p.prapi === '1' || p.courseapi === '1' || p.gmapi === '1' || p.ceoactuals === '1' || p.bct === '1') {
+  // ── API endpoints ไม่ต้อง login (data fetch + refresh only) ──
+  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || p.prapi === '1' || p.courseapi === '1' || p.gmapi === '1' || p.ceoactuals === '1' || p.bct === '1' || (p.allproject === '1') || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action))) {
     // fall through — API/embed bypass
   }
   // ── ถ้าไม่มี session และไม่ใช่ API — แสดงหน้า login ──
@@ -1384,6 +1384,15 @@ function doGet(e) {
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
 
+  // ═══ All Project Portal ═══
+  if (p.allproject === '1') {
+    var allProjHtml = HtmlService.createTemplateFromFile('AllProjectPortal');
+    return allProjHtml.evaluate()
+      .setTitle('🏆 All Project Portal — PMSG')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
   // ═══ Finance P&L Dashboard ═══  
   if (p.finance === '1') {
     var finYears = p.years ? p.years.split(',') : ['2566','2567','2568','2569'];
@@ -1457,8 +1466,33 @@ function doGet(e) {
       return ContentService.createTextOutput(JSON.stringify(logResult)).setMimeType(ContentService.MimeType.JSON);
     }
     if (p.view === 'data') {
+      // Per-department fetch — much faster than loading all at once
+      if (p.dept !== undefined && p.dept !== '') {
+        var deptIdx = parseInt(p.dept);
+        var deptCount = gsGetOKRDeptCount();
+        if (deptIdx >= 0 && deptIdx < deptCount) {
+          var deptData = gsGetOKRDeptData(deptIdx);
+          // Slim down
+          if (deptData && deptData.people) {
+            deptData.people.forEach(function(person) {
+              delete person.accountability;
+              delete person.purpose;
+              delete person.vision;
+              delete person.buPurpose;
+              delete person.buVision;
+              delete person.teamPurpose;
+              delete person.teamVision;
+              delete person.personalPurpose;
+              delete person.personalVision;
+              delete person.kpiOwnership;
+              delete person.mentors;
+            });
+          }
+          return ContentService.createTextOutput(JSON.stringify({ success: true, dept: deptIdx, deptCount: deptCount, data: deptData })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      // Full fetch (fallback)
       var allData = getMultiOKRData_();
-      // ⚡ Slim down response — remove large text fields to reduce payload from 1.5MB → ~400KB
       if (allData && allData.departments) {
         allData.departments.forEach(function(dept) {
           if (dept.people) {
@@ -1499,60 +1533,6 @@ function doGet(e) {
     var allHtml = HtmlService.createHtmlOutputFromFile('OKR_All_Index');
     var allUrl = ScriptApp.getService().getUrl();
     var allContent = allHtml.getContent();
-    // Use replaceAll in case placeholder appears multiple times after escaping
-    allContent = allContent.split('SCRIPT_URL_PLACEHOLDER').join(allUrl);
-    
-    // Inject session token so client-side fetch can bypass PDPA
-    if (p.st) {
-      allContent = allContent.split('SESSION_TOKEN_PLACEHOLDER').join(p.st);
-    } else {
-      allContent = allContent.split('SESSION_TOKEN_PLACEHOLDER').join('');
-    }
-
-    var allHtml = HtmlService.createHtmlOutputFromFile('OKR_All_Index');
-    var allUrl = ScriptApp.getService().getUrl();
-    var allContent = allHtml.getContent();
-    // Use replaceAll in case placeholder appears multiple times after escaping
-    allContent = allContent.split('SCRIPT_URL_PLACEHOLDER').join(allUrl);
-    
-    // Inject session token so client-side fetch can bypass PDPA
-    if (p.st) {
-      allContent = allContent.split('SESSION_TOKEN_PLACEHOLDER').join(p.st);
-    } else {
-      allContent = allContent.split('SESSION_TOKEN_PLACEHOLDER').join('');
-    }
-
-    // ⚡ Return HTML immediately — no background warmup (it blocks the response)
-    try {
-      var warmKey = 'okrall_data_v8';
-      var warmCached = CacheService.getScriptCache().get(warmKey);
-      allContent = allContent.split('CACHE_STATUS_PLACEHOLDER').join(warmCached ? 'warm' : 'cold');
-    } catch(e2) {
-      allContent = allContent.split('CACHE_STATUS_PLACEHOLDER').join('unknown');
-    }
-
-    // Inject CEO actuals data (server-side, no async needed)
-    // ใช้เฉพาะ known results (hardcoded) เพื่อความเร็ว — ไม่เรียก API ภายนอก
-    try {
-      var ceoActualsData = { items: [], count: 0, timestamp: new Date().toISOString() };
-      ceoActualsData.items.push({ krText: 'บรรลุรายได้ CBNP PMSG 38.5 ล้านบาท และ CBNP PMS 29 ล้านบาท (ปี 69) — สรุปเป้า PMSgr', currentValue: '23.48 ลบ.', targetValue: '38.50 ลบ.', status: 'at-risk', progressPct: 61, source: 'CEO KPI Dashboard', sourceDetail: 'สรุปเป้า PMSgr · 23.48/38.50 ลบ · 61% · เสี่ยง' });
-      ceoActualsData.items.push({ krText: 'GM > 9.5 ลบ/เดือน — GM Dashboard', currentValue: '10.3 ลบ.', targetValue: '10 ลบ.', status: 'on-track', progressPct: 103, source: 'CEO KPI Dashboard', sourceDetail: 'GM Dashboard · 10.3/10 ลบ · 103% · ทะลุเป้า' });
-      ceoActualsData.items.push({ krText: 'เคลือบแก้ว 30 คันต่อเดือน — War Room', currentValue: '58 คัน/เดือน', targetValue: '50 คัน/เดือน', status: 'on-track', progressPct: 116, source: 'CEO KPI Dashboard', sourceDetail: 'เคลือบแก้ว · 58/50 คัน · 116% · เกินเป้า' });
-      ceoActualsData.items.push({ krText: 'บริหารจัดการยอดรถเข้าศูนย์สี 3,400 คัน/ปี — War Room', currentValue: '1,619 คัน', targetValue: '3,400 คัน', status: 'behind', progressPct: 48, source: 'CEO KPI Dashboard', sourceDetail: 'ศูนย์สี · 1,619/3,400 คัน · 48% · ล้าหลัง' });
-      ceoActualsData.items.push({ krText: 'Productivity ค่าแรง+อะไหล่/คัน — War Room', currentValue: '20,132 บาท', targetValue: '23,145 บาท', status: 'behind', progressPct: 87, source: 'CEO KPI Dashboard', sourceDetail: 'Productivity · 20,132/23,145 · 87% · ลดลง' });
-      ceoActualsData.items.push({ krText: 'เชียร์เคลม 240,000 บาท — SC Dashboard', currentValue: '234,349 บาท', targetValue: '240,000 บาท', status: 'at-risk', progressPct: 98, source: 'CEO KPI Dashboard', sourceDetail: 'เชียร์เคลม · 234,349/240,000 · 98% · ใกล้เป้า' });
-      ceoActualsData.items.push({ krText: 'QC ตรวจสอบคุณภาพ ประจำปี', currentValue: '4,206', targetValue: '4,632', status: 'on-track', progressPct: 91, source: 'CEO KPI Dashboard', sourceDetail: 'QC · 4,206/4,632 · 91% · ผ่าน' });
-      ceoActualsData.items.push({ krText: 'สร้าง GM จากผลิตภัณฑ์เสริมเฉลี่ย 280,000 บาท/เดือน', currentValue: '281,552 บาท', targetValue: '280,000 บาท', status: 'on-track', progressPct: 101, source: 'CEO KPI Dashboard', sourceDetail: 'GM ผลิตภัณฑ์เสริม · 281,552/280,000 · 101% · ทะลุเป้า' });
-      ceoActualsData.items.push({ krText: 'ผลักดัน GM อะไหล่ทางเลือก PMGI 300,000 บาท/เดือน', currentValue: '226,549 บาท', targetValue: '300,000 บาท', status: 'at-risk', progressPct: 76, source: 'CEO KPI Dashboard', sourceDetail: 'GM PMGI · 226,549/300,000 · 76% · ใกล้เป้า' });
-      ceoActualsData.count = ceoActualsData.items.length;
-      // Inject as <script> tag — ไม่มีปัญหา escape
-      var ceoJson = JSON.stringify(ceoActualsData);
-      var ceoScriptTag = '<script>window.CEO_KPI_ACTUALS=' + ceoJson.replace(/</g, '\\u003c') + ';<\/script>';
-      allContent = allContent.replace('<!--CEO_ACTUALS_INJECT-->', ceoScriptTag);
-    } catch(e) {}
-
-    // NOTE: Do NOT embed OKR data in the HTML — it's 1.5MB+ and causes blank page
-    // The client-side JS will load data via google.script.run or fetch after page renders
     
     return HtmlService.createHtmlOutput(allContent)
       .setTitle('PMS/PMG OKR Dashboard — 5 แผนก')
@@ -13323,6 +13303,40 @@ function gsGetOKRData() {
     });
   });
   return light;
+}
+
+// Return client config (script URL + session token + cache status) via google.script.run
+function gsGetClientConfig() {
+  var cacheStatus = 'cold';
+  try {
+    var warmKey = 'okrall_data_v8';
+    var warmCached = CacheService.getScriptCache().get(warmKey);
+    cacheStatus = warmCached ? 'warm' : 'cold';
+  } catch(e) {}
+  return {
+    scriptUrl: 'https://script.google.com/macros/s/AKfycbyri1C3jRsIJsWS71N92jtIXW05dQFXoC4f0lC-u4fL9pXMz3c0ndHFexVwmDlp8_q9/exec',
+    sessionToken: '', // Client-side fetch uses view=data which is in API bypass
+    cacheStatus: cacheStatus
+  };
+}
+
+// Return CEO KPI actuals (hardcoded known results — fast, no API calls)
+function gsGetCEOActuals() {
+  return {
+    items: [
+      { krText: 'บรรลุรายได้ CBNP PMSG 38.5 ล้านบาท และ CBNP PMS 29 ล้านบาท (ปี 69) — สรุปเป้า PMSgr', currentValue: '23.48 ลบ.', targetValue: '38.50 ลบ.', status: 'at-risk', progressPct: 61, source: 'CEO KPI Dashboard', sourceDetail: 'สรุปเป้า PMSgr · 23.48/38.50 ลบ · 61% · เสี่ยง' },
+      { krText: 'GM > 9.5 ลบ/เดือน — GM Dashboard', currentValue: '10.3 ลบ.', targetValue: '10 ลบ.', status: 'on-track', progressPct: 103, source: 'CEO KPI Dashboard', sourceDetail: 'GM Dashboard · 10.3/10 ลบ · 103% · ทะลุเป้า' },
+      { krText: 'เคลือบแก้ว 30 คันต่อเดือน — War Room', currentValue: '58 คัน/เดือน', targetValue: '50 คัน/เดือน', status: 'on-track', progressPct: 116, source: 'CEO KPI Dashboard', sourceDetail: 'เคลือบแก้ว · 58/50 คัน · 116% · เกินเป้า' },
+      { krText: 'บริหารจัดการยอดรถเข้าศูนย์สี 3,400 คัน/ปี — War Room', currentValue: '1,619 คัน', targetValue: '3,400 คัน', status: 'behind', progressPct: 48, source: 'CEO KPI Dashboard', sourceDetail: 'ศูนย์สี · 1,619/3,400 คัน · 48% · ล้าหลัง' },
+      { krText: 'Productivity ค่าแรง+อะไหล่/คัน — War Room', currentValue: '20,132 บาท', targetValue: '23,145 บาท', status: 'behind', progressPct: 87, source: 'CEO KPI Dashboard', sourceDetail: 'Productivity · 20,132/23,145 · 87% · ลดลง' },
+      { krText: 'เชียร์เคลม 240,000 บาท — SC Dashboard', currentValue: '234,349 บาท', targetValue: '240,000 บาท', status: 'at-risk', progressPct: 98, source: 'CEO KPI Dashboard', sourceDetail: 'เชียร์เคลม · 234,349/240,000 · 98% · ใกล้เป้า' },
+      { krText: 'QC ตรวจสอบคุณภาพ ประจำปี', currentValue: '4,206', targetValue: '4,632', status: 'on-track', progressPct: 91, source: 'CEO KPI Dashboard', sourceDetail: 'QC · 4,206/4,632 · 91% · ผ่าน' },
+      { krText: 'สร้าง GM จากผลิตภัณฑ์เสริมเฉลี่ย 280,000 บาท/เดือน', currentValue: '281,552 บาท', targetValue: '280,000 บาท', status: 'on-track', progressPct: 101, source: 'CEO KPI Dashboard', sourceDetail: 'GM ผลิตภัณฑ์เสริม · 281,552/280,000 · 101% · ทะลุเป้า' },
+      { krText: 'ผลักดัน GM อะไหล่ทางเลือก PMGI 300,000 บาท/เดือน', currentValue: '226,549 บาท', targetValue: '300,000 บาท', status: 'at-risk', progressPct: 76, source: 'CEO KPI Dashboard', sourceDetail: 'GM PMGI · 226,549/300,000 · 76% · ใกล้เป้า' }
+    ],
+    count: 9,
+    timestamp: new Date().toISOString()
+  };
 }
 
 // Get full department data by index (for google.script.run — one dept at a time, ~300KB each)

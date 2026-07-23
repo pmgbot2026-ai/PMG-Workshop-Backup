@@ -888,12 +888,26 @@
 /* ═══════════════════════════════════════════════════
    PMS/PMG Multi-Department OKR Dashboard — Client logic
    ═══════════════════════════════════════════════════ */
-var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
-var SESSION_TOKEN = 'SESSION_TOKEN_PLACEHOLDER';
-var CACHE_STATUS = 'CACHE_STATUS_PLACEHOLDER'; // 'cold' or 'warm'
-// Fallback: if placeholder wasn't replaced by server (local testing), use window.location
-if (SCRIPT_URL === 'SCRIPT_URL_PLACEHOLDER' || !SCRIPT_URL) {
-  SCRIPT_URL = window.location.origin + window.location.pathname;
+var SCRIPT_URL = '';
+var SESSION_TOKEN = '';
+var CACHE_STATUS = 'unknown'; // 'cold' or 'warm'
+
+// Fetch URL + token from server (ไม่ใช้ template injection เพราะ sandbox escape ทุกอย่าง)
+try {
+  google.script.run
+    .withSuccessHandler(function(info) {
+      if (info) {
+        SCRIPT_URL = info.scriptUrl || '';
+        SESSION_TOKEN = info.sessionToken || '';
+        CACHE_STATUS = info.cacheStatus || 'unknown';
+      }
+    })
+    .gsGetClientConfig();
+} catch(e) {}
+
+// Fallback: use current full URL (preserve query params like ?okrall=1)
+if (!SCRIPT_URL) {
+  SCRIPT_URL = window.location.href.split('#')[0]; // full URL including query params
 }
 
 // Department sheet IDs (for source sheet links)
@@ -906,7 +920,7 @@ var OKR_SS_IDS_CLIENT = {
 };
 
 var D = null;             // Full data object { departments, lastUpdate }
-<!--OKR_DATA_INJECT-->
+var CEO_KPI_ACTUALS = null; // Loaded via google.script.run
 var EMBEDDED_DATA = null; // Data loaded via fetch
 var currentDept = 0;       // Selected department index for กลุ่มงาน tab
 var kpiFilterDept = -1;    // KPI tab filter: -1 = all, 0..4 = specific dept
@@ -998,44 +1012,65 @@ function loadData() {
   };
   onLoaded();
   
-  // Show loading indicator
-  var ls = document.getElementById('loadingScreen');
-  if (ls) {
-    ls.innerHTML = '<div style="text-align:center;padding:20px;background:rgba(37,99,235,.08);border-radius:10px;margin:10px 0">' +
-      '<div style="font-size:1rem;margin-bottom:8px">⏳ กำลังดึงข้อมูลจาก 5 กลุ่มงาน...</div>' +
-      '<div style="font-size:0.8rem;color:var(--text3)" id="loadProgress">เชื่อมต่อกับ server...</div>' +
-      '<div style="margin-top:10px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div id="progBar" style="height:6px;background:linear-gradient(90deg,#2563eb,#10b981);border-radius:3px;width:5%;transition:width .5s"></div></div>' +
-      '</div>';
-  }
-  
-  // Fetch all data via API
-  var url = SCRIPT_URL;
-  if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
-  else url += '?okrall=1&view=data';
-  if (SESSION_TOKEN) url += '&st=' + SESSION_TOKEN;
-  
+  // Step 1: Get config (SCRIPT_URL + SESSION_TOKEN) first, THEN fetch data
   var pe = document.getElementById('loadProgress');
   var pb = document.getElementById('progBar');
-  if (pe) pe.textContent = 'กำลังโหลดข้อมูล OKR... (อาจใช้เวลา 30-60 วินาทีในครั้งแรก)';
-  if (pb) pb.style.width = '10%';
+  if (pe) pe.textContent = 'เชื่อมต่อกับ server...';
+  if (pb) pb.style.width = '5%';
   
-  fetch(url, { cache: 'no-store' })
-    .then(function(r) { 
-      if (pe) pe.textContent = 'ได้รับข้อมูลแล้ว กำลังประมวลผล...';
-      if (pb) pb.style.width = '80%';
-      return r.json(); 
-    })
-    .then(function(data) {
-      if (data && data.departments && data.departments.length > 0) {
-        D = data;
-        D._skeleton = false;
-        try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
-        if (pe) pe.textContent = '✅ โหลดครบแล้ว (' + D.departments.length + ' กลุ่มงาน)';
-        if (pb) pb.style.width = '100%';
-        onLoaded();
-      } else {
-        if (pe) pe.textContent = '⚠️ ไม่ได้รับข้อมูล — ลองใหม่อีกครั้ง';
-        // Try google.script.run as fallback
+  var configReady = false;
+  
+  function startDataFetch() {
+    // Show loading indicator
+    var ls = document.getElementById('loadingScreen');
+    if (ls) {
+      ls.innerHTML = '<div style="text-align:center;padding:20px;background:rgba(37,99,235,.08);border-radius:10px;margin:10px 0">' +
+        '<div style="font-size:1rem;margin-bottom:8px">⏳ กำลังดึงข้อมูลจาก 5 กลุ่มงาน...</div>' +
+        '<div style="font-size:0.8rem;color:var(--text3)" id="loadProgress">กำลังโหลดข้อมูล OKR... (อาใช้เวลา 30-60 วินาทีในครั้งแรก)</div>' +
+        '<div style="margin-top:10px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div id="progBar" style="height:6px;background:linear-gradient(90deg,#2563eb,#10b981);border-radius:3px;width:10%;transition:width .5s"></div></div>' +
+        '</div>';
+    }
+    var pe2 = document.getElementById('loadProgress');
+    var pb2 = document.getElementById('progBar');
+    if (pe2) pe2.textContent = 'กำลังโหลดข้อมูล OKR... (อาใช้เวลา 30-60 วินาทีในครั้งแรก)';
+    if (pb2) pb2.style.width = '10%';
+    
+    // Step 2: Fetch all data via API
+    var url = SCRIPT_URL;
+    if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
+    else url += '?okrall=1&view=data';
+    if (SESSION_TOKEN) url += '&st=' + SESSION_TOKEN;
+    
+    fetch(url, { cache: 'no-store' })
+      .then(function(r) {
+        if (pe2) pe2.textContent = 'ได้รับข้อมูลแล้ว กำลังประมวลผล...';
+        if (pb2) pb2.style.width = '80%';
+        return r.json();
+      })
+      .then(function(data) {
+        if (data && data.departments && data.departments.length > 0) {
+          D = data;
+          D._skeleton = false;
+          try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
+          if (pe2) pe2.textContent = '✅ โหลดครบแล้ว (' + D.departments.length + ' กลุ่มงาน)';
+          if (pb2) pb2.style.width = '100%';
+          onLoaded();
+        } else {
+          if (pe2) pe2.textContent = '⚠️ ไม่ได้รับข้อมูล — ลองผ่าน google.script.run...';
+          // Try google.script.run as fallback
+          if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run
+              .withSuccessHandler(function(d) {
+                if (d && d.departments) { D = d; D._skeleton = false; onLoaded(); }
+              })
+              .gsGetOKRData();
+          }
+        }
+      })
+      .catch(function(err) {
+        console.warn('Fetch failed', err);
+        if (pe2) pe2.textContent = '⚠️ โหลดช้า — ลองผ่าน google.script.run...';
+        // Fallback to google.script.run
         if (typeof google !== 'undefined' && google.script && google.script.run) {
           google.script.run
             .withSuccessHandler(function(d) {
@@ -1043,20 +1078,50 @@ function loadData() {
             })
             .gsGetOKRData();
         }
-      }
-    })
-    .catch(function(err) {
-      console.warn('Fetch failed', err);
-      if (pe) pe.textContent = '⚠️ โหลดช้า — ลองผ่าน google.script.run...';
-      // Fallback to google.script.run
-      if (typeof google !== 'undefined' && google.script && google.script.run) {
-        google.script.run
-          .withSuccessHandler(function(d) {
-            if (d && d.departments) { D = d; D._skeleton = false; onLoaded(); }
-          })
-          .gsGetOKRData();
-      }
-    });
+      });
+  }
+  
+  // Get config first, then fetch data
+  try {
+    google.script.run
+      .withSuccessHandler(function(info) {
+        if (info) {
+          if (info.scriptUrl) SCRIPT_URL = info.scriptUrl;
+          if (info.sessionToken) SESSION_TOKEN = info.sessionToken;
+          if (info.cacheStatus) CACHE_STATUS = info.cacheStatus;
+        }
+        configReady = true;
+        startDataFetch();
+      })
+      .gsGetClientConfig();
+  } catch(e) {
+    // Fallback: use current URL
+    startDataFetch();
+  }
+  
+  // Safety timeout: if config not ready in 3s, start fetch with fallback URL
+  setTimeout(function() {
+    if (!configReady) {
+      configReady = true;
+      startDataFetch();
+    }
+  }, 3000);
+  
+  // Load CEO actuals via google.script.run (async, non-blocking)
+  try {
+    google.script.run
+      .withSuccessHandler(function(ceoData) {
+        if (ceoData && ceoData.items) {
+          CEO_KPI_ACTUALS = ceoData;
+          // Re-render business plan if current tab
+          var activeTab = document.querySelector('.tab-btn.active');
+          if (activeTab && activeTab.getAttribute('data-tab') === 'businessplan') {
+            renderBusinessPlan();
+          }
+        }
+      })
+      .gsGetCEOActuals();
+  } catch(e) {}
 }
 
 function loadDataViaFetch(progressTimer) {
@@ -1104,9 +1169,34 @@ function onLoadError(msg) {
 }
 
 function onLoaded() {
-  // Save to sessionStorage for instant reload
-  try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
-  
+  // Save to sessionStorage for instant reload (skip if skeleton)
+  if (D && !D._skeleton) {
+    try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
+  }
+
+  // If skeleton (no real data yet), show loading banner but render skeleton
+  if (D && D._skeleton) {
+    // Show skeleton but with loading banner
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('section-overview').style.display = 'block';
+    document.getElementById('section-overview').classList.add('active');
+    // Show loading banner at top of overview
+    var banner = document.getElementById('dataLoadingBanner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'dataLoadingBanner';
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#2563eb,#10b981);color:#fff;padding:8px 16px;font-size:14px;font-weight:600;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.15)';
+      document.body.appendChild(banner);
+    }
+    banner.textContent = '⏳ กำลังดึงข้อมูลจาก 5 กลุ่มงาน... (ครั้งแรกอาจใช้เวลา 30-60 วินาที)';
+    renderOverview();
+    return;
+  }
+
+  // Real data loaded — remove banner
+  var banner = document.getElementById('dataLoadingBanner');
+  if (banner) banner.remove();
+
   document.getElementById('loadingScreen').style.display = 'none';
   document.getElementById('section-overview').style.display = 'block';
   document.getElementById('section-overview').classList.add('active');
