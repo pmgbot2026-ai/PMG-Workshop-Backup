@@ -1026,59 +1026,61 @@ function loadData() {
     if (ls) {
       ls.innerHTML = '<div style="text-align:center;padding:20px;background:rgba(37,99,235,.08);border-radius:10px;margin:10px 0">' +
         '<div style="font-size:1rem;margin-bottom:8px">⏳ กำลังดึงข้อมูลจาก 5 กลุ่มงาน...</div>' +
-        '<div style="font-size:0.8rem;color:var(--text3)" id="loadProgress">กำลังโหลดข้อมูล OKR... (อาใช้เวลา 30-60 วินาทีในครั้งแรก)</div>' +
+        '<div style="font-size:0.8rem;color:var(--text3)" id="loadProgress">กำลังโหลดข้อมูล OKR... (อาจใช้เวลา 30-60 วินาทีในครั้งแรก)</div>' +
         '<div style="margin-top:10px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div id="progBar" style="height:6px;background:linear-gradient(90deg,#2563eb,#10b981);border-radius:3px;width:10%;transition:width .5s"></div></div>' +
         '</div>';
     }
     var pe2 = document.getElementById('loadProgress');
     var pb2 = document.getElementById('progBar');
-    if (pe2) pe2.textContent = 'กำลังโหลดข้อมูล OKR... (อาใช้เวลา 30-60 วินาทีในครั้งแรก)';
+    if (pe2) pe2.textContent = 'กำลังโหลดข้อมูลผ่าน server... (อาจใช้เวลา 30-60 วินาทีในครั้งแรก)';
     if (pb2) pb2.style.width = '10%';
     
-    // Step 2: Fetch all data via API
-    var url = SCRIPT_URL;
-    if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
-    else url += '?okrall=1&view=data';
-    if (SESSION_TOKEN) url += '&st=' + SESSION_TOKEN;
-    
-    fetch(url, { cache: 'no-store' })
-      .then(function(r) {
-        if (pe2) pe2.textContent = 'ได้รับข้อมูลแล้ว กำลังประมวลผล...';
-        if (pb2) pb2.style.width = '80%';
-        return r.json();
-      })
-      .then(function(data) {
-        if (data && data.departments && data.departments.length > 0) {
-          D = data;
-          D._skeleton = false;
-          try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
-          if (pe2) pe2.textContent = '✅ โหลดครบแล้ว (' + D.departments.length + ' กลุ่มงาน)';
-          if (pb2) pb2.style.width = '100%';
-          onLoaded();
-        } else {
-          if (pe2) pe2.textContent = '⚠️ ไม่ได้รับข้อมูล — ลองผ่าน google.script.run...';
-          // Try google.script.run as fallback
-          if (typeof google !== 'undefined' && google.script && google.script.run) {
-            google.script.run
-              .withSuccessHandler(function(d) {
-                if (d && d.departments) { D = d; D._skeleton = false; onLoaded(); }
-              })
-              .gsGetOKRData();
+    // Use google.script.run instead of fetch (sandbox blocks fetch)
+    try {
+      google.script.run
+        .withSuccessHandler(function(data) {
+          if (data && data.departments && data.departments.length > 0) {
+            D = data;
+            D._skeleton = false;
+            try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
+            if (pe2) pe2.textContent = '✅ โหลดครบแล้ว (' + D.departments.length + ' กลุ่มงาน)';
+            if (pb2) pb2.style.width = '100%';
+            onLoaded();
+          } else {
+            if (pe2) pe2.textContent = '⚠️ ไม่ได้รับข้อมูล — ลองอีกครั้ง...';
           }
-        }
-      })
-      .catch(function(err) {
-        console.warn('Fetch failed', err);
-        if (pe2) pe2.textContent = '⚠️ โหลดช้า — ลองผ่าน google.script.run...';
-        // Fallback to google.script.run
-        if (typeof google !== 'undefined' && google.script && google.script.run) {
-          google.script.run
-            .withSuccessHandler(function(d) {
-              if (d && d.departments) { D = d; D._skeleton = false; onLoaded(); }
-            })
-            .gsGetOKRData();
-        }
-      });
+        })
+        .withFailureHandler(function(err) {
+          console.warn('gsGetOKRData failed', err);
+          if (pe2) pe2.textContent = '⚠️ โหลดไม่สำเร็จ: ' + (err.message || err) + ' — ลองอีกครั้งใน 5 วินาที';
+          // Retry after 5s
+          setTimeout(function() {
+            if (pe2) pe2.textContent = 'กำลังลองโหลดใหม่...';
+            try {
+              google.script.run
+                .withSuccessHandler(function(data) {
+                  if (data && data.departments) { D = data; D._skeleton = false; onLoaded(); }
+                })
+                .gsGetOKRData();
+            } catch(e2) {}
+          }, 5000);
+        })
+        .gsGetOKRData();
+    } catch(e) {
+      // Last resort: try fetch (may work in some sandbox configs)
+      if (pe2) pe2.textContent = 'กำลังลองผ่าน fetch...';
+      var url = SCRIPT_URL || window.location.href.split('#')[0];
+      if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
+      else url += '?okrall=1&view=data';
+      fetch(url, { cache: 'no-store' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data && data.departments) { D = data; D._skeleton = false; onLoaded(); }
+        })
+        .catch(function(err) {
+          if (pe2) pe2.textContent = '❌ โหลดไม่สำเร็จ — กรุณารีเฟรชหน้า';
+        });
+    }
   }
   
   // Get config first, then fetch data

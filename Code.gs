@@ -13287,6 +13287,34 @@ function getEval360PersonsBatch(startIdx, batchSize) {
 // Public wrapper for google.script.run — returns OKR data for all departments
 // Returns department metadata + names only (small ~5KB) — NO sheet reads, just key names
 function gsGetOKRData() {
+  // Try cache first (fast)
+  var warmKey = 'okrall_data_v8';
+  try {
+    var warmCached = CacheService.getScriptCache().get(warmKey);
+    if (warmCached) {
+      var parsed = JSON.parse(warmCached);
+      if (parsed && parsed.departments && parsed.departments.length > 0) {
+        return parsed;
+      }
+    }
+  } catch(e) {}
+  
+  // Cache cold — read from Sheets (slow but returns real data)
+  try {
+    var fullData = getMultiOKRData_();
+    if (fullData && fullData.departments && fullData.departments.length > 0) {
+      // Save to cache for next time
+      try {
+        var jsonStr = JSON.stringify(fullData);
+        if (jsonStr.length < 900000) { // CacheService 1MB limit
+          CacheService.getScriptCache().put(warmKey, jsonStr, 3600); // 1 hour TTL
+        }
+      } catch(e2) {}
+      return fullData;
+    }
+  } catch(e3) {}
+  
+  // Last resort: return skeleton
   var deptNames = Object.keys(OKR_SS_IDS);
   var light = {
     departments: [],
@@ -13575,9 +13603,10 @@ function gsGetCEOData(personName, deptName) {
   return result;
 }
 
-// ── ฟังก์ชันเร็วสำหรับ Business Plan: ดึง CEO KPI จาก V4 API ──
-function gsGetCEOActuals() {
-  var cacheKey = 'CEO_ACTUALS_BP_V2';
+// ── REMOVED: duplicate gsGetCEOActuals that called V4 API (slow, caused timeout) ──
+// Using the hardcoded version at line 13324 instead (instant, no API calls)
+function _removed_gsGetCEOActuals_V4() {
+  var cacheKey = 'CEO_ACTUALS_BP_V2_REMOVED';
   var cached = CacheService.getScriptCache().get(cacheKey);
   if (cached) {
     try { return JSON.parse(cached); } catch(e) {}
