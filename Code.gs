@@ -331,7 +331,7 @@ function servePdpaLogin(redirectQuery, errorMsg, step, fingerprint) {
       '<div style="text-align:center"><span class="pdpa-badge">⛔ ห้ามเผยแพร่โดยไม่ได้รับอนุญาต</span></div>'+
       errorHtml+
         alertHtml+
-        '<form id="loginForm" method="post" action="'+baseUrl+'" target="_top">'+
+        '<form id="loginForm" method="get" action="'+baseUrl+'" target="_top">'+
           '<input type="hidden" name="pwdok" value="1">'+
           '<input type="hidden" name="rquery" value="'+(redirectQuery||'')+'">'+
           '<div class="input-group">'+
