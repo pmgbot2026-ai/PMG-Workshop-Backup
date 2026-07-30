@@ -11079,20 +11079,20 @@ function getMultiOKRData_() {
     }
     result.departments.push(deptData);
   }
-  // Save to cache for 5 minutes (300 seconds)
+  // Save to cache for 1 hour (3600 seconds)
   try {
     var jsonStr = JSON.stringify(result);
     if (jsonStr.length < 100000) {
-      CacheService.getScriptCache().put(cacheKey, jsonStr, 300);
+      CacheService.getScriptCache().put(cacheKey, jsonStr, 3600);
     } else {
       // Too large for single cache key — split into chunks
       var chunkSize = 90000; // ~90KB per chunk
       var numChunks = Math.ceil(jsonStr.length / chunkSize);
       for (var ci = 0; ci < numChunks; ci++) {
         var chunk = jsonStr.substring(ci * chunkSize, (ci + 1) * chunkSize);
-        CacheService.getScriptCache().put(cacheKey + '_chunk_' + ci, chunk, 300);
+        CacheService.getScriptCache().put(cacheKey + '_chunk_' + ci, chunk, 3600);
       }
-      CacheService.getScriptCache().put(cacheKey + '_meta', String(numChunks), 300);
+      CacheService.getScriptCache().put(cacheKey + '_meta', String(numChunks), 3600);
     }
   } catch(e) {}
   return result;
