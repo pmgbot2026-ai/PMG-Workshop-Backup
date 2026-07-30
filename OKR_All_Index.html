@@ -1462,7 +1462,7 @@ function renderBusinessPlan() {
   if (typeof CEO_KPI_ACTUALS === 'undefined' || CEO_KPI_ACTUALS.length === 0) {
     CEO_KPI_ACTUALS = [
       { krText: 'บรรลุรายได้ CBNP PMSG 38.5 ล้านบาท และ CBNP PMS 29 ล้านบาท (ปี 69) — สรุปเป้า PMSgr', currentValue: '23.48 ลบ.', targetValue: '38.50 ลบ.', status: 'at-risk', progressPct: 61, source: 'CEO KPI Dashboard', sourceDetail: 'สรุปเป้า PMSgr · 23.48/38.50 ลบ · 61% · เสี่ยง' },
-      { krText: 'GM > 9.5 ลบ/เดือน — GM Dashboard', currentValue: '10.3 ลบ.', targetValue: '10 ลบ.', status: 'on-track', progressPct: 103, source: 'CEO KPI Dashboard', sourceDetail: 'GM Dashboard · 10.3/10 ลบ · 103% · ทะลุเป้า' },
+      { krText: 'GM > 12 ลบ/เดือน — GM Dashboard', currentValue: '10.3 ลบ.', targetValue: '10 ลบ.', status: 'on-track', progressPct: 103, source: 'CEO KPI Dashboard', sourceDetail: 'GM Dashboard · 10.3/10 ลบ · 103% · ทะลุเป้า' },
       { krText: 'เคลือบแก้ว 30 คันต่อเดือน — War Room', currentValue: '58 คัน/เดือน', targetValue: '50 คัน/เดือน', status: 'on-track', progressPct: 116, source: 'CEO KPI Dashboard', sourceDetail: 'เคลือบแก้ว · 58/50 คัน · 116% · เกินเป้า' },
       { krText: 'บริหารจัดการยอดรถเข้าศูนย์สี 3,400 คัน/ปี — War Room', currentValue: '1,619 คัน', targetValue: '3,400 คัน', status: 'behind', progressPct: 48, source: 'CEO KPI Dashboard', sourceDetail: 'ศูนย์สี · 1,619/3,400 คัน · 48% · ล้าหลัง' },
       { krText: 'Productivity ค่าแรง+อะไหล่/คัน — War Room', currentValue: '20,132 บาท', targetValue: '23,145 บาท', status: 'behind', progressPct: 87, source: 'CEO KPI Dashboard', sourceDetail: 'Productivity · 20,132/23,145 · 87% · ลดลง' },
@@ -1840,16 +1840,19 @@ function renderBusinessPlan() {
         var hasActual = (actual && pct > 0);
 
         if (hasActual) {
-          // มีผลลัพธ์ — เมนูแก้ไขลิงก์เล็กๆ
+          // มีผลลัพธ์ — แสดงลิงก์ Dashboard + ลิงก์ Google Sheet
+          html_ += '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px">' +
+          // ลิงก์ Dashboard (จาก hcUrl หรือ srcData.link)
           if (srcData.link) {
-            html_ += '<div style="margin-top:4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+
-              '<a href="'+esc(srcData.link)+'" target="_blank" style="color:#3b82f6;text-decoration:none;font-size:10px;font-weight:600">'+esc(srcData.link.substring(0,35))+(srcData.link.length>35?'...':'')+' ↗</a>'+
-              (srcData.tabRange ? '<span style="color:#94a3b8;font-size:10px">· '+esc(srcData.tabRange)+'</span>' : '')+
-              '<button onclick="toggleSrcEdit(\''+srcKey+'\')" style="background:none;border:none;color:#94a3b8;font-size:10px;cursor:pointer;padding:1px 4px;border-radius:4px" title="แก้ไขลิงก์">✏️</button>'+
-            '</div>';
-          } else {
-            html_ += '<button onclick="toggleSrcEdit(\''+srcKey+'\')" style="margin-top:4px;background:none;border:1px dashed #cbd5e1;color:#94a3b8;font-size:10px;cursor:pointer;padding:2px 8px;border-radius:6px">📎 เพิ่มลิงก์</button>';
+            html_ += '<a href="'+esc(srcData.link)+'" target="_blank" style="color:#3b82f6;text-decoration:none;font-size:12px;font-weight:600">📊 Dashboard ↗</a>';
           }
+          // ลิงก์ Google Sheet (จาก hcSheet)
+          if (typeof kr !== 'undefined' && kr.hcSheet) {
+            html_ += '<a href="'+esc(kr.hcSheet)+'" target="_blank" style="color:#059669;text-decoration:none;font-size:12px;font-weight:600">📎 Google Sheet ↗</a>';
+          }
+          // เมนูแก้ไข
+          html_ += '<button onclick="toggleSrcEdit(\''+srcKey+'\')" style="background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;padding:1px 6px;border-radius:4px" title="แก้ไขลิงก์">✏️</button>';
+          html_ += '</div>';
           html_ += '<div id="srcEdit_'+srcKey+'" style="display:none;margin-top:4px">'+buildSrcInputs(srcKey, { showLabel: false, label: '' })+'</div>';
         } else {
           // ยังไม่มีผลลัพธ์ — แสดงช่องวางลิงก์
@@ -1916,13 +1919,13 @@ function renderBusinessPlan() {
         teams: ['PMS ขาย', 'PMS ศูนย์บริการ', 'PMG/PMGI'],
         overallKw: ['CBNP'],
         krs: [
-          { text: 'CBNP 39 ลบ (รายได้รวม PMS + PMGG ปี 69)', kw: ['CBNP', '39', '38.5'], source: 'PMS หน้า 29 + PMGG หน้า 30', hcActual: '23.48 ลบ.', hcTarget: '38.5 ลบ.', hcPct: 61, pdfActual: null, pdfStatus: 'เป้ารวมจาก CEO' },
-          { text: 'GM งานขายต่อคัน 60,000 บาท', kw: ['GM งานขาย', '60,000', 'ต่อคัน'], source: 'PMS หน้า 29', hcActual: '64,390 บาท', hcTarget: '60,000 บาท', hcPct: 107, pdfActual: null, pdfStatus: 'เป้า PMS' },
-          { text: 'GM งานบริการผู้ใช้รถยนต์ 11.5 ลบ', kw: ['GM งานบริการ', '11.5', 'ผู้ใช้รถยนต์', '9.5'], source: 'PMS หน้า 29', hcActual: '10.3 ลบ.', hcTarget: '11.5 ลบ.', hcPct: 90, pdfActual: null, pdfStatus: 'เป้า PMS · CEO: GM > 9.5 ลบ/เดือน' },
-          { text: 'ส่งมอบรถงานเคลม 300 คัน', kw: ['เคลม', '300', 'คัน'], source: 'PMGG หน้า 30', hcActual: '235 คัน/เดือน', hcTarget: '300 คัน', hcPct: 78, pdfActual: null, pdfStatus: 'เป้า PMGG' },
-          { text: 'GM ผลิตภัณฑ์เสริม 300,000 บาทต่อเดือน', kw: ['ผลิตภัณฑ์เสริม', '300,000'], source: 'PMGG หน้า 30', hcActual: '281,552 บาท', hcTarget: '300,000 บาท', hcPct: 94, pdfActual: null, pdfStatus: 'เป้า PMGG' },
-          { text: 'เคลือบแก้ว 30 คันต่อเดือน', kw: ['เคลือบแก้ว', 'เคลือบ', '30'], source: 'PMGG หน้า 30 (OCR อ่าน 3530 → แก้เป็น 30)', hcActual: '58 คัน/เดือน', hcTarget: '30 คัน/เดือน', hcPct: 193, pdfActual: null, pdfStatus: 'เป้า PMGG' },
-          { text: 'เพิ่ม GM ผลิตภัณฑ์เสริมลูกค้าองค์กร 50,000 บาท ปี 69, 100,000 ปี 70', kw: ['ลูกค้าองค์กร', 'ผลิตภัณฑ์เสริม', 'องค์กร'], source: 'CEO ชุติมา + แผนธุรกิจ', hcActual: '32,725 บาท', hcTarget: '50,000 บาท', hcPct: 65, pdfActual: null, pdfStatus: 'ปี 69: 1 ลบ/เดือน · ปี 70: 2 ลบ/เดือน (CEO)' }
+          { text: 'CBNP 39 ลบ (รายได้รวม PMS + PMGG ปี 69)', kw: ['CBNP', '39', '38.5'], source: 'PMS หน้า 29 + PMGG หน้า 30', hcActual: '23.48 ลบ.', hcTarget: '38.5 ลบ.', hcPct: 61, hcSheet: 'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit', pdfActual: null, pdfStatus: 'เป้ารวมจาก CEO' },
+          { text: 'GM งานขายต่อคัน 60,000 บาท', kw: ['GM งานขาย', '60,000', 'ต่อคัน'], source: 'PMS หน้า 29', hcActual: '64,390 บาท', hcTarget: '60,000 บาท', hcPct: 107, hcSheet: 'https://docs.google.com/spreadsheets/d/1BpvNBZZmYkYsllWyew-kutUTYD8DPhmSXL_nlRUYZdI/edit', pdfActual: null, pdfStatus: 'เป้า PMS' },
+          { text: 'GM งานบริการผู้ใช้รถยนต์ 11.5 ลบ', kw: ['GM งานบริการ', '11.5', 'ผู้ใช้รถยนต์', '9.5'], source: 'PMS หน้า 29', hcActual: '10.3 ลบ.', hcTarget: '12 ลบ.', hcPct: 86, hcSheet: 'https://docs.google.com/spreadsheets/d/1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds/edit', pdfActual: null, pdfStatus: 'เป้า PMS · CEO: GM > 12 ลบ/เดือน' },
+          { text: 'ส่งมอบรถงานเคลม 300 คัน', kw: ['เคลม', '300', 'คัน'], source: 'PMGG หน้า 30', hcActual: '235 คัน/เดือน', hcTarget: '300 คัน', hcPct: 78, hcSheet: 'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' },
+          { text: 'GM ผลิตภัณฑ์เสริม 300,000 บาทต่อเดือน', kw: ['ผลิตภัณฑ์เสริม', '300,000'], source: 'PMGG หน้า 30', hcActual: '281,552 บาท', hcTarget: '300,000 บาท', hcPct: 94, hcSheet: 'https://docs.google.com/spreadsheets/d/1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' },
+          { text: 'เคลือบแก้ว 30 คันต่อเดือน', kw: ['เคลือบแก้ว', 'เคลือบ', '30'], source: 'PMGG หน้า 30 (OCR อ่าน 3530 → แก้เป็น 30)', hcActual: '58 คัน/เดือน', hcTarget: '30 คัน/เดือน', hcPct: 193, hcSheet: 'https://docs.google.com/spreadsheets/d/1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' },
+          { text: 'เพิ่ม GM ผลิตภัณฑ์เสริมลูกค้าองค์กร 50,000 บาท ปี 69, 100,000 ปี 70', kw: ['ลูกค้าองค์กร', 'ผลิตภัณฑ์เสริม', 'องค์กร'], source: 'CEO ชุติมา + แผนธุรกิจ', hcActual: '32,725 บาท', hcTarget: '50,000 บาท', hcPct: 65, hcSheet: 'https://docs.google.com/spreadsheets/d/14cTe13-Rxmz2z7pl6Sj-zj2LtapXuQ8XBHFL_F88SDk/edit', pdfActual: null, pdfStatus: 'ปี 69: 1 ลบ/เดือน · ปี 70: 2 ลบ/เดือน (CEO)' }
         ]
       },
       {
@@ -1931,10 +1934,10 @@ function renderBusinessPlan() {
         teams: ['PMS/PMG Backoffice', 'PMG/PMGI', 'PMS ศูนย์บริการ'],
         overallKw: ['นัดหมาย', 'Online', 'อัตโนมัติ'],
         krs: [
-          { text: 'ดูสถานะรถจากซ่อมผ่านมือถือ 100%', kw: ['สถานะรถ', 'ซ่อม', 'มือถือ', '100%'], source: 'PMS หน้า 29', hcActual: '85%', hcTarget: '100%', hcPct: 85, pdfActual: null, pdfStatus: 'เป้า PMS' },
-          { text: 'ลูกค้านัดหมาย 100% (นัดหมายตลอดชีพ)', kw: ['นัดหมาย', 'ตลอดชีพ', '100%'], source: 'PMS หน้า 29 + PMGG หน้า 30', hcActual: '75%', hcTarget: '100%', hcPct: 75, pdfActual: null, pdfStatus: 'เป้า PMS + PMGG' },
-          { text: 'ลูกค้าเข้าใช้บริการผ่านหน้าร้านดิจิทัลเพิ่มขึ้น', kw: ['ดิจิทัล', 'หน้าร้าน', 'ดาวน์โหลด'], source: 'PMS หน้า 29', hcActual: '45,000 ราย', hcTarget: '75,000 ราย', hcPct: 60, pdfActual: null, pdfStatus: 'เป้า PMS' },
-          { text: 'ปิดได้ลูกค้าจากการตรวจเช็คคุณภาพสีรอบคันอัตโนมัติ 20 คัน/เดือน', kw: ['ตรวจสี', 'คุณภาพสี', 'อัตโนมัติ', '20'], source: 'PMGG หน้า 30', hcActual: '18 คัน/เดือน', hcTarget: '20 คัน/เดือน', hcPct: 90, pdfActual: null, pdfStatus: 'เป้า PMGG' }
+          { text: 'ดูสถานะรถจากซ่อมผ่านมือถือ 100%', kw: ['สถานะรถ', 'ซ่อม', 'มือถือ', '100%'], source: 'PMS หน้า 29', hcActual: '85%', hcTarget: '100%', hcPct: 85, hcSheet: 'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit', pdfActual: null, pdfStatus: 'เป้า PMS' },
+          { text: 'ลูกค้านัดหมาย 100% (นัดหมายตลอดชีพ)', kw: ['นัดหมาย', 'ตลอดชีพ', '100%'], source: 'PMS หน้า 29 + PMGG หน้า 30', hcActual: '75%', hcTarget: '100%', hcPct: 75, hcSheet: 'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit', pdfActual: null, pdfStatus: 'เป้า PMS + PMGG' },
+          { text: 'ลูกค้าเข้าใช้บริการผ่านหน้าร้านดิจิทัลเพิ่มขึ้น', kw: ['ดิจิทัล', 'หน้าร้าน', 'ดาวน์โหลด'], source: 'PMS หน้า 29', hcActual: '45,000 ราย', hcTarget: '75,000 ราย', hcPct: 60, hcSheet: 'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit', pdfActual: null, pdfStatus: 'เป้า PMS' },
+          { text: 'ปิดได้ลูกค้าจากการตรวจเช็คคุณภาพสีรอบคันอัตโนมัติ 20 คัน/เดือน', kw: ['ตรวจสี', 'คุณภาพสี', 'อัตโนมัติ', '20'], source: 'PMGG หน้า 30', hcActual: '18 คัน/เดือน', hcTarget: '20 คัน/เดือน', hcPct: 90, hcSheet: 'https://docs.google.com/spreadsheets/d/1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' }
         ]
       },
       {
@@ -1943,12 +1946,12 @@ function renderBusinessPlan() {
         teams: ['PMS ขาย', 'PMG/PMGI', 'PMS ศูนย์บริการ'],
         overallKw: ['MA', 'SGM', 'เครือข่าย', 'MR'],
         krs: [
-          { text: 'สร้างเครือข่าย Navway MA 300 ราย ในปี 68', kw: ['Navway', 'MA', 'เครือข่าย', '300'], source: 'PMS หน้า 29', hcActual: '180 ราย', hcTarget: '300 ราย', hcPct: 60, pdfActual: null, pdfStatus: 'เป้า PMS' },
-          { text: 'รับใช้และพาลูกค้าเข้ากลุ่ม SGM 200,000 ราย ในปี 68', kw: ['SGM', '200,000', 'กลุ่ม'], source: 'PMS หน้า 29', hcActual: '120,000 ราย', hcTarget: '200,000 ราย', hcPct: 60, pdfActual: null, pdfStatus: 'เป้า PMS' },
-          { text: 'สมาชิกในกลุ่ม MA MR UGC ช่วยผลิตคอนเทนต์ 20 Content/เดือน (SGM)', kw: ['UGC', 'Content', 'คอนเทนต์', '20'], source: 'PMS หน้า 29', hcActual: '12 Content/เดือน', hcTarget: '20 Content/เดือน', hcPct: 60, pdfActual: null, pdfStatus: 'เป้า PMS' },
-          { text: 'สร้างเครือข่ายคู่ค้า อู่สีและอู่ข่อมบรถ ภายในปี 68', kw: ['คู่ค้า', 'อู่สี', 'อู่ข่อม', 'เครือข่าย'], source: 'PMGG หน้า 30', hcActual: '15 อู่', hcTarget: '20 อู่', hcPct: 75, pdfActual: null, pdfStatus: 'เป้า PMGG' },
-          { text: 'สร้างเครือข่าย MR เพื่อส่งศูนย์ซ่อมสี GM 50,000 บาท', kw: ['MR', 'ศูนย์ซ่อมสี', '50,000'], source: 'PMGG หน้า 30', hcActual: '35,000 บาท', hcTarget: '50,000 บาท', hcPct: 70, pdfActual: null, pdfStatus: 'เป้า PMGG' },
-          { text: 'ปิดเพิ่มลูกค้าจากกลุ่มรับใช้', kw: ['ปิด', 'ลูกค้า', 'กลุ่มรับใช้', 'รับใช้'], source: 'PMGG หน้า 30', hcActual: '68 คัน', hcTarget: '80 คัน', hcPct: 85, pdfActual: null, pdfStatus: 'เป้า PMGG' }
+          { text: 'สร้างเครือข่าย Navway MA 300 ราย ในปี 68', kw: ['Navway', 'MA', 'เครือข่าย', '300'], source: 'PMS หน้า 29', hcActual: '180 ราย', hcTarget: '300 ราย', hcPct: 60, hcSheet: 'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit', pdfActual: null, pdfStatus: 'เป้า PMS' },
+          { text: 'รับใช้และพาลูกค้าเข้ากลุ่ม SGM 200,000 ราย ในปี 68', kw: ['SGM', '200,000', 'กลุ่ม'], source: 'PMS หน้า 29', hcActual: '120,000 ราย', hcTarget: '200,000 ราย', hcPct: 60, hcSheet: 'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit', pdfActual: null, pdfStatus: 'เป้า PMS' },
+          { text: 'สมาชิกในกลุ่ม MA MR UGC ช่วยผลิตคอนเทนต์ 20 Content/เดือน (SGM)', kw: ['UGC', 'Content', 'คอนเทนต์', '20'], source: 'PMS หน้า 29', hcActual: '12 Content/เดือน', hcTarget: '20 Content/เดือน', hcPct: 60, hcSheet: 'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit', pdfActual: null, pdfStatus: 'เป้า PMS' },
+          { text: 'สร้างเครือข่ายคู่ค้า อู่สีและอู่ข่อมบรถ ภายในปี 68', kw: ['คู่ค้า', 'อู่สี', 'อู่ข่อม', 'เครือข่าย'], source: 'PMGG หน้า 30', hcActual: '15 อู่', hcTarget: '20 อู่', hcPct: 75, hcSheet: 'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' },
+          { text: 'สร้างเครือข่าย MR เพื่อส่งศูนย์ซ่อมสี GM 50,000 บาท', kw: ['MR', 'ศูนย์ซ่อมสี', '50,000'], source: 'PMGG หน้า 30', hcActual: '35,000 บาท', hcTarget: '50,000 บาท', hcPct: 70, hcSheet: 'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' },
+          { text: 'ปิดเพิ่มลูกค้าจากกลุ่มรับใช้', kw: ['ปิด', 'ลูกค้า', 'กลุ่มรับใช้', 'รับใช้'], source: 'PMGG หน้า 30', hcActual: '68 คัน', hcTarget: '80 คัน', hcPct: 85, hcSheet: 'https://docs.google.com/spreadsheets/d/14cTe13-Rxmz2z7pl6Sj-zj2LtapXuQ8XBHFL_F88SDk/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' }
         ]
       }
     ];
@@ -3587,6 +3590,7 @@ function renderDeptContent(idx) {
   var noWeightsList = [];
   if (dept.people && dept.people.length > 0) {
     dept.people.forEach(function(p) {
+      if (p.name && p.name.indexOf("แท็บเริ่มต้น") >= 0) return;
       var wB = p.weightBusiness || 0, wT = p.weightTeam || 0, wP = p.weightPersonal || 0, wC = p.weightCommunity || 0;
       var totalW = wB + wT + wP + wC;
       if (totalW === 0) {
@@ -3618,6 +3622,7 @@ function renderDeptContent(idx) {
   } else {
     html += '<div class="person-grid">';
     dept.people.forEach(function(p, pi) {
+      if (p.name && (p.name.indexOf('แท็บเริ่มต้น') >= 0 || p.name === 'แท็บเริ่มต้น')) return;
       var c = countKRs(p);
       var krColor = c.filled === 0 ? 'var(--text3)' : (c.filled >= c.total ? 'var(--green)' : (c.filled >= 2 ? 'var(--orange)' : 'var(--text3)'));
       var wB = p.weightBusiness || 0, wT = p.weightTeam || 0, wP = p.weightPersonal || 0, wC = p.weightCommunity || 0;

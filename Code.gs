@@ -1567,7 +1567,22 @@ function doGet(e) {
         }
       }
       var freshData = getMultiOKRData_();
-      return ContentService.createTextOutput(JSON.stringify({success: true, message: 'Cache refreshed', departments: freshData.departments.length})).setMimeType(ContentService.MimeType.JSON);
+      // Write to cache immediately so gsGetOKRData can use it
+      try {
+        var jsonStr = JSON.stringify(freshData);
+        if (jsonStr.length < 900000) {
+          CacheService.getScriptCache().put(cacheKey, jsonStr, 3600);
+        } else {
+          // Chunk if too big
+          var chunkSize = 90000;
+          var chunks = Math.ceil(jsonStr.length / chunkSize);
+          for (var ci = 0; ci < chunks; ci++) {
+            CacheService.getScriptCache().put(cacheKey + '_chunk_' + ci, jsonStr.substr(ci * chunkSize, chunkSize), 3600);
+          }
+          CacheService.getScriptCache().put(cacheKey + '_meta', String(chunks), 3600);
+        }
+      } catch(e) {}
+      return ContentService.createTextOutput(JSON.stringify({success: true, message: 'Cache refreshed and saved', departments: freshData.departments.length})).setMimeType(ContentService.MimeType.JSON);
     }
     var allHtml = HtmlService.createHtmlOutputFromFile('OKR_All_Index');
     var allUrl = ScriptApp.getService().getUrl();
@@ -1683,10 +1698,15 @@ function doGet(e) {
   }
 
   // ═══ Default: redirect to OKR Dashboard (main dashboard users expect) ═══
+  var defaultRedirectUrl = ScriptApp.getService().getUrl() + '?okrall=1' + (p.st ? '&st=' + p.st : '') + (p.pwdok === '1' && p.pass && p.otp ? '&pwdok=1&pass=' + encodeURIComponent(p.pass) + '&otp=' + encodeURIComponent(p.otp) : '');
   var defaultHtml = HtmlService.createHtmlOutput(
     '<!DOCTYPE html><html><head><meta charset="UTF-8">'+
-    '<meta http-equiv="refresh" content="0;url=' + ScriptApp.getService().getUrl() + '?okrall=1' + (p.st ? '&st=' + p.st : '') + (p.pwdok === '1' && p.pass && p.otp ? '&pwdok=1&pass=' + encodeURIComponent(p.pass) + '&otp=' + encodeURIComponent(p.otp) : '') + '">'+
-    '<title>กำลังโหลด OKR Dashboard...</title></head><body></body></html>'
+    '<title>กำลังโหลด OKR Dashboard...</title></head><body>'+
+    '<form id="redirForm" action="'+defaultRedirectUrl+'" method="get" target="_top" style="display:none">'+
+    '<input type="submit" value="go">'+
+    '</form>'+
+    '<script>document.getElementById("redirForm").submit();<\/script>'+
+    '</body></html>'
   ).setTitle('กำลังโหลด...').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   return defaultHtml;
 }
@@ -1724,13 +1744,26 @@ function doPost(e) {
       var baseUrl = ScriptApp.getService().getUrl();
       var redirectUrl = baseUrl + '?st=' + sessionToken;
       if (p.rquery) redirectUrl += '&' + p.rquery;
-      return HtmlService.createHtmlOutput(
-        '<!DOCTYPE html><html><head><meta charset="UTF-8">'+
-        '<meta http-equiv="refresh" content="0;url='+redirectUrl+'">'+
-        '<title>กำลังเข้าสู่ระบบ...</title></head><body style="font-family:system-ui;text-align:center;padding:40px">'+
-        '<div style="font-size:48px">✅</div><div style="font-size:18px;font-weight:700;color:#10b981;margin-top:8px">เข้าสู่ระบบสำเร็จ</div>'+
-        '<div style="font-size:13px;color:#64748b;margin-top:4px">กำลังโหลด Dashboard...</div></body></html>'
-      ).setTitle('กำลังเข้าสู่ระบบ...').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      // Use auto-submit form (works in sandbox because form submit IS user-activated)
+      // Directly render the OKR dashboard instead of redirecting
+      try {
+        var allHtml2 = HtmlService.createHtmlOutputFromFile('OKR_All_Index');
+        var allContent2 = allHtml2.getContent();
+        return HtmlService.createHtmlOutput(allContent2)
+          .setTitle('PMS/PMG OKR Dashboard — 5 แผนก')
+          .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+          .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+      } catch(e2) {
+        // Fallback: redirect
+        return HtmlService.createHtmlOutput(
+          '<!DOCTYPE html><html><head><meta charset="UTF-8">'+
+          '<title>กำลังเข้าสู่ระบบ...</title></head><body style="font-family:system-ui;text-align:center;padding:40px">'+
+          '<div style="font-size:48px">✅</div><div style="font-size:18px;font-weight:700;color:#10b981;margin-top:8px">เข้าสู่ระบบสำเร็จ</div>'+
+          '<div style="font-size:13px;color:#64748b;margin-top:4px">กำลังโหลด Dashboard...</div>'+
+          '<a href="'+redirectUrl+'" target="_top" style="display:inline-block;margin-top:16px;padding:10px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:700">เข้าสู่ Dashboard →</a>'+
+          '</body></html>'
+        ).setTitle('กำลังเข้าสู่ระบบ...').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      }
     } else {
       var count = pdpaRecordFailedAttempt(postFp);
       pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + count, postFp);
@@ -13359,7 +13392,7 @@ function getEval360PersonsBatch(startIdx, batchSize) {
 // Public wrapper for google.script.run — returns OKR data for all departments
 // Returns department metadata + names only (small ~5KB) — NO sheet reads, just key names
 function gsGetOKRData() {
-  // Try cache first (fast)
+  // Try cache first (fast) — check both single key and chunked cache
   var warmKey = 'okrall_data_v8';
   try {
     var warmCached = CacheService.getScriptCache().get(warmKey);
@@ -13367,6 +13400,21 @@ function gsGetOKRData() {
       var parsed = JSON.parse(warmCached);
       if (parsed && parsed.departments && parsed.departments.length > 0) {
         return parsed;
+      }
+    }
+    // Try chunked cache
+    var chunkMeta = CacheService.getScriptCache().get(warmKey + '_meta');
+    if (chunkMeta) {
+      var nChunks = parseInt(chunkMeta);
+      var combined = '';
+      for (var ci = 0; ci < nChunks; ci++) {
+        combined += CacheService.getScriptCache().get(warmKey + '_chunk_' + ci) || '';
+      }
+      if (combined) {
+        var parsed2 = JSON.parse(combined);
+        if (parsed2 && parsed2.departments && parsed2.departments.length > 0) {
+          return parsed2;
+        }
       }
     }
   } catch(e) {}
@@ -14137,16 +14185,16 @@ function _removed_gsGetCEOActuals_V4() {
     sourceUrl: 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1',
     sourceDetail: 'สรุปเป้า PMSgr · 23.48/38.50 ลบ · 61% · เสี่ยง'
   });
-  // GM: เป้า 10 ลบ/เดือน → ทำได้ 10.3 ลบ (103%)
+  // GM: เป้า 12 ลบ/เดือน → ทำได้ 10.3 ลบ (86%)
   items.push({
-    krText: 'GM > 9.5 ลบ/เดือน — GM Dashboard',
+    krText: 'GM > 12 ลบ/เดือน — GM Dashboard',
     currentValue: '10.3 ลบ.',
-    targetValue: '10 ลบ.',
-    status: 'on-track',
-    progressPct: 103,
+    targetValue: '12 ลบ.',
+    status: 'at-risk',
+    progressPct: 86,
     source: 'CEO KPI Dashboard — สมศักดิ์ ธัมมะปาละ',
     sourceUrl: 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1',
-    sourceDetail: 'GM Dashboard · 10.3/10 ลบ · 103% · ทะลุเป้า'
+    sourceDetail: 'GM Dashboard · 10.3/12 ลบ · 86% · ใกล้เป้า'
   });
   // เคลือบแก้ว: เป้า 50/เดือน → ทำได้ 58 (116%)
   items.push({
@@ -14430,7 +14478,7 @@ function collectPersonKRs_(personName, deptName) {
  * Extract a numeric target from KR text.
  * Handles patterns like:
  *   "39 ลบ." → 39,000,000 (ล้านบาท)
- *   "9.5 ลบ./เดือน" → 9,500,000
+ *   "12 ลบ./เดือน" → 9,500,000
  *   "280,000 บาท/เดือน" → 280,000
  *   "300,000 บาท/เดือน" → 300,000
  *   "580 ราย" → 580
@@ -14447,7 +14495,13 @@ function extractTargetFromKR_(krText) {
   // Strip leading "KR X:" or "KR X" patterns (e.g., "KR 21 เพิ่ม..." → "เพิ่ม...")
   t = t.replace(/^KR\s*\d+\s*:?\s*/i, '');
 
-  // Pattern: X ลบ. or X ล้านบาท (ล้าน → multiply by 1,000,000)
+  // Pattern: X ล้านบาท or X ล้าน (multiply by 1,000,000)
+  m = t.match(/(d+(?:.d+)?)s*ล้านบาท/);
+  if (m) return parseFloat(m[1]) * 1000000;
+  m = t.match(/(d+(?:.d+)?)s*ล้าน/);
+  if (m) return parseFloat(m[1]) * 1000000;
+
+  // Pattern: X ลบ. (multiply by 1,000,000)
   var m = t.match(/(\d+(?:\.\d+)?)\s*ลบ/);
   if (m) return parseFloat(m[1]) * 1000000;
 
@@ -14551,12 +14605,12 @@ function matchKR_(krText, gmData, pmgiData, warroomData, cbnpData, warroom2Data)
     return noDataItem;
   }
 
-  // ── KR 2: GM ผู้ใช้รถยนต์ / 9.5 ลบ./เดือน → GM AfterSales monthly average (months 1-6 only) ──
+  // ── KR 2: GM ผู้ใช้รถยนต์ / 12 ลบ./เดือน → GM AfterSales monthly average (months 1-6 only) ──
   if ((krText.indexOf('GM') >= 0 || krText.indexOf('กำไรขั้นต้น') >= 0) && krText.indexOf('เดือน') >= 0 &&
       (krText.indexOf('ผู้ใช้รถยนต์') >= 0 || krText.indexOf('หลังการขาย') >= 0 || krText.indexOf('ไม่ต่ำกว่า') >= 0)) {
-    // Override target: KR text says 9.5 ลบ but target should be 10 ลบ = 10,000,000
+    // Override target: KR text says 12 ลบ but target should be 10 ลบ = 10,000,000
     var gmTarget = target !== null ? Math.round(target) : null;
-    if (krText.indexOf('9.5 ลบ') >= 0 || krText.indexOf('ไม่ต่ำกว่า 9.5') >= 0) {
+    if (krText.indexOf('12 ลบ') >= 0 || krText.indexOf('ไม่ต่ำกว่า 9.5') >= 0) {
       gmTarget = 10000000;
     }
     if (gmData && gmData.monthly && gmData.monthly.afterSalesTotal) {
