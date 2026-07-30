@@ -15931,6 +15931,12 @@ var ORG_CUST_SHEET_ID = '14cTe13-Rxmz2z7pl6Sj-zj2LtapXuQ8XBHFL_F88SDk';
 // ── helpers for reading sheet ranges safely ──
 function ocReadSheet_(ss, tabName, maxRows, maxCols) {
   var s = ss.getSheetByName(tabName);
+  if (!s) {
+    // Try alternative names (e.g., "NEW C3_ส่งสรุปสั้นเดิม" vs "C3_ส่งสรุปสั้นเดิม")
+    var altName = 'NEW ' + tabName;
+    s = ss.getSheetByName(altName);
+    if (s) tabName = altName;
+  }
   if (!s) return null;
   var lastRow = s.getLastRow();
   var lastCol = s.getLastColumn();
@@ -16003,7 +16009,7 @@ function getOrgCustData_(forceRefresh) {
     revenueReport: null,
     dailyAppointments: null,
     records: null,
-    tabs: {},
+    
     sourceUrl: 'https://docs.google.com/spreadsheets/d/' + ORG_CUST_SHEET_ID + '/edit',
     lastUpdate: new Date().toISOString()
   };
@@ -16014,10 +16020,9 @@ function getOrgCustData_(forceRefresh) {
     // ─────────────────────────────────────────────
     // 1. C2_สรุปผลงานรายวัน (117r×104c)
     // ─────────────────────────────────────────────
-    var c2 = ocReadSheet_(ss, 'C2_สรุปผลงานรายวัน', 117, 104);
+    var c2 = ocReadSheet_(ss, 'C2_สรุปผลงานรายวัน', 10, 104);
     if (c2) {
       result.dailyResults = c2;
-      result.tabs.c2_daily = c2;
       // R1: เป้าแสวงหา
       if (c2.rows.length > 1) {
         var targetRow = c2.rows[1];
@@ -16033,10 +16038,9 @@ function getOrgCustData_(forceRefresh) {
     // ─────────────────────────────────────────────
     // 2. C3_ส่งสรุปสั้นเดิม (125r×32c)
     // ─────────────────────────────────────────────
-    var c3 = ocReadSheet_(ss, 'C3_ส่งสรุปสั้นเดิม', 125, 32);
+    var c3 = ocReadSheet_(ss, 'C3_ส่งสรุปสั้นเดิม', 10, 32);
     if (c3) {
       result.shortSummary = c3;
-      result.tabs.c3_summary = c3;
       // R1: เดือน=7, R2: ปี=2026, เป้านัดหมาย=60, นัดได้=75, คิดเป็น=1.25
       if (c3.rows.length > 2) {
         result.summary.monthNum = ocNum(c3.rows[1][8]) || 7;
@@ -16058,7 +16062,6 @@ function getOrgCustData_(forceRefresh) {
     var c4 = ocReadSheet_(ss, 'C4_รายงานกัดไม่ปล่อย', 35, 62);
     if (c4) {
       result.holdReport = c4;
-      result.tabs.c4_hold = c4;
       // R0: เดือน, R1: headers, R3: summary stats
       if (c4.rows.length > 0) result.summary.holdMonth = c4.rows[0][0];
       if (c4.rows.length > 1) result.holdReport.dataHeaders = c4.rows[1];
@@ -16076,7 +16079,6 @@ function getOrgCustData_(forceRefresh) {
     var c5 = ocReadSheet_(ss, 'C5_เปรียบเทียบเดือน/ปี', 107, 24);
     if (c5) {
       result.yearComparison = c5;
-      result.tabs.c5_compare = c5;
       // R3 has all data: col 1=ปี68คัน, col 2=ปี69คัน, col 5=ปี68รายได้, col 6=ปี69รายได้, col 9=ปี68GM, col 10=ปี69GM
       if (c5.rows.length > 3) {
         var yrow = c5.rows[3];
@@ -16096,19 +16098,17 @@ function getOrgCustData_(forceRefresh) {
     // ─────────────────────────────────────────────
     // 5. B1_บันทึกข้อมูล (1104r×97c) — read 50 rows
     // ─────────────────────────────────────────────
-    var b1 = ocReadSheet_(ss, 'B1_บันทึกข้อมูล', 51, 97);
+    var b1 = ocReadSheet_(ss, 'B1_บันทึกข้อมูล', 21, 97);
     if (b1) {
       result.records = b1;
-      result.tabs.b1_records = b1;
     }
 
     // ─────────────────────────────────────────────
     // 6. B2_กัดไม่ปล่อยยังไม่ซ่อม (104r×86c) — read 50 rows
     // ─────────────────────────────────────────────
-    var b2 = ocReadSheet_(ss, 'B2_กัดไม่ปล่อยยังไม่ซ่อม', 51, 86);
+    var b2 = ocReadSheet_(ss, 'B2_กัดไม่ปล่อยยังไม่ซ่อม', 21, 86);
     if (b2) {
       result.pendingRepairs = b2;
-      result.tabs.b2_pending = b2;
     }
 
     // ─────────────────────────────────────────────
@@ -16117,7 +16117,7 @@ function getOrgCustData_(forceRefresh) {
     var supp = ocReadSheet_(ss, 'สรุปผลิตภัณฑ์เสริม/ปี', 32, 27);
     if (supp) {
       result.supplementProducts = supp;
-      result.tabs.supplement = supp;
+      
       // R2: headers, R3: มกราคม GM=32725
       if (supp.rows.length > 2) result.supplementProducts.headers = supp.rows[2];
       if (supp.rows.length > 3) {
@@ -16140,10 +16140,10 @@ function getOrgCustData_(forceRefresh) {
     // ─────────────────────────────────────────────
     // 8. สรุปยอดรถรายเดือน (148r×33c)
     // ─────────────────────────────────────────────
-    var mc = ocReadSheet_(ss, 'สรุปยอดรถรายเดือน', 148, 33);
+    var mc = ocReadSheet_(ss, 'สรุปยอดรถรายเดือน', 30, 33);
     if (mc) {
       result.monthlyCars = mc;
-      result.tabs.monthly_cars = mc;
+      
       // R4: headers
       if (mc.rows.length > 4) result.monthlyCars.headers = mc.rows[4];
     }
@@ -16154,7 +16154,7 @@ function getOrgCustData_(forceRefresh) {
     var org = ocReadSheet_(ss, 'สรุปฐานลูกค้าองค์กร', 200, 22);
     if (org) {
       result.orgSummary = org;
-      result.tabs.org_summary = org;
+      
       // R2: 41องค์กร 165คัน 33ลูกค้าองค์กร
       if (org.rows.length > 2) {
         var orow = org.rows[2];
@@ -16170,7 +16170,7 @@ function getOrgCustData_(forceRefresh) {
     var cl = ocReadSheet_(ss, 'รายชื่อลูกค้าองค์กร', 100, 9);
     if (cl) {
       result.customerList = cl;
-      result.tabs.customer_list = cl;
+      
       // R2: headers
       if (cl.rows.length > 2) result.customerList.headers = cl.rows[2];
     }
@@ -16181,7 +16181,7 @@ function getOrgCustData_(forceRefresh) {
     var rev = ocReadSheet_(ss, 'รายได้ของพี่วันชัย', 56, 15);
     if (rev) {
       result.revenueReport = rev;
-      result.tabs.revenue = rev;
+      
       // R4: ปิดได้ 118 (ซ่อมทันที 50 + กัดไม่ปล่อย 68)
       if (rev.rows.length > 4) {
         var rrow = rev.rows[4];
@@ -16197,7 +16197,7 @@ function getOrgCustData_(forceRefresh) {
     var appt = ocReadSheet_(ss, 'A4_นัดหมายประจำวัน', 16, 17);
     if (appt) {
       result.dailyAppointments = appt;
-      result.tabs.appointments = appt;
+      
       // R4: headers
       if (appt.rows.length > 4) result.dailyAppointments.headers = appt.rows[4];
     }
@@ -16250,8 +16250,8 @@ function getOrgCustData_(forceRefresh) {
   return result;
 }
 
-function getOrgCustDataForClient() {
-  return getOrgCustData_(true);
+function getOrgCustDataForClient(forceRefresh) {
+  return getOrgCustData_(forceRefresh === true);
 }
 
 function getOrgCustDebug_() {
@@ -16273,7 +16273,6 @@ function getOrgCustDebug_() {
         }
         rows.push(row);
       }
-      result.tabs[name] = { rows: rows, rowCount: data.length, colCount: data[0] ? data[0].length : 0 };
     }
   } catch (e) {
     result.error = e.toString();
