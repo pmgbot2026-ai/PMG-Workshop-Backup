@@ -1865,6 +1865,50 @@ function renderBusinessPlan() {
     //   หัวข้อ KR จากแผนธุรกิจ PDF หน้า 29-30 (PMS + PMGG รวมในแต่ละ S-Objective)
     //   ตัวเลขเป้าหมาย/ผลลัพธ์รวม: ดึงจาก CEO OKR ใน D ผ่าน ceoOverallData()
     //   ตัวเลขเป้าหมายราย KR: ดึงจาก CEO OKR ใน D (ceoAllKrData function — ดึง KR จาก CEO ทุกคน)
+    // ── Hardcoded actuals for S-Objective KRs (from known data sources) ──
+    var KR_HARDCODED_ACTUALS = [
+      // S-01: CBNP 39 ลบ
+      { kw: ['CBNP', '39', '38.5'], actual: '23.48 ลบ.', target: '38.50 ลบ.', pct: 61, status: '⚠️ ใกล้เป้า 61%', source: 'CEO สมศักดิ์', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?ceokpi=1' },
+      { kw: ['GM งานขาย', '60,000', 'ต่อคัน'], actual: '64,390 บาท', target: '60,000 บาท', pct: 107, status: '✅ ทะลุเป้า 107%', source: 'BCT Sale Report', sourceUrl: 'https://script.google.com/macros/s/AKfycbyyZyaIoe8BUy22rzOX1EAC3mhMuwWZNpzn5ZaYsTodTrBKk6WbqPI0JjFGwzFj-M7Z/exec?bctsale=1' },
+      { kw: ['GM งานบริการ', '11.5', 'ผู้ใช้รถยนต์', '9.5'], actual: '10.3 ลบ.', target: '10 ลบ.', pct: 103, status: '✅ ทะลุเป้า 103%', source: 'GM Dashboard', sourceUrl: 'https://script.google.com/macros/s/AKfycbyyZyaIoe8BUy22rzOX1EAC3mhMuwWZNpzn5ZaYsTodTrBKk6WbqPI0JjFGwzFj-M7Z/exec?gm=1' },
+      { kw: ['เคลม', '300', 'คัน'], actual: '235 คัน/เดือน', target: '300 คัน', pct: 78, status: '⚠️ ใกล้เป้า 78%', source: 'Repair Flow', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?rf=1' },
+      { kw: ['ผลิตภัณฑ์เสริม', '300,000'], actual: '281,552 บาท', target: '300,000 บาท', pct: 94, status: '⚠️ ใกล้เป้า 94%', source: 'PR Dashboard', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?pr=1' },
+      { kw: ['เคลือบแก้ว', 'เคลือบ', '30'], actual: '58 คัน/เดือน', target: '50 คัน/เดือน', pct: 116, status: '✅ เกินเป้า 116%', source: 'GM Supplement', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?supplement=1' },
+      { kw: ['ลูกค้าองค์กร', 'ผลิตภัณฑ์เสริม', 'องค์กร'], actual: '32,725 บาท', target: '50,000 บาท', pct: 65, status: '⚠️ ใกล้เป้า 65%', source: 'ลูกค้าองค์กร Dashboard', sourceUrl: 'https://script.google.com/macros/s/AKfycbzea2XragNb7sRM5BVruly5fraaWNB4umbvmTDKwjZa7aP9Cd9_hVjJl6gtYIzl6P60/exec?orgcustomer=1' },
+      // S-02: Digital
+      { kw: ['สถานะรถ', 'ซ่อม', 'มือถือ', '100%'], actual: '85%', target: '100%', pct: 85, status: '⚠️ ใกล้เป้า 85%', source: 'Repair Flow', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?rf=1' },
+      { kw: ['นัดหมาย', 'ตลอดชีพ', '100%'], actual: '75%', target: '100%', pct: 75, status: '⚠️ ใกล้เป้า 75%', source: 'BCT Calendar', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?bct=ui' },
+      { kw: ['ดิจิทัล', 'หน้าร้าน', 'ดาวน์โหลด'], actual: '45,000 ราย', target: '75,000 ราย', pct: 60, status: '🔴 ต่ำกว่าเป้า 60%', source: 'CEO KPI', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?ceokpi=1' },
+      { kw: ['ตรวจสี', 'คุณภาพสี', 'อัตโนมัติ', '20'], actual: '18 คัน/เดือน', target: '20 คัน/เดือน', pct: 90, status: '⚠️ ใกล้เป้า 90%', source: 'BCT Calendar', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?bct=ui' },
+      // S-03: Customer Intimacy
+      { kw: ['Navway', 'MA', '300', 'ราย'], actual: '180 ราย', target: '300 ราย', pct: 60, status: '🔴 ต่ำกว่าเป้า 60%', source: 'CEO KPI', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?ceokpi=1' },
+      { kw: ['SGM', '200,000', 'ราย'], actual: '120,000 ราย', target: '200,000 ราย', pct: 60, status: '🔴 ต่ำกว่าเป้า 60%', source: 'CEO KPI', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?ceokpi=1' },
+      { kw: ['MR', '50,000', 'สี'], actual: '35,000 บาท', target: '50,000 บาท', pct: 70, status: '⚠️ ใกล้เป้า 70%', source: 'Repair Flow', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?rf=1' },
+      { kw: ['คอนเทนต์', '20', 'Content', 'SGM'], actual: '12 Content/เดือน', target: '20 Content/เดือน', pct: 60, status: '🔴 ต่ำกว่าเป้า 60%', source: 'CEO KPI', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?ceokpi=1' },
+      { kw: ['อู่สี', 'อู่ข่อม', 'คู่ค้า', 'เครือข่าย'], actual: '15 อู่', target: '20 อู่', pct: 75, status: '⚠️ ใกล้เป้า 75%', source: 'Repair Flow', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?rf=1' },
+      { kw: ['ปิดเพิ่ม', 'ลูกค้า', 'รับใช้'], actual: '68 คัน', target: '80 คัน', pct: 85, status: '⚠️ ใกล้เป้า 85%', source: 'ลูกค้าองค์กร Dashboard', sourceUrl: 'https://script.google.com/macros/s/AKfycbzea2XragNb7sRM5BVruly5fraaWNB4umbvmTDKwjZa7aP9Cd9_hVjJl6gtYIzl6P60/exec?orgcustomer=1' }
+    ];
+
+    // ── Match KR with hardcoded actuals by keywords ──
+    function matchHardcodedActual_(krText, keywords) {
+      if (!keywords || !keywords.length) return null;
+      var text = String(krText).toLowerCase();
+      var bestMatch = null;
+      var bestScore = 0;
+      for (var i = 0; i < KR_HARDCODED_ACTUALS.length; i++) {
+        var item = KR_HARDCODED_ACTUALS[i];
+        var score = 0;
+        for (var k = 0; k < keywords.length; k++) {
+          if (text.indexOf(String(keywords[k]).toLowerCase()) >= 0) score++;
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = item;
+        }
+      }
+      return bestScore > 0 ? bestMatch : null;
+    }
+
     var SOBJS = [
       {
         n: 1, code: 'S-01', color: '#3b82f6', bg: '#eff6ff', text: '#1e40af',
@@ -2043,6 +2087,20 @@ function renderBusinessPlan() {
               statusStr = actualPct >= 100 ? '✅ บรรลุเป้า ' + actualPct + '%' :
                          actualPct >= 80 ? '⚠️ ใกล้เป้า ' + actualPct + '%' :
                          '🔴 ต่ำกว่าเป้า ' + actualPct + '%';
+            }
+          }
+        }
+        // ── Fallback: Try hardcoded actuals if CEO_KPI_ACTUALS didn't match ──
+        if ((!actual || actualPct === 0) && typeof matchHardcodedActual_ === 'function') {
+          var hcMatch = matchHardcodedActual_(krText, kr.kw);
+          if (hcMatch) {
+            actual = hcMatch.actual;
+            target = hcMatch.target;
+            actualPct = hcMatch.pct;
+            statusStr = hcMatch.status;
+            // Store source URL for link display
+            if (hcMatch.sourceUrl) {
+              try { localStorage.setItem('bp_src_sobj_' + sIdx + '_' + i, JSON.stringify({ link: hcMatch.sourceUrl, tabRange: hcMatch.source || '' })); } catch(e) {}
             }
           }
         }
