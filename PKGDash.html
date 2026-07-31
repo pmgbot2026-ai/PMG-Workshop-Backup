@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PKG AUTO BODY — คู่มือระเบียบปฏิบัติงาน (WI) ISO 9001/9002</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI','Th Sarabun New','Sukhumvit Set',Tahoma,sans-serif;background:#f1f5f9;color:#1e293b;font-size:16px;line-height:1.6;padding:18px}
+.wrap{max-width:1100px;margin:0 auto}
+.header{text-align:center;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:28px 20px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.18);margin-bottom:18px}
+.header h1{font-size:24px;margin-bottom:4px;letter-spacing:.5px}
+.header h2{font-size:18px;font-weight:500;opacity:.95}
+.header .meta{font-size:13px;margin-top:8px;opacity:.85}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;background:#fff;padding:14px 10px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:20px}
+.flow-step{background:#3b82f6;color:#fff;font-size:12px;font-weight:700;padding:7px 11px;border-radius:8px;white-space:nowrap}
+.flow-arrow{color:#64748b;font-weight:700;font-size:14px}
+.section-title{font-size:20px;color:#1e3a5f;border-left:5px solid #3b82f6;padding-left:12px;margin:22px 0 12px;font-weight:700}
+.cards{display:grid;grid-template-columns:1fr;gap:14px}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.07);overflow:hidden;border:1px solid #e2e8f0}
+.card-head{padding:14px 16px;color:#fff;display:flex;align-items:center;gap:10px}
+.card-head .num{background:rgba(255,255,255,.28);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:700}
+.card-head h3{font-size:18px;font-weight:700;flex:1}
+.card-body{padding:14px 16px}
+.meta-row{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:15px;padding:6px 0;border-bottom:1px dashed #e2e8f0}
+.meta-row:last-child{border-bottom:none}
+.meta-label{color:#64748b;font-weight:600}
+.meta-val{color:#0f172a}
+.steps{margin:10px 0 8px 0}
+.steps ol{padding-left:22px}
+.steps li{margin:5px 0;font-size:15px}
+.steps .sub{list-style:none;margin-left:18px}
+.steps .sub li::marker{content:"◦ "}
+.notif{background:#ecfdf5;border-left:4px solid #10b981;padding:8px 12px;border-radius:8px;font-size:14px;color:#065f46;margin:8px 0}
+.sd-ref{background:#fef3c7;border-left:4px solid #f59e0b;padding:8px 12px;border-radius:8px;font-size:14px;color:#78350f;margin:8px 0}
+.sd-table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.07);font-size:14px;margin-top:8px}
+.sd-table th{background:#1e3a5f;color:#fff;padding:10px;text-align:left;font-weight:600}
+.sd-table td{padding:9px 10px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+.sd-table tr:nth-child(even){background:#f8fafc}
+.sd-table tr:hover{background:#eff6ff}
+.sd-code{font-weight:700;color:#3b82f6;white-space:nowrap}
+.footer{text-align:center;color:#475569;font-size:13px;padding:18px;margin-top:22px;border-top:2px solid #cbd5e1}
+.c-blue{background:#3b82f6}.c-green{background:#10b981}.c-yellow{background:#f59e0b}.c-red{background:#ef4444}
+.c-blue2{background:#2563eb}.c-teal{background:#0d9488}.c-purple{background:#8b5cf6}.c-slate{background:#475569}
+.note{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px;font-size:13px;color:#9a3412;margin:10px 0}
+@media(max-width:640px){.meta-row{grid-template-columns:1fr;gap:2px}.meta-label{font-size:13px}.header h1{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="header">
+  <h1>PKG AUTO BODY — ศูนย์ซ่อมตัวถังและสี</h1>
+  <h2>คู่มือระเบียบปฏิบัติงานและขั้นตอนการทำงาน (WI) — ISO 9001/9002</h2>
+  <div class="meta">รหัสเอกสาร: WI-BP-MASTER &nbsp;|&nbsp; แก้ไขครั้งที่ 03 (2026) &nbsp;|&nbsp; วันที่บังคับใช้: 01/02/2026</div>
+</div>
+
+<div class="flow">
+  <span class="flow-step">01 รับรถ</span><span class="flow-arrow">→</span>
+  <span class="flow-step">02 ประเมิน</span><span class="flow-arrow">→</span>
+  <span class="flow-step">03 เจรจา</span><span class="flow-arrow">→</span>
+  <span class="flow-step">04 จัดซื้อ</span><span class="flow-arrow">→</span>
+  <span class="flow-step">05 คลัง</span><span class="flow-arrow">→</span>
+  <span class="flow-step">06 จ่ายงาน</span><span class="flow-arrow">→</span>
+  <span class="flow-step">07 โรงซ่อม</span><span class="flow-arrow">→</span>
+  <span class="flow-step">08 Final QC</span><span class="flow-arrow">→</span>
+  <span class="flow-step">09 ส่งมอบ</span><span class="flow-arrow">→</span>
+  <span class="flow-step">10 รูปเทียบ</span><span class="flow-arrow">→</span>
+  <span class="flow-step">11 วางบิล</span><span class="flow-arrow">→</span>
+  <span class="flow-step">12 รับเงิน</span>
+</div>
+
+<div class="section-title">รายละเอียดระเบียบปฏิบัติงาน (Work Instructions — WI) ฉบับสมบูรณ์</div>
+<div class="cards">
+
+<!-- WI-BP-01 -->
+<div class="card">
+  <div class="card-head c-blue"><span class="num">01</span><h3>WI-BP-01: รับแจ้งเหตุ ตรวจรับรถ และเปิดใบรับเคลม</h3></div>
+  <div class="card-body">
+    <div class="meta-row"><span class="meta-label">ผู้รับผิดชอบหลัก</span><span class="meta-val">พนักงานต้อนรับ / SA (Service Advisor)</span></div>
+    <div class="meta-row"><span class="meta-label">เป้าหมายเวลา</span><span class="meta-val">≤ 20 นาที / คัน</span></div>
+    <div class="meta-row"><span class="meta-label">อุปกรณ์/ระบบ</span><span class="meta-val">ระบบ DMS, กล้องถ่ายภาพ/แท็บเล็ต, แบบฟอร์มตรวจรับรถ</span></div>
+    <div class="steps"><ol>
+      <li>ตรวจสอบเอกสารสิทธิ์: เรียกตรวจใบเคลม (Claim Form), กรมธรรม์ประกันภัย, สำเนารายการจดทะเบียนรถ และใบขับขี่ผู้เอาประกันภัย</li>
+      <li>สำรวจและบันทึกสภาพรถแรกรับ: เดินตรวจรอบคันพร้อมลูกค้า ถ่ายภาพ 8 มุมหลัก + จุดเสียหาย + เลขไมล์ + ระดับน้ำมัน + ทรัพย์สินภายในรถ บันทึกลงใน SD-BP-01</li>
+      <li>คีย์ข้อมูลเปิด Job: บันทึกข้อมูลเข้าระบบ DMS ออกใบรับรถ/เปิดเคลม (RO - Repair Order) ให้ลูกค้าลงนาม</li>
+      <li>แจ้งเตือนอัตโนมัติ (Line/App Step 1): กดส่งระบบ Notification ขอบคุณลูกค้า พร้อมแจ้งลิงก์ติดตามสถานะงานซ่อม</li>
+    </ol></div>
+    <div class="notif">LINE/App #1: รับรถเรียบร้อย</div>
+    <div class="sd-ref">เอกสารอ้างอิง: SD-BP-01 ใบตรวจรับรถและทรัพย์สิน | SD-BP-01-A ภาพถ่ายแรกรับเข้าระบบ DMS</div>
+  </div>
+</div>
+
+<!-- WI-BP-02 -->
+<div class="card">
+  <div class="card-head c-blue2"><span class="num">02</span><h3>WI-BP-02: ประเมินความเสียหายและทำใบเสนอราคา</h3></div>
+  <div class="card-body">
+    <div class="meta-row"><span class="meta-label">ผู้รับผิดชอบหลัก</span><span class="meta-val">SA / ช่างประเมินราคา (Estimator)</span></div>
+    <div class="meta-row"><span class="meta-label">เป้าหมายเวลา</span><span class="meta-val">≤ 1 Working Day</span></div>
+    <div class="meta-row"><span class="meta-label">อุปกรณ์/ระบบ</span><span class="meta-val">ช่องถอดรื้อ (Tear-down Bay), ระบบ e-Claim, คู่มือรหัสอะไหล่ผู้ผลิต</span></div>
+    <div class="steps"><ol>
+      <li>สั่งถอดรื้อเพื่อสำรวจ (ถ้ามี): ประสานช่างถอดชิ้นส่วนภายนอกออก เพื่อตรวจเช็กโครงสร้างตัวถังด้านใน ชิ้นส่วนซ่อนเร้นที่คดดัด/แตกหัก</li>
+      <li>จำแนกประเภทงานซ่อม: ระบุรหัสชิ้นส่วนว่า เคาะดึงดัด (Labor Level 1-3), พ่นสี (พ่นเฉพาะจุด/พ่นทั้งชิ้น/แห้งช้า), หรือเปลี่ยนอะไหล่</li>
+      <li>ถ่ายภาพความเสียหายซ่อนเร้น: ถ่ายรูปซูมชัดเจนแสดงจุดบิดเบี้ยวหรือเลข Part Number อะไหล่ที่เสียหาย</li>
+      <li>จัดทำใบเสนอราคามาตรฐาน: คำนวณค่าแรง ค่าสี และราคาอะไหล่ตามโครงสร้างราคาคู่สัญญาประกันภัย บันทึกลงใน SD-BP-02</li>
+    </ol></div>
+    <div class="sd-ref">เอกสารอ้างอิง: SD-BP-02 ใบเสนอราคาและประมาณการค่าซ่อม (Estimate Sheet)</div>
+  </div>
+</div>
+
+<!-- WI-BP-03 -->
+<div class="card">
+  <div class="card-head c-teal"><span class="num">03</span><h3>WI-BP-03: เจรจาต่อรองอนุมัติราคากับประกันภัย</h3></div>
+  <div class="card-body">
+    <div class="meta-row"><span class="meta-label">ผู้รับผิดชอบหลัก</span><span class="meta-val">SA ประสานงานประกันภัย</span></div>
+    <div class="meta-row"><span class="meta-label">เป้าหมายเวลา</span><span class="meta-val">≤ 2 Working Days</span></div>
+    <div class="meta-row"><span class="meta-label">อุปกรณ์/ระบบ</span><span class="meta-val">ระบบ e-Claim / อนุมัติออนไลน์, ตารางราคาประกัน (Claim Matrix)</span></div>
+    <div class="steps"><ol>
+      <li>ส่งอนุมัติผ่านระบบ e-Claim: อัปโหลดใบเสนอราคาพร้อมชุดรูปถ่ายแรกรับและรูปถอดรื้อเข้าระบบประกันภัย</li>
+      <li>เจรจาชี้แจงเทคนิค: กรณีประกันขอตัดลดรายการ ให้ SA นำเสนอหลักฐานมาตรฐานผู้ผลิต (OEM Standard) หรือนัด Surveyor เข้าตรวจร่วม</li>
+      <li>บันทึกยอดอนุมัติและกำหนดส่งมอบ: เมื่อได้รับเอกสารอนุมัติ (Approval Sheet) บันทึกยอดเงินอนุมัติแยกค่าแรง/ค่าสี/ค่าอะไหล่ และคำนวณวันนัดรับรถ (Promised Date)</li>
+      <li>แจ้งเตือนอัตโนมัติ (Line/App Step 2): ยิงข้อความแจ้งลูกค้า: "ประกันภัยอนุมัติงานซ่อมเรียบร้อยแล้ว กำหนดส่งมอบรถวันที่ [DD/MM/YYYY]"</li>
+    </ol></div>
+    <div class="notif">LINE/App #2: อนุมัติการซ่อม</div>
+    <div class="sd-ref">เอกสารอ้างอิง: SD-BP-03 ใบอนุมัติการซ่อมจากประกันภัย (Insurance Approval Form)</div>
+  </div>
+</div>
+
+<!-- WI-BP-04 -->
+<div class="card">
+  <div class="card-head c-yellow"><span class="num">04</span><h3>WI-BP-04: จัดซื้อจัดหาอะไหล่ แท้/เทียบ/มือสอง</h3></div>
+  <div class="card-body">
+    <div class="meta-row"><span class="meta-label">ผู้รับผิดชอบหลัก</span><span class="meta-val">เจ้าหน้าที่จัดซื้ออะไหล่ (Parts Purchaser)</span></div>
+    <div class="meta-row"><span class="meta-label">เป้าหมายเวลา</span><span class="meta-val">ออก PO ภายใน 4 ชม. หลังอนุมัติ</span></div>
+    <div class="meta-row"><span class="meta-label">อุปกรณ์/ระบบ</span><span class="meta-val">ระบบ ERP/DMS คลังอะไหล่, รายนามร้านค้าผู้ผลิต/ร้านอะไหล่ (Approved Vendor List)</span></div>
+    <div class="steps"><ol>
+      <li>จำแนกประเภทอะไหล่ตามอนุมัติ:
+        <ul class="sub">
+          <li>อะไหล่แท้ (OEM): สั่งตรงจากศูนย์บริการผู้ผลิต</li>
+          <li>อะไหล่เทียบเท่า (OES/Aftermarket): สั่งจากตัวแทนจำหน่ายที่ได้มาตรฐาน ISO/TIS</li>
+          <li>อะไหล่ใช้แล้ว/มือสอง (Used Parts): คัดเลือกสภาพเกรด A โครงสร้างไม่แตกหัก ห้ามมีรอยซ่อมเดิม</li>
+        </ul>
+      </li>
+      <li>เปิดใบสั่งซื้อ (PO): ออก PO ผ่านระบบ DMS พร้อมระบุเงื่อนไขการส่งมอบ (Lead Time)</li>
+      <li>ติดตามสถานะกรณีรออะไหล่นาน: หากอะไหล่ติด Backorder ให้ลงบันทึกในระบบ และกดแจ้งเตือนลูกค้า Line/App Step 3</li>
+    </ol></div>
+    <div class="notif">LINE/App #3: สถานะสั่งอะไหล่</div>
+    <div class="sd-ref">เอกสารอ้างอิง: SD-BP-04 ใบสั่งซื้ออะไหล่ (PO) | SD-BP-04-A รายงานติดตามสถานะอะไหล่</div>
+  </div>
+</div>
+
+<!-- WI-BP-05 -->
+<div class="card">
+  <div class="card-head c-green"><span class="num">05</span><h3>WI-BP-05: ตรวจรับ/คลังอะไหล่</h3></div>
+  <div class="card-body">
+    <div class="meta-row"><span class="meta-label">ผู้รับผิดชอบหลัก</span><span class="meta-val">เจ้าหน้าที่คลังอะไหล่ (Storekeeper)</span></div>
+    <div class="meta-row"><span class="meta-label">เป้าหมายเวลา</span><span class="meta-val">ตรวจรับภายใน 1 ชม. หลังส่งมอบ</span></div>
+    <div class="meta-row"><span class="meta-label">อุปกรณ์/ระบบ</span><span class="meta-val">ชั้นวาง Bin-Location แยกตาม Job, กล้องถ่ายภาพ, ใบเบิกอะไหล่</span></div>
+    <div class="steps"><ol>
+      <li>ตรวจรับอะไหล่ (Goods Receipt): เช็ก Part No. จำนวน และสภาพความถูกต้อง ห้ามมีรอยบุบ/แตกหัก</li>
+      <li>ถ่ายภาพเทียบอะไหล่แรกรับ (SD-BP-10 Prep): ถ่ายรูปอะไหล่ใหม่คู่กับกล่อง/Part Number ให้ชัดเจน เพื่อไว้ทำหลักฐานเบิกประกัน</li>
+      <li>จัดเก็บเข้าช่อง Bin: นำอะไหล่เข้าคลังคัดแยกตามช่องประจำเลขทะเบียนรถ/เลข Job Order</li>
+      <li>จ่ายอะไหล่ออกงานซ่อม: ช่างนำใบสั่งซ่อม (WO) มาขอเบิก สโตร์ตัดสต็อกในระบบ DMS และถ่ายรูปชิ้นส่วนเก่าคืนคลัง (ถ้ามี)</li>
+    </ol></div>
+    <div class="sd-ref">เอกสารอ้างอิง: SD-BP-05 ใบตรวจรับอะไหล่ (GR) | SD-BP-05-A ใบเบิกจ่ายอะไหล่เข้า Job Order</div>
+  </div>
+</div>
+
+<!-- WI-BP-06 -->
+<div class="card">
+  <div class="card-head c-purple"><span class="num">06</span><h3>WI-BP-06: ออกใบสั่งซ่อม จ่ายงานเข้าโรงซ่อม</h3></div>
+  <div class="card-body">
+    <div class="meta-row"><span class="meta-label">ผู้รับผิดชอบหลัก</span><span class="meta-val">SA / ผู้จัดการโรงงาน (Production Controller)</span></div>
+    <div class="meta-row"><span class="meta-label">เป้าหมายเวลา</span><span class="meta-val">≤ 30 นาที</span></div>
+    <div class="meta-row"><span class="meta-label">อุปกรณ์/ระบบ</span><span class="meta-val">บอร์ดบริหารงานซ่อม (Visual Control Board), ซองใส่ Job Card ติดรถ</span></div>
+    <div class="steps"><ol>
+      <li>พิมพ์ใบสั่งซ่อมฉบับจริง (Work Order): ระบุรายละเอียดงานเคาะ งานทำสี รายการเปลี่ยนอะไหล่ และวันกำหนดเสร็จแต่ละแผนก</li>
+      <li>จ่ายงานให้ Foreman/หัวหน้าช่าง: ประชุมส่งมอบงาน มอบหมายช่างเคาะ/ช่างสีประจำรถ</li>
+      <li>ตั้งแขวน Job Card หน้ากระจกรถ: ติดตั้งซองใส่เอกสาร WO + บอร์ดสีแสดงสถานะการซ่อมไว้หน้ากระจกหน้ารถ</li>
+      <li>แจ้งเตือนอัตโนมัติ (Line/App Step 4): ยิงข้อความแจ้งลูกค้า: "รถของท่านเริ่มเข้าสู่กระบวนการซ่อมในโรงซ่อมแล้ว"</li>
+    </ol></div>
+    <div class="notif">LINE/App #4: เริ่มเข้าซ่อม</div>
+    <div class="sd-ref">เอกสารอ้างอิง: SD-BP-06 ใบสั่งซ่อม (Work Order - WO) | SD-BP-06-A บอร์ดควบคุมสถานะงานซ่อม</div>
+  </div>
+</div>
+
+<!-- WI-BP-07 -->
+<div class="card">
+  <div class="card-head c-red"><span class="num">07</span><h3>WI-BP-07: บริหารงานในโรงซ่อม + Gate Check</h3></div>
+  <div class="card-body">
+    <div class="meta-row"><span class="meta-label">ผู้รับผิดชอบหลัก</span><span class="meta-val">Foreman / ช่างเคาะ / ช่างสี / ช่างประกอบ</span></div>
+    <div class="meta-row"><span class="meta-label">เป้าหมายเวลา</span><span class="meta-val">ตาม SAT ของแต่ละ Job Order</span></div>
+    <div class="meta-row"><span class="meta-label">อุปกรณ์/ระบบ</span><span class="meta-val">แท่นดึงดัดโครงสร้าง (Jig), ห้องพ่นสีมาตรฐาน, แผ่นพ่นเทียบสี (Color Match Sample)</span></div>
+    <div class="steps"><ol>
+      <li>แผนกเคาะ (Body Section): ดึง ดัด เคาะ ดึงมิติโครงสร้างตัวถังตามสเปกโรงงาน ช่างถ่ายรูปการซ่อมดึงโครงสร้างไว้</li>
+      <li>แผนกเตรียมพื้นและทำสี (Paint Section):
+        <ul class="sub">
+          <li>โป๊วสี ขัดเตรียมพื้น พ่นสีรองพื้นกันสนิม</li>
+          <li>ช่างผสมสีต้องทำ "แผ่นพ่นเทียบสี (Color Match Card)" ทาบกับสีเดิมของรถและให้ Foreman เซ็นอนุมัติก่อนลงห้องพ่นสี</li>
+        </ul>
+      </li>
+      <li>แผนกประกอบและระบบไฟฟ้า (Assembly Section): ประกอบชิ้นส่วน เดินสายไฟ ใช้เครื่องสแกนสมองกล (Diagnostic Scan) ลบโค้ดความผิดปกติ</li>
+      <li>การตรวจผ่านคอกงาน (Gate Check System): Foreman ต้องตรวจเช็กคุณภาพและลงนามใน Job Card ก่อนอนุญาตให้ย้ายรถไปแผนกถัดไป</li>
+      <li>แจ้งเตือนอัตโนมัติ (Line/App Step 5): ยิงรูปภาพขณะพ่นสี/ประกอบ ส่งอัปเดตให้ลูกค้าทราบความคืบหน้า</li>
+    </ol></div>
+    <div class="notif">LINE/App #5: อัปเดตงานซ่อม</div>
+    <div class="sd-ref">เอกสารอ้างอิง: SD-BP-07 ใบบันทึกการตรวจคอกงาน (Gate Check Sheet) | SD-BP-07-A แผ่นพ่นเทียบสี</div>
+  </div>
+</div>
+
+<!-- WI-BP-08 -->
+<div class="card">
+  <div class="card-head c-slate"><span class="num">08</span><h3>WI-BP-08: Final QC + ทำความสะอาด</h3></div>
+  <div class="card-body">
+    <div class="meta-row"><span class="meta-label">ผู้รับผิดชอบหลัก</span><span class="meta-val">สารวัตรคุณภาพ (QC Inspector) / แผนกคาร์แคร์</span></div>
+    <div class="meta-row"><span class="meta-label">เป้าหมายเวลา</span><span class="meta-val">≤ 45 นาที / คัน</span></div>
+    <div class="meta-row"><span class="meta-label">อุปกรณ์/ระบบ</span><span class="meta-val">ไฟส่องตรวจสี (QC Light Board), เกจวัดความหนาสี, แบบฟอร์ม Final QC</span></div>
+    <div class="steps"><ol>
+      <li>การตรวจ Final QC (100% Inspection):
+        <ul class="sub">
+          <li>ตรวจความเรียบเนียนของผิวสี เฉดสี เม็ดฝุ่น และความเงา</li>
+          <li>ตรวจระยะช่องไฟ (Gap & Flush) ของชิ้นส่วนที่ประกอบใหม่</li>
+          <li>ตรวจการทำงานของระบบไฟส่องสว่าง กลอนประตู กระจกไฟฟ้า</li>
+        </ul>
+      </li>
+      <li>การทดสอบขับ (Road Test): (กรณีมีงานเคาะช่วงล่าง/โครงสร้าง) นำรถไปทดสอบขับฟังเสียงและศูนย์ถ่วง</li>
+      <li>ทำความสะอาดส่งมอบ (Detailing): ล้างดูดฝุ่น ขัดเงาเก็บงาน เช็ดกระจกสะอาดเรียบร้อย</li>
+      <li>แจ้งเตือนอัตโนมัติ (Line/App Step 6): ยิงข้อความแจ้งลูกค้า: "รถซ่อมเสร็จสมบูรณ์ ผ่าน QC เรียบร้อยแล้ว พร้อมให้เข้ารับรถได้"</li>
+    </ol></div>
+    <div class="notif">LINE/App #6: ซ่อมเสร็จพร้อมส่งมอบ</div>
+    <div class="sd-ref">เอกสารอ้างอิง: SD-BP-08 ใบรายการตรวจรับ Final QC | SD-BP-08-A รายงานการทดสอบขับ Road Test</div>
+  </div>
+</div>
+
+<!-- WI-BP-09 -->
+<div class="card">
+  <div class="card-head c-blue"><span class="num">09</span><h3>WI-BP-09: ส่งมอบรถให้ลูกค้า</h3></div>
+  <div class="card-body">
+    <div class="meta-row"><span class="meta-label">ผู้รับผิดชอบหลัก</span><span class="meta-val">SA ส่งมอบรถ / พนักงานต้อนรับ</span></div>
+    <div class="meta-row"><span class="meta-label">เป้าหมายเวลา</span><span class="meta-val">≤ 15 นาที / คัน</span></div>
+    <div class="meta-row"><span class="meta-label">อุปกรณ์/ระบบ</span><span class="meta-val">ช่องส่งมอบรถ (Delivery Bay), ใบส่งมอบรถ, แบบประเมิน CSAT</span></div>
+    <div class="steps"><ol>
+      <li>อธิบายงานซ่อมร่วมกับลูกค้า: พาลูกค้าตรวจดูจุดที่ซ่อมเคาะ/พ่นสี/เปลี่ยนอะไหล่ อธิบายการรับประกันงานสี 1 ปี</li>
+      <li>ตรวจสอบและส่งคืนอะไหล่เก่า: นำอะไหล่เก่าที่ถอดให้ลูกค้าดู (กรณีลูกค้าขอรับคืน) หรือให้ลูกค้าเซ็นยินยอมสละอะไหล่เพื่อส่งคืนประกัน</li>
+      <li>จัดเก็บค่าบริการส่วนต่าง (ถ้ามี): รับชำระค่าเสียหายส่วนแรก (Excess) หรือค่าส่วนต่างอะไหล่ พร้อมออกใบเสร็จ</li>
+      <li>ลงนามส่งมอบและประเมิน CSAT: ให้ลูกค้าเซ็นชื่อในใบส่งมอบรถ (SD-BP-09) และทำแบบประเมินความพึงพอใจ</li>
+    </ol></div>
+    <div class="sd-ref">เอกสารอ้างอิง: SD-BP-09 ใบส่งมอบรถยนต์ (Delivery Form) | SD-BP-09-A แบบประเมิน CSAT</div>
+  </div>
+</div>
+
+<!-- WI-BP-10 -->
+<div class="card">
+  <div class="card-head c-teal"><span class="num">10</span><h3>WI-BP-10: จัดทำชุดรูปเทียบ 4 ระยะ</h3></div>
+  <div class="card-body">
+    <div class="meta-row"><span class="meta-label">ผู้รับผิดชอบหลัก</span><span class="meta-val">เจ้าหน้าที่เอกสารตั้งเบิก (Billing Clerk)</span></div>
+    <div class="meta-row"><span class="meta-label">เป้าหมายเวลา</span><span class="meta-val">≤ 2 Working Days หลังส่งรถ</span></div>
+    <div class="meta-row"><span class="meta-label">อุปกรณ์/ระบบ</span><span class="meta-val">ระบบคลาวด์จัดเก็บรูปภาพ, โปรแกรมจัดทำรูปภาพวางบิลประกันภัย</span></div>
+    <div class="steps"><ol>
+      <li>รวบรวมรูปภาพถ่าย 4 ระยะมาตรฐาน:
+        <ul class="sub">
+          <li>ระยะ 1: รูปสภาพรถแรกรับก่อนซ่อม + จุดเสียหายสอดคล้องใบเคลม</li>
+          <li>ระยะ 2: รูปขณะรื้อถอด / ดึงดัดโครงสร้าง / เตรียมพื้น</li>
+          <li>ระยะ 3 (สำคัญ): รูปเทียบอะไหล่เก่า-ใหม่ (Part Comparison) วางคู่กันให้เห็น Part No. ชัดเจน</li>
+          <li>ระยะ 4: รูปหลังซ่อมเสร็จสมบูรณ์ มุมตรงและมุมเฉียง</li>
+        </ul>
+      </li>
+      <li>เข้าชุดเอกสารหลักฐาน: ประกบใบสั่งซ่อม, ใบอนุมัติประกัน, ใบรับรถ, ใบรับอะไหล่ และชุดรูปถ่ายจัดเรียงตามระบบประกันภัย</li>
+    </ol></div>
+    <div class="sd-ref">เอกสารอ้างอิง: SD-BP-10 ชุดแฟ้มรูปถ่ายประกอบการตั้งเบิก (Billing Photo Package)</div>
+  </div>
+</div>
+
+<!-- WI-BP-11 -->
+<div class="card">
+  <div class="card-head c-yellow"><span class="num">11</span><h3>WI-BP-11: ตั้งเบิก วางบิล ออกใบแจ้งหนี้</h3></div>
+  <div class="card-body">
+    <div class="meta-row"><span class="meta-label">ผู้รับผิดชอบหลัก</span><span class="meta-val">เจ้าหน้าที่บัญชีลูกหนี้ (AR Accountant)</span></div>
+    <div class="meta-row"><span class="meta-label">เป้าหมายเวลา</span><span class="meta-val">ตามรอบวางบิลประกัน (ทุกสัปดาห์)</span></div>
+    <div class="meta-row"><span class="meta-label">อุปกรณ์/ระบบ</span><span class="meta-val">โปรแกรมระบบบัญชี / ระบบ e-Billing ประกันภัย</span></div>
+    <div class="steps"><ol>
+      <li>ตรวจสอบรายการยอดเงิน: ตรวจสอบยอดเงินในใบเสนอราคากับอนุมัติประกันและรายการซ่อมจริงให้ตรงกัน 100%</li>
+      <li>ออกใบแจ้งหนี้/ใบวางบิล (Invoice): ดึงข้อมูลจากระบบออกเอกสาร Billing Note พร้อมระบุวันครบกำหนดชำระ (Credit Term)</li>
+      <li>จัดส่งวางบิล: ยื่นชุดเอกสารวางบิลผ่านระบบ e-Billing หรือส่งเจ้าหน้าที่ไปวางบิล ณ บริษัทประกันภัย</li>
+    </ol></div>
+    <div class="sd-ref">เอกสารอ้างอิง: SD-BP-11 ใบแจ้งหนี้ / ใบวางบิล (Invoice / Billing Note)</div>
+  </div>
+</div>
+
+<!-- WI-BP-12 -->
+<div class="card">
+  <div class="card-head c-green"><span class="num">12</span><h3>WI-BP-12: ติดตามหนี้ รับชำระ ออกใบกำกับภาษี</h3></div>
+  <div class="card-body">
+    <div class="meta-row"><span class="meta-label">ผู้รับผิดชอบหลัก</span><span class="meta-val">เจ้าหน้าที่การเงินและบัญชีลูกหนี้ (AR Finance)</span></div>
+    <div class="meta-row"><span class="meta-label">เป้าหมายเวลา</span><span class="meta-val">ตาม Credit Term (30-45 วัน)</span></div>
+    <div class="meta-row"><span class="meta-label">อุปกรณ์/ระบบ</span><span class="meta-val">รายงาน AR Aging Report, โปรแกรมออกใบเสร็จ/ใบกำกับภาษี</span></div>
+    <div class="steps"><ol>
+      <li>ติดตามยอดค้างชำระ (AR Aging): ดึงรายงานลูกหนี้ค้างชำระทุกวันจันทร์ ประสานงานฝ่ายจ่ายเงินบริษัทประกันภัย</li>
+      <li>ตรวจสอบเงินโอนเข้า (Statement Matching): เมื่อยอดเงินโอนเข้าบัญชีบริษัท ทำการตัดรับชำระหนี้ในระบบ</li>
+      <li>ออกใบกำกับภาษี/ใบเสร็จรับเงิน: พิมพ์ใบกำกับภาษีฉบับจริง (SD-BP-12) จัดส่งให้บริษัทประกันภัยเพื่อปิด Job โดยสมบูรณ์</li>
+    </ol></div>
+    <div class="sd-ref">เอกสารอ้างอิง: SD-BP-12 ใบกำกับภาษี/ใบเสร็จรับเงิน | SD-BP-12-A รายงาน AR Aging</div>
+  </div>
+</div>
+
+</div>
+
+<div class="section-title">ดรรชนีเอกสารและระบบข้อมูลประกอบการทำงาน (Supporting Documents & System Data Index: SD)</div>
+<div class="note">เอกสารประกอบ (SD) ทั้งหมดต้องจัดเก็บตามมาตรฐานระบบ ISO 9001/9002 เพื่อให้สามารถตรวจสอบย้อนหลัง (Traceability) ได้อย่างน้อย 5 ปี</div>
+<table class="sd-table">
+  <thead>
+    <tr><th>รหัส SD</th><th>ชื่อเอกสาร / ข้อมูลในระบบ</th><th>ผู้รับผิดชอบจัดทำ</th><th>รูปแบบการจัดเก็บ</th><th>ระยะเวลาจัดเก็บ</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="sd-code">SD-BP-01</td><td>ใบตรวจรับรถและรายการทรัพย์สินแรกรับ</td><td>พนักงานต้อนรับ / SA</td><td>เอกสาร + ไฟล์ใน DMS</td><td>5 ปี</td></tr>
+    <tr><td class="sd-code">SD-BP-02</td><td>ใบเสนอราคาและประมาณการค่าซ่อม</td><td>ช่างประเมินราคา / SA</td><td>ระบบ DMS / e-Claim</td><td>5 ปี</td></tr>
+    <tr><td class="sd-code">SD-BP-03</td><td>ใบอนุมัติการซ่อมจากบริษัทประกันภัย</td><td>SA ประสานงานประกัน</td><td>แฟ้มเอกสาร + e-Claim</td><td>5 ปี</td></tr>
+    <tr><td class="sd-code">SD-BP-04</td><td>ใบสั่งซื้ออะไหล่ (PO) & Tracking List</td><td>เจ้าหน้าที่จัดซื้ออะไหล่</td><td>ระบบ DMS / ERP</td><td>5 ปี</td></tr>
+    <tr><td class="sd-code">SD-BP-05</td><td>ใบตรวจรับอะไหล่ (GR) & ใบเบิกจ่าย Job</td><td>เจ้าหน้าที่คลังอะไหล่</td><td>เอกสาร + ระบบคลัง</td><td>5 ปี</td></tr>
+    <tr><td class="sd-code">SD-BP-06</td><td>ใบสั่งซ่อม (WO) & Job Card หน้ารถ</td><td>SA / Foreman</td><td>ซองเอกสาร + DMS</td><td>5 ปี</td></tr>
+    <tr><td class="sd-code">SD-BP-07</td><td>ใบบันทึกการตรวจคอกงาน (Gate Check)</td><td>Foreman ประจำแผนก</td><td>Job Card หน้ารถ</td><td>1 ปี</td></tr>
+    <tr><td class="sd-code">SD-BP-08</td><td>ใบรายการตรวจรับ Final QC & Road Test</td><td>สารวัตรคุณภาพ (QC)</td><td>เอกสาร + แอปพลิเคชัน</td><td>5 ปี</td></tr>
+    <tr><td class="sd-code">SD-BP-09</td><td>ใบส่งมอบรถยนต์ & แบบประเมิน CSAT</td><td>SA ส่งมอบรถ</td><td>เอกสาร + แอปพลิเคชัน</td><td>5 ปี</td></tr>
+    <tr><td class="sd-code">SD-BP-10</td><td>ชุดแฟ้มรูปถ่ายประกอบการตั้งเบิก 4 ระยะ</td><td>เจ้าหน้าที่เอกสารตั้งเบิก</td><td>Cloud Drive / DMS</td><td>5 ปี</td></tr>
+    <tr><td class="sd-code">SD-BP-11</td><td>ใบแจ้งหนี้ / ใบวางบิล (Invoice)</td><td>เจ้าหน้าที่บัญชีลูกหนี้</td><td>ระบบบัญชี / e-Billing</td><td>7 ปี (ตามกฎหมาย)</td></tr>
+    <tr><td class="sd-code">SD-BP-12</td><td>ใบกำกับภาษี / ใบเสร็จรับเงิน (Receipt)</td><td>เจ้าหน้าที่การเงิน/บัญชี</td><td>ระบบบัญชี / เอกสารสิทธิ</td><td>7 ปี (ตามกฎหมาย)</td></tr>
+  </tbody>
+</table>
+
+<div class="footer">
+  เอกสารควบคุมภายใต้ระบบบริหารคุณภาพ ISO 9001/9002 — WI-BP-MASTER แก้ไขครั้งที่ 03 (2026)<br>
+  ห้ามทำซ้ำ ดัดแปลง หรือเผยแพร่โดยไม่ได้รับอนุมัติจากผู้จัดการศูนย์บริการ
+</div>
+
+</div>
+</body>
+</html>

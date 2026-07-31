@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Autobody Dashboard — Login</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Sarabun", "Segoe UI", Tahoma, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .login-card {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 40px 35px;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .login-card .icon {
+      text-align: center;
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    .login-card h1 {
+      text-align: center;
+      font-size: 22px;
+      color: #f1f5f9;
+      margin-bottom: 6px;
+    }
+    .login-card .subtitle {
+      text-align: center;
+      font-size: 14px;
+      color: #94a3b8;
+      margin-bottom: 28px;
+    }
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #475569;
+      border-radius: 10px;
+      background: #0f172a;
+      color: #f1f5f9;
+      font-size: 16px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus {
+      border-color: #3b82f6;
+    }
+    .form-group input::placeholder { color: #64748b; }
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #2563eb, #1e3a5f);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      font-family: inherit;
+    }
+    .btn-login:hover { opacity: 0.9; }
+    .btn-login:active { transform: scale(0.98); }
+    .error-msg {
+      background: rgba(239,68,68,0.15);
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      text-align: center;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .error-msg.show { display: block; }
+    .footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(59,130,246,0.15);
+      color: #60a5fa;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="icon">🔧</div>
+    <h1>Autobody Dashboard</h1>
+    <p class="subtitle">เข้าสู่ระบบ Bodyshop Workflow</p>
+
+    <!-- Error message (injected by Code.gs) -->
+    <div class="error-msg show" id="errorDisplay">__ERROR_MSG__</div>
+
+    <!--
+      Single form: password + 2FA together (PDPA iron rule #5).
+      action="__SCRIPT_URL__" is replaced at runtime by
+      ScriptApp.getService().getUrl() in Code.gs renderLogin().
+      method="get" — doGet handles login directly, NO redirect
+      (iron rule #3: doPost redirects all fail in sandbox).
+    -->
+    <form method="get" action="__SCRIPT_URL__" target="_top">
+      <input type="hidden" name="pwdok" value="1">
+
+      <div class="form-group">
+        <label for="pass">รหัสผ่าน (Password)</label>
+        <input type="password" name="pass" id="pass"
+               placeholder="กรุณากรอกรหัสผ่าน"
+               autocomplete="current-password" required>
+      </div>
+
+      <div class="form-group">
+        <label for="otp">รหัส 2FA</label>
+        <input type="text" name="otp" id="otp"
+               placeholder="กรุณากรอกรหัส 2FA 6 หลัก"
+               inputmode="numeric" pattern="[0-9]*" maxlength="6"
+               autocomplete="one-time-code" required>
+      </div>
+
+      <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
+    </form>
+
+    <div class="footer">
+      <span class="badge">PDPA Protected</span><br>
+      Autobody Dashboard &copy; 2026
+    </div>
+  </div>
+
+  <script>
+    // Hide error box if empty (no error from server)
+    (function() {
+      var el = document.getElementById('errorDisplay');
+      if (el && el.textContent.trim() === '') {
+        el.classList.remove('show');
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1495,6 +1495,18 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
+  if (p.pkg === '1') {
+    if (!hasSession && !(p.pwdok === '1' && p.pass === 'pmsg2026' && p.otp === '2580')) {
+      var loginHtml = HtmlService.createHtmlOutputFromFile('PKGPLogin');
+      var content = loginHtml.getContent();
+      content = content.replace('__SCRIPT_URL__', ScriptApp.getService().getUrl());
+      return HtmlService.createHtmlOutput(content).setTitle('PKG Auto Body — Login').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    }
+    return HtmlService.createHtmlOutputFromFile('PKGDash')
+      .setTitle('PKG Auto Body — ศูนย์ซ่อมตัวถังและสี')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
   if (p.okrall === '1') {
     // ═══ Multi-Department OKR Dashboard (5 departments) ═══
     if (p.action === 'setupTrigger') {
