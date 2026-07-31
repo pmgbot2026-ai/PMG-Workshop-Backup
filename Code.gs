@@ -1750,17 +1750,25 @@ function doPost(e) {
       var baseUrl = ScriptApp.getService().getUrl();
       var redirectUrl = baseUrl + '?st=' + sessionToken;
       if (p.rquery) redirectUrl += '&' + p.rquery;
-      // Use ContentService (NOT HtmlService) — ContentService is NOT wrapped in sandbox
-      // meta refresh WORKS in ContentService because it's raw HTML, not sandbox iframe
-      return ContentService.createTextOutput(
-        '<!DOCTYPE html><html><head><meta charset="UTF-8">'+
-        '<meta http-equiv="refresh" content="0;url='+redirectUrl+'">'+
-        '<title>กำลังเข้าสู่ระบบ...</title></head><body style="font-family:system-ui;text-align:center;padding:40px">'+
-        '<div style="font-size:48px">✅</div><div style="font-size:18px;font-weight:700;color:#10b981;margin-top:8px">เข้าสู่ระบบสำเร็จ</div>'+
-        '<div style="font-size:13px;color:#64748b;margin-top:4px">กำลังโหลด Dashboard...</div>'+
-        '<p>หากไม่โหลดอัตโนมัติ <a href="'+redirectUrl+'">คลิกที่นี่</a></p>'+
-        '</body></html>'
-      ).setMimeType(ContentService.MimeType.HTML);
+      // Render OKR dashboard DIRECTLY in doPost (no redirect needed)
+      // This is the approach that worked before — page opens, then data loads
+      try {
+        var dashHtml = HtmlService.createHtmlOutputFromFile('OKR_All_Index');
+        var dashContent = dashHtml.getContent();
+        return HtmlService.createHtmlOutput(dashContent)
+          .setTitle('PMS/PMG OKR Dashboard — 5 แผนก')
+          .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+          .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+      } catch(e2) {
+        // Fallback: show link
+        return HtmlService.createHtmlOutput(
+          '<!DOCTYPE html><html><head><meta charset="UTF-8">'+
+          '<title>กำลังเข้าสู่ระบบ...</title></head><body style="font-family:system-ui;text-align:center;padding:40px">'+
+          '<div style="font-size:48px">✅</div><div style="font-size:18px;font-weight:700;color:#10b981;margin-top:8px">เข้าสู่ระบบสำเร็จ</div>'+
+          '<a href="'+redirectUrl+'" style="display:inline-block;margin-top:16px;padding:10px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:700">เข้าสู่ Dashboard →</a>'+
+          '</body></html>'
+        ).setTitle('เข้าสู่ระบบสำเร็จ').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      }
     } else {
       var count = pdpaRecordFailedAttempt(postFp);
       pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + count, postFp);
