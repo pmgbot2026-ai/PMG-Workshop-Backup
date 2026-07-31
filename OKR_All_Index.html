@@ -926,6 +926,8 @@ function loadData() {
  }
  }
  } catch(e) {}
+ 
+ // Show skeleton
  var deptNames = ['PMG/PMGI', 'PMS ช่าง 4 สาขา', 'PMS ขาย', 'PMS ศูนย์บริการ', 'PMS/PMG Backoffice'];
  D = {
  departments: deptNames.map(function(nm) {
@@ -935,108 +937,49 @@ function loadData() {
  _skeleton: true
  };
  onLoaded();
- var pe = document.getElementById('loadProgress');
- var pb = document.getElementById('progBar');
- if (pe) pe.textContent = 'เชื่อมต่อกับ server...';
- if (pb) pb.style.width = '5%';
- var configReady = false;
- function startDataFetch() {
- var ls = document.getElementById('loadingScreen');
- if (ls) {
- ls.innerHTML = '<div style="text-align:center;padding:20px;background:rgba(37,99,235,.08);border-radius:10px;margin:10px 0">' +
- '<div style="font-size:1rem;margin-bottom:8px">⏳ กำลังดึงข้อมูลจาก 5 กลุ่มงาน...</div>' +
- '<div style="font-size:0.8rem;color:var(--text3)" id="loadProgress">กำลังโหลดข้อมูล OKR... (อาจใช้เวลา 30-60 วินาทีในครั้งแรก)</div>' +
- '<div style="margin-top:10px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div id="progBar" style="height:6px;background:linear-gradient(90deg,#2563eb,#10b981);border-radius:3px;width:10%;transition:width .5s"></div></div>' +
- '</div>';
- }
- var pe2 = document.getElementById('loadProgress');
- var pb2 = document.getElementById('progBar');
- if (pe2) pe2.textContent = 'กำลังโหลดกลุ่มงานที่ 1/5...';
- if (pb2) pb2.style.width = '10%';
- // Per-department loading — shows data as each dept loads
- var deptNames = ['PMG/PMGI', 'PMS ช่าง 4 สาขา', 'PMS ขาย', 'PMS ศูนย์บริการ', 'PMS/PMG Backoffice'];
- var loadedDepts = 0;
- function loadDept(deptIdx) {
- if (deptIdx >= deptNames.length) {
- if (pe2) pe2.textContent = '✅ โหลดครบแล้ว (' + D.departments.length + ' กลุ่มงาน)';
- if (pb2) pb2.style.width = '100%';
+ 
+ // Load per-department
+ var loadedCount = 0;
+ function loadNextDept(idx) {
+ if (idx >= 5) {
  D._skeleton = false;
  try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
  onLoaded();
  return;
  }
- if (pe2) pe2.textContent = 'กำลังโหลดกลุ่มงานที่ ' + (deptIdx+1) + '/5: ' + deptNames[deptIdx];
- if (pb2) pb2.style.width = (10 + deptIdx * 18) + '%';
  try {
  google.script.run
  .withSuccessHandler(function(deptData) {
  if (deptData && deptData.name) {
- D.departments[deptIdx] = deptData;
- loadedDepts++;
- onLoaded(); // Re-render with new data
+ D.departments[idx] = deptData;
+ loadedCount++;
+ onLoaded();
  }
- loadDept(deptIdx + 1); // Load next dept
+ loadNextDept(idx + 1);
  })
  .withFailureHandler(function(err) {
- console.warn('Dept ' + deptIdx + ' failed', err);
- loadDept(deptIdx + 1); // Skip to next dept
+ loadNextDept(idx + 1);
  })
- .gsGetOKRDeptData(deptIdx);
+ .gsGetOKRDeptData(idx);
  } catch(e) {
- loadDept(deptIdx + 1); // Skip to next dept
+ loadNextDept(idx + 1);
  }
  }
- loadDept(0); // Start loading from dept 0
- } catch(e) {
- if (pe2) pe2.textContent = 'กำลังลองผ่าน fetch...';
- var url = SCRIPT_URL || window.location.href.split('#')[0];
- if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
- else url += '?okrall=1&view=data';
- fetch(url, { cache: 'no-store' })
- .then(function(r) { return r.json(); })
- .then(function(data) {
- if (data && data.departments) { D = data; D._skeleton = false; onLoaded(); }
- })
- .catch(function(err) {
- if (pe2) pe2.textContent = '❌ โหลดไม่สำเร็จ — กรุณารีเฟรชหน้า';
- });
- }
- }
- try {
- google.script.run
- .withSuccessHandler(function(info) {
- if (info) {
- if (info.scriptUrl) SCRIPT_URL = info.scriptUrl;
- if (info.sessionToken) SESSION_TOKEN = info.sessionToken;
- if (info.cacheStatus) CACHE_STATUS = info.cacheStatus;
- }
- configReady = true;
- startDataFetch();
- })
- .gsGetClientConfig();
- } catch(e) {
- startDataFetch();
- }
- setTimeout(function() {
- if (!configReady) {
- configReady = true;
- startDataFetch();
- }
- }, 3000);
- try {
+ loadNextDept(0);
+}
+
+// Load CEO actuals in background
+try {
  google.script.run
  .withSuccessHandler(function(ceoData) {
  if (ceoData && ceoData.items) {
  CEO_KPI_ACTUALS = ceoData;
- var activeTab = document.querySelector('.tab-btn.active');
- if (activeTab && activeTab.getAttribute('data-tab') === 'businessplan') {
- renderOverview();
- }
+ onLoaded();
  }
  })
  .gsGetCEOActuals();
- } catch(e) {}
-}
+} catch(e) {}
+
 function loadDataViaFetch(progressTimer) {
  var url = SCRIPT_URL;
  if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
@@ -1195,12 +1138,6 @@ function switchTab(tabId, btn) {
  if (tabId === 'audit') renderAudit();
  if (tabId === 'changelog') renderChangeLogTab();
 }
-function buildCascadeRow_(planLabel, dashboardLabel, keywords) {
- var keyBase = planLabel.replace(/[^a-zA-Z0-9ก-๛]/g, '_').substring(0, 30);
- var lsKey = 'bp_cascade_' + keyBase;
- var savedLink = '', savedTabRange = '';
- try {
-
 function getDeptColor(name) {
  var meta = { 'PMG/PMGI': '#3b82f6', 'PMS ช่าง 4 สาขา': '#f59e0b', 'PMS ขาย': '#10b981', 'PMS ศูนย์บริการ': '#8b5cf6', 'PMS/PMG Backoffice': '#ec4899' };
  return meta[name] || '#64748b';
@@ -1226,9 +1163,9 @@ function loadSrcData(keyBase) {
 function buildSrcInputs(keyBase, opts) {
  var d = loadSrcData(keyBase);
  var label = (opts && opts.showLabel) ? '<div style="font-size:11px;font-weight:600;color:#475569;margin-bottom:4px">'+(opts.label||'')+'</div>' : '';
- return label + '<div style="display:flex;gap:4px;flex-wrap:wrap">'+
- '<input type="text" id="'+keyBase+'_link" placeholder="วาง link..." value="'+esc(d.link)+'" onchange="saveSrcLink(''+keyBase+'')" onclick="event.stopPropagation()" style="font-size:11px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;flex:1;min-width:120px">'+
- '<input type="text" id="'+keyBase+'_tab" placeholder="แท็บ/ช่วง" value="'+esc(d.tabRange)+'" onchange="saveSrcTab(''+keyBase+'')" onclick="event.stopPropagation()" style="font-size:11px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;width:100px;color:#64748b">'+
+ return label + '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
+ '<input type="text" id="' + keyBase + '_link" placeholder="วาง link..." value="' + esc(d.link) + '" onchange="saveSrcLink(\'' + keyBase + '\')" style="font-size:11px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;flex:1;min-width:120px">' +
+ '<input type="text" id="' + keyBase + '_tab" placeholder="แท็บ/ช่วง" value="' + esc(d.tabRange) + '" onchange="saveSrcTab(\'' + keyBase + '\')" style="font-size:11px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;width:100px;color:#64748b">' +
  '</div>';
 }
 function saveSrcLink(keyBase, linkInputId, tabInputId) {
