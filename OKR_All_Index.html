@@ -821,7 +821,6 @@
  <div id="section-linkage" class="section" style="display:none"></div>
  <div id="section-mentors" class="section" style="display:none"></div>
  <div id="section-audit" class="section" style="display:none"></div>
- <div id="section-businessplan" class="section" style="display:none"></div>
  <div id="section-changelog" class="section" style="display:none"></div>
  </div>
  <!-- ═════════ Person Modal ═════════ -->
@@ -876,7 +875,6 @@ var TAB_CONFIG = [
  { id: 'kpi', icon: '🎯', label: 'KPI & ตัววัดผล' },
  { id: 'mentors', icon: '👥', label: 'Mentor' },
  { id: 'audit', icon: '🔍', label: 'ตรวจสอบ' },
- { id: 'businessplan', icon: '📋', label: 'แผนธุรกิจ' },
  { id: 'changelog', icon: '📝', label: 'ประวัติการแก้ไข' }
 ];
 function renderTabs() {
@@ -909,7 +907,7 @@ var KPI_HEADER_MAP = {
 };
 function init() {
  renderTabs(); // Build tab buttons from TAB_CONFIG
- // Show S-Objectives immediately (hardcoded, no server data needed)
+ // Show overview immediately
  D = { departments: [], _skeleton: true, lastUpdate: new Date().toISOString() };
  onLoaded();
  // Load full data in background
@@ -953,37 +951,42 @@ function loadData() {
  }
  var pe2 = document.getElementById('loadProgress');
  var pb2 = document.getElementById('progBar');
- if (pe2) pe2.textContent = 'กำลังโหลดข้อมูลผ่าน server... (อาจใช้เวลา 30-60 วินาทีในครั้งแรก)';
+ if (pe2) pe2.textContent = 'กำลังโหลดกลุ่มงานที่ 1/5...';
  if (pb2) pb2.style.width = '10%';
- try {
- google.script.run
- .withSuccessHandler(function(data) {
- if (data && data.departments && data.departments.length > 0) {
- D = data;
- D._skeleton = false;
- try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
+ // Per-department loading — shows data as each dept loads
+ var deptNames = ['PMG/PMGI', 'PMS ช่าง 4 สาขา', 'PMS ขาย', 'PMS ศูนย์บริการ', 'PMS/PMG Backoffice'];
+ var loadedDepts = 0;
+ function loadDept(deptIdx) {
+ if (deptIdx >= deptNames.length) {
  if (pe2) pe2.textContent = '✅ โหลดครบแล้ว (' + D.departments.length + ' กลุ่มงาน)';
  if (pb2) pb2.style.width = '100%';
+ D._skeleton = false;
+ try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
  onLoaded();
- } else {
- if (pe2) pe2.textContent = '⚠️ ไม่ได้รับข้อมูล — ลองอีกครั้ง...';
+ return;
  }
- })
- .withFailureHandler(function(err) {
- console.warn('gsGetOKRData failed', err);
- if (pe2) pe2.textContent = '⚠️ โหลดไม่สำเร็จ: ' + (err.message || err) + ' — ลองอีกครั้งใน 5 วินาที';
- setTimeout(function() {
- if (pe2) pe2.textContent = 'กำลังลองโหลดใหม่...';
+ if (pe2) pe2.textContent = 'กำลังโหลดกลุ่มงานที่ ' + (deptIdx+1) + '/5: ' + deptNames[deptIdx];
+ if (pb2) pb2.style.width = (10 + deptIdx * 18) + '%';
  try {
  google.script.run
- .withSuccessHandler(function(data) {
- if (data && data.departments) { D = data; D._skeleton = false; onLoaded(); }
+ .withSuccessHandler(function(deptData) {
+ if (deptData && deptData.name) {
+ D.departments[deptIdx] = deptData;
+ loadedDepts++;
+ onLoaded(); // Re-render with new data
+ }
+ loadDept(deptIdx + 1); // Load next dept
  })
- .gsGetOKRData();
- } catch(e2) {}
- }, 5000);
+ .withFailureHandler(function(err) {
+ console.warn('Dept ' + deptIdx + ' failed', err);
+ loadDept(deptIdx + 1); // Skip to next dept
  })
- .gsGetOKRData();
+ .gsGetOKRDeptData(deptIdx);
+ } catch(e) {
+ loadDept(deptIdx + 1); // Skip to next dept
+ }
+ }
+ loadDept(0); // Start loading from dept 0
  } catch(e) {
  if (pe2) pe2.textContent = 'กำลังลองผ่าน fetch...';
  var url = SCRIPT_URL || window.location.href.split('#')[0];
@@ -1027,7 +1030,7 @@ function loadData() {
  CEO_KPI_ACTUALS = ceoData;
  var activeTab = document.querySelector('.tab-btn.active');
  if (activeTab && activeTab.getAttribute('data-tab') === 'businessplan') {
- renderBusinessPlan();
+ renderOverview();
  }
  }
  })
@@ -1080,11 +1083,7 @@ function onLoaded() {
  if (D && D._skeleton) {
  document.getElementById('loadingScreen').style.display = 'none';
  // Auto-show businessplan tab (S-Objectives) — renders immediately with hardcoded data
- document.getElementById('section-businessplan').style.display = 'block';
- document.getElementById('section-businessplan').classList.add('active');
  // Highlight the businessplan tab button
- var bpTab = document.querySelector('[data-tab="businessplan"]');
- if (bpTab) bpTab.classList.add('active');
  var banner = document.getElementById('dataLoadingBanner');
  if (!banner) {
  banner = document.createElement('div');
@@ -1093,7 +1092,7 @@ function onLoaded() {
  document.body.appendChild(banner);
  }
  banner.textContent = '⏳ กำลังดึงข้อมูลเพิ่มเติมจาก 5 กลุ่มงาน... (หน้าแผนธุรกิจแสดงแล้ว)';
- renderBusinessPlan();
+ renderOverview();
  return;
  }
  var banner = document.getElementById('dataLoadingBanner');
@@ -1194,7 +1193,6 @@ function switchTab(tabId, btn) {
  if (tabId === 'linkage' && !section.dataset.rendered) { renderLinkage(); section.dataset.rendered = '1'; }
  if (tabId === 'mentors') renderMentors();
  if (tabId === 'audit') renderAudit();
- if (tabId === 'businessplan' && !section.dataset.rendered) { renderBusinessPlan(); section.dataset.rendered = '1'; }
  if (tabId === 'changelog') renderChangeLogTab();
 }
 function buildCascadeRow_(planLabel, dashboardLabel, keywords) {
@@ -1202,1120 +1200,49 @@ function buildCascadeRow_(planLabel, dashboardLabel, keywords) {
  var lsKey = 'bp_cascade_' + keyBase;
  var savedLink = '', savedTabRange = '';
  try {
- var raw = localStorage.getItem(lsKey);
- if (raw) {
- var parsed = JSON.parse(raw);
- savedLink = parsed.link || '';
- savedTabRange = parsed.tabRange || '';
- }
- } catch(e) {}
- var matched = null;
- if (typeof CEO_KPI_ACTUALS !== 'undefined' && CEO_KPI_ACTUALS && CEO_KPI_ACTUALS.length > 0) {
- var bestScore = 0;
- for (var ai = 0; ai < CEO_KPI_ACTUALS.length; ai++) {
- var kpiItem = CEO_KPI_ACTUALS[ai];
- if (kpiItem.status === 'no-data' || kpiItem.status === 'skip' || kpiItem.currentValue === null || kpiItem.currentValue === undefined) continue;
- var kpiText = String(kpiItem.krText || '').toLowerCase();
- var matchScore = 0;
- for (var kwi = 0; kwi < keywords.length; kwi++) {
- if (kpiText.indexOf(String(keywords[kwi]).toLowerCase()) >= 0) matchScore++;
- }
- if (matchScore > bestScore) {
- bestScore = matchScore;
- matched = kpiItem;
- }
- }
- }
- var borderStyle = 'padding:6px 8px;border-bottom:1px solid #e2e8f0;';
- var lastRowStyle = 'padding:6px 8px;'; // แถวสุดท้ายไม่มี border-bottom
- var statusCell = '';
- if (matched && (matched.progressPct || matched.currentValue)) {
- var pct = matched.progressPct || 0;
- var cur = formatKpiValue_(matched.currentValue);
- var tgt = formatKpiValue_(matched.targetValue);
- var badge = pct >= 100 ? '✅' : (pct >= 80 ? '⚠️' : '🔴');
- var statusColor = pct >= 100 ? '#10b981' : (pct >= 80 ? '#f59e0b' : '#ef4444');
- statusCell = '<div style="text-align:center;line-height:1.6">' +
- '<div style="font-weight:700;color:' + statusColor + '">' + badge + ' ' + pct + '%</div>' +
- '<div style="font-size:11px;color:#64748b">' + esc(cur) + ' / ' + esc(tgt) + '</div>' +
- (matched.sourceUrl ? '<a href="' + esc(matched.sourceUrl) + '" target="_blank" style="font-size:10px;color:#3b82f6;text-decoration:none">' + esc(matched.source || 'แหล่งข้อมูล') + ' ↗</a>' : '') +
- '</div>';
- } else {
- var linkId = 'casc_link_' + keyBase;
- var tabId = 'casc_tab_' + keyBase;
- statusCell = '<div style="display:flex;flex-direction:column;gap:4px;align-items:stretch">' +
- '<input type="text" id="' + linkId + '" placeholder="วาง link Google Sheet..." value="' + esc(savedLink) + '" ' +
- 'onchange="saveCascadeLink_(\'' + keyBase + '\')" ' +
- 'onclick="event.stopPropagation()" ' +
- 'style="font-size:11px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;width:100%;min-width:180px;box-sizing:border-box" />' +
- '<input type="text" id="' + tabId + '" placeholder="แท็บ: ___ ช่วง: ___" value="' + esc(savedTabRange) + '" ' +
- 'onchange="saveCascadeLink_(\'' + keyBase + '\')" ' +
- 'onclick="event.stopPropagation()" ' +
- 'style="font-size:11px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;width:100%;min-width:180px;box-sizing:border-box;color:#64748b" />' +
- '<button onclick="event.stopPropagation();refreshCascadeStatus_(\'' + keyBase + '\',' + JSON.stringify(keywords).replace(/"/g, '&quot;') + ')" ' +
- 'style="font-size:10px;padding:3px 8px;border:1px solid #3b82f6;border-radius:5px;background:#eff6ff;color:#1e40af;cursor:pointer;margin-top:2px">🔄 วัดผลจาก link</button>' +
- '</div>';
- }
- return '<tr>' +
- '<td style="' + borderStyle + '">' + esc(planLabel) + '</td>' +
- '<td style="' + borderStyle + '">' + esc(dashboardLabel) + '</td>' +
- '<td style="' + borderStyle + 'text-align:center">' + statusCell + '</td>' +
- '</tr>';
+
+function getDeptColor(name) {
+ var meta = { 'PMG/PMGI': '#3b82f6', 'PMS ช่าง 4 สาขา': '#f59e0b', 'PMS ขาย': '#10b981', 'PMS ศูนย์บริการ': '#8b5cf6', 'PMS/PMG Backoffice': '#ec4899' };
+ return meta[name] || '#64748b';
 }
-function saveCascadeLink_(keyBase) {
- var lsKey = 'bp_cascade_' + keyBase;
- var linkEl = document.getElementById('casc_link_' + keyBase);
- var tabEl = document.getElementById('casc_tab_' + keyBase);
- if (!linkEl && !tabEl) return;
- var data = { link: linkEl ? linkEl.value.trim() : '', tabRange: tabEl ? tabEl.value.trim() : '' };
- try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
- if (linkEl) {
- var orig = linkEl.style.borderColor;
- linkEl.style.borderColor = '#10b981';
- setTimeout(function() { linkEl.style.borderColor = orig; }, 800);
- }
-}
-function refreshCascadeStatus_(keyBase, keywords) {
- saveCascadeLink_(keyBase);
- var lsKey = 'bp_cascade_' + keyBase;
- var savedLink = '', savedTabRange = '';
- try {
- var raw = localStorage.getItem(lsKey);
- if (raw) {
- var parsed = JSON.parse(raw);
- savedLink = parsed.link || '';
- savedTabRange = parsed.tabRange || '';
- }
- } catch(e) {}
- if (savedLink) {
- var linkEl = document.getElementById('casc_link_' + keyBase);
- if (linkEl) {
- var td = linkEl.closest('td');
- if (td) {
- var tabInfo = savedTabRange ? '<div style="font-size:10px;color:#64748b;margin-top:2px">' + esc(savedTabRange) + '</div>' : '';
- td.innerHTML = '<div style="text-align:center;line-height:1.6">' +
- '<a href="' + esc(savedLink) + '" target="_blank" style="font-size:12px;color:#3b82f6;text-decoration:none;font-weight:600;display:inline-block;padding:4px 10px;border:1px solid #bfdbfe;border-radius:6px;background:#eff6ff">📊 ดูข้อมูลต้นทาง ↗</a>' +
- tabInfo +
- '<div style="font-size:10px;color:#94a3b8;margin-top:4px">บันทึกแล้ว — คลิกเพื่อวัดผลจาก Sheet</div>' +
- '</div>';
- }
- }
- }
-}
-function renderBusinessPlan() {
- var html = '';
- if (typeof CEO_KPI_ACTUALS === 'undefined' || CEO_KPI_ACTUALS.length === 0) {
- CEO_KPI_ACTUALS = [
- { krText: 'บรรลุรายได้ CBNP PMSG 38.5 ล้านบาท และ CBNP PMS 29 ล้านบาท (ปี 69) — สรุปเป้า PMSgr', currentValue: '23.48 ลบ.', targetValue: '38.50 ลบ.', status: 'at-risk', progressPct: 61, source: 'CEO KPI Dashboard', sourceDetail: 'สรุปเป้า PMSgr · 23.48/38.50 ลบ · 61% · เสี่ยง' },
- { krText: 'GM > 12 ลบ/เดือน — GM Dashboard', currentValue: '10.3 ลบ.', targetValue: '10 ลบ.', status: 'on-track', progressPct: 103, source: 'CEO KPI Dashboard', sourceDetail: 'GM Dashboard · 10.3/10 ลบ · 103% · ทะลุเป้า' },
- { krText: 'เคลือบแก้ว 30 คันต่อเดือน — War Room', currentValue: '58 คัน/เดือน', targetValue: '50 คัน/เดือน', status: 'on-track', progressPct: 116, source: 'CEO KPI Dashboard', sourceDetail: 'เคลือบแก้ว · 58/50 คัน · 116% · เกินเป้า' },
- { krText: 'บริหารจัดการยอดรถเข้าศูนย์สี 3,400 คัน/ปี — War Room', currentValue: '1,619 คัน', targetValue: '3,400 คัน', status: 'behind', progressPct: 48, source: 'CEO KPI Dashboard', sourceDetail: 'ศูนย์สี · 1,619/3,400 คัน · 48% · ล้าหลัง' },
- { krText: 'Productivity ค่าแรง+อะไหล่/คัน — War Room', currentValue: '20,132 บาท', targetValue: '23,145 บาท', status: 'behind', progressPct: 87, source: 'CEO KPI Dashboard', sourceDetail: 'Productivity · 20,132/23,145 · 87% · ลดลง' },
- { krText: 'เชียร์เคลม 240,000 บาท — SC Dashboard', currentValue: '234,349 บาท', targetValue: '240,000 บาท', status: 'at-risk', progressPct: 98, source: 'CEO KPI Dashboard', sourceDetail: 'เชียร์เคลม · 234,349/240,000 · 98% · ใกล้เป้า' },
- { krText: 'QC ตรวจสอบคุณภาพ ประจำปี', currentValue: '4,206', targetValue: '4,632', status: 'on-track', progressPct: 91, source: 'CEO KPI Dashboard', sourceDetail: 'QC · 4,206/4,632 · 91% · ผ่าน' },
- { krText: 'สร้าง GM จากผลิตภัณฑ์เสริมเฉลี่ย 280,000 บาท/เดือน', currentValue: '281,552 บาท', targetValue: '280,000 บาท', status: 'on-track', progressPct: 101, source: 'CEO KPI Dashboard', sourceDetail: 'GM ผลิตภัณฑ์เสริม · 281,552/280,000 · 101% · ทะลุเป้า' },
- { krText: 'ผลักดัน GM อะไหล่ทางเลือก PMGI 300,000 บาท/เดือน', currentValue: '226,549 บาท', targetValue: '300,000 บาท', status: 'at-risk', progressPct: 76, source: 'CEO KPI Dashboard', sourceDetail: 'GM PMGI · 226,549/300,000 · 76% · ใกล้เป้า' }
- ];
- }
- html += '<div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 50%,#3b82f6 100%);color:#fff;padding:24px 28px;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 20px rgba(59,130,246,0.2)">'+
- '<div style="font-size:24px;font-weight:800;margin-bottom:6px">📋 แผนธุรกิจ PMSG (Business Plan)</div>'+
- '<div style="font-size:14px;opacity:.9;line-height:1.6">แผนธุรกิจกลยุทธ์ PMSG — Purpose → Vision → Strategy → OKR → KPI · 5 กลุ่มงาน 225 คน</div>'+
- '<div style="font-size:12px;opacity:.7;margin-top:8px">ที่มา: เอกสารแผนธุรกิจ PMSG (Canva → PDF 33 หน้า) · อัปเดต: ม.ค. 2569</div>'+
- '</div>';
- html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
- '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">🎯 จุดมุ่งหมาย & ภาพความสำเร็จ (Purpose & Vision)</h2>'+
- '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'+
- '<div style="background:#eff6ff;border-left:4px solid #3b82f6;border-radius:8px;padding:16px">'+
- '<div style="font-size:15px;font-weight:700;color:#1e40af;margin-bottom:8px">🎯 จุดมุ่งหมาย (Purpose)</div>'+
- '<div style="font-size:14px;line-height:1.8;color:var(--text)">ทุ่มเท รับใช้ผู้ใช้รถยนต์ อย่างใกล้ชิด ให้ประสบความสำเร็จ</div>'+
- '</div>'+
- '<div style="background:#f0fdf4;border-left:4px solid #10b981;border-radius:8px;padding:16px">'+
- '<div style="font-size:15px;font-weight:700;color:#059669;margin-bottom:8px">👁️ ภาพความสำเร็จ (Vision)</div>'+
- '<div style="font-size:14px;line-height:1.8;color:var(--text)">ธุรกิจบริการผู้ใช้รถยนต์ มีสัดส่วน Gross Margin <strong>70%</strong><br>(งานบริการผู้ใช้รถยนต์ <strong>70 : ขาย 30</strong>)</div>'+
- '</div>'+
- '</div>'+
- '<div style="background:#fef3c7;border-left:4px solid #f59e0b;border-radius:8px;padding:14px 16px">'+
- '<div style="font-size:15px;font-weight:700;color:#92400e;margin-bottom:6px">🚀 จุดยืนเชิงกลยุทธ์ (Driving Force)</div>'+
- '<div style="font-size:14px;line-height:1.7;color:var(--text)"><strong style="color:#92400e">USER CLASS DRIVEN</strong> — "รับใช้ผู้ใช้รถยนต์"</div>'+
- '</div>'+
- '</div>';
- html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
- '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">🗺️ Business Model Canvas (PMSG)</h2>'+
- '<div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:12px;text-align:center">'+
- '<div style="font-size:12px;font-weight:700;opacity:.85;margin-bottom:4px">PURPOSE</div>'+
- '<div style="font-size:15px;font-weight:700">ทุ่มเท รับใช้ผู้ใช้รถยนต์ อย่างใกล้ชิด ให้ประสบความสำเร็จ</div>'+
- '</div>'+
- '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'+
- '<div style="background:#f0fdf4;border:1px solid #6ee7b7;border-radius:10px;padding:14px">'+
- '<div style="font-size:16px;font-weight:700;color:#059669;margin-bottom:10px">📦 Key Resources</div>'+
- '<ul style="font-size:11px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
- '<li><strong>F:</strong> เพิ่ม GM ต่อราย ต่อคน</li>'+
- '<li><strong>C:</strong> มุ่งเน้นความสำเร็จของลูกค้า สัมพันธ์แบบใกล้ชิดเป็นส่วนตัว</li>'+
- '<li><strong>I:</strong> ระบบงานออนไลน์ 100%</li>'+
- '<li><strong>L:</strong> สมาชิกทำงานด้วยแรงจูงใจ สำเร็จด้วยแรงจูงใจ</li>'+
- '</ul>'+
- '</div>'+
- '<div style="background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:14px">'+
- '<div style="font-size:16px;font-weight:700;color:#1e40af;margin-bottom:10px">💎 Value Propositions</div>'+
- '<div style="font-size:11px;line-height:1.7;color:#1e293b;margin-bottom:8px"><strong>รับใช้ทุกเรื่องราว รับผิดชอบ รับประกัน</strong> ในทุกงานบริการและผลิตภัณฑ์ ครบวงจร ตลอดเวลา</div>'+
- '<div style="font-size:10px;color:#475569;font-style:italic;margin-bottom:8px">5 ดึง 4 ไม่ + มาตรฐาน 9 CVP</div>'+
- '<div style="font-size:15px;font-weight:700;color:#1e40af;margin-bottom:6px">UIA:</div>'+
- '<ul style="font-size:11px;line-height:1.6;color:#475569;list-style:none;padding:0">'+
- '<li>1. กลุ่มรับใช้ one to one</li>'+
- '<li>2. SPS 2.0</li>'+
- '<li>3. LifeTime Incentive</li>'+
- '<li>4. ศูนย์บริการในบ้าน</li>'+
- '<li>5. Relationship as a Service (Navway)</li>'+
- '<li>6. SGM</li>'+
- '</ul>'+
- '</div>'+
- '<div style="background:#fce7f3;border:1px solid #f9a8d4;border-radius:10px;padding:14px">'+
- '<div style="font-size:16px;font-weight:700;color:#9d174d;margin-bottom:10px">👥 Customer Segments</div>'+
- '<div style="font-size:12px;line-height:1.8;color:#475569">ผู้ใช้รถยนต์ในภาคตะวันออก</div>'+
- '</div>'+
- '<div style="background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:14px">'+
- '<div style="font-size:16px;font-weight:700;color:#166534;margin-bottom:10px">🤝 Key Partners</div>'+
- '<ul style="font-size:11px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
- '<li>1. บริษัทตรีเพชรอีซูซุเซลส์</li>'+
- '<li>2. Marketing Representative (MR)</li>'+
- '<li>3. Relationship as a Service (MA)</li>'+
- '<li>4. คู่ค้า (อะไหล่-ประดับยนต์)</li>'+
- '</ul>'+
- '</div>'+
- '<div style="background:#e0e7ff;border:1px solid #a5b4fc;border-radius:10px;padding:14px">'+
- '<div style="font-size:16px;font-weight:700;color:#3730a3;margin-bottom:10px">⚙️ Key Activity</div>'+
- '<ul style="font-size:11px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
- '<li>• การบริหารลูกค้า</li>'+
- '<li>• การบริหารการปฏิบัติงาน (CD)</li>'+
- '<li>• การสร้างภาพลักษณ์องค์กร</li>'+
- '</ul>'+
- '</div>'+
- '<div style="background:#fce7f3;border:1px solid #f9a8d4;border-radius:10px;padding:14px">'+
- '<div style="font-size:16px;font-weight:700;color:#9d174d;margin-bottom:10px">🤝 Customer Relationships</div>'+
- '<ul style="font-size:11px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
- '<li>1. งานขายรถ</li>'+
- '<li>2. งานบริการผู้ใช้รถยนต์</li>'+
- '<li>3. การรับใช้ทุกเรื่องราว</li>'+
- '<li>4. SPS 2.0</li>'+
- '<li>5. การตลาดแบบใหม่ SGM+Navway</li>'+
- '</ul>'+
- '<div style="margin-top:8px;font-size:10px;color:#475569;font-style:italic">สร้างความสัมพันธ์แบบส่วนตัว ทีละราย ด้วยเทคโนโลยีใกล้ชิดกับลูกค้าตลอดชีพ</div>'+
- '</div>'+
- '<div style="background:#e0e7ff;border:1px solid #a5b4fc;border-radius:10px;padding:14px">'+
- '<div style="font-size:16px;font-weight:700;color:#3730a3;margin-bottom:10px">📡 Channels</div>'+
- '<ul style="font-size:11px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
- '<li>• โชว์รูมและศูนย์บริการ 4 สาขา</li>'+
- '<li>• ศูนย์บริการในบ้านและชุมชน</li>'+
- '<li>• TYP@ (MR/MA)</li>'+
- '<li>• SPS 2.0</li>'+
- '<li>• MApp (หน้าร้านออนไลน์)</li>'+
- '<li>• Line@ · Tiktok · FB</li>'+
- '<li>• SGM</li>'+
- '</ul>'+
- '</div>'+
- '<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:14px">'+
- '<div style="font-size:16px;font-weight:700;color:#991b1b;margin-bottom:10px">💸 Cost Structure</div>'+
- '<div style="font-size:15px;font-weight:700;color:#991b1b;margin-bottom:6px">ส่วนแบ่งผลกำไร:</div>'+
- '<ul style="font-size:11px;line-height:1.6;color:#475569;list-style:none;padding:0;margin-bottom:8px">'+
- '<li>• ทีมขาย 7+1=8% ของ GM</li>'+
- '<li>• ทีมศูนย์บริการ=12% ของ GM</li>'+
- '<li>• ทีมศูนย์สี=5% ของ GM</li>'+
- '</ul>'+
- '<div style="font-size:15px;font-weight:700;color:#991b1b;margin-bottom:4px">ต้นทุน:</div>'+
- '<ul style="font-size:11px;line-height:1.6;color:#475569;list-style:none;padding:0">'+
- '<li>PMS: รถ 95% ค่าแรง 60% อะไหล่ 70%</li>'+
- '<li>ประกัน 82% ค่าแรง 50%</li>'+
- '<li>PMG: อะไหล่ 95%</li>'+
- '</ul>'+
- '</div>'+
- '<div style="background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:14px">'+
- '<div style="font-size:16px;font-weight:700;color:#854d0e;margin-bottom:10px">💰 Revenue Streams</div>'+
- '<div style="font-size:15px;font-weight:700;color:#854d0e;margin-bottom:6px">งานบริการ:</div>'+
- '<ul style="font-size:11px;line-height:1.6;color:#475569;list-style:none;padding:0;margin-bottom:8px">'+
- '<li>• GM งานซ่อมศูนย์บริการ</li>'+
- '<li>• GM ผลิตภัณฑ์เสริม</li>'+
- '<li>• GM PMSG (PMG+PMGI)</li>'+
- '<li>• GM ประกันภัยต่ออายุ</li>'+
- '<li>• GM พันกันสนิม</li>'+
- '<li>• GM เชนโมเดล</li>'+
- '<li>• GM ประดับยนต์</li>'+
- '</ul>'+
- '<div style="font-size:15px;font-weight:700;color:#854d0e;margin-bottom:4px">งานขาย:</div>'+
- '<div style="font-size:11px;color:#475569">• GM จากการขายรถ</div>'+
- '</div>'+
- '</div>'+
- '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:14px;margin-top:12px">'+
- '<div style="font-size:16px;font-weight:700;color:#92400e;margin-bottom:10px">🏆 Area of Excellence (AOE)</div>'+
- '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px">'+
- '<li>1. เก่งวิจัยลูกค้า — รู้จักพฤติกรรมลูกค้าทีละราย</li>'+
- '<li>2. สร้างประสบการณ์ที่ยอดเยี่ยมในทุกโอกาส</li>'+
- '<li>3. ทักษะสร้างและรักษาความใกล้ชิดตลอดชีพ</li>'+
- '<li>4. เก่งทักษะการขาย & งานศูนย์บริการ</li>'+
- '<li>5. ทักษะการตลาดออนไลน์ + ออฟไลน์</li>'+
- '</ul>'+
- '</div>'+
- '</div>';
- function teamBadge(teamName) {
- var meta = DEPT_COLORS[teamName] || { color:'#64748b', bg:'#f1f5f9', text:'#334155' };
- return '<span style="display:inline-flex;align-items:center;gap:4px;background:'+meta.bg+';color:'+meta.text+';border:1px solid '+meta.color+'40;font-size:10px;font-weight:700;padding:3px 8px;border-radius:9999px;margin:2px 4px 2px 0">'+
- '<span style="width:6px;height:6px;background:'+meta.color+';border-radius:50%"></span>'+
- esc(teamName)+'</span>';
- }
- function linkageButtons() {
- return '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">'+
- '<button onclick="switchTab(\'linkage\',null)" style="background:#1e40af;color:#fff;border:none;font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px">🔗 CEO : PMSG</button>'+
- '<button onclick="switchTab(\'kpi\',null)" style="background:#9d174d;color:#fff;border:none;font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px">🎯 KPI &amp; ตัววัดผล</button>'+
- '</div>';
- }
- function ceoAllKrData(keywords) {
- if (!D || !D.departments) return [];
- var leaders = ['สมศักดิ์', 'สมศักด์', 'กาญจนา', 'ชุติมา', 'ณัฐภัทร', 'กุลภัทร'];
- var results = [];
- for (var di = 0; di < D.departments.length; di++) {
- var dept = D.departments[di];
- var people = dept.people || [];
- for (var pi = 0; pi < people.length; pi++) {
- var p = people[pi];
- var isLeader = leaders.some(function(l) { return (p.name || '').indexOf(l) >= 0; });
- if (!isLeader) continue;
- var objs = p.objectives || [];
- for (var oi = 0; oi < objs.length; oi++) {
- var o = objs[oi];
- if (o.type !== 'Business Growth' && o.type !== 'Team Growth') continue;
- var krs = o.keyResults || [];
- for (var ki = 0; ki < krs.length; ki++) {
- var krText = String(krs[ki] || '').replace(/\s+/g, ' ').trim();
- if (krText.length < 10 || krText.indexOf('§SUBCAT') === 0) continue;
- var matched = false;
- for (var kwi = 0; kwi < keywords.length; kwi++) {
- if (krText.indexOf(keywords[kwi]) >= 0) { matched = true; break; }
- }
- if (matched) {
- var numM = krText.match(/(\d[\d,]*)\s*(ลบ|ล้าน|คัน|ราย|บาท|คน|เดือน|ปี|%)/);
- var target = numM ? numM[1] + ' ' + numM[2] : '';
- results.push({
- krText: krText,
- target: target,
- source: p.name + ' · ' + dept.name,
- personName: p.name,
- deptName: dept.name,
- type: o.type
- });
- }
- }
- }
- }
- }
- return results;
- }
- function ceoBadge(personName, deptName) {
- var meta = DEPT_COLORS[deptName] || { color:'#64748b', bg:'#f1f5f9', text:'#334155' };
- return '<span style="display:inline-flex;align-items:center;gap:4px;background:'+meta.bg+';color:'+meta.text+';border:1px solid '+meta.color+'40;font-size:10px;font-weight:700;padding:3px 8px;border-radius:9999px;margin:2px 4px 2px 0">'+
- '<span style="width:6px;height:6px;background:'+meta.color+';border-radius:50%"></span>'+
- esc(personName)+' · '+esc(deptName)+'</span>';
- }
- function ceoOwnerList(owners) {
- if (!owners || owners.length === 0) return '';
- var seen = {};
- var uniq = [];
- for (var i = 0; i < owners.length; i++) {
- var key = (owners[i].personName || '') + '|' + (owners[i].deptName || '');
- if (!seen[key]) { seen[key] = true; uniq.push(owners[i]); }
- }
- var ceoOrder = ['สมศักดิ์', 'สมศักด์', 'กาญจนา', 'ณัฐภัทร', 'กุลภัทร', 'ชุติมา'];
- uniq.sort(function(a, b) {
- var ai = 99, bi = 99;
- for (var k = 0; k < ceoOrder.length; k++) {
- if ((a.personName || '').indexOf(ceoOrder[k]) >= 0) ai = Math.min(ai, k);
- if ((b.personName || '').indexOf(ceoOrder[k]) >= 0) bi = Math.min(bi, k);
- }
- return ai - bi;
- });
- var parts = uniq.map(function(o) {
- var name = o.personName || '';
- var dept = o.deptName || '';
- return '<span style="color:#334155;font-weight:600">'+esc(name)+'</span>'+
- '<span style="color:#94a3b8"> · </span>'+
- '<span style="color:#64748b">'+esc(dept)+'</span>';
- });
- return parts.join('<span style="color:#cbd5e1;margin:0 4px">,</span>');
- }
- function krResultRow(num, color, text, target, actual, statusStr, ceoSource, sObjIndex, krIndex, owners) {
- var pct = 0;
- var barColor = '#ef4444';
- var statusBadge = '';
- if (target && actual && !isNaN(parseFloat(String(target).replace(/,/g,''))) && !isNaN(parseFloat(String(actual).replace(/,/g,'')))) {
- var t = parseFloat(String(target).replace(/,/g,''));
- var a = parseFloat(String(actual).replace(/,/g,''));
- if (t > 0) {
- pct = Math.min(Math.round((a / t) * 100), 999);
- barColor = pct >= 100 ? '#10b981' : (pct >= 80 ? '#f59e0b' : '#ef4444');
- statusBadge = pct >= 100 ? ' ✅' : (pct >= 80 ? ' ⚠️' : ' 🔴');
- }
- }
- var isEdited = false;
- if (typeof sObjIndex === 'number' && typeof krIndex === 'number') {
- try { isEdited = !!localStorage.getItem('bp_sobj_' + sObjIndex + '_' + krIndex); } catch(e) {}
- }
- var editBtn = (typeof sObjIndex === 'number' && typeof krIndex === 'number')
- ? '<button onclick="editSObjKR('+sObjIndex+','+krIndex+')" title="แก้ไข KR" style="background:'+color+'15;color:'+color+';border:1px solid '+color+'40;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;cursor:pointer;flex-shrink:0;margin-left:auto">✏️ แก้ไข</button>'
- : '';
- var html_ = '<li style="margin-bottom:8px;padding:8px 10px;background:#ffffff80;border-radius:8px;border:1px solid #e2e8f0">'+
- '<div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap">'+
- '<strong style="color:'+color+';flex-shrink:0">KR-'+num+':</strong>'+
- '<span style="flex:1;min-width:200px;color:#475569">'+esc(text)+'</span>'+
- (isEdited ? '<span style="font-size:9px;color:#f59e0b;font-weight:700;flex-shrink:0" title="แก้ไขแล้ว">●</span>' : '')+
- editBtn+
- '</div>';
- if (actual && pct > 0) {
- html_ += '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">'+
- '<span style="font-size:15px;font-weight:700;color:'+barColor+';min-width:80px">📊 '+esc(actual)+'</span>'+
- '<span style="font-size:10px;color:#94a3b8">/ '+esc(target)+'</span>'+
- '<div style="flex:1;min-width:100px;height:10px;background:#e2e8f0;border-radius:9999px;overflow:hidden">'+
- '<div style="width:'+Math.min(pct,100)+'%;height:100%;background:'+barColor+';border-radius:9999px;transition:width .3s"></div>'+
- '</div>'+
- '<span style="font-size:16px;font-weight:700;color:'+barColor+';min-width:48px;text-align:right">'+pct+'%'+statusBadge+'</span>'+
- '</div>';
- } else if (statusStr) {
- html_ += '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">'+
- '<span style="font-size:10px;color:#64748b">📊 สถานะ:</span>'+
- '<span style="font-size:15px;font-weight:700;color:#6d28d9;background:#f5f3ff;padding:2px 8px;border-radius:6px">'+esc(statusStr)+'</span>'+
- '</div>';
- }
- if (owners && owners.length > 0) {
- var ownerListHtml = ceoOwnerList(owners);
- if (ownerListHtml) {
- html_ += '<div style="margin-top:4px;font-size:11px;line-height:1.5">'+
- '<span style="color:#64748b;font-size:10px">👤 </span>'+
- ownerListHtml+'</div>';
- }
- }
- if (typeof sObjIndex === 'number' && typeof krIndex === 'number') {
- var srcKey = 'bp_src_sobj_' + sObjIndex + '_' + krIndex;
- var srcData = loadSrcData(srcKey);
- var hasActual = (actual && pct > 0);
- if (hasActual) {
- html_ += '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px">' +
- if (srcData.link) {
- html_ += '<a href="'+esc(srcData.link)+'" target="_blank" style="color:#3b82f6;text-decoration:none;font-size:12px;font-weight:600">📊 Dashboard ↗</a>';
- }
- if (typeof kr !== 'undefined' && kr.hcSheet) {
- html_ += '<a href="'+esc(kr.hcSheet)+'" target="_blank" style="color:#059669;text-decoration:none;font-size:12px;font-weight:600">📎 Google Sheet ↗</a>';
- }
- html_ += '<button onclick="toggleSrcEdit(\''+srcKey+'\')" style="background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;padding:1px 6px;border-radius:4px" title="แก้ไขลิงก์">✏️</button>';
- html_ += '</div>';
- html_ += '<div id="srcEdit_'+srcKey+'" style="display:none;margin-top:4px">'+buildSrcInputs(srcKey, { showLabel: false, label: '' })+'</div>';
- } else {
- html_ += buildSrcInputs(srcKey, { showLabel: true, label: '📎 วางลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล' });
- }
- }
- html_ += '</li>';
- return html_;
- }
- var KR_HARDCODED_ACTUALS = [
- { kw: ['CBNP', '39', '38.5'], actual: '23.48 ลบ.', target: '38.50 ลบ.', pct: 61, status: '⚠️ ใกล้เป้า 60%', source: 'CEO สมศักดิ์', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?ceokpi=1' },
- { kw: ['GM งานขาย', '60,000', 'ต่อคัน'], actual: '64,390 บาท', target: '60,000 บาท', pct: 107, status: '✅ ทะลุเป้า 107%', source: 'BCT Sale Report', sourceUrl: 'https://script.google.com/macros/s/AKfycbyyZyaIoe8BUy22rzOX1EAC3mhMuwWZNpzn5ZaYsTodTrBKk6WbqPI0JjFGwzFj-M7Z/exec?bctsale=1' },
- { kw: ['GM งานบริการ', '11.5', 'ผู้ใช้รถยนต์', '9.5'], actual: '10.3 ลบ.', target: '10 ลบ.', pct: 103, status: '⚠️ ใกล้เป้า 90%', source: 'GM Dashboard', sourceUrl: 'https://script.google.com/macros/s/AKfycbyyZyaIoe8BUy22rzOX1EAC3mhMuwWZNpzn5ZaYsTodTrBKk6WbqPI0JjFGwzFj-M7Z/exec?gm=1' },
- { kw: ['เคลม', '300', 'คัน'], actual: '235 คัน/เดือน', target: '300 คัน', pct: 78, status: '⚠️ ใกล้เป้า 78%', source: 'Repair Flow', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?rf=1' },
- { kw: ['ผลิตภัณฑ์เสริม', '300,000'], actual: '281,552 บาท', target: '300,000 บาท', pct: 94, status: '⚠️ ใกล้เป้า 94%', source: 'PR Dashboard', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?pr=1' },
- { kw: ['เคลือบแก้ว', 'เคลือบ', '30'], actual: '58 คัน/เดือน', target: '50 คัน/เดือน', pct: 116, status: '✅ เกินเป้า 193%', source: 'GM Supplement', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?supplement=1' },
- { kw: ['ลูกค้าองค์กร', 'ผลิตภัณฑ์เสริม', 'องค์กร'], actual: '32,725 บาท', target: '50,000 บาท', pct: 65, status: '⚠️ ใกล้เป้า 65%', source: 'ลูกค้าองค์กร Dashboard', sourceUrl: 'https://script.google.com/macros/s/AKfycbzea2XragNb7sRM5BVruly5fraaWNB4umbvmTDKwjZa7aP9Cd9_hVjJl6gtYIzl6P60/exec?orgcustomer=1' },
- { kw: ['สถานะรถ', 'ซ่อม', 'มือถือ', '100%'], actual: '85%', target: '100%', pct: 85, status: '⚠️ ใกล้เป้า 85%', source: 'Repair Flow', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?rf=1' },
- { kw: ['นัดหมาย', 'ตลอดชีพ', '100%'], actual: '75%', target: '100%', pct: 75, status: '⚠️ ใกล้เป้า 75%', source: 'BCT Calendar', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?bct=ui' },
- { kw: ['ดิจิทัล', 'หน้าร้าน', 'ดาวน์โหลด'], actual: '45,000 ราย', target: '75,000 ราย', pct: 60, status: '🔴 ต่ำกว่าเป้า 60%', source: 'CEO KPI', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?ceokpi=1' },
- { kw: ['ตรวจสี', 'คุณภาพสี', 'อัตโนมัติ', '20'], actual: '18 คัน/เดือน', target: '20 คัน/เดือน', pct: 90, status: '⚠️ ใกล้เป้า 90%', source: 'BCT Calendar', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?bct=ui' },
- { kw: ['Navway', 'MA', '300', 'ราย'], actual: '180 ราย', target: '300 ราย', pct: 60, status: '🔴 ต่ำกว่าเป้า 60%', source: 'CEO KPI', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?ceokpi=1' },
- { kw: ['SGM', '200,000', 'ราย'], actual: '120,000 ราย', target: '200,000 ราย', pct: 60, status: '🔴 ต่ำกว่าเป้า 60%', source: 'CEO KPI', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?ceokpi=1' },
- { kw: ['MR', '50,000', 'สี'], actual: '35,000 บาท', target: '50,000 บาท', pct: 70, status: '⚠️ ใกล้เป้า 70%', source: 'Repair Flow', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?rf=1' },
- { kw: ['คอนเทนต์', '20', 'Content', 'SGM'], actual: '12 Content/เดือน', target: '20 Content/เดือน', pct: 60, status: '🔴 ต่ำกว่าเป้า 60%', source: 'CEO KPI', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?ceokpi=1' },
- { kw: ['อู่สี', 'อู่ข่อม', 'คู่ค้า', 'เครือข่าย'], actual: '15 อู่', target: '20 อู่', pct: 75, status: '⚠️ ใกล้เป้า 75%', source: 'Repair Flow', sourceUrl: 'https://script.google.com/macros/s/AKfycbwDu1rAyn4aEmRUJiFJhPt-I4Gs1f7BdVEoaf3ybIz78O9hjzgbHq71aNS7AkK2x7j0/exec?rf=1' },
- { kw: ['ปิดเพิ่ม', 'ลูกค้า', 'รับใช้'], actual: '68 คัน', target: '80 คัน', pct: 85, status: '⚠️ ใกล้เป้า 85%', source: 'ลูกค้าองค์กร Dashboard', sourceUrl: 'https://script.google.com/macros/s/AKfycbzea2XragNb7sRM5BVruly5fraaWNB4umbvmTDKwjZa7aP9Cd9_hVjJl6gtYIzl6P60/exec?orgcustomer=1' }
- ];
- function matchHardcodedActual_(krText, keywords) {
- if (!keywords || !keywords.length) return null;
- var text = String(krText).toLowerCase();
- var bestMatch = null;
- var bestScore = 0;
- for (var i = 0; i < KR_HARDCODED_ACTUALS.length; i++) {
- var item = KR_HARDCODED_ACTUALS[i];
- var score = 0;
- for (var k = 0; k < keywords.length; k++) {
- if (text.indexOf(String(keywords[k]).toLowerCase()) >= 0) score++;
- }
- if (score > bestScore) {
- bestScore = score;
- bestMatch = item;
- }
- }
- return bestScore > 0 ? bestMatch : null;
- }
- var SOBJS = [
- {
- n: 1, code: 'S-01', color: '#3b82f6', bg: '#eff6ff', text: '#1e40af',
- title: 'CBNP 39 ลบ ปี 69 (PMS + PMGG) — รวมงานขาย/บริการ/เคลม/ผลิตภัณฑ์เสริม',
- teams: ['PMS ขาย', 'PMS ศูนย์บริการ', 'PMG/PMGI'],
- overallKw: ['CBNP'],
- krs: [
- { text: 'CBNP 39 ลบ (รายได้รวม PMS + PMGG ปี 69)', kw: ['CBNP', '39', '38.5'], source: 'PMS หน้า 29 + PMGG หน้า 30', hcActual: '23.48 ลบ.', hcTarget: '38.5 ลบ.', hcPct: 61, hcSheet: 'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit', pdfActual: null, pdfStatus: 'เป้ารวมจาก CEO' },
- { text: 'GM งานขายต่อคัน 60,000 บาท', kw: ['GM งานขาย', '60,000', 'ต่อคัน'], source: 'PMS หน้า 29', hcActual: '64,390 บาท', hcTarget: '60,000 บาท', hcPct: 107, hcSheet: 'https://docs.google.com/spreadsheets/d/1BpvNBZZmYkYsllWyew-kutUTYD8DPhmSXL_nlRUYZdI/edit', pdfActual: null, pdfStatus: 'เป้า PMS' },
- { text: 'GM งานบริการผู้ใช้รถยนต์ 11.5 ลบ', kw: ['GM งานบริการ', '11.5', 'ผู้ใช้รถยนต์', '9.5'], source: 'PMS หน้า 29', hcActual: '10.3 ลบ.', hcTarget: '12 ลบ.', hcPct: 86, hcSheet: 'https://docs.google.com/spreadsheets/d/1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds/edit', pdfActual: null, pdfStatus: 'เป้า PMS · CEO: GM > 12 ลบ/เดือน' },
- { text: 'ส่งมอบรถงานเคลม 300 คัน', kw: ['เคลม', '300', 'คัน'], source: 'PMGG หน้า 30', hcActual: '235 คัน/เดือน', hcTarget: '300 คัน', hcPct: 78, hcSheet: 'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' },
- { text: 'GM ผลิตภัณฑ์เสริม 300,000 บาทต่อเดือน', kw: ['ผลิตภัณฑ์เสริม', '300,000'], source: 'PMGG หน้า 30', hcActual: '281,552 บาท', hcTarget: '300,000 บาท', hcPct: 94, hcSheet: 'https://docs.google.com/spreadsheets/d/1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' },
- { text: 'เคลือบแก้ว 30 คันต่อเดือน', kw: ['เคลือบแก้ว', 'เคลือบ', '30'], source: 'PMGG หน้า 30 (OCR อ่าน 3530 → แก้เป็น 30)', hcActual: '58 คัน/เดือน', hcTarget: '30 คัน/เดือน', hcPct: 193, hcSheet: 'https://docs.google.com/spreadsheets/d/1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' },
- { text: 'เพิ่ม GM ผลิตภัณฑ์เสริมลูกค้าองค์กร 50,000 บาท ปี 69, 100,000 ปี 70', kw: ['ลูกค้าองค์กร', 'ผลิตภัณฑ์เสริม', 'องค์กร'], source: 'CEO ชุติมา + แผนธุรกิจ', hcActual: '32,725 บาท', hcTarget: '50,000 บาท', hcPct: 65, hcSheet: 'https://docs.google.com/spreadsheets/d/14cTe13-Rxmz2z7pl6Sj-zj2LtapXuQ8XBHFL_F88SDk/edit', pdfActual: null, pdfStatus: 'ปี 69: 1 ลบ/เดือน · ปี 70: 2 ลบ/เดือน (CEO)' }
- ]
- },
- {
- n: 2, code: 'S-02', color: '#8b5cf6', bg: '#f5f3ff', text: '#6d28d9',
- title: 'ระบบงานอัตโนมัติ Online (PMS Digital + PMGG Automation)',
- teams: ['PMS/PMG Backoffice', 'PMG/PMGI', 'PMS ศูนย์บริการ'],
- overallKw: ['นัดหมาย', 'Online', 'อัตโนมัติ'],
- krs: [
- { text: 'ดูสถานะรถจากซ่อมผ่านมือถือ 100%', kw: ['สถานะรถ', 'ซ่อม', 'มือถือ', '100%'], source: 'PMS หน้า 29', hcActual: '85%', hcTarget: '100%', hcPct: 85, hcSheet: 'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit', pdfActual: null, pdfStatus: 'เป้า PMS' },
- { text: 'ลูกค้านัดหมาย 100% (นัดหมายตลอดชีพ)', kw: ['นัดหมาย', 'ตลอดชีพ', '100%'], source: 'PMS หน้า 29 + PMGG หน้า 30', hcActual: '75%', hcTarget: '100%', hcPct: 75, hcSheet: 'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit', pdfActual: null, pdfStatus: 'เป้า PMS + PMGG' },
- { text: 'ลูกค้าเข้าใช้บริการผ่านหน้าร้านดิจิทัลเพิ่มขึ้น', kw: ['ดิจิทัล', 'หน้าร้าน', 'ดาวน์โหลด'], source: 'PMS หน้า 29', hcActual: '45,000 ราย', hcTarget: '75,000 ราย', hcPct: 60, hcSheet: 'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit', pdfActual: null, pdfStatus: 'เป้า PMS' },
- { text: 'ปิดได้ลูกค้าจากการตรวจเช็คคุณภาพสีรอบคันอัตโนมัติ 20 คัน/เดือน', kw: ['ตรวจสี', 'คุณภาพสี', 'อัตโนมัติ', '20'], source: 'PMGG หน้า 30', hcActual: '18 คัน/เดือน', hcTarget: '20 คัน/เดือน', hcPct: 90, hcSheet: 'https://docs.google.com/spreadsheets/d/1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' }
- ]
- },
- {
- n: 3, code: 'S-03', color: '#10b981', bg: '#ecfdf5', text: '#059669',
- title: 'สร้างความใกล้ชิด พัฒนาพนักงาน รู้จักลูกค้ามากที่สุด (Customer Intimacy)',
- teams: ['PMS ขาย', 'PMG/PMGI', 'PMS ศูนย์บริการ'],
- overallKw: ['MA', 'SGM', 'เครือข่าย', 'MR'],
- krs: [
- { text: 'สร้างเครือข่าย Navway MA 300 ราย ในปี 68', kw: ['Navway', 'MA', 'เครือข่าย', '300'], source: 'PMS หน้า 29', hcActual: '180 ราย', hcTarget: '300 ราย', hcPct: 60, hcSheet: 'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit', pdfActual: null, pdfStatus: 'เป้า PMS' },
- { text: 'รับใช้และพาลูกค้าเข้ากลุ่ม SGM 200,000 ราย ในปี 68', kw: ['SGM', '200,000', 'กลุ่ม'], source: 'PMS หน้า 29', hcActual: '120,000 ราย', hcTarget: '200,000 ราย', hcPct: 60, hcSheet: 'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit', pdfActual: null, pdfStatus: 'เป้า PMS' },
- { text: 'สมาชิกในกลุ่ม MA MR UGC ช่วยผลิตคอนเทนต์ 20 Content/เดือน (SGM)', kw: ['UGC', 'Content', 'คอนเทนต์', '20'], source: 'PMS หน้า 29', hcActual: '12 Content/เดือน', hcTarget: '20 Content/เดือน', hcPct: 60, hcSheet: 'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit', pdfActual: null, pdfStatus: 'เป้า PMS' },
- { text: 'สร้างเครือข่ายคู่ค้า อู่สีและอู่ข่อมบรถ ภายในปี 68', kw: ['คู่ค้า', 'อู่สี', 'อู่ข่อม', 'เครือข่าย'], source: 'PMGG หน้า 30', hcActual: '15 อู่', hcTarget: '20 อู่', hcPct: 75, hcSheet: 'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' },
- { text: 'สร้างเครือข่าย MR เพื่อส่งศูนย์ซ่อมสี GM 50,000 บาท', kw: ['MR', 'ศูนย์ซ่อมสี', '50,000'], source: 'PMGG หน้า 30', hcActual: '35,000 บาท', hcTarget: '50,000 บาท', hcPct: 70, hcSheet: 'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' },
- { text: 'ปิดเพิ่มลูกค้าจากกลุ่มรับใช้', kw: ['ปิด', 'ลูกค้า', 'กลุ่มรับใช้', 'รับใช้'], source: 'PMGG หน้า 30', hcActual: '68 คัน', hcTarget: '80 คัน', hcPct: 85, hcSheet: 'https://docs.google.com/spreadsheets/d/14cTe13-Rxmz2z7pl6Sj-zj2LtapXuQ8XBHFL_F88SDk/edit', pdfActual: null, pdfStatus: 'เป้า PMGG' }
- ]
- }
- ];
- function ceoOverallData(keywords) {
- var all = ceoAllKrData(keywords);
- if (!all || all.length === 0) return null;
- var primary = all[0];
- var sources = all.map(function(f) { return f.source; }).filter(function(v, i, a) { return a.indexOf(v) === i; });
- return {
- target: primary.krText,
- source: sources.join(' + '),
- allKrs: all
+function getDeptMeta(name) {
+ var metas = {
+ 'PMG/PMGI': { color: '#3b82f6', bg: '#dbeafe', text: '#1e40af', badge: 'badge-blue' },
+ 'PMS ช่าง 4 สาขา': { color: '#f59e0b', bg: '#fef3c7', text: '#92400e', badge: 'badge-orange' },
+ 'PMS ขาย': { color: '#10b981', bg: '#d1fae5', text: '#065f46', badge: 'badge-green' },
+ 'PMS ศูนย์บริการ': { color: '#8b5cf6', bg: '#ede9fe', text: '#5b21b6', badge: 'badge-purple' },
+ 'PMS/PMG Backoffice': { color: '#ec4899', bg: '#fce7f3', text: '#9d174d', badge: 'badge-pink' }
  };
- }
- html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
- '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:6px;display:flex;align-items:center;gap:8px">🎯 S-Objectives (Strategic Objectives)</h2>'+
- '<div style="font-size:12px;color:var(--text3);margin-bottom:14px">3 ยุทธศาสตร์ (S-01 CBNP · S-02 ONLINE · S-03 ใกล้ชิดลูกค้า) · หัวข้อจากแผนธุรกิจ PDF หน้า 29-30 · ตัวเลขเป้าหมายจาก CEO OKR · ทีมรับผิดชอบ + เชื่อมโยง CEO/KPI · ✏️ แก้ไข KR ได้</div>';
- SOBJS.forEach(function(s, sIdx) {
- var overallData = ceoOverallData(s.overallKw || []);
- var overallTarget = overallData ? overallData.target : 'รอข้อมูล CEO';
- var overallSource = overallData ? overallData.source : null;
- var overallHasData = !!overallData;
- html += '<div style="background:'+s.bg+';border-left:5px solid '+s.color+';border-radius:10px;padding:16px;margin-bottom:14px">'+// Header row
- '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
- '<div style="background:'+s.color+';color:#fff;width:34px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">'+s.code+'</div>'+
- '<div style="font-size:16px;font-weight:700;color:'+s.text+';flex:1">'+esc(s.title)+'</div>'+
- '</div>'+
- '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;padding:8px 12px;background:#ffffff80;border-radius:8px;flex-wrap:wrap">'+
- '<div style="flex:1;min-width:200px">'+
- '<div style="font-size:15px;font-weight:700;color:'+s.text+';margin-bottom:4px">📊 ผลลัพธ์รวม (จาก CEO):</div>';
- if (overallHasData) {
- html += '<div style="font-size:11px;color:#475569;line-height:1.5">'+esc(overallTarget)+'</div>';
- if (overallData.allKrs && overallData.allKrs.length > 0) {
- var overallOwners = [];
- var seenOverall = {};
- overallData.allKrs.forEach(function(ckr) {
- var key2 = ckr.personName + '|' + ckr.deptName;
- if (!seenOverall[key2]) { seenOverall[key2] = true; overallOwners.push({ personName: ckr.personName, deptName: ckr.deptName }); }
- });
- var overallOwnerListHtml = ceoOwnerList(overallOwners);
- if (overallOwnerListHtml) {
- html += '<div style="margin-top:6px;font-size:11px;line-height:1.5">'+
- '<span style="font-size:10px;color:#64748b">👤 ดูแล: </span>'+
- overallOwnerListHtml+'</div>';
- }
- }
- } else {
- html += '<div style="font-size:11px;color:#f59e0b;font-weight:600">⏳ รอข้อมูล CEO</div>';
- }
- html += '</div></div>'+
- '<ul style="font-size:15px;line-height:2;color:#475569;list-style:none;padding:0;margin:0;padding-left:8px">';
- var allCeoOwners = [];
- var seenKrKw = {}; // dedup ตาม keyword signature
- var dedupedKrs = [];
- s.krs.forEach(function(kr, i) {
- var sig = kr.kw.slice().sort().join('|').toLowerCase();
- if (seenKrKw[sig]) {
- } else {
- seenKrKw[sig] = true;
- dedupedKrs.push({ kr: kr, origIndex: i });
- }
- });
- dedupedKrs.forEach(function(item, di) {
- var kr = item.kr;
- var i = item.origIndex;
- var lsKey = 'bp_sobj_' + sIdx + '_' + i;
- var krText = kr.text;
- try {
- var saved = localStorage.getItem(lsKey);
- if (saved) krText = saved;
- } catch(e) {}
- var allCeoKrs = ceoAllKrData(kr.kw);
- var firstCeo = allCeoKrs.length > 0 ? allCeoKrs[0] : null;
- var target = kr.hcTarget || (firstCeo ? firstCeo.target : (kr.pdfTarget || null));
- var ceoSource = null;
- if (allCeoKrs.length > 0) {
- var srcOwners = allCeoKrs.map(function(ckr) {
- return { personName: ckr.personName, deptName: ckr.deptName };
- });
- ceoSource = ceoOwnerList(srcOwners);
- }
- var actual = kr.hcActual || kr.pdfActual || null;
- var statusStr = kr.hcStatus || kr.pdfStatus || null;
- var actualPct = kr.hcPct || 0;
- if ((!actual || actualPct === 0) && typeof CEO_KPI_ACTUALS !== 'undefined' && CEO_KPI_ACTUALS && CEO_KPI_ACTUALS.length > 0) {
- var bestMatch = null;
- var bestScore = 0;
- for (var ai = 0; ai < CEO_KPI_ACTUALS.length; ai++) {
- var kpiItem = CEO_KPI_ACTUALS[ai];
- var kpiText = (kpiItem.krText || '').toLowerCase();
- if (kpiItem.status === 'no-data' || kpiItem.status === 'skip' || kpiItem.currentValue === null) continue;
- var matchScore = 0;
- for (var kwi = 0; kwi < kr.kw.length; kwi++) {
- if (kpiText.indexOf(kr.kw[kwi].toLowerCase()) >= 0) matchScore++;
- }
- if (matchScore > bestScore) {
- bestScore = matchScore;
- bestMatch = kpiItem;
- }
- }
- if (bestMatch && bestScore >= 2) {
- actual = bestMatch.currentValue != null ? String(bestMatch.currentValue) : actual;
- target = bestMatch.targetValue != null ? String(bestMatch.targetValue) : target;
- actualPct = bestMatch.progressPct || 0;
- if (actualPct > 0) {
- statusStr = actualPct >= 100 ? '✅ บรรลุเป้า ' + actualPct + '%' :
- actualPct >= 80 ? '⚠️ ใกล้เป้า ' + actualPct + '%' :
- '🔴 ต่ำกว่าเป้า ' + actualPct + '%';
- }
- }
- }
- var krOwners = allCeoKrs.map(function(ckr) {
- return { personName: ckr.personName, deptName: ckr.deptName };
- });
- allCeoKrs.forEach(function(ckr) {
- var key = ckr.personName + '|' + ckr.deptName;
- if (allCeoOwners.findIndex(function(o) { return o.key === key; }) === -1) {
- allCeoOwners.push({ key: key, personName: ckr.personName, deptName: ckr.deptName });
- }
- });
- html += krResultRow(di+1, s.color, krText, target, actual, statusStr, ceoSource, sIdx, i, krOwners);
- });
- html += '</ul>'+
- '<div style="margin-top:12px;padding:10px 12px;background:#ffffff80;border-radius:8px">'+
- '<div style="font-size:15px;font-weight:700;color:'+s.text+';margin-bottom:6px">👥 ผู้รับผิดชอบ (CEO):</div>';
- if (allCeoOwners.length > 0) {
- html += '<div style="font-size:11px;line-height:1.6">'+ceoOwnerList(allCeoOwners)+'</div>';
- } else {
- html += '<div style="font-size:11px;color:#64748b">'+s.teams.map(esc).join(' · ')+'</div>';
- }
- html += '</div>'+
- linkageButtons()+
- '</div>';
- });
- html += '</div>';
- html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
- '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">🏛️ ทุนองค์กร 4 ด้าน (Organizational Capital)</h2>'+
- '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">'+
- '<div style="background:#eff6ff;border-radius:10px;padding:16px;border-left:4px solid #3b82f6">'+
- '<div style="font-size:16px;font-weight:700;color:#1e40af;margin-bottom:10px">OC — ทุนองค์กร (Organizational Capital)</div>'+
- '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
- '<li>• โครงสร้างองค์กร, ภาวะผู้รับใช้, ท่าทีเพื่อสื่อสาร, บรรยากาศ</li>'+
- '<li>• วัฒนธรรมองค์กร 20 ข้อ</li>'+
- '<li>• ค่านิยม 6 รับ</li>'+
- '<li>• นโยบายสนับสนุนสมาชิก 10 ประการ</li>'+
- '<li>• อุปนิสัย 8 ประการ</li>'+
- '<li>• ผู้นำผู้รับใช้ 5 บทบาท</li>'+
- '</ul>'+
- '</div>'+
- '<div style="background:#f0fdf4;border-radius:10px;padding:16px;border-left:4px solid #10b981">'+
- '<div style="font-size:16px;font-weight:700;color:#059669;margin-bottom:10px">HC — ทุนมนุษย์ (Human Capital)</div>'+
- '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
- '<li>• เพิ่มทักษะงานขายเพิ่ม GM</li>'+
- '<li>• พัฒนาทักษะด้วย AI</li>'+
- '<li>• เก่งเครื่องมืออัตโนมัติ</li>'+
- '<li>• บ่มเพาะ AOE 3 ผ่าน</li>'+
- '<li>• สมาชิก 3 ผ่าน ทักษะและทุนองค์กร 100%</li>'+
- '</ul>'+
- '</div>'+
- '<div style="background:#fef3c7;border-radius:10px;padding:16px;border-left:4px solid #f59e0b">'+
- '<div style="font-size:16px;font-weight:700;color:#92400e;margin-bottom:10px">IC — ทุนสารสนเทศ (Information Capital)</div>'+
- '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
- '<li>• BCT Dashboard</li>'+
- '<li>• MApp หน้าร้านออนไลน์</li>'+
- '<li>• MS24 · TG</li>'+
- '<li>• AI วิเคราะห์พฤติกรรมลูกค้า</li>'+
- '<li>• ฐานข้อมูลภายใน/ภายนอก</li>'+
- '<li>• BCT ออนไลน์ 100%</li>'+
- '</ul>'+
- '</div>'+
- '<div style="background:#fce7f3;border-radius:10px;padding:16px;border-left:4px solid #ec4899">'+
- '<div style="font-size:16px;font-weight:700;color:#9d174d;margin-bottom:10px">DINC — Data & Intelligence Capital</div>'+
- '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
- '<li>• AIOS + AI Agent</li>'+
- '<li>• Software Architecture + Cybersecurity</li>'+
- '<li>• Data Warehouse</li>'+
- '<li>• AI Model Training + Fine-tuning</li>'+
- '<li>• AI Agent (Digital Twin)</li>'+
- '<li>• Data Privacy + Access Control</li>'+
- '</ul>'+
- '</div>'+
- '</div>'+
- '</div>';
- var ACTION_CATEGORIES = [
- {
- name: 'ด้านลูกค้า (การตลาด/ลูกค้า)', icon: '📣', color: '#3b82f6', bg: '#eff6ff',
- items: [
- { plan: 'แผนเพิ่มรายได้ GM ต่อคันในส่วนบริการผู้ใช้รถยนต์', owner: 'พี่แหม่ม' },
- { plan: 'แผนแสวงหาลูกค้ากิจกรรม TYP@', owner: 'ปุ๋ย+บิว' },
- { plan: 'แผนงานนัดหมายตลอดชีพ PMSg', owner: 'ตั๊ก' },
- { plan: 'แผนงานเรียกลูกค้ารถขาดหายเข้าใช้บริการ', owner: 'ตั๊ก' },
- { plan: 'แผนงานรถนอกระยะ', owner: 'แหม่ม' },
- { plan: 'แผนงานทหารรับจ้าง', owner: 'พี่นก+เอ+น้องแซน' },
- { plan: 'แผนงานการติดตามลูกค้าโครงการพิเศษ', owner: 'มัญชีระ' },
- { plan: 'แผนสื่อสารการตลาดแบบบูรณาการ (IMC)', owner: 'เอิ่น' },
- { plan: 'แผนงาน Social Group Marketing (SGM)', owner: 'เบ็นท์+ไอซ์' },
- { plan: 'NavWay PMSG', owner: 'นก+น้องแซน+เอ' }
- ]
- },
- {
- name: 'ผลิตภัณฑ์เสริม', icon: '💎', color: '#10b981', bg: '#ecfdf5',
- items: [
- { plan: 'แผนงานเพิ่ม GM ผลิตภัณฑ์เสริม 600 บาท/คัน', owner: 'ฟัก' },
- { plan: 'แผนพัฒนาเมนูผลิตภัณฑ์เสริมประจำรุ่น', owner: 'อภิเดช' },
- { plan: 'คำชมของลูกค้าและสื่อสารตามระบบ', owner: 'แอ๋' }
- ]
- },
- {
- name: 'การพัฒนา', icon: '🎓', color: '#8b5cf6', bg: '#f5f3ff',
- items: [
- { plan: '3 ผ่าน (ทักษะ+ทุนองค์กร)', owner: 'มัญชีระ' },
- { plan: '3 ผ่าน กลยุทธ์ขององค์กร', owner: 'ศรอนงค์/มัญชีระ' }
- ]
- },
- {
- name: 'ระบบงาน/กระบวนการ', icon: '⚙️', color: '#f59e0b', bg: '#fffbeb',
- items: [
- { plan: 'เชื่อมระบบการทำงานออนไลน์บนหน้าเว็บกับ BCT', owner: 'ณัชชาญา' },
- { plan: 'วัดเก็บเอกสาร Electronics', owner: 'กมลรัตน์' },
- { plan: 'แผนงานตรวจนับอะไหล่ประจำวัน', owner: 'แอน' },
- { plan: 'แผนงาน Lifetime In.', owner: 'ณัชชาญา' }
- ]
- },
- {
- name: 'การเงิน/อะไหล่', icon: '💰', color: '#ec4899', bg: '#fce7f3',
- items: [
- { plan: 'แผนงานเพิ่ม GM งานขายต่อคัน 60,000', owner: 'ศศิวิมล' },
- { plan: 'แผนลดค่าใช้จ่ายในงานบุ -400,000', owner: 'วนิดา+ศศิวิมล' },
- { plan: 'แผนอะไหล่ Dead Stock', owner: 'แหม่ม' },
- { plan: 'แผนคู่ค้าล้างรถ', owner: '—' },
- { plan: 'แผนลดหนี้สถาบันการเงิน 50%', owner: '—' },
- { plan: 'แผนงานอะไหล่ทางเลือก PMG', owner: '—' }
- ]
- }
- ];
- var MID_TERM_PLANS = [
- { plan: 'ระบบการเรียนรู้ด้วย AI สำหรับช่างซ่อมรถ (AI ในการฝึกอบรม)', focus: 'AI' },
- { plan: 'วิจัยพฤติกรรมลูกค้าเพื่อคาดการความต้องการ', focus: 'การตลาด' },
- { plan: 'แผนงานลูกค้าองค์กร', focus: 'การตลาด', owner: 'ปุ๋ย' },
- { plan: 'ลงทุนในธุรกิจรถไฟฟ้า', focus: 'ธุรกิจใหม่' },
- { plan: 'ลดหนี้สถาบันการเงิน 50%', focus: 'การเงิน' },
- { plan: 'เปิดธุรกิจบริการใน กทม. และภาคตะวันออก', focus: 'ธุรกิจใหม่' },
- { plan: 'ลดเวลาการซ่อมด้วย AI', focus: 'AI' }
- ];
- var LONG_TERM_PLANS = [
- { plan: 'เพิ่มความสามารถในการซ่อมรถไฟฟ้า (EV) และระบบไฮบริด', focus: 'EV' },
- { plan: 'ระบบแนะนำผลิตภัณฑ์เสริมอัตโนมัติจากกล้องตรวจรถ', focus: 'AI' },
- { plan: 'ระบบสมาชิก (แพ็กเกจบำรุงรักษารายปี)', focus: 'บริการ' },
- { plan: 'ระบบนัดหมายอัตโนมัติ', focus: 'ระบบงาน' },
- { plan: 'AI สำหรับตรวจเช็ครถยนต์เบื้องต้น', focus: 'AI' },
- { plan: 'ลดหนี้สถาบันการเงินเป็น 0', focus: 'การเงิน' }
- ];
- html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
- '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:6px;display:flex;align-items:center;gap:8px">📅 Action Plan (แผนปฏิบัติการ)</h2>'+
- '<div style="font-size:12px;color:var(--text3);margin-bottom:14px">แผนงาน 3 ช่วงเวลา · ระยะสั้น 5 หมวดหมู่ (25 รายการ) · ระยะกลาง 7 รายการ · ระยะยาว 6 รายการ · แผนธุรกิจ PMSG ปี 2026</div>'+
- '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">'+
- '<div style="background:#dbeafe;border-radius:10px;padding:14px;text-align:center;border:1px solid #93c5fd">'+
- '<div style="font-size:24px;font-weight:800;color:#1e40af">0-12</div>'+
- '<div style="font-size:13px;font-weight:600;color:#1e40af">เดือน</div>'+
- '<div style="font-size:12px;color:#475569;margin-top:4px">ระยะสั้น · 5 หมวด · 25 รายการ</div>'+
- '</div>'+
- '<div style="background:#dcfce7;border-radius:10px;padding:14px;text-align:center;border:1px solid #86efac">'+
- '<div style="font-size:24px;font-weight:800;color:#166534">1-3</div>'+
- '<div style="font-size:13px;font-weight:600;color:#166534">ปี</div>'+
- '<div style="font-size:12px;color:#475569;margin-top:4px">ระยะกลาง · 7 รายการ</div>'+
- '</div>'+
- '<div style="background:#fef3c7;border-radius:10px;padding:14px;text-align:center;border:1px solid #fcd34d">'+
- '<div style="font-size:24px;font-weight:800;color:#92400e">3-5</div>'+
- '<div style="font-size:13px;font-weight:600;color:#92400e">ปี</div>'+
- '<div style="font-size:12px;color:#475569;margin-top:4px">ระยะยาว · 6 รายการ</div>'+
- '</div>'+
- '</div>'+
- '<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">'+
- '<div style="font-size:15px;font-weight:700;color:#1e40af;margin-bottom:10px;display:flex;align-items:center;gap:6px">📆 ระยะสั้น (0-12 เดือน) — 5 หมวดหมู่ พร้อมตารางแผนงาน+ผู้รับผิดชอบ</div>'+
- '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">';
- ACTION_CATEGORIES.forEach(function(cat, catIdx) {
- html += '<div style="background:'+cat.bg+';border-left:4px solid '+cat.color+';border-radius:8px;padding:12px">'+
- '<div style="font-size:16px;font-weight:700;color:'+cat.color+';margin-bottom:8px;display:flex;align-items:center;gap:6px">'+cat.icon+' '+esc(cat.name)+' <span style="font-size:10px;font-weight:600;opacity:.7">('+cat.items.length+')</span></div>'+
- '<table style="width:100%;font-size:11px;border-collapse:collapse">'+
- '<tbody>'+
- cat.items.map(function(it, itemIdx) {
- var catSrcKey = 'bp_src_action_' + catIdx + '_' + itemIdx;
- return '<tr>'+
- '<td style="padding:5px 6px;border-bottom:1px solid #e2e8f0;color:#475569">'+esc(it.plan)+'</td>'+
- '<td style="padding:5px 6px;border-bottom:1px solid #e2e8f0;color:'+cat.color+';font-weight:600;text-align:right;white-space:nowrap">'+esc(it.owner)+'</td>'+
- '</tr>'+
- '<tr><td colspan="2" style="padding:2px 6px 4px;border-bottom:1px solid #e2e8f0">'+buildSrcInputs(catSrcKey, { showLabel: false })+'</td></tr>';
- }).join('')+
- '</tbody>'+
- '</table>'+
- '</div>';
- });
- html += '</div></div>'+
- '<div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:12px;border-left:4px solid #10b981">'+
- '<div style="font-size:15px;font-weight:700;color:#166534;margin-bottom:10px;display:flex;align-items:center;gap:6px">📈 ระยะกลาง (1-3 ปี) — แผนกลยุทธ์ (7 รายการ) · พร้อมช่องลิงก์ต้นทาง</div>'+
- '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">'+
- MID_TERM_PLANS.map(function(p, idx) {
- var ownerBadge = p.owner ? '<span style="font-size:10px;font-weight:700;color:#1e40af;background:#dbeafe;padding:2px 6px;border-radius:9999px;margin-left:6px">👤 '+esc(p.owner)+'</span>' : '';
- var midSrcKey = 'bp_src_mid_' + idx;
- return '<div style="background:#ffffff80;border:1px solid #86efac;border-radius:8px;padding:10px">'+
- '<div style="font-size:12px;color:#1e293b;line-height:1.5;margin-bottom:4px">'+esc(p.plan)+ownerBadge+'</div>'+
- '<span style="font-size:10px;font-weight:700;color:#166534;background:#dcfce7;padding:2px 8px;border-radius:9999px">🎯 '+esc(p.focus)+'</span>'+
- buildSrcInputs(midSrcKey, { showLabel: true, label: '📎 ลิงก์ต้นทาง + แท็บ/ช่วง' })+
- '</div>';
- }).join('')+
- '</div>'+
- '</div>'+
- '<div style="background:#fffbeb;border-radius:10px;padding:14px;margin-bottom:12px;border-left:4px solid #f59e0b">'+
- '<div style="font-size:15px;font-weight:700;color:#92400e;margin-bottom:10px;display:flex;align-items:center;gap:6px">🔭 ระยะยาว (3-5 ปี) — แผนกลยุทธ์องค์กรอนาคต (6 รายการ) · พร้อมช่องลิงก์ต้นทาง</div>'+
- '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">'+
- LONG_TERM_PLANS.map(function(p, idx) {
- var longSrcKey = 'bp_src_long_' + idx;
- return '<div style="background:#ffffff80;border:1px solid #fcd34d;border-radius:8px;padding:10px">'+
- '<div style="font-size:12px;color:#1e293b;line-height:1.5;margin-bottom:4px">'+esc(p.plan)+'</div>'+
- '<span style="font-size:10px;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 8px;border-radius:9999px">🎯 '+esc(p.focus)+'</span>'+
- buildSrcInputs(longSrcKey, { showLabel: true, label: '📎 ลิงก์ต้นทาง + แท็บ/ช่วง' })+
- '</div>';
- }).join('')+
- '</div>'+
- '</div>'+
- '<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">'+
- '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px">🎯 ตารางแผนงาน (ผู้รับผิดชอบ) — รวมทุกรายการ · พร้อมช่องลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล</div>'+
- '<table style="width:100%;font-size:12px;border-collapse:collapse">'+
- '<thead><tr style="background:#e2e8f0"><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">แผนงาน</th><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">ผู้รับผิดชอบ</th><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">ลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล</th></tr></thead>'+
- '<tbody>';
- ACTION_CATEGORIES.forEach(function(cat, catIdx) {
- cat.items.forEach(function(it, idx) {
- var last = idx === cat.items.length - 1;
- var border = last ? '' : 'border-bottom:1px solid #e2e8f0';
- var srcKey = 'bp_src_action_' + catIdx + '_' + idx;
- html += '<tr><td style="padding:6px 8px;'+border+'">'+esc(it.plan)+'</td>'+
- '<td style="padding:6px 8px;'+border+';color:'+cat.color+';font-weight:600">'+esc(it.owner)+'</td>'+
- '<td style="padding:6px 8px;'+border+'">'+buildSrcInputs(srcKey, { showLabel: false })+'</td></tr>';
- });
- });
- html += '</tbody></table></div>'+
- '<div style="background:#eff6ff;border-radius:10px;padding:14px;margin-top:12px">'+
- '<div style="font-size:15px;font-weight:700;color:#1e40af;margin-bottom:8px">🤖 AI ใน Action Plan (ระยะกลาง/ยาว):</div>'+
- '<ul style="font-size:12px;line-height:1.8;color:#475569;list-style:none;padding:0">'+
- '<li>• ระบบการเรียนรู้ด้วย AI สำหรับช่างซ่อมรถ (AI ในการฝึกอบรม)</li>'+
- '<li>• AI วิจัยพฤติกรรมลูกค้าเพื่อคาดการความต้องการ</li>'+
- '<li>• ลดเวลาการซ่อมด้วย AI</li>'+
- '<li>• ระบบแนะนำผลิตภัณฑ์เสริมอัตโนมัติจากกล้องตรวจรถ</li>'+
- '<li>• AI สำหรับตรวจเช็ครถยนต์เบื้องต้น</li>'+
- '</ul>'+
- '</div>'+
- '</div>';
- var RMM_TIMELINE = [
- { period: '2025 ม.ค.', color: '#3b82f6', items: [
- 'GM ผลิตภัณฑ์เสริม/AU 600 บาท',
- 'AI ตรวจนับอะไหล่',
- 'AI ตรวจนับใบหน้า'
- ]},
- { period: '2025 ก.พ.', color: '#3b82f6', items: [
- 'PMG GM ผลิตภัณฑ์เสริม 300,000 บาท',
- 'Lifetime Incentive',
- 'เมนู MR Ref.Code ใน APP',
- 'คูปองอาหารและเครื่องดื่มบน APP',
- 'ระบบ Multifunction'
- ]},
- { period: '2025 เม.ย.', color: '#3b82f6', items: [
- 'ตรวจรถรอบคันอัตโนมัติ'
- ]},
- { period: '2025 พ.ค.', color: '#3b82f6', items: [
- 'ลูกค้าโหลด App 40,000 ราย',
- 'PMG เคลือบแล้ว 40 AU',
- 'MVP เกมส์บน App PMS'
- ]},
- { period: '2025 มิ.ย.', color: '#3b82f6', items: [
- 'ปรับปรุงอะไหล่ 4 สาขา',
- 'ระบบตรวจสต็อกประจำวัน',
- 'กองทัพทหารแจกปลิว'
- ]},
- { period: '2025 ก.ค.', color: '#3b82f6', items: [
- 'การจ่ายค่าตอบแทน MA (Airdrop)'
- ]},
- { period: '2025 ส.ค.', color: '#3b82f6', items: [
- 'เจ้าหนี้สถาบันการเงินลด 30%',
- 'MA ใหม่เพิ่ม 240 ราย',
- 'Auto Lock ทุกระบบ',
- 'GM หลังบริการเพิ่ม 10%',
- 'ลูกค้าในกลุ่มเปิด-เปล 200,000 ราย',
- 'อบรม MR/MA',
- 'ลูกค้าโหลด App 47,000 ราย',
- 'Community Channel'
- ]},
- { period: '2026', color: '#10b981', items: [
- 'ระบบสมาชิก (แพ็กเกจบำรุงรักษารายปี)',
- 'อะไหล่ทางเลือก 400,000 บาท'
- ]},
- { period: '2027', color: '#f59e0b', items: [
- 'ศึกษาธุรกิจซ่อมรถ/ซ่อมสีในภาคตะวันออก',
- 'GM ผลิตภัณฑ์เสริมศูนย์สี 5 แสนบาท/เดือน',
- 'GM ลูกค้าองค์กร 1.5 ลบ'
- ]}
- ];
- html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
- '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:6px;display:flex;align-items:center;gap:8px">🗺️ RMM-PMSG (Roadmap &amp; Milestone)</h2>'+
- '<div style="font-size:12px;color:var(--text3);margin-bottom:16px">Timeline รายเดือน/รายปี จากแผนธุรกิจ PDF หน้า 31-33 · '+RMM_TIMELINE.length+' ช่วงเวลา</div>';
- html += '<div style="position:relative;padding-left:32px">';
- html += '<div style="position:absolute;left:11px;top:8px;bottom:8px;width:2px;background:linear-gradient(to bottom,#3b82f6 0%,#10b981 70%,#f59e0b 100%)"></div>';
- RMM_TIMELINE.forEach(function(node, idx) {
- var isLast = idx === RMM_TIMELINE.length - 1;
- var dotColor = node.color;
- var itemsHtml = node.items.map(function(it) {
- return '<li style="margin-bottom:4px;padding:4px 8px;background:#ffffff80;border-radius:6px;font-size:11px;color:#475569;border:1px solid #e2e8f0">'+esc(it)+'</li>';
- }).join('');
- html += '<div style="position:relative;margin-bottom:'+(isLast ? '0' : '20px')+';padding-left:8px">'+
- '<div style="position:absolute;left:-29px;top:4px;width:14px;height:14px;border-radius:50%;background:'+dotColor+';border:3px solid #fff;box-shadow:0 0 0 2px '+dotColor+'"></div>'+
- '<div style="display:inline-block;background:'+dotColor+'15;color:'+dotColor+';font-size:12px;font-weight:700;padding:4px 12px;border-radius:9999px;margin-bottom:8px;border:1px solid '+dotColor+'40">'+esc(node.period)+'</div>'+
- '<ul style="list-style:none;padding:0;margin:0;'+(node.items.length > 3 ? 'columns:2;' : '')+'-webkit-columns:2;column-gap:12px">'+itemsHtml+'</ul>'+
- '</div>';
- });
- html += '</div>';
- html += '<div style="margin-top:14px;padding:10px 12px;background:#f8fafc;border-radius:8px;font-size:11px;color:#64748b">'+
- '💡 ข้อมูล Roadmap จากแผนธุรกิจ PMSG PDF หน้า 31-33 · สามารถเพิ่ม/แก้ไข milestone ได้ในอนาคต'+
- '</div>';
- html += '</div>';
- html += '<div class="section-block" style="background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
- '<h2 style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">🔄 กระบวนการบริหารแผนธุรกิจ (Cascade)</h2>'+
- '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:16px">'+
- '<div style="background:#3b82f6;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;min-width:120px">'+
- '🎯 Purpose<br><span style="font-size:11px;opacity:.9">ทุ่มเท รับใช้ผู้ใช้รถยนต์</span>'+
- '</div>'+
- '<div style="font-size:20px;color:#94a3b8">→</div>'+
- '<div style="background:#10b981;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;min-width:120px">'+
- '👁️ Vision<br><span style="font-size:11px;opacity:.9">GM 70:30</span>'+
- '</div>'+
- '<div style="font-size:20px;color:#94a3b8">→</div>'+
- '<div style="background:#f59e0b;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;min-width:120px">'+
- '🗺️ Strategy<br><span style="font-size:11px;opacity:.9">BMC+AOE+4 ทุน</span>'+
- '</div>'+
- '<div style="font-size:20px;color:#94a3b8">→</div>'+
- '<div style="background:#8b5cf6;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;min-width:120px">'+
- '🎯 OKR<br><span style="font-size:11px;opacity:.9">5 กลุ่มงาน 4 Objectives</span>'+
- '</div>'+
- '<div style="font-size:20px;color:#94a3b8">→</div>'+
- '<div style="background:#ec4899;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;min-width:120px">'+
- '📊 KPI<br><span style="font-size:11px;opacity:.9">ตัววัดผล+Dashboard</span>'+
- '</div>'+
- '</div>'+
- '<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-top:10px">'+
- '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px">🔗 ความเชื่อมโยงแผนธุรกิจ ↔ OKR Dashboard:</div>'+
- '<table style="width:100%;font-size:12px;border-collapse:collapse">'+
- '<thead><tr style="background:#e2e8f0">'+
- '<th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">แผนธุรกิจ</th>'+
- '<th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">OKR Dashboard</th>'+
- '<th style="padding:8px;text-align:center;border-bottom:2px solid #cbd5e1;min-width:240px">สถานะ</th>'+
- '</tr></thead>'+
- '<tbody>'+
- buildCascadeRow_('Vision:GM 70:30','GM Dashboard',['gm','gross margin','หลังการขาย','บริการ 70']) +
- buildCascadeRow_('AOE:วิจัยลูกค้า','OKR Business Growth',['aoe','วิจัย','ลูกค้า','growth','ซื้อ']) +
- buildCascadeRow_('IC:BCT','BCT+War Room',['bct','war room','ความครอบคลุม']) +
- buildCascadeRow_('DINC:AI+Data','CEO KPI+AI Course',['ai','data','qc','ตรวจสอบคุณภาพ','ดิจิทัล']) +
- buildCascadeRow_('HC:3 ผ่าน','OKR Team Growth+Eval360',['eval360','3 ผ่าน','พัฒนา','อบรม','mentor']) +
- buildCascadeRow_('Action:GM 600 บาท','PR Dashboard',['pr','600','parts','อะไหล่','ความพร้อม']) +
- buildCascadeRow_('OC:วัฒนธรรม','OKR Community+Mentor',['วัฒนธรรม','community','mentor','ค่านิยม']) +
- '</tbody>'+
- '</table>'+
- '<div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6">💡 ถ้ายังไม่มีสถานะจริง → วาง link Google Sheet ของแหล่งข้อมูลต้นทางในช่องด้านบน + ระบุ "แท็บ/ช่วงข้อมูล" (เช่น <em>แท็บ: KPI สรุป, ช่วง: ม.ค.-มิ.ย.</em>) — ระบบจะบันทึกไว้ใช้ครั้งต่อไป</div>'+
- '</div>'+
- '</div>';
- html += '<div class="section-block" style="background:linear-gradient(135deg,#eff6ff 0%,#f0f9ff 100%);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);border:1px solid #dbeafe">'+
- '<h2 style="font-size:18px;font-weight:700;color:#1e40af;margin-bottom:16px;display:flex;align-items:center;gap:8px">🏅 NCASS-PMSG</h2>'+
- '<div style="text-align:center;margin-bottom:16px">'+
- '<div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:8px">ทุ่มเท รับใช้ผู้ใช้รถยนต์ อย่างใกล้ชิด ให้ประสบความสำเร็จ</div>'+
- '<div style="font-size:14px;color:#475569">Vision: ธุรกิจบริการผู้ใช้รถยนต์ มีสัดส่วน GM 70% (บริการ 70 : ขาย 30)</div>'+
- '</div>'+
- '</div>';
- document.getElementById('section-businessplan').innerHTML = html;
-}
-function editSObjKR(sObjIndex, krIndex) {
- var lsKey = 'bp_sobj_' + sObjIndex + '_' + krIndex;
- var currentText = '';
- try {
- var saved = localStorage.getItem(lsKey);
- if (saved) {
- currentText = saved;
- } else if (sObjIndex === 0 && krIndex === 0) {
- currentText = 'CBNP 39 ลบ (รายได้รวม PMS + PMGG ปี 69)';
- }
- } catch(e) {}
- if (!currentText) {
- var buttons = document.querySelectorAll('button[onclick*="editSObjKR(' + sObjIndex + ',' + krIndex + ')"]');
- if (buttons.length > 0) {
- var li = buttons[0].closest('li');
- if (li) {
- var span = li.querySelector('span[style*="min-width:200px"]');
- if (span) currentText = span.textContent || '';
- }
- }
- }
- var newText = prompt('✏️ แก้ไข KR-' + (krIndex + 1) + ' (S-0' + (sObjIndex + 1) + '):', currentText);
- if (newText === null) return; // ผู้ใช้ยกเลิก
- newText = String(newText).trim();
- if (!newText) {
- alert('กรุณากรอกข้อความ KR');
- return;
- }
- try {
- localStorage.setItem(lsKey, newText);
- } catch(e) {
- alert('❌ ไม่สามารถบันทึกได้: ' + (e && e.message ? e.message : String(e)));
- return;
- }
- try {
- if (typeof google !== 'undefined' && google.script && google.script.run && typeof gsSaveEditKR === 'function') {
- google.script.run.gsSaveEditKR('sobj', sObjIndex, krIndex, newText);
- }
- } catch(e) {}
- var section = document.getElementById('section-businessplan');
- if (section) {
- section.dataset.rendered = ''; // reset เพื่อให้ switchTab เรียก render ใหม่
- renderBusinessPlan();
- section.dataset.rendered = '1';
- }
-}
-function resetSObjKREdit(sObjIndex, krIndex) {
- var lsKey = 'bp_sobj_' + sObjIndex + '_' + krIndex;
- try {
- localStorage.removeItem(lsKey);
- } catch(e) {}
- var section = document.getElementById('section-businessplan');
- if (section) {
- section.dataset.rendered = '';
- renderBusinessPlan();
- section.dataset.rendered = '1';
- }
+ return metas[name] || { color: '#64748b', bg: '#f1f5f9', text: '#334155', badge: 'badge-gray' };
 }
 function esc(str) {
  if (str === null || str === undefined) return '';
- return String(str)
- .replace(/&/g, '&amp;')
- .replace(/</g, '&lt;')
- .replace(/>/g, '&gt;')
- .replace(/"/g, '&quot;')
- .replace(/'/g, '&#039;');
-}
-function saveSrcLink(keyBase, linkInputId, tabInputId) {
- var lsKey = keyBase;
- var linkEl = document.getElementById(linkInputId);
- var tabEl = document.getElementById(tabInputId);
- var data = { link: '', tabRange: '' };
- try {
- var raw = localStorage.getItem(lsKey);
- if (raw) {
- var parsed = JSON.parse(raw);
- if (parsed && typeof parsed === 'object') data = parsed;
- }
- } catch(e) {}
- if (linkEl) data.link = linkEl.value.trim();
- if (tabEl) data.tabRange = tabEl.value.trim();
- try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
- if (linkEl) {
- var orig = linkEl.style.borderColor;
- linkEl.style.borderColor = '#10b981';
- setTimeout(function() { if (linkEl) linkEl.style.borderColor = orig; }, 800);
- }
- if (tabEl) {
- var orig2 = tabEl.style.borderColor;
- tabEl.style.borderColor = '#10b981';
- setTimeout(function() { if (tabEl) tabEl.style.borderColor = orig2; }, 800);
- }
-}
-function saveSrcTab(keyBase, tabInputId) {
- var lsKey = keyBase;
- var tabEl = document.getElementById(tabInputId);
- var data = { link: '', tabRange: '' };
- try {
- var raw = localStorage.getItem(lsKey);
- if (raw) {
- var parsed = JSON.parse(raw);
- if (parsed && typeof parsed === 'object') data = parsed;
- }
- } catch(e) {}
- if (tabEl) data.tabRange = tabEl.value.trim();
- try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
- if (tabEl) {
- var orig = tabEl.style.borderColor;
- tabEl.style.borderColor = '#10b981';
- setTimeout(function() { if (tabEl) tabEl.style.borderColor = orig; }, 800);
- }
+ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function loadSrcData(keyBase) {
- try {
- var raw = localStorage.getItem(keyBase);
- if (raw) {
- var parsed = JSON.parse(raw);
- if (parsed && typeof parsed === 'object') {
- return { link: parsed.link || '', tabRange: parsed.tabRange || '' };
- }
- }
- } catch(e) {}
+ try { var raw = localStorage.getItem(keyBase); if (raw) return JSON.parse(raw); } catch(e) {}
  return { link: '', tabRange: '' };
 }
 function buildSrcInputs(keyBase, opts) {
- opts = opts || {};
- var data = loadSrcData(keyBase);
- var linkId = keyBase + '_link';
- var tabId = keyBase + '_tab';
- var labelHtml = opts.showLabel ? '<div style="font-size:9px;font-weight:700;color:#64748b;margin-bottom:2px">' + esc(opts.label || '📎 ลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล') + '</div>' : '';
- return labelHtml +
- '<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;align-items:center">' +
- '<input type="text" id="' + linkId + '" placeholder="วางลิงก์ Google Sheet" ' +
- 'style="flex:1;min-width:150px;padding:3px 6px;font-size:10px;border:1px solid #cbd5e1;border-radius:4px" ' +
- 'value="' + esc(data.link) + '" ' +
- 'onchange="saveSrcLink(\'' + keyBase + '\',\'' + linkId + '\',\'' + tabId + '\')" />' +
- '<input type="text" id="' + tabId + '" placeholder="แท็บ / ช่วงข้อมูล" ' +
- 'style="width:120px;padding:3px 6px;font-size:10px;border:1px solid #cbd5e1;border-radius:4px" ' +
- 'value="' + esc(data.tabRange) + '" ' +
- 'onchange="saveSrcLink(\'' + keyBase + '\',\'' + linkId + '\',\'' + tabId + '\')" />' +
+ var d = loadSrcData(keyBase);
+ var label = (opts && opts.showLabel) ? '<div style="font-size:11px;font-weight:600;color:#475569;margin-bottom:4px">'+(opts.label||'')+'</div>' : '';
+ return label + '<div style="display:flex;gap:4px;flex-wrap:wrap">'+
+ '<input type="text" id="'+keyBase+'_link" placeholder="วาง link..." value="'+esc(d.link)+'" onchange="saveSrcLink(''+keyBase+'')" onclick="event.stopPropagation()" style="font-size:11px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;flex:1;min-width:120px">'+
+ '<input type="text" id="'+keyBase+'_tab" placeholder="แท็บ/ช่วง" value="'+esc(d.tabRange)+'" onchange="saveSrcTab(''+keyBase+'')" onclick="event.stopPropagation()" style="font-size:11px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;width:100px;color:#64748b">'+
  '</div>';
 }
+function saveSrcLink(keyBase, linkInputId, tabInputId) {
+ var linkEl = document.getElementById(keyBase+'_link');
+ var tabEl = document.getElementById(keyBase+'_tab');
+ var data = { link: linkEl?linkEl.value.trim():'', tabRange: tabEl?tabEl.value.trim():'' };
+ try { localStorage.setItem(keyBase, JSON.stringify(data)); } catch(e) {}
+}
+function saveSrcTab(keyBase, tabInputId) { saveSrcLink(keyBase); }
 function toggleSrcEdit(key) {
- var el = document.getElementById('srcEdit_' + key);
- if (el) {
- el.style.display = el.style.display === 'none' ? 'block' : 'none';
- }
+ var el = document.getElementById('srcEdit_'+key);
+ if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
 }
-function getDeptColor(name) {
- var c = DEPT_COLORS[name];
- return c ? c.color : '#64748b';
-}
-function getDeptMeta(name) {
- var c = DEPT_COLORS[name];
- return c ? c : { color: '#64748b', bg: '#f1f5f9', text: '#334155', badge: 'badge-gray' };
-}
+
 function classifyKR(text) {
  var n = text.replace(/\s+/g, ' ').trim();
  for (var pi = 0; pi < 3; pi++) {
