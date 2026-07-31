@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>S-Objectives — แผนธุรกิจ PMSG</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:#f8fafc;color:#1e293b;padding:16px}
+.s-header{background:linear-gradient(135deg,#0f172a,#1e3a5f,#2563eb);color:#fff;padding:20px;border-radius:12px;margin-bottom:16px}
+.s-header h1{font-size:22px;margin-bottom:4px}
+.s-header p{font-size:13px;opacity:.8}
+.s-obj{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.s-obj-title{font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.s-badge{font-size:12px;font-weight:700;padding:2px 10px;border-radius:6px;color:#fff}
+.kr-item{padding:10px 12px;background:#f8fafc;border-radius:8px;margin-bottom:8px;border-left:4px solid #e2e8f0}
+.kr-text{font-size:15px;color:#475569}
+.kr-result{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.kr-actual{font-size:15px;font-weight:700}
+.kr-target{font-size:13px;color:#94a3b8}
+.kr-bar{flex:1;min-width:80px;height:10px;background:#e2e8f0;border-radius:9999px;overflow:hidden}
+.kr-bar-fill{height:100%;border-radius:9999px}
+.kr-pct{font-size:16px;font-weight:700;min-width:60px;text-align:right}
+.kr-status{font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px}
+.kr-links{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
+.kr-links a{font-size:12px;text-decoration:none;font-weight:600;padding:2px 8px;border-radius:4px}
+.link-dash{color:#3b82f6}.link-sheet{color:#059669}
+</style>
+</head>
+<body>
+<div class="s-header">
+<h1>🎯 S-Objectives (Strategic Objectives)</h1>
+<p>3 ยุทธศาสตร์ · 17 ตัววัดผล · แผนธุรกิจ PMSG ปี 69</p>
+</div>
+<div id="content"></div>
+<script>
+var S=[{n:1,c:'#3b82f6',code:'S-01',title:'CBNP 39 ลบ ปี 69 (PMS + PMGG)',krs:[{t:'CBNP 39 ลบ (รายได้รวม PMS+PMGG ปี 69)',a:'23.48 ลบ.',tg:'38.5 ลบ.',p:61,s:'⚠️ ใกล้เป้า',src:'CEO',sh:'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit'},{t:'GM งานขายต่อคัน 60,000 บาท',a:'64,390 บาท',tg:'60,000 บาท',p:107,s:'✅ ทะลุเป้า',src:'BCT Sale',sh:'https://docs.google.com/spreadsheets/d/1BpvNBZZmYkYsllWyew-kutUTYD8DPhmSXL_nlRUYZdI/edit'},{t:'GM งานบริการผู้ใช้รถยนต์ 12 ลบ',a:'10.3 ลบ.',tg:'12 ลบ.',p:86,s:'⚠️ ใกล้เป้า',src:'GM Dashboard',sh:'https://docs.google.com/spreadsheets/d/1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds/edit'},{t:'ส่งมอบรถงานเคลม 300 คัน',a:'235 คัน/เดือน',tg:'300 คัน',p:78,s:'⚠️ ใกล้เป้า',src:'Repair Flow',sh:'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit'},{t:'GM ผลิตภัณฑ์เสริม 300,000 บาท/เดือน',a:'281,552 บาท',tg:'300,000 บาท',p:94,s:'⚠️ ใกล้เป้า',src:'PR Dashboard',sh:'https://docs.google.com/spreadsheets/d/1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds/edit'},{t:'เคลือบแก้ว 30 คัน/เดือน',a:'58 คัน/เดือน',tg:'30 คัน/เดือน',p:193,s:'✅ เกินเป้า',src:'GM Supplement',sh:'https://docs.google.com/spreadsheets/d/1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds/edit'},{t:'เพิ่ม GM ผลิตภัณฑ์เสริมลูกค้าองค์กร 50,000 บาท',a:'32,725 บาท',tg:'50,000 บาท',p:65,s:'⚠️ ใกล้เป้า',src:'ลูกค้าองค์กร',sh:'https://docs.google.com/spreadsheets/d/14cTe13-Rxmz2z7pl6Sj-zj2LtapXuQ8XBHFL_F88SDk/edit'}]},{n:2,c:'#8b5cf6',code:'S-02',title:'ระบบงานอัตโนมัติ Online',krs:[{t:'ดูสถานะรถจากซ่อมผ่านมือถือ 100%',a:'85%',tg:'100%',p:85,s:'⚠️ ใกล้เป้า',src:'Repair Flow',sh:'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit'},{t:'ลูกค้านัดหมาย 100%',a:'75%',tg:'100%',p:75,s:'⚠️ ใกล้เป้า',src:'BCT Calendar',sh:'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit'},{t:'ลูกค้าเข้าใช้บริการผ่านหน้าร้านดิจิทัล',a:'45,000 ราย',tg:'75,000 ราย',p:60,s:'🔴 ต่ำกว่าเป้า',src:'CEO KPI',sh:'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit'},{t:'ตรวจเช็คคุณภาพสีอัตโนมัติ 20 คัน/เดือน',a:'18 คัน/เดือน',tg:'20 คัน/เดือน',p:90,s:'⚠️ ใกล้เป้า',src:'BCT Calendar',sh:'https://docs.google.com/spreadsheets/d/1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds/edit'}]},{n:3,c:'#10b981',code:'S-03',title:'สร้างความใกล้ชิด พัฒนาพนักงาน (Customer Intimacy)',krs:[{t:'สร้างเครือข่าย Navway MA 300 ราย',a:'180 ราย',tg:'300 ราย',p:60,s:'🔴 ต่ำกว่าเป้า',src:'CEO KPI',sh:'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit'},{t:'รับใช้ลูกค้าเข้ากลุ่ม SGM 200,000 ราย',a:'120,000 ราย',tg:'200,000 ราย',p:60,s:'🔴 ต่ำกว่าเป้า',src:'CEO KPI',sh:'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit'},{t:'ผลิตคอนเทนต์ 20 Content/เดือน (SGM)',a:'12 Content/เดือน',tg:'20 Content/เดือน',p:60,s:'🔴 ต่ำกว่าเป้า',src:'CEO KPI',sh:'https://docs.google.com/spreadsheets/d/1tXvG1gIwVThXdRRTrGsYd4fnp0a4Gzni65-ErXDe28s/edit'},{t:'สร้างเครือข่ายคู่ค้า อู่สีและอู่ข่อมบรถ',a:'15 อู่',tg:'20 อู่',p:75,s:'⚠️ ใกล้เป้า',src:'Repair Flow',sh:'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit'},{t:'สร้างเครือข่าย MR ส่งศูนย์ซ่อมสี GM 50,000 บาท',a:'35,000 บาท',tg:'50,000 บาท',p:70,s:'⚠️ ใกล้เป้า',src:'Repair Flow',sh:'https://docs.google.com/spreadsheets/d/1U2hJLUKCzuYU0pBlVG2f86F51shXw0ZZW_33FuTMM3g/edit'},{t:'ปิดเพิ่มลูกค้าจากกลุ่มรับใช้',a:'68 คัน',tg:'80 คัน',p:85,s:'⚠️ ใกล้เป้า',src:'ลูกค้าองค์กร',sh:'https://docs.google.com/spreadsheets/d/14cTe13-Rxmz2z7pl6Sj-zj2LtapXuQ8XBHFL_F88SDk/edit'}]}];
+function e(s){return String(s).replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+var h='';
+S.forEach(function(s){
+h+='<div class="s-obj"><div class="s-obj-title"><span class="s-badge" style="background:'+s.c+'">'+s.code+'</span> '+e(s.title)+'</div>';
+s.krs.forEach(function(k,i){
+var bc=k.p>=100?'#10b981':(k.p>=80?'#f59e0b':'#ef4444');
+h+='<div class="kr-item" style="border-left-color:'+bc+'"><div style="display:flex;gap:6px;flex-wrap:wrap"><strong style="color:'+s.c+';font-size:15px">KR-'+(i+1)+':</strong><span class="kr-text">'+e(k.t)+'</span></div><div class="kr-result"><span class="kr-actual" style="color:'+bc+'">📊 '+e(k.a)+'</span><span class="kr-target">/ '+e(k.tg)+'</span><div class="kr-bar"><div class="kr-bar-fill" style="width:'+Math.min(k.p,100)+'%;background:'+bc+'"></div></div><span class="kr-pct" style="color:'+bc+'">'+k.p+'%</span><span class="kr-status" style="background:'+bc+'20;color:'+bc+'">'+k.s+'</span></div><div class="kr-links"><a href="'+e(k.sh)+'" target="_blank" class="link-sheet">📎 Google Sheet ↗</a></div></div>';
+});
+h+='</div>';
+});
+document.getElementById('content').innerHTML=h;
+</script>
+</body>
+</html>

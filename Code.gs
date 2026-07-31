@@ -331,7 +331,7 @@ function servePdpaLogin(redirectQuery, errorMsg, step, fingerprint) {
       '<div style="text-align:center"><span class="pdpa-badge">⛔ ห้ามเผยแพร่โดยไม่ได้รับอนุญาต</span></div>'+
       errorHtml+
         alertHtml+
-        '<form id="loginForm" method="get" action="'+baseUrl+'" target="_top">'+
+        '<form id="loginForm" method="post" action="'+baseUrl+'" target="_top">'+
           '<input type="hidden" name="pwdok" value="1">'+
           '<input type="hidden" name="rquery" value="'+(redirectQuery||'')+'">'+
           '<div class="input-group">'+
@@ -1489,6 +1489,12 @@ function doGet(e) {
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
   
+  if (p.sobjectives === '1') {
+    return HtmlService.createHtmlOutputFromFile('SObjectives')
+      .setTitle('S-Objectives — แผนธุรกิจ PMSG')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
   if (p.okrall === '1') {
     // ═══ Multi-Department OKR Dashboard (5 departments) ═══
     if (p.action === 'setupTrigger') {
