@@ -1,164 +1,40 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Autobody Dashboard — Login</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: "Sarabun", "Segoe UI", Tahoma, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-    .login-card {
-      background: #1e293b;
-      border-radius: 16px;
-      padding: 40px 35px;
-      max-width: 420px;
-      width: 90%;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    }
-    .login-card .icon {
-      text-align: center;
-      font-size: 48px;
-      margin-bottom: 16px;
-    }
-    .login-card h1 {
-      text-align: center;
-      font-size: 22px;
-      color: #f1f5f9;
-      margin-bottom: 6px;
-    }
-    .login-card .subtitle {
-      text-align: center;
-      font-size: 14px;
-      color: #94a3b8;
-      margin-bottom: 28px;
-    }
-    .form-group { margin-bottom: 18px; }
-    .form-group label {
-      display: block;
-      font-size: 14px;
-      color: #cbd5e1;
-      margin-bottom: 6px;
-      font-weight: 600;
-    }
-    .form-group input {
-      width: 100%;
-      padding: 12px 16px;
-      border: 2px solid #475569;
-      border-radius: 10px;
-      background: #0f172a;
-      color: #f1f5f9;
-      font-size: 16px;
-      font-family: inherit;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    .form-group input:focus {
-      border-color: #3b82f6;
-    }
-    .form-group input::placeholder { color: #64748b; }
-    .btn-login {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #2563eb, #1e3a5f);
-      color: #fff;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: opacity 0.2s;
-      font-family: inherit;
-    }
-    .btn-login:hover { opacity: 0.9; }
-    .btn-login:active { transform: scale(0.98); }
-    .error-msg {
-      background: rgba(239,68,68,0.15);
-      border: 1px solid #ef4444;
-      color: #fca5a5;
-      padding: 12px 16px;
-      border-radius: 10px;
-      font-size: 14px;
-      text-align: center;
-      margin-bottom: 20px;
-      display: none;
-    }
-    .error-msg.show { display: block; }
-    .footer {
-      text-align: center;
-      margin-top: 24px;
-      font-size: 12px;
-      color: #64748b;
-    }
-    .badge {
-      display: inline-block;
-      background: rgba(59,130,246,0.15);
-      color: #60a5fa;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      margin-top: 8px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PKG Auto Body — Login</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:linear-gradient(135deg,#0f172a,#1e3a5f,#2563eb);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.c{background:#fff;border-radius:16px;padding:36px 32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.l{font-size:44px;text-align:center;margin-bottom:8px}
+h1{font-size:20px;font-weight:800;text-align:center;margin-bottom:4px}
+.s{font-size:13px;text-align:center;color:#64748b;margin-bottom:16px}
+.b{display:inline-block;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:14px}
+.g{margin-bottom:14px}
+label{display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px}
+input{width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;font-family:inherit}
+input:focus{outline:none;border-color:#2563eb}
+.o{text-align:center;letter-spacing:6px;font-size:20px}
+button{width:100%;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;border:none;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer}
+.n{margin-top:14px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;font-size:11px;color:#1e40af;line-height:1.6}
+</style>
 </head>
 <body>
-  <div class="login-card">
-    <div class="icon">🔧</div>
-    <h1>Autobody Dashboard</h1>
-    <p class="subtitle">เข้าสู่ระบบ Bodyshop Workflow</p>
-
-    <!-- Error message (injected by Code.gs) -->
-    <div class="error-msg show" id="errorDisplay">__ERROR_MSG__</div>
-
-    <!--
-      Single form: password + 2FA together (PDPA iron rule #5).
-      action="__SCRIPT_URL__" is replaced at runtime by
-      ScriptApp.getService().getUrl() in Code.gs renderLogin().
-      method="get" — doGet handles login directly, NO redirect
-      (iron rule #3: doPost redirects all fail in sandbox).
-    -->
-    <form method="get" action="__SCRIPT_URL__" target="_top">
-      <input type="hidden" name="pwdok" value="1">
-
-      <div class="form-group">
-        <label for="pass">รหัสผ่าน (Password)</label>
-        <input type="password" name="pass" id="pass"
-               placeholder="กรุณากรอกรหัสผ่าน"
-               autocomplete="current-password" required>
-      </div>
-
-      <div class="form-group">
-        <label for="otp">รหัส 2FA</label>
-        <input type="text" name="otp" id="otp"
-               placeholder="กรุณากรอกรหัส 2FA 6 หลัก"
-               inputmode="numeric" pattern="[0-9]*" maxlength="6"
-               autocomplete="one-time-code" required>
-      </div>
-
-      <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
-    </form>
-
-    <div class="footer">
-      <span class="badge">PDPA Protected</span><br>
-      Autobody Dashboard &copy; 2026
-    </div>
-  </div>
-
-  <script>
-    // Hide error box if empty (no error from server)
-    (function() {
-      var el = document.getElementById('errorDisplay');
-      if (el && el.textContent.trim() === '') {
-        el.classList.remove('show');
-      }
-    })();
-  </script>
+<div class="c">
+<div class="l">🔐</div>
+<h1>PKG Auto Body Dashboard</h1>
+<div class="s">ศูนย์ซ่อมตัวถังและสี — ระบบจำกัดการเข้าถึง 2FA</div>
+<div style="text-align:center"><span class="b">⛔ ห้ามเผยแพร่โดยไม่ได้รับอนุญาต</span></div>
+<form method="get" action="__SCRIPT_URL__" target="_top">
+<input type="hidden" name="pwdok" value="1">
+<input type="hidden" name="pkg" value="1">
+<div class="g"><label>🔑 รหัสผ่าน</label><input type="password" name="pass" placeholder="กรุณาใส่รหัสผ่าน" autofocus required></div>
+<div class="g"><label>📱 รหัส 2FA (4 หลัก)</label><input type="text" name="otp" class="o" placeholder="••••" maxlength="4" pattern="[0-9]{4}" required></div>
+<button type="submit">เข้าสู่ระบบ →</button>
+</form>
+<div class="n"><strong>📋 PDPA:</strong> ข้อมูลส่วนบุคคล — ห้ามส่งออก เผยแพร่ หรือเข้าถึงโดยไม่ได้รับอนุญาต</div>
+</div>
 </body>
 </html>
