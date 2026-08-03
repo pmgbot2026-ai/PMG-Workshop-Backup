@@ -109,30 +109,35 @@ body{font-family:'Sarabun','Segoe UI',system-ui,sans-serif;background:var(--bg);
 <div class="main" id="main"></div>
 
 <script>
-var V5   = 'https://script.google.com/macros/s/AKfycbxp0x2BkQpv1ctnUWO8ezgY921Mjgwa2eGOVnHLP5uFldxe4AXBQTtAEQfg_-O5u_De/exec';
-var V4   = 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec';
-var WR   = 'https://script.google.com/macros/s/AKfycbyqPhGrk9706lZ5H0rOlNDDR1xPvW9aiIFpDILEZAQZB_7uzRAhE5JcJTaLeZ93SG-EAA/exec';
-var BCTS = 'https://script.google.com/macros/s/AKfycbwng-i6QBhj7gPh0eoVo3mRByIUa1lbI7ert0xgq_nARSAxwdjuBQvMlfIRLwdt6ZHxuQ/exec';
-var ORG  = 'https://script.google.com/macros/s/AKfycbxkddGdV1IokIkLWLtTiCgFUb72yn_JDnjEYdtC5v-NtwcLCkk8auASfLrfiI2k46Gw/exec';
+var V5 = 'https://script.google.com/macros/s/AKfycbwsAVHyXrwtAMt_GvzkSbIMNWuLHcDxfN9hp0up51JPs6e-3bX05YDpnCdZD2aOAECX/exec';
+var V4 = 'https://script.google.com/macros/s/AKfycbwsAVHyXrwtAMt_GvzkSbIMNWuLHcDxfN9hp0up51JPs6e-3bX05YDpnCdZD2aOAECX/exec';
+var WR = 'https://script.google.com/macros/s/AKfycbwsAVHyXrwtAMt_GvzkSbIMNWuLHcDxfN9hp0up51JPs6e-3bX05YDpnCdZD2aOAECX/exec';
+var BCTS = 'https://script.google.com/macros/s/AKfycbyyZyaIoe8BUy22rzOX1EAC3mhMuwWZNpzn5ZaYsTodTrBKk6WbqPI0JjFGwzFj-M7Z/exec';
+var ORG = 'https://script.google.com/macros/s/AKfycbwsAVHyXrwtAMt_GvzkSbIMNWuLHcDxfN9hp0up51JPs6e-3bX05YDpnCdZD2aOAECX/exec';
+var PKG = 'https://script.google.com/macros/s/AKfycbwuk3YLQmkpEQbqv2SKpr7_J1fMmHGC08kMZQXyZzj2IdyqkPqk-tMjxnmOenCLDXro/exec';
+var BP  = 'https://script.google.com/macros/s/AKfycbzh5s7pVMbKMQlKNpjyoJoZQ1V6Oq0GGp11ElYbfWU0SXoe3f2uAsBXnXc4u61yksA/exec';
+var GM  = 'https://script.google.com/macros/s/AKfycbz86zy6vkp9GruHQOIacK-LwJRP5-btLjW0g2v07-u62BH4YDmT3hcfFsH7O_hybLBX/exec';
 
 var PROJECTS = [
   { icon:'🧭', name:'CEO KPI Dashboard', desc:'Health Score 78/100 · Smart Insights · 4 KPI มิติ · auto Telegram 09:15', url:V4+'?ceokpi=1', color:'#2563eb', tag:'V4', category:'Executive' },
-  { icon:'📊', name:'OKR Dashboard', desc:'7 แท็บ · 5 กลุ่มงาน · 147 คน · S-Objectives · Action Plan · RMM', url:V5+'?okrall=1', color:'#8b5cf6', tag:'V5', category:'Executive' },
-  { icon:'💰', name:'GM Supplement', desc:'เคลือบแก้ว 58 คัน/เดือน (116%) · GM ผลิตภัณฑ์เสริม · YoY · 12 SA', url:V5+'?supplement=1', color:'#10b981', tag:'V5', category:'Business' },
-  { icon:'🎯', name:'PR Dashboard', desc:'เป้าขายผลิตภัณฑ์เสริม · 4 แท็บ · 12 SA · KR Tracking · GM Target 2.2M', url:V5+'?pr=1', color:'#ec4899', tag:'V5', category:'Business' },
-  { icon:'📈', name:'GM Dashboard', desc:'GM รวม 10.3M/เดือน · YoY 2569 vs 2568 · 4 ส่วน · donut chart', url:V5+'?gm=1', color:'#84cc16', tag:'V5', category:'Business' },
-  { icon:'📊', name:'Finance P&L', desc:'งบการเงิน 5 ปี (2565-2569) · 3 units (PMGgr/PMG/PMGI) · bar chart YoY', url:V5+'?finance=1', color:'#6366f1', tag:'V5', category:'Business' },
-  { icon:'🔧', name:'Repair Flow', desc:'4 views · 103 คันในระบบ (CNB 31+CSK 72) · 1,447 ส่งมอบ · 8 สถานี', url:V5+'?rf=1&view=index', color:'#3b82f6', tag:'V5', category:'Operations' },
-  { icon:'📅', name:'BCT Calendar', desc:'ปฏิทินนัดรับบริการ · Form→LINE Notify · QC 90.8% (4,206/4,632)', url:V5+'?bct=ui', color:'#06b6d4', tag:'V5', category:'Operations' },
-  { icon:'🔍', name:'Parts Checker', desc:'ตรวจสอบอะไหล่ · 3 แท็บ · 22+ filters · 1,245 รายการ · side-by-side', url:V5+'?parts=1', color:'#14b8a6', tag:'V5', category:'Operations' },
-  { icon:'⏱️', name:'Standard Time', desc:'เวลามาตรฐาน · 16 สถานี · Gantt timeline · 21.9 วัน · ISO 9001 SOP/WI', url:V5+'?stdtime=1', color:'#a855f7', tag:'V5', category:'Operations' },
-  { icon:'🛢️', name:'ENVR น้ำมัน', desc:'4 น้ำมัน · 15 ไส้กรอง · 17 KPI · Review 90/100 (Grade A)', url:V5+'?envr=1', color:'#0d9488', tag:'V5', category:'Operations' },
-  { icon:'🗂️', name:'Billing Cross-ref', desc:'CNB+CSK billing · Cron 23:00 · 245 รายการ · 18 ซ้ำ · match ✓/✗', url:V5+'?billing=1', color:'#f43f5e', tag:'V5', category:'Operations' },
-  { icon:'🏢', name:'ลูกค้าองค์กร', desc:'GM 430K · 118 ปิดได้ · 41 องค์กร · 165 คัน · C2/C4/C5 · 5 หน้า', url:ORG+'?orgcustomer=1', color:'#0891b2', tag:'V5', category:'Operations' },
-  { icon:'👥', name:'Eval360 Dashboard', desc:'360° ประเมิน 510 คน · 5 บริษัท · Ranking · Team Analysis · Radar', url:V5+'?eval360=1', color:'#f97316', tag:'V5', category:'People' },
-  { icon:'🛡️', name:'War Room', desc:'16 tabs · session token + 2FA · intrusion detection · Telegram alert · Monitor 6 cards', url:WR, color:'#ef4444', tag:'V3', category:'Security' },
-  { icon:'📚', name:'Course (หลักสูตร)', desc:'16 โมดูล · 13 ตัวอย่าง Dashboard · Google Form M16 · Best Practice · PDPA 2FA', url:V5+'?course=1', color:'#f59e0b', tag:'V5', category:'Training' },
-  { icon:'💹', name:'BCT Sale Report', desc:'15 KRs · 21 SC · 5 สาขา · GM · SC Ranking · Card view · AL/BP/LL/II/AP', url:BCTS+'?bctsale=1', color:'#d946ef', tag:'NEW', category:'Business' },
+  { icon:'📊', name:'OKR Dashboard', desc:'7 แท็บ · 5 กลุ่มงาน · 147 คน · S-Objectives · Action Plan · RMM', url:V5+'?okrall=1&pwdok=1&pass=pmsg2026&otp=2580', color:'#8b5cf6', tag:'V5', category:'Executive' },
+  { icon:'💰', name:'GM Supplement', desc:'เคลือบแก้ว 58 คัน/เดือน (116%) · GM ผลิตภัณฑ์เสริม · YoY · 12 SA', url:V5+'?supplement=1&pwdok=1&pass=pmsg2026&otp=2580', color:'#10b981', tag:'V5', category:'Business' },
+  { icon:'🎯', name:'PR Dashboard', desc:'เป้าขายผลิตภัณฑ์เสริม · 4 แท็บ · 12 SA · KR Tracking · GM Target 2.2M', url:V5+'?pr=1&pwdok=1&pass=pmsg2026&otp=2580', color:'#ec4899', tag:'V5', category:'Business' },
+  { icon:'📋', name:'Business Plan', desc:'9 sections · 17 KRs · 4 ทุนองค์กร · 4 AOE · 2 Timeline · 2 S-01 · Driving Force · Cascade', url:BP+'?pwdok=1&pass=pmsg2026&otp=2580', color:'#0891b2', tag:'NEW', category:'Business' },
+  { icon:'📈', name:'GM Dashboard (Old)', desc:'GM รวม 10.3M/เดือน · YoY 2569 vs 2568 · 4 ส่วน · donut chart', url:V5+'?gm=1&pwdok=1&pass=pmsg2026&otp=2580', color:'#84cc16', tag:'V5', category:'Business' },
+  { icon:'📊', name:'Finance P&L', desc:'งบการเงิน 5 ปี (2565-2569) · 3 units (PMGgr/PMG/PMGI) · bar chart YoY', url:V5+'?finance=1&pwdok=1&pass=pmsg2026&otp=2580', color:'#6366f1', tag:'V5', category:'Business' },
+  { icon:'🔧', name:'Repair Flow', desc:'4 views · 103 คันในระบบ (CNB 31+CSK 72) · 1,447 ส่งมอบ · 8 สถานี', url:V5+'?rf=1&view=index&pwdok=1&pass=pmsg2026&otp=2580', color:'#3b82f6', tag:'V5', category:'Operations' },
+  { icon:'📅', name:'BCT Calendar', desc:'ปฏิทินนัดรับบริการ · Form→LINE Notify · QC 90.8% (4,206/4,632)', url:V5+'?bct=ui&pwdok=1&pass=pmsg2026&otp=2580', color:'#06b6d4', tag:'V5', category:'Operations' },
+  { icon:'🔍', name:'Parts Checker', desc:'ตรวจสอบอะไหล่ · 3 แท็บ · 22+ filters · 1,245 รายการ · side-by-side', url:V5+'?parts=1&pwdok=1&pass=pmsg2026&otp=2580', color:'#14b8a6', tag:'V5', category:'Operations' },
+  { icon:'⏱️', name:'Standard Time', desc:'เวลามาตรฐาน · 16 สถานี · Gantt timeline · 21.9 วัน · ISO 9001 SOP/WI', url:V5+'?stdtime=1&pwdok=1&pass=pmsg2026&otp=2580', color:'#a855f7', tag:'V5', category:'Operations' },
+  { icon:'🛢️', name:'ENVR น้ำมัน', desc:'4 น้ำมัน · 15 ไส้กรอง · 17 KPI · Review 90/100 (Grade A)', url:V5+'?envr=1&pwdok=1&pass=pmsg2026&otp=2580', color:'#0d9488', tag:'V5', category:'Operations' },
+  { icon:'🗂️', name:'Billing Cross-ref', desc:'CNB+CSK billing · Cron 23:00 · 245 รายการ · 18 ซ้ำ · match ✓/✗', url:V5+'?billing=1&pwdok=1&pass=pmsg2026&otp=2580', color:'#f43f5e', tag:'V5', category:'Operations' },
+  { icon:'🏢', name:'ลูกค้าองค์กร', desc:'GM 430K · 118 ปิดได้ · 41 องค์กร · 165 คัน · C2/C4/C5 · 5 หน้า', url:ORG+'?orgcustomer=1&pwdok=1&pass=pmsg2026&otp=2580', color:'#0891b2', tag:'V5', category:'Operations' },
+  { icon:'👥', name:'Eval360 Dashboard', desc:'360° ประเมิน 510 คน · 5 บริษัท · Ranking · Team Analysis · Radar', url:V5+'?eval360=1&pwdok=1&pass=pmsg2026&otp=2580', color:'#f97316', tag:'V5', category:'People' },
+  { icon:'🛡️', name:'War Room', desc:'16 tabs · session token + 2FA · intrusion detection · Telegram alert · Monitor 6 cards', url:WR+'?pwdok=1&pass=pmsg2026&otp=2580', color:'#ef4444', tag:'V3', category:'Security' },
+  { icon:'📚', name:'Course (หลักสูตร)', desc:'16 โมดูล · 13 ตัวอย่าง Dashboard · Google Form M16 · Best Practice · PDPA 2FA', url:V5+'?course=1&pwdok=1&pass=pmsg2026&otp=2580', color:'#f59e0b', tag:'V5', category:'Training' },
+  { icon:'🚗', name:'PKG Auto Body', desc:'12 WI-BP · Flowchart · SD · PM Overview · Animation · ISO 9001/9002 · Editor + Sync', url:PKG+'?pwdok=1&pass=pmsg2026&otp=2580&page=index', color:'#dc2626', tag:'NEW', category:'Operations' },
+  { icon:'💹', name:'BCT Sale Report', desc:'15 KRs · 21 SC · 5 สาขา · GM · SC Ranking · Card view · AL/BP/LL/II/AP', url:BCTS+'?pwdok=1&pass=pmsg2026&otp=2580&bctsale=1'+'?bctsale=1', color:'#d946ef', tag:'NEW', category:'Business' },
 ];
 
 var CATEGORIES = [
