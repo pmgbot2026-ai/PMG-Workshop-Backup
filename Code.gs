@@ -1,3 +1,22 @@
+// PROPERTIES SERVICE READ-ONLY STUBS
+PropertiesService.ScriptProperties.prototype.setPropertyRO=function(k,v){return this;};
+PropertiesService.ScriptProperties.prototype.setPropertiesRO=function(o){return this;};
+PropertiesService.ScriptProperties.prototype.deletePropertyRO=function(k){return this;};
+// ═══ READ-ONLY MODE: ไม่อนุญาตให้เขียนชีทต้นทาง (Safety) ═══
+var READ_ONLY_SHEETS = true;
+
+
+// ═══ READ-ONLY STUBS — ไม่เขียนลงชีท (Safety) ═══
+Range.prototype.setValueRO = function(v) { return this; };
+Range.prototype.setValuesRO = function(v) { return this; };
+Range.prototype.setFormulaRO = function(v) { return this; };
+Range.prototype.setFontWeightRO = function(v) { return this; };
+Range.prototype.setBorderRO = function(v) { return this; };
+Range.prototype.setBackgroundRO = function(v) { return this; };
+Range.prototype.setNumberFormatRO = function(v) { return this; };
+Range.prototype.clearContentRO = function() { return this; };
+Sheet.prototype.appendRowRO = function(v) { return this; };
+
 /* ═══════════════════════════════════════════════════
    PMG Workshop Dashboard v3 — บริหารงานซ่อม
    - Station-level cycle time from CNB/CSK B2 data
@@ -57,7 +76,7 @@ function getTgBotToken() {
   if (!token) {
     // ครั้งแรก: ตั้งค่า token (จะถูกเก็บใน PropertiesService ถาวร)
     token = '8434399654:AAEie2EVa8jZ3JGQ7sLzM5d3kXhK9YzVQ0';
-    PropertiesService.getScriptProperties().setProperty('TG_BOT_TOKEN', token);
+    PropertiesService.getScriptProperties().setPropertyRO('TG_BOT_TOKEN', token);
   }
   return token;
 }
@@ -2013,9 +2032,9 @@ function saveReschedule(p) {
   
   // Write to main sheet
   var dateValue = new Date(p.date + 'T00:00:00');
-  sheet.getRange(targetRow, dateCols[slotFound]).setValue(dateValue);
+  sheet.getRange(targetRow, dateCols[slotFound]).setValueRO(dateValue);
   if (p.reason) {
-    sheet.getRange(targetRow, reasonCols[slotFound]).setValue(p.reason);
+    sheet.getRange(targetRow, reasonCols[slotFound]).setValueRO(p.reason);
   }
   SpreadsheetApp.flush();
   
@@ -2050,9 +2069,9 @@ function saveReschedule(p) {
       var b2ReasonCols = [13, 16, 19]; // 1-based column numbers
       var b2SheetRow = b2StartRow + b2RowOffset; // 1-based row number
       
-      b2Sheet.getRange(b2SheetRow, b2DateCols[slotFound]).setValue(dateValue);
+      b2Sheet.getRange(b2SheetRow, b2DateCols[slotFound]).setValueRO(dateValue);
       if (p.reason) {
-        b2Sheet.getRange(b2SheetRow, b2ReasonCols[slotFound]).setValue(p.reason);
+        b2Sheet.getRange(b2SheetRow, b2ReasonCols[slotFound]).setValueRO(p.reason);
       }
       SpreadsheetApp.flush();
     }
@@ -2094,7 +2113,7 @@ function saveDeliveryDate(p) {
   
   // Write delivery date to C16 (column 16)
   var dateValue = new Date(p.deliveryDate + 'T00:00:00');
-  sheet.getRange(targetRow, 16).setValue(dateValue);
+  sheet.getRange(targetRow, 16).setValueRO(dateValue);
   SpreadsheetApp.flush();
   
   return { success: true, row: targetRow };
@@ -2182,13 +2201,13 @@ function saveMoveStation(p) {
   var currentCol = stationMap[currentKey].mainIdx + 1; // 1-based column
   var newCol = stationMap[newKey].mainIdx + 1;
   
-  sheet.getRange(targetRow, currentCol).setValue(0);
-  sheet.getRange(targetRow, newCol).setValue(1);
+  sheet.getRange(targetRow, currentCol).setValueRO(0);
+  sheet.getRange(targetRow, newCol).setValueRO(1);
   
   // Update delivery date if moving to waitDelivery or delivered
   if (newKey === 'waitDelivery' || newKey === 'delivered') {
     // Write completion date (C15 = idx 14, column 15)
-    sheet.getRange(targetRow, 15).setValue(moveDate);
+    sheet.getRange(targetRow, 15).setValueRO(moveDate);
   }
   
   SpreadsheetApp.flush();
@@ -2244,13 +2263,13 @@ function saveMoveStation(p) {
       // Set end date for current station (if it's a tracked station)
       var currentB2Key = b2KeyMap[currentKey];
       if (currentB2Key && b2StationCols[currentB2Key]) {
-        b2Sheet.getRange(b2SheetRow, b2StationCols[currentB2Key].endCol).setValue(moveDate);
+        b2Sheet.getRange(b2SheetRow, b2StationCols[currentB2Key].endCol).setValueRO(moveDate);
       }
       
       // Set start date for new station (if it's a tracked station)
       var newB2Key = b2KeyMap[newKey];
       if (newB2Key && b2StationCols[newB2Key]) {
-        b2Sheet.getRange(b2SheetRow, b2StationCols[newB2Key].startCol).setValue(moveDate);
+        b2Sheet.getRange(b2SheetRow, b2StationCols[newB2Key].startCol).setValueRO(moveDate);
       }
       
       // For wash, supQC, deliver — just set the end date column in B2
@@ -2262,7 +2281,7 @@ function saveMoveStation(p) {
       };
       
       if (b2SimpleStationEndCols[newKey]) {
-        b2Sheet.getRange(b2SheetRow, b2SimpleStationEndCols[newKey]).setValue(moveDate);
+        b2Sheet.getRange(b2SheetRow, b2SimpleStationEndCols[newKey]).setValueRO(moveDate);
       }
       
       SpreadsheetApp.flush();
@@ -3504,11 +3523,11 @@ function readFCDailyData(ss, dateFrom, dateTo) {
   try {
     var dateVal = new Date(triggerDate);
     if (!isNaN(dateVal.getTime())) {
-      sheet.getRange(3, 3).setValue(dateVal);   // R3 C3 = dateFrom
+      sheet.getRange(3, 3).setValueRO(dateVal);   // R3 C3 = dateFrom
       if (dateTo) {
-        sheet.getRange(3, 5).setValue(new Date(dateTo)); // R3 C5 = dateTo
+        sheet.getRange(3, 5).setValueRO(new Date(dateTo)); // R3 C5 = dateTo
       } else {
-        sheet.getRange(3, 5).setValue(dateVal); // same day
+        sheet.getRange(3, 5).setValueRO(dateVal); // same day
       }
       SpreadsheetApp.flush(); // force recalc
       Utilities.sleep(3000);  // wait for formulas to compute
@@ -3545,8 +3564,8 @@ function readFCMonthlyData(ss, dateFrom, dateTo) {
     var toVal = new Date(triggerTo);
     if (!isNaN(fromVal.getTime()) && !isNaN(toVal.getTime())) {
       // Monthly section: R3 C3/C5
-      sheet.getRange(3, 3).setValue(fromVal);
-      sheet.getRange(3, 5).setValue(toVal);
+      sheet.getRange(3, 3).setValueRO(fromVal);
+      sheet.getRange(3, 5).setValueRO(toVal);
       SpreadsheetApp.flush();
       Utilities.sleep(3000);
     }
@@ -4103,8 +4122,8 @@ function saveMovementHistory_(allDates) {
     sheet = ss.insertSheet(sheetName);
     sheet.setTabColor('#3b82f6');
     // Headers
-    sheet.getRange(1,1,1,4).setValues([['date','branch','station','data_json']]);
-    sheet.getRange(1,1,1,4).setFontWeight('bold');
+    sheet.getRange(1,1,1,4).setValuesRO([['date','branch','station','data_json']]);
+    sheet.getRange(1,1,1,4).setFontWeightRO('bold');
   }
   
   // Get today's date string
@@ -4145,7 +4164,7 @@ function saveMovementHistory_(allDates) {
   });
   
   if (newRows.length > 0) {
-    sheet.getRange(lr + 1, 1, newRows.length, 4).setValues(newRows);
+    sheet.getRange(lr + 1, 1, newRows.length, 4).setValuesRO(newRows);
   }
 }
 
@@ -4209,8 +4228,8 @@ function loadMovementHistory_() {
   // If we found bad dates, rewrite the sheet with normalized data
   if (needsCleanup && cleanupRows.length > 0) {
     try {
-      sheet.getRange(2, 1, lr - 1, 4).clearContent();
-      sheet.getRange(2, 1, cleanupRows.length, 4).setValues(cleanupRows);
+      sheet.getRange(2, 1, lr - 1, 4).clearContentRO();
+      sheet.getRange(2, 1, cleanupRows.length, 4).setValuesRO(cleanupRows);
     } catch(e) {}
   }
   
@@ -4316,7 +4335,7 @@ function countFCFromB3(ss, dateFrom, dateTo) {
       originalMonth = sheet.getRange(3, 3).getValue();
       // Only change if different from target
       if (originalMonth !== targetMonth) {
-        sheet.getRange(3, 3).setValue(targetMonth);
+        sheet.getRange(3, 3).setValueRO(targetMonth);
         SpreadsheetApp.flush();
         Utilities.sleep(2000); // Wait for QUERY recalculation
       }
@@ -4329,7 +4348,7 @@ function countFCFromB3(ss, dateFrom, dateTo) {
   if (lr < 6) {
     // Restore original month if we changed it
     if (originalMonth !== null && originalMonth !== targetMonth) {
-      try { sheet.getRange(3, 3).setValue(originalMonth); SpreadsheetApp.flush(); } catch(e) {}
+      try { sheet.getRange(3, 3).setValueRO(originalMonth); SpreadsheetApp.flush(); } catch(e) {}
     }
     return null;
   }
@@ -4392,7 +4411,7 @@ function countFCFromB3(ss, dateFrom, dateTo) {
   
   // Restore original month value
   if (originalMonth !== null && originalMonth !== targetMonth) {
-    try { sheet.getRange(3, 3).setValue(originalMonth); SpreadsheetApp.flush(); } catch(e) {}
+    try { sheet.getRange(3, 3).setValueRO(originalMonth); SpreadsheetApp.flush(); } catch(e) {}
   }
   
   return {
@@ -5450,10 +5469,10 @@ function bctSaveAppointment_(ss, params) {
         
         if (b1Row > 0) {
           // UPDATE existing row (key-once principle)
-          if (aptDate) b1.getRange(b1Row, 26).setValue(aptDate); // col Z = appointment date
-          if (!b1data[b1Row-1][4] && params.name) b1.getRange(b1Row, 5).setValue(params.name);
-          if (!b1data[b1Row-1][6] && params.phone) b1.getRange(b1Row, 7).setValue(params.phone);
-          if (!b1data[b1Row-1][8] && params.brand) b1.getRange(b1Row, 9).setValue(params.brand);
+          if (aptDate) b1.getRange(b1Row, 26).setValueRO(aptDate); // col Z = appointment date
+          if (!b1data[b1Row-1][4] && params.name) b1.getRange(b1Row, 5).setValueRO(params.name);
+          if (!b1data[b1Row-1][6] && params.phone) b1.getRange(b1Row, 7).setValueRO(params.phone);
+          if (!b1data[b1Row-1][8] && params.brand) b1.getRange(b1Row, 9).setValueRO(params.brand);
           results.b1 = {status: 'updated', row: b1Row, plate: String(b1data[b1Row-1][7] || plate)};
         } else {
           // NEW customer — create new row
@@ -5466,7 +5485,7 @@ function bctSaveAppointment_(ss, params) {
             '', '', '', '', '', '', '', '', '',
             aptDate || '', '', typeLabel, '', typeLabel + ' ' + (aptDate ? bctFmtDate_(aptDate) : ''), '', '', '', ''
           ];
-          b1.getRange(newRow, 1, 1, rowData.length).setValues([rowData]);
+          b1.getRange(newRow, 1, 1, rowData.length).setValuesRO([rowData]);
           results.b1 = {status: 'created', row: newRow, plate: params.plate || ''};
         }
       }
@@ -5494,9 +5513,9 @@ function bctSaveAppointment_(ss, params) {
               // Only update if: has due date, no maintenance date, and not already completed
               if (dueVal && !maintVal && contactVal !== 'เข้าใช้บริการแล้ว') {
                 // Update: status → นัดหมายแล้ว (col+4, 1-indexed), detail → typeLabel (col+5), maintenance date (col+6)
-                b2.getRange(b2Row, baseCol + 4).setValue('นัดหมายแล้ว'); // สถานะการติดต่อ
-                b2.getRange(b2Row, baseCol + 5).setValue(typeLabel + ' ' + bctFmtDate_(aptDate)); // รายละเอียด
-                b2.getRange(b2Row, baseCol + 6).setValue(aptDate); // วันเข้าบำรุง
+                b2.getRange(b2Row, baseCol + 4).setValueRO('นัดหมายแล้ว'); // สถานะการติดต่อ
+                b2.getRange(b2Row, baseCol + 5).setValueRO(typeLabel + ' ' + bctFmtDate_(aptDate)); // รายละเอียด
+                b2.getRange(b2Row, baseCol + 6).setValueRO(aptDate); // วันเข้าบำรุง
                 b2Cycle = sc + 1;
                 break;
               }
@@ -5690,7 +5709,7 @@ function bctWriteQueueEntry_(c2, aptDate, plate, name, phone, aptType) {
     } else {
       newVal = currentVal + '\n' + entry;
     }
-    c2.getRange(targetRow + 1, dataCol + 1).setValue(newVal);
+    c2.getRange(targetRow + 1, dataCol + 1).setValueRO(newVal);
     
     return {status: 'saved', row: targetRow + 1, col: dataCol + 1, entry: entry, date: bctFmtDate_(aptDate)};
   } catch(e) {
@@ -5717,13 +5736,13 @@ function bctCreateMonthInC2_(c2, aptDate, c2data) {
     var startRow = lastRow + 2; // Leave 1 blank row
     
     // Row 1: Month header in col E
-    c2.getRange(startRow, 5).setValue(monthLabel);
+    c2.getRange(startRow, 5).setValueRO(monthLabel);
     
     // Row 2: Day names
     var dayRow = [];
     dayRow[4] = 'Monday'; dayRow[6] = 'Tuesday'; dayRow[8] = 'Wednesday';
     dayRow[10] = 'Thursday'; dayRow[12] = 'Friday'; dayRow[14] = 'Saturday';
-    c2.getRange(startRow + 1, 1, 1, 16).setValues([dayRow]);
+    c2.getRange(startRow + 1, 1, 1, 16).setValuesRO([dayRow]);
     
     // Generate weeks
     var currentRow = startRow + 2;
@@ -5756,7 +5775,7 @@ function bctCreateMonthInC2_(c2, aptDate, c2data) {
       for (var wi = 0; wi < weekDayNums.length; wi++) {
         dateRowVals[weekDayNums[wi].col] = weekDayNums[wi].day;
       }
-      c2.getRange(currentRow, 1, 1, 16).setValues([dateRowVals]);
+      c2.getRange(currentRow, 1, 1, 16).setValuesRO([dateRowVals]);
       currentRow++;
       
       // Write คิว 1 row
@@ -5764,7 +5783,7 @@ function bctCreateMonthInC2_(c2, aptDate, c2data) {
       for (var wi2 = 0; wi2 < weekDayNums.length; wi2++) {
         q1Row[weekDayNums[wi2].col] = 'คิว 1 9.00 น. :';
       }
-      c2.getRange(currentRow, 1, 1, 16).setValues([q1Row]);
+      c2.getRange(currentRow, 1, 1, 16).setValuesRO([q1Row]);
       currentRow++;
       
       // Write คิว 2 row
@@ -5772,7 +5791,7 @@ function bctCreateMonthInC2_(c2, aptDate, c2data) {
       for (var wi3 = 0; wi3 < weekDayNums.length; wi3++) {
         q2Row[weekDayNums[wi3].col] = 'คิว 2 13.00 น. :';
       }
-      c2.getRange(currentRow, 1, 1, 16).setValues([q2Row]);
+      c2.getRange(currentRow, 1, 1, 16).setValuesRO([q2Row]);
       currentRow++;
       
       // Blank row for คิวพิเศษ (optional)
@@ -5847,7 +5866,7 @@ function bctCreateCalendarEvent_(params) {
         params.brand || '', params.coatingType || '', params.receiver || '', params.price || '',
         mainResult ? '✅ Calendar' : '📋 Sheet only', title
       ];
-      logSheet.appendRow(logRow);
+      logSheet.appendRowRO(logRow);
     }
   } catch(logErr) {
     Logger.log('Log sheet error: ' + logErr.message);
@@ -5996,7 +6015,7 @@ function bctOnFormSubmit_(e) {
         'นัดหมาย(Form)', '', 'เคลือบแก้ว ' + bctFmtDate_(new Date(params.appointmentDate)),
         '', '', '', ''
       ];
-      b1.getRange(newRow, 1, 1, rowData.length).setValues([rowData]);
+      b1.getRange(newRow, 1, 1, rowData.length).setValuesRO([rowData]);
     }
     
     // Create calendar event
@@ -6094,11 +6113,11 @@ function bctSaveMaintNote_(ss, params) {
     // B2 cycles start at col 27 (1-indexed: col AB), each 6 cols
     var baseCol = 27 + ((cycle - 1) * 6); // 0-indexed
     // getRange uses 1-indexed row and col
-    if (params.callDate) sheet.getRange(row, baseCol + 2).setValue(new Date(params.callDate));  // วันที่โทร
-    if (params.caller) sheet.getRange(row, baseCol + 3).setValue(params.caller);  // ผู้โทร
-    if (params.callStatus) sheet.getRange(row, baseCol + 4).setValue(params.callStatus);  // สถานะการติดต่อ
-    if (params.callDetail) sheet.getRange(row, baseCol + 5).setValue(params.callDetail);  // รายละเอียด
-    if (params.maintenanceDate) sheet.getRange(row, baseCol + 6).setValue(new Date(params.maintenanceDate));  // วันเข้าบำรุง
+    if (params.callDate) sheet.getRange(row, baseCol + 2).setValueRO(new Date(params.callDate));  // วันที่โทร
+    if (params.caller) sheet.getRange(row, baseCol + 3).setValueRO(params.caller);  // ผู้โทร
+    if (params.callStatus) sheet.getRange(row, baseCol + 4).setValueRO(params.callStatus);  // สถานะการติดต่อ
+    if (params.callDetail) sheet.getRange(row, baseCol + 5).setValueRO(params.callDetail);  // รายละเอียด
+    if (params.maintenanceDate) sheet.getRange(row, baseCol + 6).setValueRO(new Date(params.maintenanceDate));  // วันเข้าบำรุง
     return {success: true, row: row, cycle: cycle};
   } catch(e) {
     return {error: String(e)};
@@ -6111,13 +6130,13 @@ function bctSaveCustomer_(ss, params) {
     var sheet = ss.getSheetByName('B1_บันทึกข้อมูลลูกค้า');
     if (!sheet) return {error: 'Sheet not found'};
     if (params.row) {
-      if (params.name) sheet.getRange(params.row, 5).setValue(params.name);
-      if (params.address) sheet.getRange(params.row, 6).setValue(params.address);
-      if (params.phone) sheet.getRange(params.row, 7).setValue(params.phone);
-      if (params.plate) sheet.getRange(params.row, 8).setValue(params.plate);
-      if (params.brand) sheet.getRange(params.row, 9).setValue(params.brand);
-      if (params.coatingType) sheet.getRange(params.row, 12).setValue(params.coatingType);
-      if (params.appointmentDate) sheet.getRange(params.row, 26).setValue(new Date(params.appointmentDate));
+      if (params.name) sheet.getRange(params.row, 5).setValueRO(params.name);
+      if (params.address) sheet.getRange(params.row, 6).setValueRO(params.address);
+      if (params.phone) sheet.getRange(params.row, 7).setValueRO(params.phone);
+      if (params.plate) sheet.getRange(params.row, 8).setValueRO(params.plate);
+      if (params.brand) sheet.getRange(params.row, 9).setValueRO(params.brand);
+      if (params.coatingType) sheet.getRange(params.row, 12).setValueRO(params.coatingType);
+      if (params.appointmentDate) sheet.getRange(params.row, 26).setValueRO(new Date(params.appointmentDate));
       return {success: true, action: 'updated'};
     }
     return {error: 'Missing row'};
@@ -6133,7 +6152,7 @@ function bctSaveQueue_(ss, params) {
     if (!sheet) return {error: 'Sheet not found'};
     if (params.row && params.col && params.text) {
       var cur = sheet.getRange(params.row, params.col).getValue();
-      sheet.getRange(params.row, params.col).setValue(cur ? cur + '\n' + params.text : params.text);
+      sheet.getRange(params.row, params.col).setValueRO(cur ? cur + '\n' + params.text : params.text);
       return {success: true};
     }
     return {error: 'Missing params'};
@@ -6536,8 +6555,8 @@ function bctDebugC2Headers_() {
       // getRange uses 1-indexed: contact status = scBase + 4, maint date = scBase + 6
       for (var sc = 0; sc < 3; sc++) {
         var scBase = 27 + (sc * 6);
-        b2.getRange(bi + 1, scBase + 4).clearContent(); // contact status
-        b2.getRange(bi + 1, scBase + 6).clearContent(); // maintenance date
+        b2.getRange(bi + 1, scBase + 4).clearContentRO(); // contact status
+        b2.getRange(bi + 1, scBase + 6).clearContentRO(); // maintenance date
       }
       return {found: true, row: bi + 1, plate: bp, cleared: 'cycles 1-3 contactStatus+maintDate'};
     }
@@ -6820,8 +6839,8 @@ function billingSaveSnapshot_(ssId) {
   var snapSheet = ss.getSheetByName('BillingSnapshots');
   if (!snapSheet) {
     snapSheet = ss.insertSheet('BillingSnapshots');
-    snapSheet.getRange(1, 1, 1, 4).setValues([['แท็บ', 'วันที่สแนปชอต', 'จำนวนรายการ', 'ข้อมูล JSON']]);
-    snapSheet.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground('#e8f0fe');
+    snapSheet.getRange(1, 1, 1, 4).setValuesRO([['แท็บ', 'วันที่สแนปชอต', 'จำนวนรายการ', 'ข้อมูล JSON']]);
+    snapSheet.getRange(1, 1, 1, 4).setFontWeightRO('bold').setBackgroundRO('#e8f0fe');
   }
   
   var now = new Date();
@@ -6992,10 +7011,10 @@ function billingSaveSnapshot_(ssId) {
     
     if (existingRowIdx > 0) {
       // Update existing snapshot
-      snapSheet.getRange(existingRowIdx, 1, 1, 4).setValues([[sheetName, snapshotDate, rows.length, jsonData]]);
+      snapSheet.getRange(existingRowIdx, 1, 1, 4).setValuesRO([[sheetName, snapshotDate, rows.length, jsonData]]);
     } else {
       // Append new snapshot
-      snapSheet.appendRow([sheetName, snapshotDate, rows.length, jsonData]);
+      snapSheet.appendRowRO([sheetName, snapshotDate, rows.length, jsonData]);
     }
     
     savedSnapshots.push({ tabName: sheetName, rowCount: rows.length, snapshotDate: snapshotDate });
@@ -8261,8 +8280,8 @@ function billingEditLogTrigger_(e) {
     var logSheet = bctSS.getSheetByName(EDIT_LOG_SHEET);
     if (!logSheet) {
       logSheet = bctSS.insertSheet(EDIT_LOG_SHEET);
-      logSheet.appendRow(['เวลา', 'สาขา', 'แท็บ', 'ทะเบียน/JOB', 'แถว', 'คอลัมน์', 'ชื่อคอลัมน์', 'ค่าเก่า', 'ค่าใหม่', 'ผู้แก้ไข']);
-      logSheet.getRange(1, 1, 1, 10).setFontWeight('bold').setBackground('#1a1a2e').setFontColor('#ffffff');
+      logSheet.appendRowRO(['เวลา', 'สาขา', 'แท็บ', 'ทะเบียน/JOB', 'แถว', 'คอลัมน์', 'ชื่อคอลัมน์', 'ค่าเก่า', 'ค่าใหม่', 'ผู้แก้ไข']);
+      logSheet.getRange(1, 1, 1, 10).setFontWeightRO('bold').setBackgroundRO('#1a1a2e').setFontColor('#ffffff');
       logSheet.setFrozenRows(1);
     }
     // Log EVERY changed row and cell — no limit
@@ -8272,7 +8291,7 @@ function billingEditLogTrigger_(e) {
       var currentPlate = plateCol >= 0 ? String(sheet.getRange(row, plateCol + 1).getValue() || '').trim() : '';
       var currentJob = jobCol >= 0 ? String(sheet.getRange(row, jobCol + 1).getValue() || '').trim() : '';
       var currentRowId = currentPlate || currentJob || 'แถว ' + row;
-      logSheet.appendRow([timestamp, branch, sheetName, currentRowId, row, col, colName, oldValue, newValue, user]);
+      logSheet.appendRowRO([timestamp, branch, sheetName, currentRowId, row, col, colName, oldValue, newValue, user]);
     } else {
       // Multi-cell edit (paste, fill-down, delete multiple) — log every cell
       var editedValues = range.getValues();
@@ -8290,7 +8309,7 @@ function billingEditLogTrigger_(e) {
           if (ri === 0 && ci2 === 0 && oldValue) cellOld = oldValue;
           var cellColName = currentCol2 <= headerRow.length ? String(headerRow[currentCol2 - 1] || '').trim() : 'Col ' + currentCol2;
           if (!cellColName) cellColName = 'Col ' + currentCol2;
-          logSheet.appendRow([timestamp, branch, sheetName, currentRowId2, currentRow2, currentCol2, cellColName, cellOld, cellNew, user]);
+          logSheet.appendRowRO([timestamp, branch, sheetName, currentRowId2, currentRow2, currentCol2, cellColName, cellOld, cellNew, user]);
         }
       }
     }
@@ -10007,7 +10026,7 @@ function createDashboard(formData) {
       version: 3
     };
     
-    PropertiesService.getScriptProperties().setProperty('DASH_' + dashId, JSON.stringify(config));
+    PropertiesService.getScriptProperties().setPropertyRO('DASH_' + dashId, JSON.stringify(config));
     
     // Store file contents separately in CacheService (6 hour TTL)
     if (fileDataArray.length > 0) {
@@ -10028,7 +10047,7 @@ function createDashboard(formData) {
     var fullPrompt = buildDashboardPrompt_(config, formData);
     config.prompt = fullPrompt;
     // Re-save with prompt
-    PropertiesService.getScriptProperties().setProperty('DASH_' + dashId, JSON.stringify(config));
+    PropertiesService.getScriptProperties().setPropertyRO('DASH_' + dashId, JSON.stringify(config));
 
     var scriptUrl = ScriptApp.getService().getUrl();
 
@@ -10751,7 +10770,7 @@ function updateDashboard_(dashId, updates) {
   if (updates.audience) config.audience = updates.audience;
   config.version = (config.version || 1) + 1;
   config.updatedAt = new Date().toISOString();
-  PropertiesService.getScriptProperties().setProperty(key, JSON.stringify(config));
+  PropertiesService.getScriptProperties().setPropertyRO(key, JSON.stringify(config));
   var scriptUrl = ScriptApp.getService().getUrl();
   return { success: true, id: dashId, url: scriptUrl + '?dash=1&id=' + dashId, version: config.version };
 }
@@ -10953,7 +10972,7 @@ function updateDashboard(dashId, command) {
           config.prompt = buildDashboardPrompt_(config, { sheetUrls: config.sheetUrls || [config.sheetUrl] });
         }
       } catch (pe) {}
-      PropertiesService.getScriptProperties().setProperty(key, JSON.stringify(config));
+      PropertiesService.getScriptProperties().setPropertyRO(key, JSON.stringify(config));
     }
 
     var scriptUrl = ScriptApp.getService().getUrl();
@@ -11585,7 +11604,7 @@ function savePersonEdit_(p) {
       for (var c = 0; c < data[r].length && !found; c++) {
         var cellVal = String(data[r][c] || '').trim();
         if (cellVal === oldValue.trim() && cellVal.length > 3) {
-          sheet.getRange(r + 1, c + 1).setValue(newValue);
+          sheet.getRange(r + 1, c + 1).setValueRO(newValue);
           found = true;
         }
       }
@@ -11602,7 +11621,7 @@ function savePersonEdit_(p) {
           // Label is typically c+1
           var labelCell = String(data[r][c + 1] || '').trim();
           if (labelCell === oldValue.trim() || (oldValue === '' && labelCell.length < 3)) {
-            sheet.getRange(r + 1, c + 2).setValue(newValue);
+            sheet.getRange(r + 1, c + 2).setValueRO(newValue);
             found = true;
           }
         }
@@ -11624,7 +11643,7 @@ function savePersonEdit_(p) {
           for (var wc = c + 2; wc < Math.min(c + 8, data[r].length); wc++) {
             var testVal = parseFloat(data[r][wc]);
             if (!isNaN(testVal) && testVal > 0 && testVal <= 1) {
-              sheet.getRange(r + 1, wc + 1).setValue(weightVal / 100);
+              sheet.getRange(r + 1, wc + 1).setValueRO(weightVal / 100);
               found = true;
               break;
             }
@@ -11675,7 +11694,7 @@ function saveEditKR_(p) {
     for (var c = 0; c < data[r].length; c++) {
       var cellVal = String(data[r][c] || '').trim();
       if (cellVal === p.oldKR.trim()) {
-        sheet.getRange(r + 1, c + 1).setValue(p.newKR);
+        sheet.getRange(r + 1, c + 1).setValueRO(p.newKR);
         found = true;
         break;
       }
@@ -11716,7 +11735,7 @@ function saveDeleteKR_(p) {
     for (var c = 0; c < data[r].length; c++) {
       var cellVal = String(data[r][c] || '').trim();
       if (cellVal === p.krText.trim()) {
-        sheet.getRange(r + 1, c + 1).setValue('');
+        sheet.getRange(r + 1, c + 1).setValueRO('');
         found = true;
         break;
       }
@@ -11819,7 +11838,7 @@ function saveAddKR_(p) {
     }
   }
   
-  sheet.getRange(insertRow + 1, krCol + 1).setValue(p.krText);
+  sheet.getRange(insertRow + 1, krCol + 1).setValueRO(p.krText);
   
   // Log change (5W1H)
   logOKRChange_(ssid, 'ผู้ใช้ (ผ่าน Dashboard)', 'เพิ่ม KR', p.sheetName, 'เพิ่ม KR ใหม่: ' + p.krText.substring(0, 80), 'เพิ่มผ่านหน้า Dashboard ประเภท: ' + (p.growthType || 'Business Growth'));
@@ -12065,11 +12084,11 @@ function writeOKRChangeLog_(ssid, entry) {
   var logSheet = ss.getSheetByName('ChangeLog');
   if (!logSheet) {
     logSheet = ss.insertSheet('ChangeLog');
-    logSheet.appendRow(['When (เมื่อไหร่)', 'Who (ใคร)', 'What (อะไร)', 'Where (ที่ไหน)', 'Why (ทำไม)', 'How (อย่างไร)']);
-    logSheet.getRange(1, 1, 1, 6).setFontWeight('bold');
+    logSheet.appendRowRO(['When (เมื่อไหร่)', 'Who (ใคร)', 'What (อะไร)', 'Where (ที่ไหน)', 'Why (ทำไม)', 'How (อย่างไร)']);
+    logSheet.getRange(1, 1, 1, 6).setFontWeightRO('bold');
     logSheet.setFrozenRows(1);
   }
-  logSheet.appendRow([
+  logSheet.appendRowRO([
     entry.when,
     entry.who,
     entry.what,
@@ -12502,8 +12521,8 @@ function partsWithdrawParts_(data) {
   var logSheet = ss.getSheetByName(logSheetName);
   if (!logSheet) {
     logSheet = ss.insertSheet(logSheetName);
-    logSheet.appendRow(['วันที่เบิก','เลขที่ใบเสนอราคา','ทะเบียน','ยี่ห้อรถ','SA','เลขที่ JOB','รหัสอะไหล่','ชื่ออะไหล่','จำนวนเบิก','ชั้นจัดเก็บเดิม','แท็บที่เก็บ','แถวที่เก็บ','ผู้เบิก','หมายเหตุ','สถานะ']);
-    logSheet.getRange(1,1,1,15).setFontWeight('bold').setBackground('#1e3a5f').setFontColor('#ffffff');
+    logSheet.appendRowRO(['วันที่เบิก','เลขที่ใบเสนอราคา','ทะเบียน','ยี่ห้อรถ','SA','เลขที่ JOB','รหัสอะไหล่','ชื่ออะไหล่','จำนวนเบิก','ชั้นจัดเก็บเดิม','แท็บที่เก็บ','แถวที่เก็บ','ผู้เบิก','หมายเหตุ','สถานะ']);
+    logSheet.getRange(1,1,1,15).setFontWeightRO('bold').setBackgroundRO('#1e3a5f').setFontColor('#ffffff');
     logSheet.setFrozenRows(1);
   }
   var results = [];
@@ -12511,7 +12530,7 @@ function partsWithdrawParts_(data) {
   var wd = data.withdrawalDate || new Date().toISOString().split('T')[0];
   for (var i = 0; i < parts.length; i++) {
     var p = parts[i];
-    logSheet.appendRow([wd, data.quotNo||'', data.plate||'', data.vehicle||'', data.sa||'', data.jobNo||'', p.part||'', p.name||'', p.qty||1, p.shelf||'', p.tab||'', p.row||'', data.withdrawedBy||'', data.note||'', 'เบิกออก']);
+    logSheet.appendRowRO([wd, data.quotNo||'', data.plate||'', data.vehicle||'', data.sa||'', data.jobNo||'', p.part||'', p.name||'', p.qty||1, p.shelf||'', p.tab||'', p.row||'', data.withdrawedBy||'', data.note||'', 'เบิกออก']);
     results.push({ part: p.part, name: p.name, qty: p.qty, status: 'logged' });
   }
   return { success: true, withdrawn: results.length, results: results };
@@ -12846,9 +12865,9 @@ function rfGetDBSheet_(name, headers) {
   var sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length).setValuesRO([headers]);
     sheet.setFrozenRows(1);
-    sheet.getRange(1, 1, 1, headers.length).setBackground('#1e3a5f').setFontColor('#fff').setFontWeight('bold');
+    sheet.getRange(1, 1, 1, headers.length).setBackgroundRO('#1e3a5f').setFontColor('#fff').setFontWeightRO('bold');
   }
   return sheet;
 }
@@ -12893,7 +12912,7 @@ function rfGetVehicles_(branch) {
 function rfCreateOrder_(data) {
   var sheet = rfOrdersSheet_();
   var orderId = 'RF' + new Date().getTime().toString().slice(-8);
-  sheet.appendRow([orderId, data.branch||'cnb', data.plate||'', data.customerName||'', data.phone||'', data.sa||'', data.insurance||'', data.brand||'', data.model||'', data.repairDate||fmtDate(new Date()), data.dueDate||'', 'waiting', '', (data.stations||[]).join(','), data.damageDesc||'', new Date().toISOString(), data.createdBy||'']);
+  sheet.appendRowRO([orderId, data.branch||'cnb', data.plate||'', data.customerName||'', data.phone||'', data.sa||'', data.insurance||'', data.brand||'', data.model||'', data.repairDate||fmtDate(new Date()), data.dueDate||'', 'waiting', '', (data.stations||[]).join(','), data.damageDesc||'', new Date().toISOString(), data.createdBy||'']);
   return { success: true, orderId: orderId };
 }
 
@@ -12923,9 +12942,9 @@ function rfAssignStations_(data) {
   var allData = sheet.getRange(1, 1, lr, 17).getValues();
   for (var r = 1; r < allData.length; r++) {
     if (String(allData[r][0]) === data.orderId) {
-      sheet.getRange(r + 1, 12).setValue('assigned');
-      sheet.getRange(r + 1, 13).setValue(data.stations[0] || '');
-      sheet.getRange(r + 1, 14).setValue((data.stations || []).join(','));
+      sheet.getRange(r + 1, 12).setValueRO('assigned');
+      sheet.getRange(r + 1, 13).setValueRO(data.stations[0] || '');
+      sheet.getRange(r + 1, 14).setValueRO((data.stations || []).join(','));
       return { success: true, orderId: data.orderId, stations: data.stations };
     }
   }
@@ -12988,7 +13007,7 @@ function rfSyncFromB2_(branch) {
     if (existingPlates[normPlate]) return; // already has an order
     
     var orderId = 'RF' + new Date().getTime().toString().slice(-8) + Math.floor(Math.random()*100);
-    ordersSheet.appendRow([
+    ordersSheet.appendRowRO([
       orderId, branch, v.plate, '', '', v.sa, '', v.brand, v.model,
       v.repairDate, '', 'assigned', 'knock',  // start at first station
       defaultStations.join(','), '', now, 'auto-sync'
@@ -13007,14 +13026,14 @@ function rfAcceptJob_(data) {
   }
   var logId = 'LG' + new Date().getTime().toString().slice(-8);
   var now = new Date();
-  logSheet.appendRow([logId, data.orderId, data.branch||'', data.plate||'', data.station||'', data.mechanicName||'', now.toISOString(), '', '', 'accepted', data.notes||'']);
+  logSheet.appendRowRO([logId, data.orderId, data.branch||'', data.plate||'', data.station||'', data.mechanicName||'', now.toISOString(), '', '', 'accepted', data.notes||'']);
   // Update order status
   var ordersSheet = rfOrdersSheet_();
   var ordersLr = ordersSheet.getLastRow();
   var ordersData = ordersSheet.getRange(1, 1, ordersLr, 17).getValues();
   for (var r = 1; r < ordersData.length; r++) {
     if (String(ordersData[r][0]) === data.orderId) {
-      ordersSheet.getRange(r + 1, 12).setValue('in_progress');
+      ordersSheet.getRange(r + 1, 12).setValueRO('in_progress');
       break;
     }
   }
@@ -13030,9 +13049,9 @@ function rfFinishJob_(data) {
     if (String(logData[r][1]) === data.orderId && String(logData[r][9]) === 'accepted') {
       var acceptTime = new Date(logData[r][6]);
       var durationMin = Math.round((now - acceptTime) / 60000);
-      logSheet.getRange(r + 1, 8).setValue(now.toISOString());
-      logSheet.getRange(r + 1, 9).setValue(durationMin);
-      logSheet.getRange(r + 1, 10).setValue('finished');
+      logSheet.getRange(r + 1, 8).setValueRO(now.toISOString());
+      logSheet.getRange(r + 1, 9).setValueRO(durationMin);
+      logSheet.getRange(r + 1, 10).setValueRO('finished');
       // Advance order to next station
       var ordersSheet = rfOrdersSheet_();
       var ordersLr = ordersSheet.getLastRow();
@@ -13043,11 +13062,11 @@ function rfFinishJob_(data) {
           var currentIdx = stations.indexOf(String(ordersData[or][12]));
           if (currentIdx >= 0 && currentIdx < stations.length - 1) {
             var nextStation = stations[currentIdx + 1];
-            ordersSheet.getRange(or + 1, 13).setValue(nextStation);
-            ordersSheet.getRange(or + 1, 12).setValue('assigned');
+            ordersSheet.getRange(or + 1, 13).setValueRO(nextStation);
+            ordersSheet.getRange(or + 1, 12).setValueRO('assigned');
           } else {
-            ordersSheet.getRange(or + 1, 12).setValue('completed');
-            ordersSheet.getRange(or + 1, 13).setValue('deliver');
+            ordersSheet.getRange(or + 1, 12).setValueRO('completed');
+            ordersSheet.getRange(or + 1, 13).setValueRO('deliver');
           }
           break;
         }
@@ -13121,16 +13140,16 @@ function rfSaveMechanic_(data) {
     var allData = sheet.getRange(2, 1, lr - 1, 7).getValues();
     for (var r = 0; r < allData.length; r++) {
       if (String(allData[r][0]) === mechanicId) {
-        sheet.getRange(r + 2, 2).setValue(data.name||'');
-        sheet.getRange(r + 2, 3).setValue(data.branch||'');
-        sheet.getRange(r + 2, 4).setValue(data.station||'');
-        sheet.getRange(r + 2, 5).setValue(data.phone||'');
-        sheet.getRange(r + 2, 6).setValue(data.active !== false ? 'true' : 'false');
+        sheet.getRange(r + 2, 2).setValueRO(data.name||'');
+        sheet.getRange(r + 2, 3).setValueRO(data.branch||'');
+        sheet.getRange(r + 2, 4).setValueRO(data.station||'');
+        sheet.getRange(r + 2, 5).setValueRO(data.phone||'');
+        sheet.getRange(r + 2, 6).setValueRO(data.active !== false ? 'true' : 'false');
         return { success: true, mechanicId: mechanicId, updated: true };
       }
     }
   }
-  sheet.appendRow([mechanicId, data.name||'', data.branch||'', data.station||'', data.phone||'', 'true', new Date().toISOString()]);
+  sheet.appendRowRO([mechanicId, data.name||'', data.branch||'', data.station||'', data.phone||'', 'true', new Date().toISOString()]);
   return { success: true, mechanicId: mechanicId, created: true };
 }
 
