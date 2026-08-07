@@ -1416,21 +1416,14 @@ function doGet(e) {
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
         .addMetaTag('viewport', 'width=device-width, initial-scale=1');
     }
-    // Concatenate raw chunks into full page
-    var pp7Parts = ['PP7Raw1','PP7Raw2','PP7Raw3','PP7Raw4'];
-    var pp7Content = '';
-    for (var i = 0; i < pp7Parts.length; i++) {
-      try {
-        pp7Content += HtmlService.createHtmlOutputFromFile(pp7Parts[i]).getContent();
-      } catch(e) {}
-    }
+    // Build PP7 from .gs variables (not HTML files)
+    var pp7Content = PP7_PART_1.join('\n') + PP7_PART_2.join('\n') + PP7_PART_3.join('\n') + PP7_PART_4.join('\n') + PP7_PART_5.join('\n') + PP7_PART_6.join('\n') + PP7_PART_7.join('\n') + PP7_PART_8.join('\n') ;
     
     
-    var pp7Content = PP7_PART_1.join("\\n") + PP7_PART_2.join("\\n") + PP7_PART_3.join("\\n") + PP7_PART_4.join("\\n") + PP7_PART_5.join("\\n") + PP7_PART_6.join("\\n") + PP7_PART_7.join("\\n");
     
-    var pp7CSS = PP7_CSS_10+PP7_CSS_11+PP7_CSS_12+PP7_CSS_13+PP7_CSS_14+PP7_CSS_15+PP7_CSS_16+PP7_CSS_17+PP7_CSS_18+PP7_CSS_19+PP7_CSS_1+PP7_CSS_20+PP7_CSS_21+PP7_CSS_22+PP7_CSS_23+PP7_CSS_24+PP7_CSS_25+PP7_CSS_26+PP7_CSS_27+PP7_CSS_28+PP7_CSS_29+PP7_CSS_2+PP7_CSS_30+PP7_CSS_31+PP7_CSS_32+PP7_CSS_33+PP7_CSS_34+PP7_CSS_35+PP7_CSS_36+PP7_CSS_37+PP7_CSS_38+PP7_CSS_39+PP7_CSS_3+PP7_CSS_40+PP7_CSS_41+PP7_CSS_42+PP7_CSS_43+PP7_CSS_44+PP7_CSS_45+PP7_CSS_46+PP7_CSS_47+PP7_CSS_48+PP7_CSS_49+PP7_CSS_4+PP7_CSS_50+PP7_CSS_51+PP7_CSS_52+PP7_CSS_53+PP7_CSS_54+PP7_CSS_55+PP7_CSS_56+PP7_CSS_57+PP7_CSS_58+PP7_CSS_59+PP7_CSS_5+PP7_CSS_60+PP7_CSS_61+PP7_CSS_62+PP7_CSS_63+PP7_CSS_64+PP7_CSS_65+PP7_CSS_66+PP7_CSS_67+PP7_CSS_68+PP7_CSS_69+PP7_CSS_6+PP7_CSS_70+PP7_CSS_71+PP7_CSS_72+PP7_CSS_73+PP7_CSS_74+PP7_CSS_7+PP7_CSS_8+PP7_CSS_9;
-    pp7Content = pp7Content.replace('<style id="tailwind-inline"></style>', '<style>' + pp7CSS + '</style>');
-    pp7Content = pp7Content.replace(/__TOKEN__/g, pp7Token);
+    
+    
+        pp7Content = pp7Content.replace(/__TOKEN__/g, pp7Token);
     pp7Content = pp7Content.replace(/__SCRIPT_URL__/g, ScriptApp.getService().getUrl());
     
     // Escape JS template literals to avoid HtmlService parsing issues
