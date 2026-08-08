@@ -57,7 +57,8 @@ var PDPA_CONFIG = {
   PASSWORD_KEY: 'PDPA_PWD',       // CacheService key สำหรับรหัสผ่าน
   TWOFA_KEY: 'PDPA_2FA',          // CacheService key สำหรับ 2FA
   // Telegram notification — token stored in PropertiesService for security
-  TG_CHAT_ID: '-5060108435'       // PMS Service OpenClaw group
+  TG_CHAT_ID: '-5060108435',      // PMS Service OpenClaw group
+  SESSION_TTL: 14400              // session token TTL 4 ชม. (reduced from 8)
 };
 
 // ── อ่าน Telegram bot token จาก PropertiesService (ไม่ hardcode เพื่อความปลอดภัย) ──
@@ -233,6 +234,16 @@ function pdpaGetSecurityLog() {
   var cached = CacheService.getScriptCache().get(PDPA_CONFIG.SECURITY_LOG_KEY);
   if (!cached) return [];
   try { return JSON.parse(cached); } catch(e) { return []; }
+}
+
+// ── Rate Limiting — Max 100 requests per minute ──
+function checkRateLimit() {
+  var cache = CacheService.getScriptCache();
+  var key = 'RL_' + new Date().getMinutes();
+  var count = Number(cache.get(key)) || 0;
+  if (count > 100) return false;
+  cache.put(key, String(count + 1), 120);
+  return true;
 }
 
 // ── ตรวจสอบ login ผ่าน google.script.run (ไม่ redirect) ──
@@ -511,6 +522,12 @@ function readForeignSheet_(ssid, sheetName, maxRows) {
 
 
 function doGet(e) {
+  // ── Rate Limiting — Max 100 requests per minute ──
+  if (!checkRateLimit()) {
+    return HtmlService.createHtmlOutput('<p>Too many requests. Please try again later.</p>')
+      .setTitle('Rate Limited');
+  }
+
   if (!e) e = { parameter: {} };
   var p = e.parameter || {};
   
@@ -556,7 +573,7 @@ function doGet(e) {
       pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (GET backward compat)', loginFp);
       // Create session token
       var getToken = Utilities.getUuid() + '_' + new Date().getTime();
-      CacheService.getScriptCache().put('PDPA_SESSION_' + getToken, 'valid', 28800);
+      CacheService.getScriptCache().put('PDPA_SESSION_' + getToken, 'valid', PDPA_CONFIG.SESSION_TTL);
       // Parse rquery if present
       if (p.rquery) {
         try {
@@ -1405,7 +1422,7 @@ function doGet(e) {
     }
     if (!pp7HasSession && p.pwdok === '1' && p.pass === 'pmsg2026' && p.otp === '2580') {
       pp7Token = Utilities.getUuid() + '_' + new Date().getTime();
-      CacheService.getScriptCache().put('PDPA_SESSION_' + pp7Token, 'valid', 28800);
+      CacheService.getScriptCache().put('PDPA_SESSION_' + pp7Token, 'valid', PDPA_CONFIG.SESSION_TTL);
       pp7HasSession = true;
     }
     if (!pp7HasSession) {
@@ -1807,7 +1824,7 @@ function doPost(e) {
       pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (form POST)', postFp);
       // Create session token (valid 8 hours)
       var sessionToken = Utilities.getUuid() + '_' + new Date().getTime();
-      CacheService.getScriptCache().put('PDPA_SESSION_' + sessionToken, 'valid', 28800); // 8 ชม.
+      CacheService.getScriptCache().put('PDPA_SESSION_' + sessionToken, 'valid', PDPA_CONFIG.SESSION_TTL); // 4 ชม. (reduced from 8)
       // Build redirect URL with token + rquery
       var baseUrl = ScriptApp.getService().getUrl();
       var redirectUrl = baseUrl + '?st=' + sessionToken;
