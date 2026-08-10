@@ -1829,25 +1829,24 @@ function doPost(e) {
       var baseUrl = ScriptApp.getService().getUrl();
       var redirectUrl = baseUrl + '?st=' + sessionToken;
       if (p.rquery) redirectUrl += '&' + p.rquery;
-      // Render OKR dashboard DIRECTLY in doPost (no redirect needed)
-      // This is the approach that worked before — page opens, then data loads
-      try {
-        var dashHtml = HtmlService.createHtmlOutputFromFile('OKR_All_Index');
-        var dashContent = dashHtml.getContent();
-        return HtmlService.createHtmlOutput(dashContent)
-          .setTitle('PMS/PMG OKR Dashboard — 5 แผนก')
-          .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-          .addMetaTag('viewport', 'width=device-width, initial-scale=1');
-      } catch(e2) {
-        // Fallback: show link
-        return HtmlService.createHtmlOutput(
-          '<!DOCTYPE html><html><head><meta charset="UTF-8">'+
-          '<title>กำลังเข้าสู่ระบบ...</title></head><body style="font-family:system-ui;text-align:center;padding:40px">'+
-          '<div style="font-size:48px">✅</div><div style="font-size:18px;font-weight:700;color:#10b981;margin-top:8px">เข้าสู่ระบบสำเร็จ</div>'+
-          '<a href="'+redirectUrl+'" style="display:inline-block;margin-top:16px;padding:10px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:700">เข้าสู่ Dashboard →</a>'+
-          '</body></html>'
-        ).setTitle('เข้าสู่ระบบสำเร็จ').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      // Build redirect URL with ALL original params (gm, pr, okrall, etc.)
+      var redirUrl = baseUrl + '?st=' + getToken;
+      for (var rk in p) {
+        if (p[rk] && rk !== 'st' && rk !== 'pass' && rk !== 'authed' && rk !== 'otp' && rk !== 'pwdok' && rk !== 'rquery') {
+          redirUrl += '&' + rk + '=' + encodeURIComponent(p[rk]);
+        }
       }
+      // Meta-refresh redirect to the correct page with session token
+      return HtmlService.createHtmlOutput(
+        '<!DOCTYPE html><html><head><meta charset="UTF-8">'+
+        '<meta http-equiv="refresh" content="0;url='+escapeHtml(redirUrl)+'">'+
+        '<title>กำลังเข้าสู่ระบบ...</title></head>'+
+        '<body style="font-family:system-ui;text-align:center;padding:40px">'+
+        '<div style="font-size:48px">✅</div>'+
+        '<div style="font-size:18px;font-weight:700;color:#10b981;margin-top:8px">เข้าสู่ระบบสำเร็จ</div>'+
+        '<div style="font-size:13px;color:#64748b;margin-top:4px">กำลังโหลด...</div>'+
+        '</body></html>'
+      ).setTitle('กำลังเข้าสู่ระบบ...').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     } else {
       var count = pdpaRecordFailedAttempt(postFp);
       pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + count, postFp);
@@ -15602,7 +15601,7 @@ function fetchPRDashboardData() {
 function refreshPRData() {
   try {
     // ล้าง cache
-    CacheService.getScriptCache().remove('prdash_data_v10');
+    CacheService.getScriptCache().remove('prdash_data_v19');
     // ดึงข้อมูลใหม่
     var data = fetchPRDashboardData_();
     return { success: true, data: data };
@@ -15613,7 +15612,7 @@ function refreshPRData() {
 
 function fetchPRDashboardData_() {
   var SHEET_ID = '1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds';
-  var cacheKey = 'prdash_data_v18';
+  var cacheKey = 'prdash_data_v19';
   var cached = CacheService.getScriptCache().get(cacheKey);
   if (cached) {
     try { return JSON.parse(cached); } catch(e) {}
@@ -15896,7 +15895,7 @@ function fetchPRDashboardData_() {
       var tGmTarget = Number(trow[3]) || 0;
       var tGmActual = Number(trow[4]) || 0;
       // เฉพาะแถวที่มี GM จริง (ปี 69) และมีจำนวนรถมากกว่า 500 (กรองข้อมูลปีเก่า/สาขาเดียว)
-      if (tGmActual > 100000 && tCars > 500) {
+      if (tGmActual > 0 && tCars > 0) {
         monthlyArr.push({
           month: tMonth,
           gm: Math.round(tGmActual),
@@ -16420,4 +16419,36 @@ function getOrgCustDebug_() {
 
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+function getSheetByGid(sheetId, gid) {
+  var ss = SpreadsheetApp.openById(sheetId);
+  var sheets = ss.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].getSheetId() === gid) return sheets[i];
+  }
+  return null;
+}
+
+function dumpPRSheetGid() {
+  var ss = SpreadsheetApp.openById('1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds');
+  var sheets = ss.getSheets();
+  var result = { sheets: [] };
+  for (var i = 0; i < sheets.length; i++) {
+    result.sheets.push({ name: sheets[i].getName(), gid: sheets[i].getSheetId(), rows: sheets[i].getLastRow(), cols: sheets[i].getLastColumn() });
+  }
+  // Read the sheet with gid=1745710344
+  var target = getSheetByGid('1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds', 1745710344);
+  if (target) {
+    result.targetName = target.getName();
+    result.targetGid = target.getSheetId();
+    var lr = Math.min(target.getLastRow(), 50);
+    var lc = Math.min(target.getLastColumn(), 15);
+    var data = target.getRange(1, 1, lr, lc).getValues();
+    result.rawData = [];
+    for (var r = 0; r < data.length; r++) {
+      result.rawData.push({ row: r + 1, cells: data[r].slice(0, 10).map(function(v) { return v === '' ? '' : (typeof v === 'number' ? v : String(v).trim().substring(0, 30)); }) });
+    }
+  }
+  return result;
 }
