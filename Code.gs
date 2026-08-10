@@ -1380,7 +1380,7 @@ function doGet(e) {
   }
   if (p.gm === '1') {
     // Serve GM Dashboard HTML — data loaded via ?view=data fetch
-    var gmHtml = HtmlService.createHtmlOutputFromFile('GM_Index');
+    var gmHtml = HtmlService.createHtmlOutputFromFile('GMDash');
     // Inject the script URL so JS can fetch data from the correct endpoint
     // (inside GAS sandbox, window.location.href is a sandbox URL, not the real one)
     var scriptUrl = ScriptApp.getService().getUrl();
@@ -15895,7 +15895,7 @@ function fetchPRDashboardData_() {
       var tGmTarget = Number(trow[3]) || 0;
       var tGmActual = Number(trow[4]) || 0;
       // เฉพาะแถวที่มี GM จริง (ปี 69) และมีจำนวนรถมากกว่า 500 (กรองข้อมูลปีเก่า/สาขาเดียว)
-      if (tGmActual > 0 && tCars > 0) {
+      if (tGmActual > 0 && tCars > 0 && tCars < 10000 && tGmActual > 10000) {
         monthlyArr.push({
           month: tMonth,
           gm: Math.round(tGmActual),
@@ -15939,7 +15939,7 @@ function fetchGMDashboardData() {
 
 function fetchGMDashboardData_() {
   var SHEET_ID = '1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds';
-  var cacheKey = 'gmdash_data_v3';
+  var cacheKey = 'gmdash_data_v7';
   var cached = CacheService.getScriptCache().get(cacheKey);
   if (cached) {
     try { return JSON.parse(cached); } catch(e) {}
@@ -15978,7 +15978,7 @@ function fetchGMDashboardData_() {
       var gmPerCar = cars > 0 ? Math.round(gmActual / cars) : 0;
       var gmOld = Number(row[13]) || 0;
       
-      if (gmActual > 0 && month !== 'รวม' && month.indexOf('%') < 0 && month.indexOf('GM') < 0) {
+      if (gmActual > 10000 && cars > 100 && cars < 10000 && month !== 'รวม' && month.indexOf('%') < 0 && month.indexOf('GM') < 0) {
         months.push({
           month: month, cars: cars, revenue: Math.round(revenue),
           gmTarget: Math.round(gmTarget), gmActual: Math.round(gmActual),

@@ -295,21 +295,19 @@ function init() {
   D = window.GM_RAW_DATA || null;
   initWatermark();
   if (!D) {
-    var baseUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL
-      : window.location.href.split('?')[0];
-    fetch(baseUrl + (baseUrl.indexOf('?') > -1 ? '&' : '?') + 'gm=1&view=data')
-      .then(function(r) { return r.json(); })
-      .then(function(d) { D = d; render(); })
-      .catch(function(e) {
+    google.script.run
+      .withSuccessHandler(function(d) { D = d; render(); })
+      .withFailureHandler(function(e) {
         document.getElementById('mainContent').innerHTML = '<div class="loading" style="color:#dc2626">❌ ไม่สามารถโหลดข้อมูลได้: ' + e.message + '</div>';
-      });
+      })
+      .fetchGMDashboardData();
   } else {
     render();
   }
 }
 
 function render() {
-  if (!D || !D.summary || D.summary.length === 0) {
+  if (!D || !D.summary || Object.keys(D.summary).length === 0) {
     document.getElementById('mainContent').innerHTML = '<div class="loading" style="color:#dc2626">❌ ไม่มีข้อมูล</div>';
     return;
   }
