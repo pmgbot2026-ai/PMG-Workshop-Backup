@@ -605,7 +605,7 @@ function doGet(e) {
     // fall through ไปทำงานต่อ
   }
   // ── API endpoints ไม่ต้อง login (data fetch + refresh only) ──
-  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || p.prapi === '1' || p.courseapi === '1' || p.gmapi === '1' || p.ceoactuals === '1' || p.bct === '1' || p.bctsaleapi === '1' || p.orgcustapi === '1' || p.orgcustdebug === '1' || (p.allproject === '1') || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action))) {
+  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || p.prapi === '1' || p.prdebug === '1' || p.courseapi === '1' || p.gmapi === '1' || p.ceoactuals === '1' || p.bct === '1' || p.bctsaleapi === '1' || p.orgcustapi === '1' || p.orgcustdebug === '1' || (p.allproject === '1') || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action))) {
     // fall through — API/embed bypass
   }
   // ── ถ้าไม่มี session และไม่ใช่ API — แสดงหน้า login ──
@@ -1720,6 +1720,13 @@ function doGet(e) {
   if (p.prapi === '1') {
     var prData = fetchPRDashboardData_();
     return ContentService.createTextOutput(JSON.stringify(prData))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ═══ PR Dashboard NEW sheet debug API ═══
+  if (p.prdebug === '1') {
+    var dbgData = getPRNewSheetData_();
+    return ContentService.createTextOutput(JSON.stringify(dbgData))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -15601,7 +15608,7 @@ function fetchPRDashboardData() {
 function refreshPRData() {
   try {
     // ล้าง cache
-    CacheService.getScriptCache().remove('prdash_data_v19');
+    CacheService.getScriptCache().remove('prdash_data_v21');
     // ดึงข้อมูลใหม่
     var data = fetchPRDashboardData_();
     return { success: true, data: data };
@@ -15612,7 +15619,7 @@ function refreshPRData() {
 
 function fetchPRDashboardData_() {
   var SHEET_ID = '1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds';
-  var cacheKey = 'prdash_data_v19';
+  var cacheKey = 'prdash_data_v21';
   var cached = CacheService.getScriptCache().get(cacheKey);
   if (cached) {
     try { return JSON.parse(cached); } catch(e) {}
@@ -15924,6 +15931,368 @@ function fetchPRDashboardData_() {
 
   // Cache for 1 hour
   try { CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 600); } catch(e) {}
+
+  return result;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// NEW SHEET DATA — 1m29ivs-X8DEV4XQa2zP4D3QfiUU-DKtWJ6KmUChuqgg
+// 4 tabs: เป้า/ผลงาน ส.ค. 69, สรุป รายได้ ยอดรถ GM,
+//        PR เป้าขายรวมเดือน สิงหาคม 69, วัดผล ผลิตภัณฑ์ใหม่ 69
+// ════════════════════════════════════════════════════════════════════════
+var PR_NEW_SHEET_ID = '1m29ivs-X8DEV4XQa2zP4D3QfiUU-DKtWJ6KmUChuqgg';
+
+function getPRNewSheetData_() {
+  var ss = SpreadsheetApp.openById(PR_NEW_SHEET_ID);
+  var result = {
+    sheetTitle: ss.getName(),
+    timestampStr: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm'),
+    saTargets: [],
+    saRevenue: [],
+    productData: [],
+    newProductData: [],
+    summary: {}
+  };
+
+  // ── Tab 1: "เป้า/ผลงาน ส.ค. 69" — SA targets vs actuals ──
+  var s1 = ss.getSheetByName('\u0E40\u0E1B\u0E49/\u0E1C\u0E25\u0E07\u0E32\u0E19 \u0E2A.\u0E04. 69');
+  if (s1) {
+    var d1 = s1.getDataRange().getValues();
+    // Totals row = R6 (index 6): targets for all SAs
+    // Left section (cols A-H, index 0-7): NO, สาขา, SC, เป้ายอดรถ, เป้ารายได้/คัน, เป้ารายได้รวม, GMผลิตภัณฑ์เสริมรวม, GMผลิตภัณฑ์เสริม/คัน
+    // Right section (cols J-Y, index 9-24): NO, สาขา, SA, สถานะSA, ยอดรถเข้าซ่อม (เป้า/ทำได้/%/คงเหลือ), รายได้รวม (เป้า/ทำได้/%/คงเหลือ)
+
+    var saTargets = [];
+    // SA data rows: index 7-23 (skip subtotal rows like R13, R16, R18, R22)
+    for (var i = 7; i < d1.length; i++) {
+      var r = d1[i];
+      var no = Number(r[0]);
+      var branch = String(r[1] || '').trim();
+      var scName = String(r[2] || '').trim();
+      // Skip subtotal rows (no number, or contains "รวม")
+      if (isNaN(no) || no < 1 || no > 100) continue;
+      if (branch.indexOf('\u0E23\u0E27\u0E21') >= 0) continue; // skip "รวม" rows
+
+      var carTarget = Number(r[3]) || 0;
+      var revPerCarTarget = Number(r[4]) || 0;
+      var revTarget = Number(r[5]) || 0;
+      var gmTarget = Number(r[6]) || 0;
+      var gmPerCarTarget = Number(r[7]) || 0;
+
+      // Actuals from right section (cols J onwards, index 9+)
+      var actNo = Number(r[9]) || 0;
+      var actBranch = String(r[10] || '').trim();
+      var actName = String(r[11] || '').trim();
+      var actStatus = String(r[12] || '').trim();
+      var actCarTarget = Number(r[13]) || 0;
+      var actCarActual = Number(r[14]) || 0;
+      var carPct = actCarTarget > 0 ? Math.round(actCarActual / actCarTarget * 100) : 0;
+      var carsWithRev = Number(r[15]) || 0;
+      var carsWithRevPct = Number(r[16]) || 0;
+      var carsRemaining = Number(r[17]) || 0;
+      var carsRemainingPct = Number(r[18]) || 0;
+      var actRevTarget = Number(r[19]) || 0;
+      var actRevActual = Number(r[20]) || 0;
+      var revPct = actRevTarget > 0 ? Math.round(actRevActual / actRevTarget * 100) : 0;
+      var revRemaining = Number(r[21]) || 0;
+      var revRemainingPct = Number(r[22]) || 0;
+
+      saTargets.push({
+        no: no,
+        name: actName || scName,
+        branch: actBranch || branch,
+        status: actStatus,
+        carTarget: Math.round(actCarTarget),
+        carActual: Math.round(actCarActual),
+        carPct: carPct,
+        carsWithRev: Math.round(carsWithRev),
+        carsRemaining: Math.round(carsRemaining),
+        revTarget: Math.round(actRevTarget),
+        revActual: Math.round(actRevActual),
+        revPct: revPct,
+        gmTarget: Math.round(gmTarget),
+        gmPerCarTarget: Math.round(gmPerCarTarget),
+        revPerCarTarget: Math.round(revPerCarTarget)
+      });
+    }
+    result.saTargets = saTargets;
+
+    // Totals from R6 (index 6)
+    var tot1 = d1[6];
+    result.summary.totalCarTarget = Math.round(Number(tot1[3]) || 0);
+    result.summary.totalRevPerCarTarget = Math.round(Number(tot1[4]) || 0);
+    result.summary.totalRevTarget = Math.round(Number(tot1[5]) || 0);
+    result.summary.totalGMTarget = Math.round(Number(tot1[6]) || 0);
+    result.summary.totalGMPerCarTarget = Math.round(Number(tot1[7]) || 0);
+    // Actuals totals from right section
+    result.summary.totalCarActual = Math.round(Number(tot1[14]) || 0);
+    result.summary.totalCarsWithRev = Math.round(Number(tot1[15]) || 0);
+    result.summary.totalRevActual = Math.round(Number(tot1[20]) || 0);
+  }
+
+  // ── Tab 2: "สรุป รายได้ ยอดรถ GM" — SA revenue/car/GM data ──
+  var s2 = ss.getSheetByName('\u0E2A\u0E23\u0E38\u0E1B \u0E23\u0E32\u0E22\u0E44\u0E14\u0E49 \u0E22\u0E2D\u0E14\u0E23\u0E16 GM');
+  if (s2) {
+    var d2 = s2.getDataRange().getValues();
+    // SA ranking section: R7-R37 (index 7-37), with cols:
+    // B=NO(1), C=สาขา(2), D=SA(3), E=รับรถ(4), F=GM(5), G=รายได้รวม(6)
+    // H-N: behavior scores (7-13)
+    // O=รับรถ(14), P=GM(15), Q=รายได้รวม(16), R=เกรด(17), S=คะแนนรวม(18)
+    // PR section starting R22 (index 22): headers
+    // R24 (index 24) = totals row
+    // R25+ (index 25+) = SA data with full revenue breakdown
+    var saRevenue = [];
+    // Use PR section (R22+ headers, R24 totals, R25+ SA data)
+    // R22: headers: NO(1), สาขา(2), SA(3), เป้ายอดรถ(4), รับรถ(5), %(6), ยอดรถมีรายได้(7), รถฟรี(8),
+    //         รายได้รวม(9), ค่าแรง(10), ค่าอะไหล่(11), วัสดุสิ้นเปลือง(12), จ้างภายนอก(13),
+    //         ผลิตภัณฑ์เสริม(14): รายได้(14), ต้นทุน(15), GM(16), %(17),
+    //         เกรด(18), ค่าคะแนน(19), รายได้ค่าอะไหล่/คัน(20), GMรายได้ค่าอะไหล่/คัน(21)
+    for (var j = 25; j < d2.length; j++) {
+      var rr = d2[j];
+      var no2 = Number(rr[1]);
+      if (isNaN(no2) || no2 < 1 || no2 > 100) continue;
+      var name2 = String(rr[3] || '').trim();
+      if (!name2 || name2 === '' || name2.indexOf('\u0E23\u0E27\u0E21') >= 0) continue;
+
+      var carTarget2 = Number(rr[4]) || 0;
+      var carCount2 = Number(rr[5]) || 0;
+      var carPct2 = carTarget2 > 0 ? Math.round(carCount2 / carTarget2 * 100) : 0;
+      var carsWithRev2 = Number(rr[7]) || 0;
+      var carsFree = Number(rr[8]) || 0;
+      var revenue2 = Number(rr[9]) || 0;
+      var labor2 = Number(rr[10]) || 0;
+      var parts2 = Number(rr[11]) || 0;
+      var consumables = Number(rr[12]) || 0;
+      var outsourcing = Number(rr[13]) || 0;
+      var suppRevenue = Number(rr[14]) || 0;
+      var suppCost = Number(rr[15]) || 0;
+      var suppGM = Number(rr[16]) || 0;
+      var gmPct2 = suppRevenue > 0 ? Math.round(suppGM / suppRevenue * 100) : 0;
+      var grade2 = String(rr[18] || '').trim();
+      var gradeScore = Number(rr[19]) || 0;
+
+      saRevenue.push({
+        no: no2,
+        name: name2,
+        branch: String(rr[2] || '').trim(),
+        carTarget: Math.round(carTarget2),
+        carCount: Math.round(carCount2),
+        carPct: carPct2,
+        carsWithRev: Math.round(carsWithRev2),
+        carsFree: Math.round(carsFree),
+        revenue: Math.round(revenue2),
+        labor: Math.round(labor2),
+        parts: Math.round(parts2),
+        consumables: Math.round(consumables),
+        outsourcing: Math.round(outsourcing),
+        supplementRevenue: Math.round(suppRevenue),
+        supplementCost: Math.round(suppCost),
+        supplementGM: Math.round(suppGM),
+        gmPct: gmPct2,
+        grade: grade2,
+        gradeScore: gradeScore
+      });
+    }
+    result.saRevenue = saRevenue;
+
+    // Totals from R24 (index 24)
+    var tot2 = d2[24];
+    if (tot2) {
+      result.summary.revTotalCarTarget = Math.round(Number(tot2[4]) || 0);
+      result.summary.revTotalCarCount = Math.round(Number(tot2[5]) || 0);
+      result.summary.revTotalCarsWithRev = Math.round(Number(tot2[7]) || 0);
+      result.summary.revTotalRevenue = Math.round(Number(tot2[9]) || 0);
+      result.summary.revTotalLabor = Math.round(Number(tot2[10]) || 0);
+      result.summary.revTotalParts = Math.round(Number(tot2[11]) || 0);
+      result.summary.revTotalSuppRevenue = Math.round(Number(tot2[14]) || 0);
+      result.summary.revTotalSuppCost = Math.round(Number(tot2[15]) || 0);
+      result.summary.revTotalSuppGM = Math.round(Number(tot2[16]) || 0);
+      result.summary.revTotalGMPct = result.summary.revTotalSuppRevenue > 0 ? Math.round(result.summary.revTotalSuppGM / result.summary.revTotalSuppRevenue * 100) : 0;
+    }
+
+    // Also get ranking data from R7-R16 (ranking section)
+    var rankings = [];
+    for (var rk = 7; rk < Math.min(17, d2.length); rk++) {
+      var rkr = d2[rk];
+      var rkNo = Number(rkr[1]);
+      if (isNaN(rkNo) || rkNo < 1) continue;
+      var rkName = String(rkr[3] || '').trim();
+      if (!rkName || rkName.indexOf('\u0E23\u0E27\u0E21') >= 0) continue;
+      rankings.push({
+        no: rkNo,
+        name: rkName,
+        branch: String(rkr[2] || '').trim(),
+        carCount: Number(rkr[4]) || 0,
+        gm: Math.round(Number(rkr[5]) || 0),
+        revenue: Math.round(Number(rkr[6]) || 0),
+        carGrade: String(rkr[13] || '').trim(),
+        gmGrade: String(rkr[14] || '').trim(),
+        revGrade: String(rkr[15] || '').trim(),
+        totalScore: Number(rkr[17]) || 0,
+        overallGrade: String(rkr[23] || '').trim()
+      });
+    }
+    result.rankings = rankings;
+
+    // Get data date from R17 (index 17): col E (index 4) = month, col F (index 5) = date
+    if (d2.length > 17) {
+      var dateRow = d2[17];
+      var monthVal = String(dateRow[4] || '').trim();
+      var dateVal = dateRow[5];
+      if (dateVal instanceof Date) {
+        result.dataDate = '\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2D\u0E31\u0E1E\u0E40\u0E14\u0E17: ' + Utilities.formatDate(dateVal, 'GMT+7', 'dd/MM/yyyy');
+      } else if (monthVal) {
+        result.dataDate = '\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2D\u0E31\u0E1E\u0E40\u0E14\u0E17: ' + String(monthVal) + ' ' + String(dateVal || '');
+      }
+    }
+  }
+
+  // ── Tab 3: "PR เป้าขายรวมเดือน สิงหาคม 69" — Product-level sales targets ──
+  var s3 = ss.getSheetByName('PR \u0E40\u0E1B\u0E49\u0E02\u0E32\u0E22\u0E23\u0E27\u0E21\u0E40\u0E14\u0E37\u0E2D\u0E19 \u0E2A\u0E34\u0E07\u0E2B\u0E32\u0E04\u0E21 69');
+  if (s3) {
+    var d3 = s3.getDataRange().getValues();
+    // Same structure as existing July tab:
+    // R5 (index 5) = totals row: เป้ารวม 4 สาขา
+    // R6+ (index 6+) = product rows
+    // Cols: A=NO(0), B=Product name(1), C=เริ่มขาย(2), D=เป้าปิด(3), E=ราคาขาย/หน่วย(4), F=ราคาขายรวม(5),
+    //       G=ต้นทุน/หน่วย(6), H=ต้นทุนรวม(7), I=GM/หน่วย(8), J=GMรวม(9), K=ปิดได้(10),
+    //       L=%(11), M=คงเหลือ(12), N=คิดเป็น%(13), O=ทำได้รายได้ผลิตภัณฑ์เสริม(15),
+    //       Q=เป้าหมาย(16) [not always present], R=ทำได้GM(17), S=GMเฉลี่ย/รายการ(18), T=%GM(19)
+    var tot3 = d3[5];
+    if (tot3) {
+      var targetCount = Number(tot3[3]) || 0;
+      var closeCount = Number(tot3[10]) || 0;
+      var closePct = targetCount > 0 ? Math.round(closeCount / targetCount * 100) : 0;
+      var prodRevenue = Number(tot3[15]) || 0;
+      var prodGM = Number(tot3[17]) || 0;
+      var prodGMPerItem = Number(tot3[18]) || 0;
+
+      result.summary.augTargetCount = Math.round(targetCount);
+      result.summary.augCloseCount = Math.round(closeCount);
+      result.summary.augClosePct = closePct;
+      result.summary.augRevenue = Math.round(prodRevenue);
+      result.summary.augGM = Math.round(prodGM);
+      result.summary.augGMPerItem = Math.round(prodGMPerItem);
+    }
+
+    var productList = [];
+    for (var k = 6; k < d3.length; k++) {
+      var row3 = d3[k];
+      var prodName = row3[1];
+      if (!prodName || String(prodName).trim() === '') continue;
+      prodName = String(prodName).trim();
+      var prodNo = Number(row3[0]);
+      if (isNaN(prodNo) || prodNo < 1 || prodNo > 100) continue;
+
+      var tgtCount = Number(row3[3]) || 0;
+      var priceUnit = Number(row3[4]) || 0;
+      var priceTotal = Number(row3[5]) || 0;
+      var costUnit = Number(row3[6]) || 0;
+      var costTotal = Number(row3[7]) || 0;
+      var gmUnit = Number(row3[8]) || 0;
+      var gmTotal = Number(row3[9]) || 0;
+      var closed = Number(row3[10]) || 0;
+      var closeP = tgtCount > 0 ? Math.round(closed / tgtCount * 100) : 0;
+      var remaining = Number(row3[12]) || 0;
+      var prodRev = Number(row3[15]) || 0;
+      var prodGmVal = Number(row3[17]) || 0;
+      var prodGMPerIt = Number(row3[18]) || 0;
+      var prodGMPctVal = (row3[19] !== '' && row3[19] !== 0) ? Math.round(Number(row3[19]) * 100) : 0;
+
+      productList.push({
+        no: prodNo,
+        name: prodName,
+        startDate: String(row3[2] || '').trim(),
+        targetCount: Math.round(tgtCount),
+        pricePerUnit: Math.round(priceUnit),
+        priceTotal: Math.round(priceTotal),
+        costPerUnit: Math.round(costUnit),
+        costTotal: Math.round(costTotal),
+        gmPerUnit: Math.round(gmUnit),
+        gmTotal: Math.round(gmTotal),
+        closeCount: Math.round(closed),
+        closePct: closeP,
+        remaining: Math.round(remaining),
+        revenue: Math.round(prodRev),
+        gm: Math.round(prodGmVal),
+        gmPerItem: Math.round(prodGMPerIt),
+        gmPctSales: prodGMPctVal
+      });
+    }
+    result.productData = productList;
+  }
+
+  // ── Tab 4: "วัดผล ผลิตภัณฑ์ใหม่ 69" — New products measurement ──
+  var s4 = ss.getSheetByName('\u0E27\u0E31\u0E14\u0E1C\u0E25 \u0E1C\u0E25\u0E34\u0E15\u0E20\u0E31\u0E13\u0E11\u0E4C\u0E43\u0E2B\u0E21\u0E48 69');
+  if (s4) {
+    var d4 = s4.getDataRange().getValues();
+    // Same product structure: R5 = totals, R6+ = product rows
+    // Cols: A=NO(0), B=Product name(1), C=เริ่มขาย(2), D=เป้าปิด(3), E=ราคาขาย/หน่วย(4), F=ราคาขายรวม(5),
+    //       G=ต้นทุน/หน่วย(6), H=ต้นทุนรวม(7), I=GM/หน่วย(8), J=GMรวม(9), K=ปิดได้(10),
+    //       L=%(11), M=คงเหลือ(12), N=คิดเป็น%(13), O=ทำได้รายได้(14), P=ทำได้GM(15), Q=GMเฉลี่ย/รายการ(16), R=%GM(17)
+    var tot4 = d4[5];
+    if (tot4) {
+      var npTargetCount = Number(tot4[3]) || 0;
+      var npCloseCount = Number(tot4[10]) || 0;
+      var npClosePct = npTargetCount > 0 ? Math.round(npCloseCount / npTargetCount * 100) : 0;
+      var npRevenue = Number(tot4[14]) || 0;
+      var npGM = Number(tot4[15]) || 0;
+      var npGMPerItem = Number(tot4[16]) || 0;
+
+      result.summary.newProdTargetCount = Math.round(npTargetCount);
+      result.summary.newProdCloseCount = Math.round(npCloseCount);
+      result.summary.newProdClosePct = npClosePct;
+      result.summary.newProdRevenue = Math.round(npRevenue);
+      result.summary.newProdGM = Math.round(npGM);
+      result.summary.newProdGMPerItem = Math.round(npGMPerItem);
+    }
+
+    var newProdList = [];
+    for (var n = 6; n < d4.length; n++) {
+      var row4 = d4[n];
+      var npName = row4[1];
+      if (!npName || String(npName).trim() === '') continue;
+      npName = String(npName).trim();
+      var npNo = Number(row4[0]);
+      if (isNaN(npNo) || npNo < 1 || npNo > 100) continue;
+
+      var npTgtCount = Number(row4[3]) || 0;
+      var npPriceUnit = Number(row4[4]) || 0;
+      var npPriceTotal = Number(row4[5]) || 0;
+      var npCostUnit = Number(row4[6]) || 0;
+      var npCostTotal = Number(row4[7]) || 0;
+      var npGmUnit = Number(row4[8]) || 0;
+      var npGmTotal = Number(row4[9]) || 0;
+      var npClosed = Number(row4[10]) || 0;
+      var npCloseP = npTgtCount > 0 ? Math.round(npClosed / npTgtCount * 100) : 0;
+      var npRemaining = Number(row4[12]) || 0;
+      var npRev = Number(row4[14]) || 0;
+      var npGMVal = Number(row4[15]) || 0;
+      var npGMPer = Number(row4[16]) || 0;
+      var npGMPct = (row4[17] !== '' && row4[17] !== 0) ? Math.round(Number(row4[17]) * 100) : 0;
+
+      newProdList.push({
+        no: npNo,
+        name: npName,
+        startDate: String(row4[2] || '').trim(),
+        targetCount: Math.round(npTgtCount),
+        pricePerUnit: Math.round(npPriceUnit),
+        priceTotal: Math.round(npPriceTotal),
+        costPerUnit: Math.round(npCostUnit),
+        costTotal: Math.round(npCostTotal),
+        gmPerUnit: Math.round(npGmUnit),
+        gmTotal: Math.round(npGmTotal),
+        closeCount: Math.round(npClosed),
+        closePct: npCloseP,
+        remaining: Math.round(npRemaining),
+        revenue: Math.round(npRev),
+        gm: Math.round(npGMVal),
+        gmPerItem: Math.round(npGMPer),
+        gmPctSales: npGMPct
+      });
+    }
+    result.newProductData = newProdList;
+  }
 
   return result;
 }
