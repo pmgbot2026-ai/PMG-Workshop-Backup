@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>แบบแปลนโรงซ่อม PMSG v7.2 — ตามสถานที่จริง</title>
+<title>แบบแปลนโรงซ่อม PMSG v8.0 — สเกลถูกต้อง + ทางเดินทุกช่อง</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,sans-serif;background:#f0f4f8;color:#1e293b;padding:12px}
-h1{font-size:15px;color:#1e40af;text-align:center;margin-bottom:6px}
+h1{font-size:15px;color:#1e40af;text-align:center;margin-bottom:4px}
 .sub{font-size:11px;color:#64748b;text-align:center;margin-bottom:8px}
 canvas{display:block;margin:0 auto;border:1px solid #cbd5e1;background:#fff}
 .legend{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:8px 0}
@@ -16,30 +16,30 @@ canvas{display:block;margin:0 auto;border:1px solid #cbd5e1;background:#fff}
 </style>
 </head>
 <body>
-<h1>🏗️ แบบแปลนโรงซ่อม PMSG v7.2 — ตามสถานที่จริง</h1>
-<div class="sub">อาคาร 20×40m · ที่ดิน 40×60m · ทิศ SW · ถนน 6 เลน · สเกล 1:100</div>
+<h1>🏗️ แบบแปลนโรงซ่อม PMSG v8.0 — สเกล 1:100 · ทางเดินเข้าทุกช่อง</h1>
+<div class="sub">อาคาร 20×40m · ช่อง 4×7m · ทางเดินรถ 4m ข้างซ้าย · รถเข้า-ออกทุกช่องได้</div>
 <div class="legend">
-<div class="li"><div class="lc" style="background:#dbeafe"></div>รับ-ประเมิน</div>
-<div class="li"><div class="lc" style="background:#cffafe"></div>ล้างรถ</div>
-<div class="li"><div class="lc" style="background:#f1f5f9"></div>ผนัง/ทางเดิน</div>
+<div class="li"><div class="lc" style="background:#dbeafe"></div>รับ-ประเมิน-ส่ง</div>
+<div class="li"><div class="lc" style="background:#fee2e2"></div>ซ่อมตัวถัง</div>
+<div class="li"><div class="lc" style="background:#fef3c7"></div>เตรียมผิว</div>
 <div class="li"><div class="lc" style="background:#ede9fe"></div>ตู้พ่นสี</div>
-<div class="li"><div class="lc" style="background:#fef3c7"></div>คลังอะไหล่</div>
-<div class="li"><div class="lc" style="background:#d1fae5"></div>ช่องซ่อมหลัง</div>
-<div class="li"><div class="lc" style="background:#e2e8f0;border:2px dashed #64748b"></div>ที่ดิน</div>
+<div class="li"><div class="lc" style="background:#cffafe"></div>ล้างรถ</div>
+<div class="li"><div class="lc" style="background:#d1fae5"></div>ขัดเงา/QC</div>
+<div class="li"><div class="lc" style="background:#f8fafc;border:1px dashed #94a3b8"></div>ทางเดินรถ 4m</div>
+<div class="li"><div class="lc" style="background:#cbd5e1"></div>ผนัง</div>
+<div class="li"><div class="lc" style="background:#fef3c7;border:1px solid #d97706"></div>คลังอะไหล่</div>
 </div>
-<canvas id="c" width="900" height="950"></canvas>
+<canvas id="c" width="900" height="1000"></canvas>
 <script>
 const cv=document.getElementById('c');
 const ctx=cv.getContext('2d');
-const S=15; // 1m = 15px
-const BW=20*S, BD=40*S, BK=9*S; // building 300×600, back 135
-const LW=40*S, LD=60*S; // land 600×900
+const S=18; // 1m = 18px (larger for clarity)
+const BW=20*S, BD=40*S, BK=9*S;
+const LW=40*S, LD=60*S;
 const OX=(900-LW)/2, OY=20;
+const bW=4*S, bD=7*S, aisleW=4*S;
 
-// Colors
-const W='#334155', B='#e2e8f0', R='#dbeafe', P='#ede9fe', K='#fef3c7',
-      G='#d1fae5', A='#cffafe', D='#fbbf24', T='#1e293b', L='#94a3b8';
-
+const W='#334155',T='#1e293b',L='#94a3b8';
 function rect(x,y,w,h,fill,label,sub){
   ctx.fillStyle=fill;ctx.fillRect(OX+x,OY+y,w,h);
   ctx.strokeStyle=W;ctx.lineWidth=1.5;ctx.strokeRect(OX+x,OY+y,w,h);
@@ -47,15 +47,20 @@ function rect(x,y,w,h,fill,label,sub){
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(label,OX+x+w/2,OY+y+h/2-(sub?6:0));
     if(sub){ctx.font='9px sans-serif';ctx.fillStyle='#475569';
-      ctx.fillText(sub,OX+x+w/2,OY+y+h/2+8);}
-  }
+      ctx.fillText(sub,OX+x+w/2,OY+y+h/2+8);}}
 }
 function wall(x,y,w,h){
   ctx.fillStyle='#cbd5e1';ctx.fillRect(OX+x,OY+y,w,h);
   ctx.strokeStyle=W;ctx.lineWidth=1;ctx.strokeRect(OX+x,OY+y,w,h);
 }
+function aisle(x,y,w,h){
+  ctx.fillStyle='#f8fafc';ctx.fillRect(OX+x,OY+y,w,h);
+  ctx.strokeStyle='#94a3b8';ctx.lineWidth=0.5;ctx.setLineDash([4,3]);
+  ctx.strokeRect(OX+x,OY+y,w,h);ctx.setLineDash([]);
+}
 function door(x,y,w,h){
-  ctx.fillStyle=D;ctx.fillRect(OX+x,OY+y,w,h);
+  ctx.fillStyle='#fbbf24';ctx.fillRect(OX+x,OY+y,w,h);
+  ctx.strokeStyle=W;ctx.lineWidth=1;ctx.strokeRect(OX+x,OY+y,w,h);
   ctx.fillStyle=T;ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText('D',OX+x+w/2,OY+y+h/2);
 }
@@ -71,105 +76,135 @@ function dim(x1,y1,x2,y2,l,v){
   else{ctx.fillText(l,OX+(x1+x2)/2,OY+y1-6);}
 }
 function arrow(x1,y1,x2,y2,c){
-  ctx.strokeStyle=c||D;ctx.lineWidth=2;ctx.setLineDash([5,3]);
+  ctx.strokeStyle=c||'#2563eb';ctx.lineWidth=2;ctx.setLineDash([5,3]);
   ctx.beginPath();ctx.moveTo(OX+x1,OY+y1);ctx.lineTo(OX+x2,OY+y2);ctx.stroke();
   ctx.setLineDash([]);
   const a=Math.atan2(y2-y1,x2-x1),h=7;
   ctx.beginPath();ctx.moveTo(OX+x2,OY+y2);
   ctx.lineTo(OX+x2-h*Math.cos(a-Math.PI/6),OY+y2-h*Math.sin(a-Math.PI/6));
   ctx.lineTo(OX+x2-h*Math.cos(a+Math.PI/6),OY+y2-h*Math.sin(a+Math.PI/6));
-  ctx.closePath();ctx.fillStyle=c||D;ctx.fill();
+  ctx.closePath();ctx.fillStyle=c||'#2563eb';ctx.fill();
 }
 
 // === DRAW ===
-ctx.fillStyle='#fff';ctx.fillRect(0,0,900,950);
+ctx.fillStyle='#fff';ctx.fillRect(0,0,900,1000);
 
-// Land (40×60m)
+// Land
 ctx.fillStyle='#f8fafc';ctx.fillRect(OX,OY,LW,LD+BK);
 ctx.strokeStyle=L;ctx.lineWidth=1;ctx.setLineDash([6,4]);
 ctx.strokeRect(OX,OY,LW,LD+BK);ctx.setLineDash([]);
 
 // Road
-ctx.fillStyle='#e2e8f0';ctx.fillRect(OX-25,OY+LD+BK+5,LW+50,20);
+ctx.fillStyle='#e2e8f0';ctx.fillRect(OX-25,OY+LD+BK+5,LW+50,22);
 text(LW/2,LD+BK+17,'🛣️ ถนน 6 เลน (SW)',L,9,true);
 
 // Back area (40×9m)
-rect(0,0,LW,BK,K,'📦 ห้องเก็บอะไหล่','ฝ้าสูง 2 ชั้น · ประตูตาข่ายเลื่อน 2m');
+rect(0,0,LW*0.6,BK,'#fef3c7','📦 คลังอะไหล่','ฝ้าสูง 2 ชั้น · ประตูตาข่าย 2m');
+rect(LW*0.6,0,LW*0.4,BK,'#fef3c7','🏢 สำนักงาน','ลูกค้า (ชั้นลอย)');
 
-// === BUILDING (20×40m) centered in land ===
+// === BUILDING 20×40m ===
 const bx=(LW-BW)/2, by=BK+10;
 ctx.fillStyle='#f1f5f9';ctx.fillRect(OX+bx,OY+by,BW,BD);
 ctx.strokeStyle=W;ctx.lineWidth=2.5;ctx.strokeRect(OX+bx,OY+by,BW,BD);
-text(bx+BW/2,by-8,'🏢 อาคาร 20×40m',L,9,true);
+text(bx+BW/2,by-8,'🏢 อาคาร 20×40m (800 ตรม.)',L,9,true);
 
-// === INTERIOR LAYOUT (from Excel grid) ===
-// Building interior: 20m wide, 40m deep
-// Section 1 (Y=1-4m): Reception + Wash — 4m deep
-// Wall (Y=5-15m): Structure/wall — 10m
-// Section 2 (Y=16-30m): Access/structure — 15m
-// Section 3 (Y=31-44m): Paint + work — 14m
-// Section 4 (Y=45-48m): Back bays — 4m (extends into back area)
+// === INTERIOR LAYOUT ===
+// Building: 20m wide × 40m deep
+// Layout: [ทางเดิน 4m][ช่อง 4m][ช่อง 4m][ช่อง 4m][ช่อง 4m] = 20m
+// ทางเดินด้านซ้าย 4m ยาวตลอด 40m — รถเข้าถึงทุกช่อง
+// ช่องขวา: 4 คอลัมน์ × 4m = 16m
+// แต่ละช่องเปิดประตูเข้าจากทางเดิน (drive-in/back-out)
 
-const ix=bx+2, iy=by+2, iw=BW-4, ih=BD-4;
+const ax=bx+2; // aisle start
+const aw=aisleW-2; // aisle width
+const baysX=ax+aw+2; // bays start
+const baysW=BW-aw-6; // 16m for 4 bays
+const colW=baysW/4; // each column = 4m
 
-// --- SECTION 1: Reception + Wash (Y=1-4m = 4m deep) ---
-const s1h=4*S;
-// 4 reception bays (each ~4m wide)
-const bayW=iw/5; // 4 bays + 1 wash
-rect(ix,iy,bayW,s1h,R,'📋 ประเมิน','①');
-rect(ix+bayW,iy,bayW,s1h,R,'🚗 รับรถ','②');
-rect(ix+bayW*2,iy,bayW,s1h,R,'🚗 รับรถ','③');
-rect(ix+bayW*3,iy,bayW,s1h,R,'📤 ส่งมอบ','④');
-// Wash area (2m wide at right)
-rect(ix+bayW*4,iy,bayW*0.5,s1h,A,'💦 ล้าง','⑤');
+// 5 rows of 7m bays
+const numRows=5;
+const rowGap=(BD-4-numRows*bD)/(numRows-1);
+const rowY=[];
+for(let r=0;r<numRows;r++) rowY.push(by+2+r*(bD+rowGap));
 
-// --- WALL (Y=5-15m = 10m) ---
-const s2y=iy+s1h, s2h=10*S;
-wall(ix,s2y,iw,s2h);
-text(ix+iw/2,s2y+s2h/2,'🧱 ผนัง/โครงสร้าง (10m)','#64748b',9,true);
+// === DRIVE AISLE (left side, full 40m length) ===
+aisle(ax,by+2,aw,BD-4);
+// Aisle label
+ctx.fillStyle=L;ctx.font='bold 9px sans-serif';
+ctx.save();ctx.translate(OX+ax+aw/2,OY+by+BD/2);ctx.rotate(-Math.PI/2);
+ctx.textAlign='center';ctx.fillText('🛣️ ทางเดินรถ 4m',0,0);ctx.restore();
 
-// --- SECTION 2: Access area (Y=16-30m = 15m) ---
-const s3y=s2y+s2h, s3h=15*S;
-// This area has doors and access
-wall(ix,s3y,iw*0.3,s3h); // left wall
-// Door opening
-door(ix+iw*0.3,s3y+5*S,iw*0.1,s3h-5*S);
-// Open area (drive aisle)
-ctx.fillStyle='#f8fafc';ctx.fillRect(OX+ix+iw*0.4,OY+s3y,iw*0.4,s3h);
-ctx.strokeStyle=L;ctx.lineWidth=0.5;ctx.setLineDash([3,2]);
-ctx.strokeRect(OX+ix+iw*0.4,OY+s3y,iw*0.4,s3h);ctx.setLineDash([]);
-text(ix+iw*0.6,s3y+s3h/2,'🛣️ ทางเดินรถ','กลางอาคาร',L,9,true);
-// Right wall
-wall(ix+iw*0.8,s3y,iw*0.2,s3h);
+// Aisle flow arrows
+arrow(ax+aw/2,by+15,ax+aw/2,by+BD-20,'#16a34a');
+text(ax+aw/2,by+8,'📥 เข้า','#16a34a',8,true);
+text(ax+aw/2,by+BD-8,'⬇️ ส่งมอบ','#dc2626',8,true);
 
-// Flow arrow through aisle
-arrow(ix+iw*0.6,s3y+10,ix+iw*0.6,s3y+s3h-10,'#16a34a');
+// === ROW 1 (Y=1-7m): Reception + Estimate + Delivery + Wash ===
+const r1l=[['📋 ประเมิน','①'],['🚗 รับรถ','②'],['🚗 รับรถ','③'],['📤 ส่งมอบ','④']];
+for(let c=0;c<4;c++){
+  rect(baysX+c*colW,rowY[0],colW-1,bD,'#dbeafe',r1l[c][0],r1l[c][1]);
+  // Arrow from aisle into bay
+  arrow(ax+aw-2,rowY[0]+bD/2,baysX+c*colW-1,rowY[0]+bD/2,'#2563eb',1.5);
+}
 
-// --- SECTION 3: Paint + Work (Y=31-44m = 14m) ---
-const s4y=s3y+s3h, s4h=14*S;
-// Paint booth (12m wide × 14m deep)
-rect(ix,s4y,12*S,s4h,P,'🎨 ตู้พ่นสี','12×14m · Comax/PPG');
-// Parts storage (0.5m strip on left wall — already in wall)
-// Right side: structure/wall
-wall(ix+12*S,s4y,iw-12*S,s4h);
-text(ix+12*S+(iw-12*S)/2,s4y+s4h/2,'🧱 ผนัง','#64748b',8,true);
+// === ROW 2 (Y=8-14m): Disassembly + Frame + Heavy Pull + Hammer ===
+const r2l=[['🔧 ถอด','⑤'],['📐 วัด','⑥'],['🔨 ดึง','⑦'],['🔨 เคาะ','⑧']];
+for(let c=0;c<4;c++){
+  rect(baysX+c*colW,rowY[1],colW-1,bD,'#fee2e2',r2l[c][0],r2l[c][1]);
+  arrow(ax+aw-2,rowY[1]+bD/2,baysX+c*colW-1,rowY[1]+bD/2,'#2563eb',1.5);
+}
 
-// --- SECTION 4: Back bays (Y=45-48m = 4m, extends into back area) ---
-const s5y=s4y+s4h, s5h=4*S;
-rect(ix,s5y,12*S,s5h,G,'🔧 ช่องซ่อมหลัง','⑥ ⑦ ⑧ ⑨');
-wall(ix+12*S,s5y,iw-12*S,s5h);
+// === ROW 3 (Y=15-21m): Prep (putty, primer, masking) ===
+const r3l=[['🛠️ โป๊ว','⑨'],['🎨 พ่นพื้น','⑩'],['📋 ติดกระดาษ','⑪'],['🛠️ เตรียม','⑫']];
+for(let c=0;c<4;c++){
+  rect(baysX+c*colW,rowY[2],colW-1,bD,'#fef3c7',r3l[c][0],r3l[c][1]);
+  arrow(ax+aw-2,rowY[2]+bD/2,baysX+c*colW-1,rowY[2]+bD/2,'#2563eb',1.5);
+}
+
+// === ROW 4 (Y=22-28m... adjusted): Paint Booths ===
+// Paint booth 1 (TC) — 2 bays wide (8m)
+rect(baysX,rowY[3],colW*2-1,bD,'#ede9fe','🎨 ตู้พ่นสี TC','⑬ Comax/PPG · 8×7m');
+arrow(ax+aw-2,rowY[3]+bD/2,baysX-1,rowY[3]+bD/2,'#2563eb',1.5);
+// Paint booth 2 (primer)
+rect(baysX+colW*2,rowY[3],colW-1,bD,'#ede9fe','🎨 พ่น','พื้น ⑭');
+arrow(ax+aw-2,rowY[3]+bD/2,baysX+colW*2-1,rowY[3]+bD/2,'#2563eb',1.5);
+// Mix room + dry
+rect(baysX+colW*3,rowY[3],colW-1,bD*0.4,'#ede9fe','🧪 ผสมสี','');
+rect(baysX+colW*3,rowY[3]+bD*0.4+2,colW-1,bD*0.6-2,'#fef3c7','💨 อบแห้ง','⑮');
+
+// === ROW 5 (Y=29-35m... adjusted): Wash + Polish + QC ===
+const r5l=[['💦 ล้าง','⑯'],['✨ ขัดเงา','⑰'],['✨ ขัดเงา','⑱'],['🔍 QC','⑲']];
+for(let c=0;c<4;c++){
+  rect(baysX+c*colW,rowY[4],colW-1,bD,c===0?'#cffafe':'#d1fae5',r5l[c][0],r5l[c][1]);
+  arrow(ax+aw-2,rowY[4]+bD/2,baysX+c*colW-1,rowY[4]+bD/2,'#2563eb',1.5);
+}
+
+// Flow arrows between rows (in aisle)
+for(let r=0;r<4;r++){
+  arrow(ax+aw/2,rowY[r]+bD+2,ax+aw/2,rowY[r+1]-2,'#16a34a',2);
+}
+
+// === DOOR OPENINGS through wall (connecting aisle to each bay) ===
+// Small door markers at each bay entrance
+for(let r=0;r<5;r++){
+  door(ax+aw-3,rowY[r]+bD/2-4,3,8);
+}
 
 // === EXTERIOR: Service area (right of building) ===
 const svX=bx+BW+10;
 if(svX+8*S<LW-5){
-  // EV charging
-  for(let i=0;i<3;i++)rect(svX+i*3*S,by,3*S,4*S,'#f3e8ff','⚡','EV'+(i+1));
-  // Service bays
-  for(let c=0;c<2;c++)for(let r=0;r<4;r++){
-    const sx=svX+c*(4*S+3),sy=by+5*S+r*(7*S+3);
-    if(sx+4*S<LW-5&&sy+7*S<by+BD)rect(sx,sy,4*S,7*S,'#fce7f3','🔧 S'+(c*4+r+1));
+  // EV charging (3 spots)
+  for(let i=0;i<3;i++)if(svX+i*(3*S+2)+3*S<LW-5)
+    rect(svX+i*(3*S+2),by,3*S,4*S,'#f3e8ff','⚡','EV'+(i+1));
+  // Service bays (8 bays, 2×4)
+  for(let col=0;col<2;col++)for(let row=0;row<4;row++){
+    const sx=svX+col*(4*S+3),sy=by+5*S+row*(7*S+3);
+    if(sx+4*S<LW-5&&sy+7*S<by+BD)
+      rect(sx,sy,4*S,7*S,'#fce7f3','🔧 S'+(col*4+row+1));
   }
   text(svX+4*S,by-8,'🔧 บริการ(8)+EV(3)','#be185d',8,true);
+  // Service access from road
+  arrow(svX-3,by+4*S/2,svX+2,by+4*S/2,'#16a34a',2);
 }
 
 // === EXTERIOR: Coating (left of building) ===
@@ -182,7 +217,7 @@ if(coX>5){
   text(coX+4*S,by-8,'💎 เคลือบ/ฟิล์ม(4)','#9a3412',8,true);
 }
 
-// === PARKING (front, between building and road) ===
+// === PARKING (front) ===
 const pkY=by+BD+8;
 for(let i=0;i<5;i++){
   ctx.fillStyle='#f1f5f9';ctx.fillRect(OX+5+i*(5*S+3),OY+pkY,5*S,4*S);
@@ -190,80 +225,26 @@ for(let i=0;i<5;i++){
   ctx.strokeRect(OX+5+i*(5*S+3),OY+pkY,5*S,4*S);ctx.setLineDash([]);
   text(5+i*(5*S+3)+2.5*S,pkY+2*S,'🚛 H'+(i+1),L,8,true);
 }
-text(LW/2,pkY-6,'🚗 จอดรถ รอซ่อม (5 รถหนัก)',L,8,true);
+// Tow/slide area
+ctx.fillStyle='#f1f5f9';ctx.fillRect(OX+5+5*(5*S+3)+5,OY+pkY,6*S,4*S);
+ctx.strokeStyle=L;ctx.lineWidth=0.5;ctx.setLineDash([3,2]);
+ctx.strokeRect(OX+5+5*(5*S+3)+5,OY+pkY,6*S,4*S);ctx.setLineDash([]);
+text(5+5*(5*S+3)+5+3*S,pkY+2*S,'🚛 ลาก/สไลด์',L,8,true);
+text(LW/2,pkY-6,'🚗 จอดรถ รอซ่อม (5+ลาก)',L,8,true);
 
-// === DIMENSIONS ===
+// === DIMENSIONS (architectural) ===
 dim(0,by+BD+4,LW,by+BD+4,'40m ที่ดิน');
 dim(-8,by,-8,by+BD,'40m อาคาร',true);
 dim(-8,0,-8,LD+BK,'69m (60+9)',true);
 dim(bx,by+BD+4,bx+BW,by+BD+4,'20m อาคาร');
-dim(bx,by-4,bx+BW,by-4,'20m');
-dim(ix,s4y-4,ix+12*S,s4y-4,'12m ตู้พ่นสี');
+dim(bx,by-4,bx+aisleW,by-4,'4m ทางเดิน');
+dim(bx+aisleW,by-4,bx+aisleW+colW,by-4,'4m ช่อง');
+dim(baysX,rowY[0]-4,baysX,rowY[0]+bD,'7m ลึก',true);
 
 // === COMPASS ===
 ctx.save();ctx.translate(OX+LW-20,OY+20);
 ctx.fillStyle='#fbbf24';ctx.font='bold 10px sans-serif';
 ctx.textAlign='center';ctx.fillText('SW ↘',0,0);ctx.restore();
 </script>
-
-<div style="max-width:900px;margin:16px auto;background:#fff;border:2px solid #cbd5e1;border-radius:8px;padding:16px">
-<h2 style="font-size:15px;color:#1e40af;margin-bottom:10px">📋 รายละเอียดความต้องการก่อนออกแบบ</h2>
-
-<h3 style="font-size:13px;color:#1e293b;margin:10px 0 6px">1. ศูนย์ซ่อมตัวถังและสี</h3>
-<table style="width:100%;font-size:11px;border-collapse:collapse">
-<tr style="background:#f1f5f9"><th style="padding:4px 8px;text-align:left;border:1px solid #e2e8f0">พื้นที่</th><th style="padding:4px 8px;border:1px solid #e2e8f0">ต้องการ</th><th style="padding:4px 8px;border:1px solid #e2e8f0">ในแปลน</th></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ประเมินราคา</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">≥1 ช่อง</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ 1</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">รับลูกค้า/ส่งมอบ</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">≥3 ช่อง</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ 3</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ถอดประกอบชิ้นส่วน</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">≥1 ช่อง</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ ในช่องซ่อมหลัง</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ซ่อมหนัก/ดึงตัวถัง</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">≥1 ช่อง + เก็บเครื่องมือ</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ ในช่องซ่อมหลัง</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ซ่อมตัวถังเคาะ</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">≥2 ช่อง</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ ในช่องซ่อมหลัง</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">เตรียมผิว (โป๊ว/พ่นพื้น/กระดาษ)</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">≥3 ช่อง</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ ในตู้พ่นสี area</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ตู้พ่นสี (TC + พื้น)</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">2 ตู้ + ห้องผสมสี</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ 12×14m (Comax/PPG)</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ล้างรถ</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">≥2 ช่อง</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ 1 (2m) + นอกอาคาร</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ขัดเงา + QC</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">≥3 ช่อง</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ ในช่องซ่อมหลัง</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ห้องเก็บอะไหล่</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">ใหม่ + ถอด + วัสดุสิ้นเปลือง</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ หลังอาคาร ฝ้าสูง 2 ชั้น</td></tr>
-</table>
-
-<h3 style="font-size:13px;color:#1e293b;margin:10px 0 6px">2. งานเคลือบแก้ว สติกเกอร์ ฟิล์ม</h3>
-<table style="width:100%;font-size:11px;border-collapse:collapse">
-<tr style="background:#f1f5f9"><th style="padding:4px 8px;text-align:left;border:1px solid #e2e8f0">พื้นที่</th><th style="padding:4px 8px;border:1px solid #e2e8f0">ต้องการ</th><th style="padding:4px 8px;border:1px solid #e2e8f0">ในแปลน</th></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">เตรียมผิวงาน</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">≥2 คัน (ใช้ร่วมได้)</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ C1, C2</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ทำงานเคลือบ/ฟิล์ม</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">≥2 คัน</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ C3, C4</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">รับ-ส่งมอบ</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">2 ช่อง</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ ใช้ร่วมกับศูนย์สี</td></tr>
-</table>
-
-<h3 style="font-size:13px;color:#1e293b;margin:10px 0 6px">3. งานบริการทั่วไป</h3>
-<table style="width:100%;font-size:11px;border-collapse:collapse">
-<tr style="background:#f1f5f9"><th style="padding:4px 8px;text-align:left;border:1px solid #e2e8f0">พื้นที่</th><th style="padding:4px 8px;border:1px solid #e2e8f0">ต้องการ</th><th style="padding:4px 8px;border:1px solid #e2e8f0">ในแปลน</th></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">รับ-ส่งมอบ</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">2-3 ช่อง (ใช้ร่วมได้)</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ ใช้ร่วมศูนย์สี</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ช่องซ่อมบริการ</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">6-8 ช่อง</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ 8 ช่อง (นอกอาคาร)</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">EV Charging</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">2-3 ช่อง</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ 3 จุด AC 22kW</td></tr>
-</table>
-
-<h3 style="font-size:13px;color:#1e293b;margin:10px 0 6px">4. พื้นที่อื่นๆ</h3>
-<table style="width:100%;font-size:11px;border-collapse:collapse">
-<tr style="background:#f1f5f9"><th style="padding:4px 8px;text-align:left;border:1px solid #e2e8f0">พื้นที่</th><th style="padding:4px 8px;border:1px solid #e2e8f0">ต้องการ</th><th style="padding:4px 8px;border:1px solid #e2e8f0">ในแปลน</th></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">โชว์งานเคลือบ</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">2 คัน (ใช้ร่วมได้)</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ พื้นที่จอดหน้า</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">จอดรถ รอซ่อม</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">5 ช่อง (หนัก+เบา)</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ 5 ช่องหน้าอาคาร</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">พักคอยลูกค้า</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">ตามความเหมาะสม</td><td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:center">✅ ชั้นลอยหลังอาคาร</td></tr>
-</table>
-
-<h3 style="font-size:13px;color:#1e293b;margin:10px 0 6px">5. ข้อมูลพื้นที่จริง</h3>
-<table style="width:100%;font-size:11px;border-collapse:collapse">
-<tr style="background:#f1f5f9"><th style="padding:4px 8px;text-align:left;border:1px solid #e2e8f0">รายการ</th><th style="padding:4px 8px;border:1px solid #e2e8f0">ข้อมูล</th></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ที่ดินรอบอาคาร</td><td style="padding:4px 8px;border:1px solid #e2e8f0">40 × 60 เมตร</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ทิศทาง</td><td style="padding:4px 8px;border:1px solid #e2e8f0">หันหน้า ตะวันตกเฉียงใต้ (SW) · ถนน 6 เลน</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ขนาดอาคาร</td><td style="padding:4px 8px;border:1px solid #e2e8f0">20 × 40 เมตร (สูง 8m, clear ~6.5m)</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">พื้นที่หลังอาคาร</td><td style="padding:4px 8px;border:1px solid #e2e8f0">40 × 9 เมตร (ต่อชั้นลอยได้)</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ช่องซ่อม</td><td style="padding:4px 8px;border:1px solid #e2e8f0">4 × 7 เมตร</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">Paint Booth</td><td style="padding:4px 8px;border:1px solid #e2e8f0">Comax / Nippon Paint / PPG</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">EV Charging</td><td style="padding:4px 8px;border:1px solid #e2e8f0">AC 22kW</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">Service Lifts</td><td style="padding:4px 8px;border:1px solid #e2e8f0">2 ตัว (ไม่รวมช่องซ่อมงานตัวถังและสี)</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ถนน</td><td style="padding:4px 8px;border:1px solid #e2e8f0">เลนเดียว (ไม่ต้อง 2 เลนสวนกัน)</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">รถลาก/สไลด์</td><td style="padding:4px 8px;border:1px solid #e2e8f0">มีพื้นที่จอดรถลากเข้าได้</td></tr>
-<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">ห้องเก็บอะไหล่</td><td style="padding:4px 8px;border:1px solid #e2e8f0">ฝ้าสูง วัดจากเชล์ฟ 2 ชั้น · ประตูตาข่ายเลื่อน 2m</td></tr>
-</table>
-</div>
-
 </body>
 </html>
