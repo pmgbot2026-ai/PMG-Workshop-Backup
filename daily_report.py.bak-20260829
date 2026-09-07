@@ -63,7 +63,7 @@ def generate_report():
     daily_comp = daily.get('completions', {}).get('summary', [])
     monthly_comp = daily.get('completions', {}).get('monthlySummary', [])
     daily_fc = daily.get('finalCheck', {}).get('daily', {})
-    monthly_fc = daily.get('finalCheck', {}).get('monthly', {}) or {}
+    monthly_fc = daily.get('finalCheck', {}).get('monthly', {})
     daily_at_risk = daily.get('atRisk', {}).get('count', 0)
     reschedules = daily.get('reschedules', {}).get('count', 0)
 
