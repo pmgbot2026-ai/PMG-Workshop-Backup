@@ -68,6 +68,8 @@ tr:hover{background:#f8fafc}
 </div>
 <script>
 var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
+var PDPA_TOKEN = 'PDPA_TOKEN_PLACEHOLDER';
+function tk() { return PDPA_TOKEN ? ('&token=' + encodeURIComponent(PDPA_TOKEN)) : ''; }
 var currentBranch = 'cnb';
 var currentTab = 'new';
 var vehicles = [];

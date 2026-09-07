@@ -61,6 +61,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 <script>
 var currentBranch = 'cnb';
 var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
+// PDPA token — injected by Code.gs from the URL, carried on every link/fetch.
+var PDPA_TOKEN = 'PDPA_TOKEN_PLACEHOLDER';
 
 function setBranch(b) {
   currentBranch = b;
@@ -70,12 +72,14 @@ function setBranch(b) {
   updateLinks();
 }
 
+function tk() { return PDPA_TOKEN ? ('&token=' + encodeURIComponent(PDPA_TOKEN)) : ''; }
+
 function updateLinks() {
   var base = SCRIPT_URL;
-  document.getElementById('card-receive').href = base + '?receive=1&branch=' + currentBranch;
-  document.getElementById('card-plan').href = base + '?plan=1&branch=' + currentBranch;
-  document.getElementById('card-mechanic').href = base + '?mechanic=1&branch=' + currentBranch;
-  document.getElementById('card-dash').href = base + '?dash=1&branch=' + currentBranch;
+  document.getElementById('card-receive').href = base + '?receive=1&branch=' + currentBranch + tk();
+  document.getElementById('card-plan').href = base + '?plan=1&branch=' + currentBranch + tk();
+  document.getElementById('card-mechanic').href = base + '?mechanic=1&branch=' + currentBranch + tk();
+  document.getElementById('card-dash').href = base + '?dash=1&branch=' + currentBranch + tk();
 }
 
 updateLinks();

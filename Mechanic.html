@@ -63,6 +63,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 </div>
 <script>
 var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
+var PDPA_TOKEN = 'PDPA_TOKEN_PLACEHOLDER';
+function tk() { return PDPA_TOKEN ? ('&token=' + encodeURIComponent(PDPA_TOKEN)) : ''; }
 var currentBranch = 'cnb';
 var currentStation = '';
 var mechanicName = '';
@@ -104,7 +106,7 @@ function init() {
 }
 
 function loadMechanics() {
-  fetch(SCRIPT_URL + '?api=1&action=getMechanics&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch}))
+  fetch(SCRIPT_URL + '?api=1&action=getMechanics&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch})) + tk()
   ).then(function(r) { return r.json(); }).then(function(r) {
     if (r.success && r.mechanics) {
       var dl = document.getElementById('mechanicList');
@@ -133,7 +135,7 @@ function selectStation(s) {
 }
 
 function loadJobs() {
-  fetch(SCRIPT_URL + '?api=1&action=getMechanicJobs&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch, station: currentStation}))
+  fetch(SCRIPT_URL + '?api=1&action=getMechanicJobs&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch, station: currentStation})) + tk()
   ).then(function(r) { return r.json(); }).then(function(r) {
     if (r.success) {
       jobs = r.jobs || [];
@@ -211,7 +213,7 @@ function acceptJob(orderId, plate, station) {
   if (!confirm('รับงาน: ' + plate + ' (' + (stationNames[station]||station) + ')?')) return;
   
   var data = { orderId: orderId, branch: currentBranch, plate: plate, station: station, mechanicName: mechanicName };
-  fetch(SCRIPT_URL + '?api=1&action=acceptJob&data=' + encodeURIComponent(JSON.stringify(data))
+  fetch(SCRIPT_URL + '?api=1&action=acceptJob&data=' + encodeURIComponent(JSON.stringify(data)) + tk()
   ).then(function(r) { return r.json(); }).then(function(r) {
     if (r.success) {
       loadJobs();
@@ -226,7 +228,7 @@ function finishJob(orderId, plate, station) {
   if (!confirm('จบงาน: ' + plate + ' (' + (stationNames[station]||station) + ')?\n\nรถจะเคลื่อนไปสถานีถัดไปอัตโนมัติ')) return;
   
   var data = { orderId: orderId, branch: currentBranch, plate: plate, station: station, mechanicName: mechanicName };
-  fetch(SCRIPT_URL + '?api=1&action=finishJob&data=' + encodeURIComponent(JSON.stringify(data))
+  fetch(SCRIPT_URL + '?api=1&action=finishJob&data=' + encodeURIComponent(JSON.stringify(data)) + tk()
   ).then(function(r) { return r.json(); }).then(function(r) {
     if (r.success) {
       var msg = '✅ จบงานสำเร็จ!\n⏱️ ใช้เวลา: ' + r.durationMin + ' นาที';

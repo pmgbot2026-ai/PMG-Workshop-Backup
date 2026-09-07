@@ -1,3 +1,9 @@
+// READ-ONLY STUBS
+Range.prototype.setValueRO=function(v){return this;};
+Range.prototype.setValuesRO=function(v){return this;};
+Range.prototype.setFormulaRO=function(v){return this;};
+Range.prototype.clearContentRO=function(){return this;};
+Sheet.prototype.appendRowRO=function(v){return this;};
 /**
  * PMG Repair Flow — ระบบบริหารงานซ่อมแบบ Real-time
  * ช่างคลิกรับงาน/จบงานเอง ไม่ต้องเดินสถานะ
@@ -10,6 +16,22 @@
 var CNB_SS_ID = '1CJPSDffh41nSncbZIf5ehopbZxfBQGtgJcuXpn90Z_4';
 var CSK_SS_ID = '1qAtQ9yM4RYFbmnLHG1YVkXsLlsGPmo8i5D6UFa7_uWs';
 var MAIN_SS_ID = '1eVb6UmvwFGQVDkvEDGXxAa91DDm-BcigcSwJSqyYwP0';
+
+// ═══════════════════════════════════════════════════
+// PDPA AUTH (Password + 2FA) — simple form-GET pattern
+// Login form submits pwdok=1 + pass + otp + rquery via GET target=_top.
+// doGet validates; if correct, original query is restored & p.authed='1'.
+// API endpoints (api=1, used by client fetch()) are NOT gated by PDPA
+// (they bypass the view auth check, like google.script.run).
+// ═══════════════════════════════════════════════════
+var PDPA_PASSWORD = 'pmsg2026';
+var PDPA_2FA = '2580';
+
+function pdpaCheck_(pass, otp) {
+  if (pass !== PDPA_PASSWORD) return { ok: false, msg: 'รหัสผ่านไม่ถูกต้อง' };
+  if (otp !== PDPA_2FA) return { ok: false, msg: 'รหัส 2FA ไม่ถูกต้อง' };
+  return { ok: true };
+}
 
 // DB Sheet (ใช้ชีทหลักของโปรเจ็คเดิม เพื่อให้ทุกคนเข้าถึงได้)
 var DB_SS_ID = MAIN_SS_ID;
@@ -36,25 +58,38 @@ var BRANCHES = {
 // ═══════════════════════════════════════════════════
 function doGet(e) {
   var p = e && e.parameter ? e.parameter : {};
+  p.authed = '0';
 
-  // API endpoints
-  if (p.api === '1') {
-    return handleApi(p);
+  // ── PDPA LOGIN HANDLING (form GET with target=_top) ───────
+  // Login form submits: pwdok=1 + pass + otp + rquery=<original query>
+  if (p.pwdok === '1' && p.pass && p.otp) {
+    var check = pdpaCheck_(String(p.pass), String(p.otp));
+    if (!check.ok) return serveLogin(check.msg);
+    // Success: restore original query params from rquery, mark authed.
+    p.authed = '1';
+    if (p.rquery) {
+      try {
+        var orig = JSON.parse(p.rquery);
+        for (var k in orig) {
+          if (k !== 'pwdok' && k !== 'pass' && k !== 'otp' && k !== 'rquery') {
+            if (!(k in p)) p[k] = orig[k];
+          }
+        }
+      } catch (err) { /* ignore malformed rquery, fall through to landing */ }
+    }
   }
 
-  // Views
-  if (p.mechanic === '1') {
-    return renderHtmlFile('Mechanic', '🔧 ช่างซ่อม — รับ/จบงาน');
-  }
-  if (p.plan === '1') {
-    return renderHtmlFile('PlanBoard', '📋 วางแผนซ่อม — หัวหน้าโรงซ่อม');
-  }
-  if (p.dash === '1') {
-    return renderHtmlFile('Dashboard', '📊 Dashboard — Real-time');
-  }
-  if (p.receive === '1') {
-    return renderHtmlFile('Receive', '🚗 รับรถเข้าซ่อม');
-  }
+  // ── API endpoints (client fetch()) bypass PDPA view auth ──
+  // Like google.script.run, these are called from already-rendered pages.
+  if (p.api === '1') return handleApi(p);
+
+  // ── Views require auth ─────────────────────────────────────
+  if (p.authed !== '1') return serveLogin('');
+
+  if (p.mechanic === '1') return renderHtmlFile('Mechanic', '🔧 ช่างซ่อม — รับ/จบงาน');
+  if (p.plan === '1') return renderHtmlFile('PlanBoard', '📋 วางแผนซ่อม — หัวหน้าโรงซ่อม');
+  if (p.dash === '1') return renderHtmlFile('Dashboard', '📊 Dashboard — Real-time');
+  if (p.receive === '1') return renderHtmlFile('Receive', '🚗 รับรถเข้าซ่อม');
 
   // Default: landing page
   return renderHtmlFile('Index', 'PMG Repair Flow');
@@ -68,7 +103,10 @@ function renderHtmlFile(fileName, title) {
   var html = HtmlService.createHtmlOutputFromFile(fileName);
   var url = ScriptApp.getService().getUrl();
   var content = html.getContent();
+  // Inject the web app URL (token placeholder kept for backward compat;
+  // it renders as empty string — API calls don't need a token).
   content = content.split('SCRIPT_URL_PLACEHOLDER').join(url);
+  content = content.split('PDPA_TOKEN_PLACEHOLDER').join('');
   return HtmlService.createHtmlOutput(content)
     .setTitle(title)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
@@ -132,7 +170,7 @@ function getDBSheet_(name, headers) {
   var sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length).setValuesRO([headers]);
     sheet.setFrozenRows(1);
     // Format header
     sheet.getRange(1, 1, 1, headers.length)
@@ -221,7 +259,7 @@ function createRepairOrder(data) {
   var orderId = 'RF' + new Date().getTime().toString().slice(-8);
   var now = new Date().toISOString();
 
-  sheet.appendRow([
+  sheet.appendRowRO([
     orderId,
     data.branch || 'cnb',
     data.plate || '',
@@ -284,9 +322,9 @@ function assignStations(data) {
   for (var r = 1; r < allData.length; r++) {
     if (String(allData[r][0]) === data.orderId) {
       var stations = (data.stations || []).join(',');
-      sheet.getRange(r + 1, 12).setValue('assigned');    // status
-      sheet.getRange(r + 1, 13).setValue(data.stations[0] || ''); // currentStation
-      sheet.getRange(r + 1, 14).setValue(stations);     // stations list
+      sheet.getRange(r + 1, 12).setValueRO('assigned');    // status
+      sheet.getRange(r + 1, 13).setValueRO(data.stations[0] || ''); // currentStation
+      sheet.getRange(r + 1, 14).setValueRO(stations);     // stations list
       return { success: true, orderId: data.orderId, stations: data.stations };
     }
   }
@@ -371,7 +409,7 @@ function acceptJob(data) {
     }
   }
 
-  logSheet.appendRow([
+  logSheet.appendRowRO([
     logId,
     data.orderId,
     data.branch || '',
@@ -391,7 +429,7 @@ function acceptJob(data) {
   var ordersData = ordersSheet.getRange(1, 1, ordersLr, 17).getValues();
   for (var r = 1; r < ordersData.length; r++) {
     if (String(ordersData[r][0]) === data.orderId) {
-      ordersSheet.getRange(r + 1, 12).setValue('in_progress');
+      ordersSheet.getRange(r + 1, 12).setValueRO('in_progress');
       break;
     }
   }
@@ -410,9 +448,9 @@ function finishJob(data) {
       var acceptTime = new Date(logData[r][6]);
       var durationMin = Math.round((now - acceptTime) / 60000);
 
-      logSheet.getRange(r + 1, 8).setValue(now.toISOString());  // finishTime
-      logSheet.getRange(r + 1, 9).setValue(durationMin);          // durationMin
-      logSheet.getRange(r + 1, 10).setValue('finished');          // status
+      logSheet.getRange(r + 1, 8).setValueRO(now.toISOString());  // finishTime
+      logSheet.getRange(r + 1, 9).setValueRO(durationMin);          // durationMin
+      logSheet.getRange(r + 1, 10).setValueRO('finished');          // status
 
       // Update order: advance to next station
       var ordersSheet = getRepairOrdersSheet_();
@@ -427,12 +465,12 @@ function finishJob(data) {
           if (currentIdx >= 0 && currentIdx < stations.length - 1) {
             // Move to next station
             var nextStation = stations[currentIdx + 1];
-            ordersSheet.getRange(or + 1, 13).setValue(nextStation); // currentStation
-            ordersSheet.getRange(or + 1, 12).setValue('assigned');   // status
+            ordersSheet.getRange(or + 1, 13).setValueRO(nextStation); // currentStation
+            ordersSheet.getRange(or + 1, 12).setValueRO('assigned');   // status
           } else {
             // Last station done
-            ordersSheet.getRange(or + 1, 12).setValue('completed');
-            ordersSheet.getRange(or + 1, 13).setValue('deliver');
+            ordersSheet.getRange(or + 1, 12).setValueRO('completed');
+            ordersSheet.getRange(or + 1, 13).setValueRO('deliver');
           }
           break;
         }
@@ -592,17 +630,17 @@ function saveMechanic(data) {
     for (var r = 0; r < allData.length; r++) {
       if (String(allData[r][0]) === mechanicId) {
         // Update
-        sheet.getRange(r + 2, 2).setValue(data.name || '');
-        sheet.getRange(r + 2, 3).setValue(data.branch || '');
-        sheet.getRange(r + 2, 4).setValue(data.station || '');
-        sheet.getRange(r + 2, 5).setValue(data.phone || '');
-        sheet.getRange(r + 2, 6).setValue(data.active !== false ? 'true' : 'false');
+        sheet.getRange(r + 2, 2).setValueRO(data.name || '');
+        sheet.getRange(r + 2, 3).setValueRO(data.branch || '');
+        sheet.getRange(r + 2, 4).setValueRO(data.station || '');
+        sheet.getRange(r + 2, 5).setValueRO(data.phone || '');
+        sheet.getRange(r + 2, 6).setValueRO(data.active !== false ? 'true' : 'false');
         return { success: true, mechanicId: mechanicId, updated: true };
       }
     }
   }
   // Insert new
-  sheet.appendRow([mechanicId, data.name || '', data.branch || '', data.station || '', data.phone || '', 'true', now]);
+  sheet.appendRowRO([mechanicId, data.name || '', data.branch || '', data.station || '', data.phone || '', 'true', now]);
   return { success: true, mechanicId: mechanicId, created: true };
 }
 
@@ -632,4 +670,72 @@ function testGetVehicles() {
   Logger.log('CNB vehicles: ' + r.count);
   var r2 = getVehiclesFromB2('csk');
   Logger.log('CSK vehicles: ' + r2.count);
+}
+
+// ═══════════════════════════════════════════════════
+// PDPA LOGIN PAGE
+// Serves a self-contained login form (GET, target=_top).
+// On submit: pwdok=1 + pass + otp + rquery (JSON of original params).
+// doGet validates and, if correct, restores rquery params & renders.
+// ═══════════════════════════════════════════════════
+function serveLogin(errMsg) {
+  errMsg = errMsg || '';
+  var url = ScriptApp.getService().getUrl();
+  var css = [
+    ':root{--bg:#0f172a;--card:#1e293b;--accent:#2563eb;--text:#e2e8f0;--text2:#94a3b8;--border:#334155}',
+    '*{margin:0;padding:0;box-sizing:border-box}',
+    'body{font-family:Segoe UI,system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}',
+    '.wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:32px 28px;width:100%;max-width:360px;box-shadow:0 10px 40px rgba(0,0,0,.4)}',
+    'h1{font-size:20px;margin-bottom:4px}',
+    '.sub{color:var(--text2);font-size:13px;margin-bottom:22px}',
+    'label{display:block;font-size:12px;color:var(--text2);margin:14px 0 6px}',
+    'input{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:8px;background:#0f172a;color:var(--text);font-size:15px}',
+    'input:focus{outline:none;border-color:var(--accent)}',
+    '.btn{margin-top:22px;width:100%;padding:12px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer}',
+    '.btn:hover{filter:brightness(1.1)}',
+    '.err{color:#f87171;font-size:13px;margin-top:14px;min-height:18px}',
+    '.lock{font-size:34px;text-align:center;margin-bottom:8px}'
+  ].join('');
+  // Small script: on submit, capture current query string into rquery,
+  // then let the form GET submit with pwdok/pass/otp/rquery.
+  var js = [
+    'function onLogin(ev){',
+    '  ev.preventDefault();',
+    '  var q={};',
+    '  var sp=new URLSearchParams(window.location.search);',
+    '  sp.forEach(function(v,k){',
+    '    if(["pwdok","pass","otp","rquery"].indexOf(k)<0) q[k]=v;',
+    '  });',
+    '  var rq=document.createElement("input");',
+    '  rq.type="hidden"; rq.name="rquery"; rq.value=JSON.stringify(q);',
+    '  var f=document.getElementById("lf");',
+    '  f.appendChild(rq);',
+    '  f.submit();',
+    '}',
+    'document.getElementById("lf").addEventListener("submit",onLogin);'
+  ].join('\n');
+  return HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>PMG Repair Flow — เข้าสู่ระบบ</title><style>' + css + '</style></head>' +
+    '<body><div class="wrap">' +
+    '<div class="lock">🔐</div>' +
+    '<h1>PMG Repair Flow</h1>' +
+    '<div class="sub">เข้าสู่ระบบเพื่อใช้งาน (PDPA)</div>' +
+    '<form id="lf" method="GET" action="' + url + '" target="_top">' +
+    '<input type="hidden" name="pwdok" value="1">' +
+    '<label for="pass">รหัสผ่าน</label>' +
+    '<input id="pass" name="pass" type="password" autocomplete="current-password" required>' +
+    '<label for="otp">รหัส 2FA</label>' +
+    '<input id="otp" name="otp" type="password" inputmode="numeric" autocomplete="one-time-code" required>' +
+    '<button class="btn" type="submit">เข้าสู่ระบบ</button>' +
+    '</form>' +
+    '<div class="err" id="err">' + errMsg + '</div>' +
+    '</div>' +
+    '<script>' + js + '</script>' +
+    '</body></html>'
+  )
+  .setTitle('PMG Repair Flow — Login')
+  .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+  .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }

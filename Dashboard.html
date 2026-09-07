@@ -65,6 +65,8 @@ td{padding:6px;border-bottom:1px solid var(--border);vertical-align:top}
 </div>
 <script>
 var SCRIPT_URL = 'SCRIPT_URL_PLACEHOLDER';
+var PDPA_TOKEN = 'PDPA_TOKEN_PLACEHOLDER';
+function tk() { return PDPA_TOKEN ? ('&token=' + encodeURIComponent(PDPA_TOKEN)) : ''; }
 var currentBranch = 'cnb';
 var stationNames = {knock:'เคาะ',patch:'โป๊ว',squirt:'พ่น',assemble:'ประกอบ',polish:'ขัดสี',wash:'ล้าง',supQC:'SUP QC',deliver:'ส่งมอบ'};
 var stationOrder = ['knock','patch','squirt','assemble','polish','wash','supQC','deliver'];
@@ -88,7 +90,7 @@ function setBranch(b) {
 }
 
 function loadDashboard() {
-  fetch(SCRIPT_URL + '?api=1&action=getDashboard&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch}))
+  fetch(SCRIPT_URL + '?api=1&action=getDashboard&data=' + encodeURIComponent(JSON.stringify({branch: currentBranch})) + tk()
   ).then(function(r) { return r.json(); }).then(function(r) {
     if (r.success) {
       renderDashboard(r.data);
