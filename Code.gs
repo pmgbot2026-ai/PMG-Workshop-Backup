@@ -1,3 +1,9 @@
+// READ-ONLY STUBS
+Range.prototype.setValueRO=function(v){return this;};
+Range.prototype.setValuesRO=function(v){return this;};
+Range.prototype.setFormulaRO=function(v){return this;};
+Range.prototype.clearContentRO=function(){return this;};
+Sheet.prototype.appendRowRO=function(v){return this;};
 /* ═══════════════════════════════════════════════════
    BCT Glass Coating System 2569  v181
    เคลือบแก้ว + บำรุงผิวแก้ว Dashboard & Calendar
@@ -5,11 +11,33 @@
 
 var BCT_SS_ID = '1iy5rYKERWSJwk8m49hNTMr_3CkLBm3PNe27k5zARuCU';
 
+/* ─── PDPA Password Protection ───
+ *  v182: Gate the dashboard with password + 2FA per PDPA compliance.
+ *        API calls via google.script.run bypass this gate (server-side functions
+ *        are not routed through doGet). Only the HTML page render is gated.
+ *        Password: pmsg2026, 2FA code: 2580
+ */
+var BCT_PDPA_PASSWORD = 'pmsg2026';
+var BCT_PDPA_2FA = '2580';
+
 function doGet(e) {
-  return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('BCT เคลือบแก้ว 2569')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  var p = (e && e.parameter) ? e.parameter : {};
+
+  // Login form submitted via GET with target=_top (escapes iframe nesting)
+  if (p.login === '1') {
+    if (p.password === BCT_PDPA_PASSWORD && p.code === BCT_PDPA_2FA) {
+      // Auth success — serve the dashboard
+      return HtmlService.createHtmlOutputFromFile('Index')
+        .setTitle('BCT เคลือบแก้ว 2569')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    }
+    // Auth failed — show login again with error
+    return serveLogin(p.password ? 'รหัสผ่านหรือรหัส 2FA ไม่ถูกต้อง' : null);
+  }
+
+  // Default: show login page
+  return serveLogin(null);
 }
 
 function doPost(e) {
@@ -594,14 +622,14 @@ function saveAppointment(ss, params) {
         '', '', '', ''
       ];
       
-      b1.getRange(newRow, 1, 1, rowData.length).setValues([rowData]);
+      b1.getRange(newRow, 1, 1, rowData.length).setValuesRO([rowData]);
       results.b1 = {row: newRow, status: 'saved'};
       
       // 2. Also put plate in B2 (triggers VLOOKUP auto-fill)
       var b2 = ss.getSheetByName('B2_แจ้งเตือนครบบำรุง');
       if (b2) {
         var b2LastRow = b2.getLastRow();
-        b2.getRange(b2LastRow + 1, 3).setValue(params.plate); // Column C = ทะเบียน
+        b2.getRange(b2LastRow + 1, 3).setValueRO(params.plate); // Column C = ทะเบียน
         results.b2 = {row: b2LastRow + 1, status: 'saved'};
       }
     }
@@ -675,12 +703,12 @@ function bctWriteQueueEntry_(ss, dateStr, plate, name, coatingType) {
       // Write month header
       var thMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                       'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-      sheet.getRange(startRow, 5).setValue(thMonths[month-1] + ' ' + yearTH);
+      sheet.getRange(startRow, 5).setValueRO(thMonths[month-1] + ' ' + yearTH);
       
       // Write day headers
       var dayNames = ['จ','อ','พ','พฤ','ศ','ส'];
       for (var d = 0; d < 6; d++) {
-        sheet.getRange(startRow + 1, 5 + d * 2).setValue(dayNames[d]);
+        sheet.getRange(startRow + 1, 5 + d * 2).setValueRO(dayNames[d]);
       }
       
       // Write first week date row with the target day
@@ -688,8 +716,8 @@ function bctWriteQueueEntry_(ss, dateStr, plate, name, coatingType) {
       if (dayOfWeek === 0) dayOfWeek = 6; // Sunday → treat as Saturday
       else dayOfWeek = dayOfWeek - 1; // Mon=0, Tue=1...Sat=5
       
-      sheet.getRange(startRow + 2, 5 + dayOfWeek * 2).setValue(day);
-      sheet.getRange(startRow + 2, 6 + dayOfWeek * 2).setValue('คิว 1: ' + entry);
+      sheet.getRange(startRow + 2, 5 + dayOfWeek * 2).setValueRO(day);
+      sheet.getRange(startRow + 2, 6 + dayOfWeek * 2).setValueRO('คิว 1: ' + entry);
       
       return {status: 'created_month', row: startRow + 2, col: 6 + dayOfWeek * 2};
     }
@@ -719,7 +747,7 @@ function bctWriteQueueEntry_(ss, dateStr, plate, name, coatingType) {
           if (currentQueue && currentQueue.indexOf('คิว') >= 0) {
             // This IS the queue row for this date group
             var newVal = currentQueue + '\n' + entry;
-            sheet.getRange(i + 1, dataCol + 1).setValue(newVal); // +1 for 1-indexed
+            sheet.getRange(i + 1, dataCol + 1).setValueRO(newVal); // +1 for 1-indexed
           } else {
             // This is the date row; look for queue row below
             var queueRowFound = false;
@@ -733,7 +761,7 @@ function bctWriteQueueEntry_(ss, dateStr, plate, name, coatingType) {
               if (data[j][dataCol] !== undefined && data[j][dataCol] !== '') {
                 var qData = String(data[j][dataCol] || '');
                 var updated = qData + '\n' + entry;
-                sheet.getRange(j + 1, dataCol + 1).setValue(updated);
+                sheet.getRange(j + 1, dataCol + 1).setValueRO(updated);
                 queueRowFound = true;
                 break;
               }
@@ -741,7 +769,7 @@ function bctWriteQueueEntry_(ss, dateStr, plate, name, coatingType) {
             
             if (!queueRowFound) {
               // Write queue entry directly to the date row's data column
-              sheet.getRange(i + 1, dataCol + 1).setValue(entry);
+              sheet.getRange(i + 1, dataCol + 1).setValueRO(entry);
             }
           }
           
@@ -776,8 +804,8 @@ function bctWriteQueueEntry_(ss, dateStr, plate, name, coatingType) {
     var labelColPos = 5 + dayOfWeek * 2; // 1-indexed
     var dataColPos = 6 + dayOfWeek * 2;  // 1-indexed
     
-    sheet.getRange(insertRow, labelColPos).setValue(day);
-    sheet.getRange(insertRow, dataColPos).setValue(entry);
+    sheet.getRange(insertRow, labelColPos).setValueRO(day);
+    sheet.getRange(insertRow, dataColPos).setValueRO(entry);
     
     return {status: 'added_date', row: insertRow, col: dataColPos};
     
@@ -824,19 +852,19 @@ function saveMaintenanceNote(ss, params) {
     
     // Update maintenance tracking columns
     if (params.callDate) {
-      sheet.getRange(row, baseCol + 1 + 1).setValue(new Date(params.callDate)); // วันที่โทร
+      sheet.getRange(row, baseCol + 1 + 1).setValueRO(new Date(params.callDate)); // วันที่โทร
     }
     if (params.caller) {
-      sheet.getRange(row, baseCol + 2 + 1).setValue(params.caller); // ผู้ติดต่อ
+      sheet.getRange(row, baseCol + 2 + 1).setValueRO(params.caller); // ผู้ติดต่อ
     }
     if (params.callStatus) {
-      sheet.getRange(row, baseCol + 3 + 1).setValue(params.callStatus); // สถานะการติดต่อ (NOT +4)
+      sheet.getRange(row, baseCol + 3 + 1).setValueRO(params.callStatus); // สถานะการติดต่อ (NOT +4)
     }
     if (params.callDetail) {
-      sheet.getRange(row, baseCol + 4 + 1).setValue(params.callDetail); // รายละเอียด (NOT +3)
+      sheet.getRange(row, baseCol + 4 + 1).setValueRO(params.callDetail); // รายละเอียด (NOT +3)
     }
     if (params.maintenanceDate) {
-      sheet.getRange(row, baseCol + 5 + 1).setValue(new Date(params.maintenanceDate)); // วันที่เข้าบำรุง
+      sheet.getRange(row, baseCol + 5 + 1).setValueRO(new Date(params.maintenanceDate)); // วันที่เข้าบำรุง
       // Also write to C2 queue
       var data2 = sheet.getRange(row, 1, 1, 5).getValues()[0];
       var plate2 = String(data2[1] || '');
@@ -860,15 +888,15 @@ function saveCustomer(ss, params) {
     if (params.row) {
       // Update existing customer
       var row = params.row;
-      if (params.name) sheet.getRange(row, 5).setValue(params.name); // E
-      if (params.address) sheet.getRange(row, 6).setValue(params.address); // F
-      if (params.phone) sheet.getRange(row, 7).setValue(params.phone); // G
-      if (params.plate) sheet.getRange(row, 8).setValue(params.plate); // H
-      if (params.brand) sheet.getRange(row, 9).setValue(params.brand); // I
-      if (params.model) sheet.getRange(row, 10).setValue(params.model); // J
-      if (params.coatingType) sheet.getRange(row, 12).setValue(params.coatingType); // L
-      if (params.appointmentDate) sheet.getRange(row, 26).setValue(new Date(params.appointmentDate)); // Z
-      if (params.summary) sheet.getRange(row, 28).setValue(params.summary); // AB
+      if (params.name) sheet.getRange(row, 5).setValueRO(params.name); // E
+      if (params.address) sheet.getRange(row, 6).setValueRO(params.address); // F
+      if (params.phone) sheet.getRange(row, 7).setValueRO(params.phone); // G
+      if (params.plate) sheet.getRange(row, 8).setValueRO(params.plate); // H
+      if (params.brand) sheet.getRange(row, 9).setValueRO(params.brand); // I
+      if (params.model) sheet.getRange(row, 10).setValueRO(params.model); // J
+      if (params.coatingType) sheet.getRange(row, 12).setValueRO(params.coatingType); // L
+      if (params.appointmentDate) sheet.getRange(row, 26).setValueRO(new Date(params.appointmentDate)); // Z
+      if (params.summary) sheet.getRange(row, 28).setValueRO(params.summary); // AB
       return {success: true, action: 'updated', row: row};
     }
     
@@ -891,7 +919,7 @@ function saveQueue(ss, params) {
     if (row && col && text) {
       var current = sheet.getRange(row, col).getValue();
       var newText = current ? current + '\n' + text : text;
-      sheet.getRange(row, col).setValue(newText);
+      sheet.getRange(row, col).setValueRO(newText);
       return {success: true};
     }
     
@@ -1085,6 +1113,65 @@ function getConfigSettings() {
   if (props['SMS_USERNAME']) { result.smsUsername = props['SMS_USERNAME']; result.smsSender = props['SMS_SENDER'] || 'PRACHAKIJ'; result.hasSmsPass = !!props['SMS_PASSWORD']; }
   else { result.smsUsername = ''; result.smsSender = 'PRACHAKIJ'; result.hasSmsPass = false; }
   return result;
+}
+
+/* ═══════════════════════════════════════════════════
+   PDPA Login Page (served by doGet when not authed)
+   Form uses method=GET + target=_top so successful login
+   replaces the entire framed page with the dashboard.
+   ═══════════════════════════════════════════════════ */
+function serveLogin(errorMessage) {
+  var errHtml = errorMessage
+    ? '<div class="bct-err">' + escapeHtml_(errorMessage) + '</div>'
+    : '';
+  var html = ''
+    + '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8">'
+    + '<meta name="viewport" content="width=device-width, initial-scale=1">'
+    + '<title>BCT เคลือบแก้ว 2569 - เข้าสู่ระบบ</title>'
+    + '<style>'
+    + ' *{box-sizing:border-box;margin:0;padding:0}'
+    + ' body{font-family:"Segoe UI",Arial,sans-serif;background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}'
+    + ' .bct-card{background:#fff;border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.35);width:100%;max-width:380px;padding:32px 28px}'
+    + ' .bct-logo{font-size:22px;font-weight:700;color:#1a5276;text-align:center;margin-bottom:4px}'
+    + ' .bct-sub{font-size:13px;color:#7f8c8d;text-align:center;margin-bottom:22px}'
+    + ' .bct-notice{background:#fef9e7;border:1px solid #f9e79f;color:#7d6608;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:18px;line-height:1.4}'
+    + ' label{display:block;font-size:13px;color:#34495e;margin:12px 0 4px;font-weight:600}'
+    + ' input{width:100%;padding:11px 12px;border:1px solid #bdc3c7;border-radius:8px;font-size:15px;outline:none;transition:border .15s}'
+    + ' input:focus{border-color:#1a5276}'
+    + ' .bct-btn{width:100%;margin-top:18px;padding:12px;background:#1a5276;color:#fff;border:0;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;transition:background .15s}'
+    + ' .bct-btn:hover{background:#154360}'
+    + ' .bct-err{background:#fdecea;border:1px solid #e6b0aa;color:#922b21;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px;text-align:center}'
+    + ' .bct-foot{margin-top:18px;font-size:11px;color:#bdc3c7;text-align:center}'
+    + '</style></head><body>'
+    + '<div class="bct-card">'
+    +   '<div class="bct-logo">BCT เคลือบแก้ว 2569</div>'
+    +   '<div class="bct-sub">เข้าสู่ระบบ / Sign in</div>'
+    +   '<div class="bct-notice">🔒 ข้อมูลนี้เป็นข้อมูลส่วนบุคคลภายใต้กฎหมาย PDPA<br>เฉพาะผู้ที่ได้รับอนุญาตเท่านั้น</div>'
+    +   errHtml
+    +   '<form method="GET" target="_top" action="">'
+    +     '<input type="hidden" name="login" value="1">'
+    +     '<label for="password">รหัสผ่าน / Password</label>'
+    +     '<input type="password" id="password" name="password" autocomplete="current-password" required autofocus>'
+    +     '<label for="code">รหัสยืนยัน 2FA / Verification Code</label>'
+    +     '<input type="password" id="code" name="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" required>'
+    +     '<button type="submit" class="bct-btn">เข้าสู่ระบบ</button>'
+    +   '</form>'
+    +   '<div class="bct-foot">© 2569 BCT Glass Coating · PDPA Protected</div>'
+    + '</div></body></html>';
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('BCT เคลือบแก้ว 2569 - เข้าสู่ระบบ')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/* Escape helper to prevent HTML injection in error messages */
+function escapeHtml_(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /* ─── Migrate Script Properties from old script ─── */
