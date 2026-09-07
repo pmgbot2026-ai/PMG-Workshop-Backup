@@ -15,26 +15,6 @@ function cs(key, val) { CacheService.getScriptCache().put(CACHE_PREFIX + key, JS
 function cv(key) { var c = ck(key); return c ? JSON.parse(c) : null; }
 
 function doGet(e) {
-  if (e && e.parameter && e.parameter.debug4) {
-    var ss = SpreadsheetApp.openById(SS_KEY);
-    var sh = ss.getSheetByName('Monitor');
-    if (!sh) {
-      var sheets = ss.getSheets();
-      for (var i = 0; i < sheets.length; i++) {
-        if (sheets[i].getSheetId() === 1645350915) { sh = sheets[i]; break; }
-      }
-    }
-    if (sh) {
-      var out = {};
-      out.monitorRaw = sh.getRange('E182:X217').getValues();
-      // Also try the first few rows to see actual structure
-      out.monitorFirst3Rows = sh.getRange('E182:X184').getValues();
-      return ContentService.createTextOutput(JSON.stringify(out))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    return ContentService.createTextOutput(JSON.stringify({error: 'Monitor sheet not found'}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
   if (e && e.parameter && e.parameter.debug3) {
     var sh = getSh();
     var out = { version: 'v13.37' };
