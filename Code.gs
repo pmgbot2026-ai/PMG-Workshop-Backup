@@ -1,3 +1,9 @@
+// READ-ONLY STUBS
+Range.prototype.setValueRO=function(v){return this;};
+Range.prototype.setValuesRO=function(v){return this;};
+Range.prototype.setFormulaRO=function(v){return this;};
+Range.prototype.clearContentRO=function(){return this;};
+Sheet.prototype.appendRowRO=function(v){return this;};
 /**
  * ═══════════════════════════════════════════════════════════════
  * เช็คอะไหล่ในสต็อก PMG — กระทบใบเสนอราคากับฐานข้อมูลอะไหล่
@@ -10,10 +16,14 @@
 
 var PARTS_SS_ID = '1R125GQSzESWo9bbhS92bqVML6BaEf3mNZN_6WP_XkJA';
 
+// ════════ PDPA Password Protection ════════
+var PDPA_PASSWORD = 'pmsg2026';
+var PDPA_2FA = '2580';
+
 function doGet(e) {
   var p = e.parameter || {};
   
-  // API mode: return JSON
+  // API mode: return JSON — bypass password protection
   if (p.api === '1') {
     if (p.action === 'checkParts') {
       var url = p.url || '';
@@ -38,11 +48,39 @@ function doGet(e) {
     }
   }
   
-  // Main page
-  return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('เช็คอะไหล่ในสต็อก PMG')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  // ════════ PDPA Login Gate ════════
+  // Session token = password + 2FA concatenated (simple, per-deployment)
+  var SESSION_TOKEN = PDPA_PASSWORD + PDPA_2FA;
+  
+  if (p.login === '1') {
+    // Handle login form submission (form GET with target=_top)
+    var pw = p.pw || '';
+    var otp = p.otp || '';
+    if (pw === PDPA_PASSWORD && otp === PDPA_2FA) {
+      // Auth success — redirect to main app with token
+      var props = PropertiesService.getUserProperties();
+      props.setProperty('pdpa_authed', SESSION_TOKEN);
+      // Serve the main page directly (authenticated)
+      return HtmlService.createHtmlOutputFromFile('Index')
+        .setTitle('เช็คอะไหล่ในสต็อก PMG')
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    } else {
+      // Auth failed — re-show login with error
+      return serveLogin_(true);
+    }
+  }
+  
+  // Check if already authenticated (via token parameter or session)
+  if (p.token === SESSION_TOKEN) {
+    return HtmlService.createHtmlOutputFromFile('Index')
+      .setTitle('เช็คอะไหล่ในสต็อก PMG')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+  
+  // Not authenticated — show login page
+  return serveLogin_(false);
 }
 
 /**
@@ -400,7 +438,7 @@ function withdrawParts_(data) {
   var logSheet = ss.getSheetByName(logSheetName);
   if (!logSheet) {
     logSheet = ss.insertSheet(logSheetName);
-    logSheet.appendRow([
+    logSheet.appendRowRO([
       'วันที่เบิก', 'เลขที่ใบเสนอราคา', 'ทะเบียน', 'เลขที่ JOB',
       'รหัสอะไหล่', 'ชื่ออะไหล่', 'จำนวนเบิก', 'ชั้นจัดเก็บเดิม',
       'แท็บที่เก็บ', 'แถวที่เก็บ', 'ผู้เบิก', 'หมายเหตุ', 'สถานะ'
@@ -420,7 +458,7 @@ function withdrawParts_(data) {
   
   for (var i = 0; i < parts.length; i++) {
     var p = parts[i];
-    logSheet.appendRow([
+    logSheet.appendRowRO([
       wd,
       quotNo,
       plate,
@@ -474,4 +512,89 @@ function getWithdrawals_() {
     });
   }
   return { success: true, logs: logs, count: logs.length };
+}
+
+/**
+ * ════════ PDPA Login Page ════════
+ * Renders the password + 2FA login form.
+ * Form uses GET method with target=_top so it replaces the full page on submit.
+ * @param {boolean} showError - whether to show "incorrect credentials" message
+ */
+function serveLogin_(showError) {
+  var errHtml = showError
+    ? '<div class="err">❌ รหัสผ่านหรือรหัส 2FA ไม่ถูกต้อง กรุณาลองอีกครั้ง</div>'
+    : '';
+
+  var html = '<!DOCTYPE html>'
+    + '<html lang="th">'
+    + '<head>'
+    + '<meta charset="utf-8">'
+    + '<meta name="viewport" content="width=device-width, initial-scale=1">'
+    + '<title>PDPA Login — เช็คอะไหล่ในสต็อก PMG</title>'
+    + '<style>'
+    + '* { box-sizing: border-box; margin: 0; padding: 0; }'
+    + 'body {'
+    + '  font-family: "Segoe UI", "Sarabun", sans-serif;'
+    + '  background: linear-gradient(135deg, #1e3a5f 0%, #0f1c2e 100%);'
+    + '  min-height: 100vh; display: flex; align-items: center; justify-content: center;'
+    + '  padding: 20px;'
+    + '}'
+    + '.card {'
+    + '  background: #fff; border-radius: 14px; padding: 40px 34px;'
+    + '  width: 100%; max-width: 380px; box-shadow: 0 12px 40px rgba(0,0,0,0.35);'
+    + '}'
+    + '.logo { text-align: center; margin-bottom: 22px; }'
+    + '.logo h1 { color: #1e3a5f; font-size: 22px; font-weight: 700; }'
+    + '.logo p { color: #6b7c93; font-size: 13px; margin-top: 4px; }'
+    + '.pdpa-badge {'
+    + '  background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;'
+    + '  border-radius: 6px; padding: 6px 10px; font-size: 11px; text-align: center;'
+    + '  margin-bottom: 20px; font-weight: 600;'
+    + '}'
+    + 'label { display: block; font-size: 13px; color: #374151; margin-bottom: 6px; font-weight: 600; }'
+    + 'input[type="password"], input[type="text"] {'
+    + '  width: 100%; padding: 12px 14px; border: 1.5px solid #d1d5db;'
+    + '  border-radius: 8px; font-size: 16px; margin-bottom: 16px;'
+    + '  transition: border-color 0.2s;'
+    + '}'
+    + 'input:focus { outline: none; border-color: #1e3a5f; }'
+    + '.btn {'
+    + '  width: 100%; padding: 13px; background: #1e3a5f; color: #fff;'
+    + '  border: none; border-radius: 8px; font-size: 16px; font-weight: 600;'
+    + '  cursor: pointer; transition: background 0.2s;'
+    + '}'
+    + '.btn:hover { background: #15293f; }'
+    + '.err {'
+    + '  background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5;'
+    + '  border-radius: 8px; padding: 10px 12px; font-size: 13px;'
+    + '  text-align: center; margin-bottom: 16px;'
+    + '}'
+    + '.footer { text-align: center; margin-top: 18px; font-size: 11px; color: #9ca3af; }'
+    + '</style>'
+    + '</head>'
+    + '<body>'
+    + '<div class="card">'
+    + '  <div class="logo">'
+    + '    <h1>🔐 เช็คอะไหล่ PMG</h1>'
+    + '    <p>เข้าสู่ระบบเพื่อใช้งาน</p>'
+    + '  </div>'
+    + '  <div class="pdpa-badge">🛡️ ป้องกันข้อมูลส่วนบุคคล (PDPA)</div>'
+    + errHtml
+    + '  <form method="GET" target="_top">'
+    + '    <input type="hidden" name="login" value="1">'
+    + '    <label for="pw">รหัสผ่าน (Password)</label>'
+    + '    <input type="password" id="pw" name="pw" placeholder="กรุณาใส่รหัสผ่าน" autocomplete="current-password" required autofocus>'
+    + '    <label for="otp">รหัสยืนยัน 2FA</label>'
+    + '    <input type="password" id="otp" name="otp" placeholder="รหัส 4 หลัก" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="one-time-code" required>'
+    + '    <button type="submit" class="btn">เข้าสู่ระบบ →</button>'
+    + '  </form>'
+    + '  <div class="footer">© 2026 PMG — สงวนลิขสิทธิ์</div>'
+    + '</div>'
+    + '</body>'
+    + '</html>';
+
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('PDPA Login — เช็คอะไหล่ในสต็อก PMG')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
