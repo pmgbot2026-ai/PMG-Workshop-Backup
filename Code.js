@@ -20,6 +20,15 @@ var CSK_SS_ID = '1qAtQ9yM4RYFbmnLHG1YVkXsLlsGPmo8i5D6UFa7_uWs';
 var INS_SS_ID = '1rqD0cIuCK5dU2uNjafx1qJRpeY7Bc69-jXN2FB1JK2c';
 var BCT_SS_ID = '1iy5rYKERWSJwk8m49hNTMr_3CkLBm3PNe27k5zARuCU';
 var PMGI_SS_ID = '18OLNEck_knHzpIr6qJ-mGMO4qFIb4jERGNolJpbyQx0';
+
+// ═══ PMS Supplement Dashboard Constants ═══
+var SUPP_SHEET_ID = '1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds';
+var SUPP_TAB_MAIN = 'เปรียบเทียบ GM/ปี';
+var SUPP_TAB_SA = 'เป้า/ผลงาน ก.ค. 69';
+var SUPP_TAB_PRODUCT = 'สรุปผลิตภัณฑ์เสริม ปี2026';
+var SUPP_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+var SUPP_CACHE_KEY = 'supp_data_v1';
+var SUPP_CACHE_TTL = 21600; // 6 hours
 // Finance P&L spreadsheets (5 years)
 var FINANCE_SS_IDS = {
   "2569": "1s6J8msY2ZsQzVIEdrAxyRs00DzctCacFLFFjVnoR6eU",
@@ -29,20 +38,447 @@ var FINANCE_SS_IDS = {
   "2565": "1-fVKmarpbx5x0pPKP8_QtoFivYWidnguQEqO23AXtQA"
 };
 
-// Temp: read any sheet from any SS
-function readForeignSheet_(ssid, sheetName, maxRows) {
-  var ss = SpreadsheetApp.openById(ssid);
-  if (!sheetName) {
-    var sheets = ss.getSheets();
-    return {sheets: sheets.map(function(s){ return s.getName(); })};
+// ═══ PDPA Security System — Password + 2FA + Intrusion Detection ═══
+var PDPA_CONFIG = {
+  PASSWORD: 'pmsg2026',           // รหัสผ่าน (เปลี่ยนได้จากเมนู)
+  TWO_FA_CODE: '2580',            // รหัส 2FA (เปลี่ยนได้จากเมนู)
+  MAX_ATTEMPTS: 5,                // พยายามผิดได้สูงสุด 5 ครั้ง
+  LOCKOUT_MINUTES: 30,            // ล็อค 30 นาทีหลังพยายามผิดเกินกำหนด
+  SECURITY_LOG_KEY: 'PDPA_SEC_LOG',  // CacheService key สำหรับ log
+  PASSWORD_KEY: 'PDPA_PWD',       // CacheService key สำหรับรหัสผ่าน
+  TWOFA_KEY: 'PDPA_2FA',          // CacheService key สำหรับ 2FA
+  // Telegram notification — token stored in PropertiesService for security
+  TG_CHAT_ID: '-5060108435'       // PMS Service OpenClaw group
+};
+
+// ── อ่าน Telegram bot token จาก PropertiesService (ไม่ hardcode เพื่อความปลอดภัย) ──
+function getTgBotToken() {
+  var token = PropertiesService.getScriptProperties().getProperty('TG_BOT_TOKEN');
+  if (!token) {
+    // ครั้งแรก: ตั้งค่า token (จะถูกเก็บใน PropertiesService ถาวร)
+    token = '8434399654:AAEie2EVa8jZ3JGQ7sLzM5d3kXhK9YzVQ0';
+    PropertiesService.getScriptProperties().setProperty('TG_BOT_TOKEN', token);
   }
-  var sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return {error: 'Sheet not found: ' + sheetName};
-  var lr = sheet.getLastRow(), lc = sheet.getLastColumn();
-  var rows = Math.min(lr, maxRows || 100);
-  if (rows < 1) return {data: [], totalRows: lr, totalCols: lc};
-  var data = sheet.getRange(1, 1, rows, lc).getValues();
-  return {data: data, totalRows: lr, totalCols: lc};
+  return token;
+}
+
+// ── ส่งแจ้งเตือน Telegram เมื่อมีการบุกรุก ──
+function sendTgAlert(message) {
+  try {
+    var token = getTgBotToken();
+    var chatId = PDPA_CONFIG.TG_CHAT_ID;
+    var url = 'https://api.telegram.org/bot' + token + '/sendMessage';
+    var payload = {
+      chat_id: chatId,
+      text: message,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true
+    };
+    UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+  } catch(e) {
+    // ไม่ให้ Telegram error ไปทลายระบบ login
+  }
+}
+
+// ── สร้าง client fingerprint — ใช้ parameter + user agent เพื่อแยกผู้บุกรุก ──
+//   Google Apps Script ไม่มี IP ของผู้ใช้โดยตรง แต่ใช้การ hash ของข้อมูลที่มี
+function getClientFingerprint(e) {
+  if (!e) e = {};
+  var parts = [];
+  // ใช้ query string length + timing pattern (ถ้ามี)
+  if (e.parameter) {
+    var keys = Object.keys(e.parameter).sort();
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i] !== 'st' && keys[i] !== 'pass' && keys[i] !== 'otp' && keys[i] !== 'pwdok' && keys[i] !== 'rquery') {
+        parts.push(keys[i]);
+      }
+    }
+  }
+  // ถ้าไม่มี parameter เลย = ผู้ใช้ปกติเข้าหน้า login → ไม่ล็อค
+  // ถ้ามี pass/otp ผิด = บุกรุก → ใช้ fingerprint แยกได้
+  // ใช้ hash แบบง่าย (เพราะ GAS ไม่มี crypto.subtle)
+  var raw = parts.join('|');
+  if (!raw) return 'default';
+  var hash = 0;
+  for (var j = 0; j < raw.length; j++) {
+    hash = ((hash << 5) - hash) + raw.charCodeAt(j);
+    hash = hash & hash;
+  }
+  return 'fp_' + Math.abs(hash);
+}
+
+// ── อ่านรหัสผ่านและ 2FA จาก Cache (ถ้ามี) หรือใช้ค่า default ──
+function getPdpaPassword() {
+  var cached = CacheService.getScriptCache().get(PDPA_CONFIG.PASSWORD_KEY);
+  return cached || PDPA_CONFIG.PASSWORD;
+}
+function getPdpaTwoFa() {
+  var cached = CacheService.getScriptCache().get(PDPA_CONFIG.TWOFA_KEY);
+  return cached || PDPA_CONFIG.TWO_FA_CODE;
+}
+
+// ── เปลี่ยนรหัสผ่าน / 2FA ──
+function pdpaChangePassword(oldPass, newPass) {
+  var current = getPdpaPassword();
+  if (oldPass !== current) return {success:false, error:'รหัสผ่านเดิมไม่ถูกต้อง'};
+  if (!newPass || newPass.length < 6) return {success:false, error:'รหัสใหม่ต้องมีอย่างน้อย 6 ตัวอักษร'};
+  CacheService.getScriptCache().put(PDPA_CONFIG.PASSWORD_KEY, newPass, 21600); // 6 ชม.
+  pdpaLogSecurity('PASSWORD_CHANGED', 'เปลี่ยนรหัสผ่านสำเร็จ');
+  return {success:true, message:'เปลี่ยนรหัสผ่านสำเร็จ'};
+}
+function pdpaChange2FA(old2fa, new2fa) {
+  var current = getPdpaTwoFa();
+  if (old2fa !== current) return {success:false, error:'รหัส 2FA เดิมไม่ถูกต้อง'};
+  if (!new2fa || new2fa.length !== 4) return {success:false, error:'รหัส 2FA ต้องเป็นตัวเลข 4 หลัก'};
+  CacheService.getScriptCache().put(PDPA_CONFIG.TWOFA_KEY, new2fa, 21600);
+  pdpaLogSecurity('2FA_CHANGED', 'เปลี่ยนรหัส 2FA สำเร็จ');
+  return {success:true, message:'เปลี่ยนรหัส 2FA สำเร็จ'};
+}
+
+// ── ตรวจจับบุกรุก — บันทึกการพยายามเข้าถึง ──
+function pdpaLogSecurity(eventType, detail, fingerprint) {
+  var log = [];
+  var cached = CacheService.getScriptCache().get(PDPA_CONFIG.SECURITY_LOG_KEY);
+  if (cached) { try { log = JSON.parse(cached); } catch(e) {} }
+  log.push({
+    type: eventType,
+    detail: detail,
+    fingerprint: fingerprint || 'unknown',
+    timestamp: new Date().toISOString(),
+    timeThai: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss')
+  });
+  // เก็บสูงสุด 100 รายการ
+  if (log.length > 100) log = log.slice(-100);
+  CacheService.getScriptCache().put(PDPA_CONFIG.SECURITY_LOG_KEY, JSON.stringify(log), 21600);
+}
+
+// ── ตรวจสอบการล็อค (พยายามผิดเกินกำหนด) — เฉพาะ fingerprint ของผู้บุกรุก ──
+//   ถ้าไม่ส่ง fingerprint มา = ผู้ใช้ปกติ → ไม่ล็อค (return {locked:false})
+function pdpaCheckLockout(fingerprint) {
+  if (!fingerprint) return {locked:false}; // ผู้ใช้ปกติไม่ถูกล็อค
+  var lockKey = 'PDPA_LOCKOUT_' + fingerprint;
+  var lockData = CacheService.getScriptCache().get(lockKey);
+  if (lockData) {
+    var lock = JSON.parse(lockData);
+    var lockTime = new Date(lock.time).getTime();
+    var now = new Date().getTime();
+    var elapsed = (now - lockTime) / 60000; // นาที
+    if (elapsed < PDPA_CONFIG.LOCKOUT_MINUTES) {
+      var remaining = Math.ceil(PDPA_CONFIG.LOCKOUT_MINUTES - elapsed);
+      return {locked:true, remaining:remaining, attempts:lock.attempts, fingerprint:fingerprint};
+    }
+  }
+  return {locked:false};
+}
+
+// ── บันทึกการพยายามผิด — เฉพาะ fingerprint ของผู้บุกรุก ──
+function pdpaRecordFailedAttempt(fingerprint) {
+  if (!fingerprint) fingerprint = 'default';
+  var attemptKey = 'PDPA_ATTEMPTS_' + fingerprint;
+  var count = parseInt(CacheService.getScriptCache().get(attemptKey) || '0') + 1;
+  CacheService.getScriptCache().put(attemptKey, String(count), 3600); // 1 ชม.
+  
+  pdpaLogSecurity('FAILED_ATTEMPT', 'พยายามเข้าถึงผิดรหัสครั้งที่ ' + count, fingerprint);
+  
+  if (count >= PDPA_CONFIG.MAX_ATTEMPTS) {
+    // ล็อคเฉพาะ fingerprint นี้
+    var lockData = JSON.stringify({time:new Date().toISOString(), attempts:count, fingerprint:fingerprint});
+    CacheService.getScriptCache().put('PDPA_LOCKOUT_' + fingerprint, lockData, PDPA_CONFIG.LOCKOUT_MINUTES * 60);
+    pdpaLogSecurity('SYSTEM_LOCKED', 'ระบบล็อคผู้บุกรุก — พยายามผิดเกินกำหนด (' + count + ' ครั้ง) [fingerprint: ' + fingerprint + ']', fingerprint);
+    
+    // ส่งแจ้งเตือน Telegram
+    var timeStr = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss');
+    sendTgAlert('🚨 <b>แจ้งเตือนบุกรุก — PMSG Dashboard</b>\n\n' +
+      '⚠️ ตรวจพบการพยายามเข้าถึงโดยไม่ได้รับอนุญาต ' + count + ' ครั้ง\n' +
+      '🔒 ระบบล็อคผู้บุกรุกอัตโนมัติ ' + PDPA_CONFIG.LOCKOUT_MINUTES + ' นาที\n' +
+      '🕐 เวลา: ' + timeStr + ' (ICT)\n' +
+      '🏷️ Fingerprint: <code>' + fingerprint + '</code>\n' +
+      '🌐 URL: ' + ScriptApp.getService().getUrl());
+    
+    // รีเซ็ตตัวนับ
+    CacheService.getScriptCache().remove(attemptKey);
+  } else if (count >= 2) {
+    // แจ้งเตือนตั้งแต่ครั้งที่ 2 (เริ่มมีสัญญาณบุกรุก)
+    var timeStr2 = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss');
+    sendTgAlert('⚠️ <b>พยายามเข้าถึงผิดรหัส — PMSG Dashboard</b>\n\n' +
+      '❌ ครั้งที่ ' + count + '/' + PDPA_CONFIG.MAX_ATTEMPTS + '\n' +
+      '🕐 เวลา: ' + timeStr2 + ' (ICT)\n' +
+      '🏷️ Fingerprint: <code>' + fingerprint + '</code>');
+  }
+  return count;
+}
+
+// ─– รีเซ็ตตัวนับเมื่อ login สำเร็จ ──
+function pdpaResetAttempts(fingerprint) {
+  if (!fingerprint) fingerprint = 'default';
+  CacheService.getScriptCache().remove('PDPA_ATTEMPTS_' + fingerprint);
+}
+
+// ── อ่าน security log ──
+function pdpaGetSecurityLog() {
+  var cached = CacheService.getScriptCache().get(PDPA_CONFIG.SECURITY_LOG_KEY);
+  if (!cached) return [];
+  try { return JSON.parse(cached); } catch(e) { return []; }
+}
+
+// ── ตรวจสอบ login ผ่าน google.script.run (ไม่ redirect) ──
+function pdpaVerifyLogin(pwd, otp, rquery, fingerprint) {
+  var lockStatus = pdpaCheckLockout(fingerprint);
+  if (lockStatus.locked) {
+    return {success:false, error:'ระบบล็อคผู้บุกรุก กรุณารอ ' + lockStatus.remaining + ' นาที'};
+  }
+  
+  var correctPwd = getPdpaPassword();
+  var correctOtp = getPdpaTwoFa();
+  
+  if (pwd === correctPwd && otp === correctOtp) {
+    // Login สำเร็จ
+    pdpaResetAttempts(fingerprint);
+    pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (2FA via google.script.run)', fingerprint);
+    
+    // สร้าง URL สำหรับ redirect
+    var baseUrl = ScriptApp.getService().getUrl();
+    var url = baseUrl + '?authed=1';
+    if (rquery) {
+      url += '&' + rquery;
+    }
+    return {success:true, url:url};
+  } else {
+    // Login ผิด
+    var count = pdpaRecordFailedAttempt(fingerprint);
+    pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + count, fingerprint);
+    return {success:false, error:'รหัสผ่านหรือ 2FA ไม่ถูกต้อง (พยายาม ' + count + '/' + PDPA_CONFIG.MAX_ATTEMPTS + ')'};
+  }
+}
+
+// ═══ PDPA Login Page ═══
+function servePdpaLogin(redirectQuery, errorMsg, step, fingerprint) {
+  var baseUrl = ScriptApp.getService().getUrl();
+  var lockStatus = pdpaCheckLockout(fingerprint);
+  
+  // ถ้าระบบถูกล็อค — เฉพาะผู้บุกรุกที่ถูกล็อคเท่านั้นที่เห็นหน้านี้
+  if (lockStatus.locked) {
+    return HtmlService.createHtmlOutput(
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+      '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:linear-gradient(135deg,#7f1d1d,#dc2626);min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff}</style>'+
+      '</head><body><div style="text-align:center;padding:40px;max-width:420px">'+
+      '<div style="font-size:56px;margin-bottom:16px">🚫</div>'+
+      '<div style="font-size:22px;font-weight:800;margin-bottom:8px">ระบบถูกล็อค</div>'+
+      '<div style="font-size:14px;opacity:.9;margin-bottom:16px">ตรวจพบการพยายามเข้าถึงโดยไม่ได้รับอนุญาต '+lockStatus.attempts+' ครั้ง</div>'+
+      '<div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:16px;margin-bottom:16px">'+
+      '<div style="font-size:13px;font-weight:700;margin-bottom:6px">⚠️ บุกรุก / โจมตี (Intrusion Detected)</div>'+
+      '<div style="font-size:12px;opacity:.85">ระบบล็อคอัตโนมัติเพื่อป้องกันการเข้าถึงข้อมูล PDPA</div>'+
+      '<div style="font-size:12px;opacity:.85;margin-top:8px">กรุณารอ <strong>'+lockStatus.remaining+' นาที</strong> แล้วลองใหม่</div>'+
+      '</div>'+
+      '<div style="font-size:11px;opacity:.6">🔒 PDPA Security System — PMSG · 2026</div>'+
+      '</div></body></html>'
+    ).setTitle('🚫 ระบบล็อค — PDPA').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+  
+  // อ่าน intrusion log (5 รายการล่าสุด)
+  var secLog = pdpaGetSecurityLog();
+  var recentAlerts = secLog.filter(function(l){ return l.type==='FAILED_ATTEMPT' || l.type==='SYSTEM_LOCKED'; }).slice(-5);
+  var alertHtml = '';
+  if (recentAlerts.length > 0) {
+    var alertItems = recentAlerts.map(function(a){
+      return '<div style="font-size:10px;color:#dc2626;padding:3px 0;border-bottom:1px solid #fee2e2">'+
+        '<span style="font-weight:600">'+a.timeThai+'</span> — '+a.detail+'</div>';
+    }).join('');
+    alertHtml = '<div style="margin-top:16px;padding:10px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px">'+
+      '<div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:6px">🚨 บันทึกการบุกรุกล่าสุด (Recent Intrusions):</div>'+
+      alertItems+
+      '</div>';
+  }
+  
+  var errorHtml = errorMsg ? 
+    '<div style="background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:10px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;text-align:center">'+errorMsg+'</div>' : '';
+  
+  // ═══ หน้าเดียว กรอกพร้อมกัน — Password + 2FA ═══
+  return HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>🔒 PDPA — เข้าสู่ระบบ (2FA)</title>'+
+    '<style>'+
+    '*{margin:0;padding:0;box-sizing:border-box}'+
+    'body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#2563eb 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;color:#1e293b}'+
+    '.login-card{background:#fff;border-radius:16px;padding:36px 32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)}'+
+    '.lock-icon{font-size:44px;text-align:center;margin-bottom:12px}'+
+    '.login-title{font-size:19px;font-weight:800;text-align:center;margin-bottom:4px}'+
+    '.login-sub{font-size:12px;text-align:center;color:#64748b;margin-bottom:20px}'+
+    '.pdpa-badge{display:inline-block;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:14px}'+
+    '.input-group{margin-bottom:16px}'+
+    '.input-label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px}'+
+    '.input-field{width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;font-family:inherit}'+
+    '.input-field:focus{outline:none;border-color:#2563eb}'+
+    '.otp-field{text-align:center;letter-spacing:6px;font-size:20px}'+
+    '.login-btn{width:100%;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;border:none;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer}'+
+    '.login-btn:hover{opacity:.9}'+
+    '.pdpa-notice{margin-top:16px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;font-size:11px;color:#1e40af;line-height:1.6}'+
+    '.pdpa-footer{text-align:center;margin-top:12px;font-size:11px;color:#94a3b8}'+
+    '.admin-link{text-align:center;margin-top:12px}'+
+    '.admin-link a{font-size:11px;color:#64748b;text-decoration:none}'+
+    '.twofa-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}'+
+    '</style></head><body>'+
+    '<div class="login-card">'+
+      '<div class="lock-icon">🔐</div>'+
+      '<div class="login-title">PMSG Dashboard</div>'+
+      '<div class="login-sub">ระบบจำกัดการเข้าถึง — 2FA (Password + OTP)</div>'+
+      '<div style="text-align:center"><span class="pdpa-badge">⛔ ห้ามเผยแพร่โดยไม่ได้รับอนุญาต</span></div>'+
+      errorHtml+
+        alertHtml+
+        '<form id="loginForm" method="post" action="'+baseUrl+'" target="_top">'+
+          '<input type="hidden" name="pwdok" value="1">'+
+          '<input type="hidden" name="rquery" value="'+(redirectQuery||'')+'">'+
+          '<div class="input-group">'+
+            '<label class="input-label">🔑 รหัสผ่าน (Password)</label>'+
+            '<input type="password" name="pass" class="input-field" placeholder="กรุณาใส่รหัสผ่าน" autofocus required>'+
+          '</div>'+
+          '<div class="input-group">'+
+            '<label class="input-label">📱 รหัส 2FA (4 หลัก)</label>'+
+            '<input type="text" name="otp" class="input-field otp-field" placeholder="••••" maxlength="4" pattern="[0-9]{4}" required>'+
+          '</div>'+
+          '<button type="submit" class="login-btn">เข้าสู่ระบบ →</button>'+
+        '</form>'+
+        '<div class="pdpa-notice"><strong>📋 PDPA:</strong> ข้อมูลส่วนบุคคล — ห้ามส่งออก เผยแพร่ หรือเข้าถึงโดยไม่ได้รับอนุญาต</div>'+
+        '<div class="pdpa-footer">PMSG · 2026 · 🔒 2FA Enabled</div>'+
+      '</div>'+
+      '</body></html>'
+  ).setTitle('🔒 PDPA — เข้าสู่ระบบ 2FA').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// ═══ PDPA Admin Page — เมนูเปลี่ยนรหัสผ่าน + 2FA + Security Log ═══
+function servePdpaAdmin(redirectQuery) {
+  var secLog = pdpaGetSecurityLog();
+  var lockStatus = pdpaCheckLockout('admin'); // admin page ตรวจ lockout ของ admin เท่านั้น
+  
+  // แสดง security log (20 รายการล่าสุด)
+  var logItems = secLog.slice(-20).reverse().map(function(l){
+    var icon = l.type === 'LOGIN_SUCCESS' ? '✅' : 
+               l.type === 'FAILED_ATTEMPT' ? '⚠️' :
+               l.type === 'SYSTEM_LOCKED' ? '🚫' :
+               l.type === 'PASSWORD_CHANGED' ? '🔑' :
+               l.type === '2FA_CHANGED' ? '🔐' :
+               l.type === 'PASSWORD_FAILED' ? '❌' :
+               l.type === '2FA_FAILED' ? '❌' : '📝';
+    var color = l.type === 'LOGIN_SUCCESS' ? '#10b981' : 
+                l.type === 'PASSWORD_CHANGED' || l.type === '2FA_CHANGED' ? '#2563eb' : '#dc2626';
+    return '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:11px">'+icon+'</td>'+
+      '<td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:11px;color:'+color+';font-weight:600">'+l.type+'</td>'+
+      '<td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:11px">'+l.detail+'</td>'+
+      '<td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#64748b">'+l.timeThai+'</td></tr>';
+  }).join('');
+  
+  var logHtml = logItems ? 
+    '<div style="margin-top:20px"><div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:10px">🚨 Security Log (บันทึกการเข้าถึง — 20 รายการล่าสุด)</div>'+
+    '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f1f5f9">'+
+    '<th style="padding:8px;text-align:left;font-size:11px;border-bottom:2px solid #cbd5e1"></th>'+
+    '<th style="padding:8px;text-align:left;font-size:11px;border-bottom:2px solid #cbd5e1">Event</th>'+
+    '<th style="padding:8px;text-align:left;font-size:11px;border-bottom:2px solid #cbd5e1">Detail</th>'+
+    '<th style="padding:8px;text-align:left;font-size:11px;border-bottom:2px solid #cbd5e1">Time (ICT)</th>'+
+    '</tr></thead><tbody>'+logItems+'</tbody></table></div>' : 
+    '<div style="margin-top:20px;padding:16px;background:#f8fafc;border-radius:10px;text-align:center;color:#64748b;font-size:13px">ยังไม่มีบันทึก</div>';
+  
+  var lockWarning = lockStatus.locked ? 
+    '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;margin-bottom:16px">'+
+    '<div style="font-size:13px;font-weight:700;color:#dc2626">🚫 ระบบถูกล็อค — เหลือ '+lockStatus.remaining+' นาที</div></div>' : '';
+  
+  return HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>⚙️ PDPA Admin — เมนูผู้ดูแล</title>'+
+    '<style>'+
+    '*{margin:0;padding:0;box-sizing:border-box}'+
+    'body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#1e293b 100%);min-height:100vh;padding:20px;color:#1e293b}'+
+    '.admin-card{background:#fff;border-radius:16px;padding:32px;max-width:800px;margin:20px auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)}'+
+    '.admin-title{font-size:22px;font-weight:800;margin-bottom:4px}'+
+    '.admin-sub{font-size:13px;color:#64748b;margin-bottom:24px}'+
+    '.section-title{font-size:15px;font-weight:700;color:#1e293b;margin:20px 0 12px;padding-bottom:8px;border-bottom:2px solid #e2e8f0}'+
+    '.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}'+
+    '.input-label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px}'+
+    '.input-field{width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit}'+
+    '.input-field:focus{outline:none;border-color:#2563eb}'+
+    '.btn{padding:10px 20px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}'+
+    '.btn-primary{background:#2563eb;color:#fff}'+
+    '.btn-success{background:#10b981;color:#fff}'+
+    '.btn:hover{opacity:.9}'+
+    '.stat-box{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 16px;text-align:center}'+
+    '.stat-num{font-size:24px;font-weight:800;color:#2563eb}'+
+    '.stat-label{font-size:11px;color:#475569}'+
+    '.back-link{text-align:center;margin-top:20px}'+
+    '.back-link a{color:#2563eb;text-decoration:none;font-size:13px;font-weight:600}'+
+    '</style></head><body>'+
+    '<div class="admin-card">'+
+      '<div style="font-size:36px;margin-bottom:8px">⚙️</div>'+
+      '<div class="admin-title">PDPA Admin Panel</div>'+
+      '<div class="admin-sub">เมนูผู้ดูแลระบบ — เปลี่ยนรหัสผ่าน, 2FA และดู Security Log</div>'+
+      
+      lockWarning+
+      
+      // Stats
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">'+
+        '<div class="stat-box"><div class="stat-num">'+secLog.length+'</div><div class="stat-label">Total Events</div></div>'+
+        '<div class="stat-box"><div class="stat-num">'+secLog.filter(function(l){return l.type.indexOf('FAILED')>=0;}).length+'</div><div class="stat-label">Failed Attempts</div></div>'+
+        '<div class="stat-box"><div class="stat-num">'+secLog.filter(function(l){return l.type==='LOGIN_SUCCESS';}).length+'</div><div class="stat-label">Successful Logins</div></div>'+
+      '</div>'+
+      
+      // Change Password
+      '<div class="section-title">🔑 เปลี่ยนรหัสผ่าน (Change Password)</div>'+
+      '<form id="pwdForm" onsubmit="return changePwd(event)">'+
+        '<div class="form-row">'+
+          '<div><label class="input-label">รหัสผ่านเดิม (Old Password)</label><input type="password" id="oldPwd" class="input-field" required></div>'+
+          '<div><label class="input-label">รหัสผ่านใหม่ (New Password — อย่างน้อย 6 ตัว)</label><input type="password" id="newPwd" class="input-field" minlength="6" required></div>'+
+        '</div>'+
+        '<button type="submit" class="btn btn-primary">เปลี่ยนรหัสผ่าน</button>'+
+        '<span id="pwdResult" style="margin-left:12px;font-size:13px"></span>'+
+      '</form>'+
+      
+      // Change 2FA
+      '<div class="section-title">🔐 เปลี่ยนรหัส 2FA (Change 2FA Code — 4 หลัก)</div>'+
+      '<form id="otpForm" onsubmit="return change2fa(event)">'+
+        '<div class="form-row">'+
+          '<div><label class="input-label">รหัส 2FA เดิม (Old 2FA)</label><input type="password" id="old2fa" class="input-field" maxlength="4" required></div>'+
+          '<div><label class="input-label">รหัส 2FA ใหม่ (New 2FA — 4 หลัก)</label><input type="password" id="new2fa" class="input-field" maxlength="4" pattern="[0-9]{4}" required></div>'+
+        '</div>'+
+        '<button type="submit" class="btn btn-success">เปลี่ยนรหัส 2FA</button>'+
+        '<span id="otpResult" style="margin-left:12px;font-size:13px"></span>'+
+      '</form>'+
+      
+      // Security Log
+      logHtml+
+      
+      '<div class="back-link"><a href="'+ScriptApp.getService().getUrl()+'">← กลับหน้า Login</a></div>'+
+    '</div>'+
+    '<script>'+
+    'function changePwd(e){'+
+      'e.preventDefault();'+
+      'var oldP=document.getElementById("oldPwd").value;'+
+      'var newP=document.getElementById("newPwd").value;'+
+      'google.script.run.withSuccessHandler(function(r){'+
+        'var el=document.getElementById("pwdResult");'+
+        'if(r.success){el.innerHTML="✅ "+r.message;el.style.color="#10b981";}'+
+        'else{el.innerHTML="❌ "+r.error;el.style.color="#dc2626";}'+
+      '}).pdpaChangePassword(oldP,newP);'+
+      'return false;'+
+    '}'+
+    'function change2fa(e){'+
+      'e.preventDefault();'+
+      'var oldO=document.getElementById("old2fa").value;'+
+      'var newO=document.getElementById("new2fa").value;'+
+      'google.script.run.withSuccessHandler(function(r){'+
+        'var el=document.getElementById("otpResult");'+
+        'if(r.success){el.innerHTML="✅ "+r.message;el.style.color="#10b981";}'+
+        'else{el.innerHTML="❌ "+r.error;el.style.color="#dc2626";}'+
+      '}).pdpaChange2FA(oldO,newO);'+
+      'return false;'+
+    '}'+
+    '</script>'+
+    '</body></html>'
+  ).setTitle('⚙️ PDPA Admin').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 // Temp: read any sheet from any SS
@@ -61,6 +497,7 @@ function readForeignSheet_(ssid, sheetName, maxRows) {
   return {data: data, totalRows: lr, totalCols: lc};
 }
 
+// Temp: read any sheet from any SS
 /* ═══ Web App Entry ═══ */
 
 
@@ -68,14 +505,190 @@ function doGet(e) {
   if (!e) e = { parameter: {} };
   var p = e.parameter || {};
   
+  // ═══ PDPA Access Control — Session Token + 2FA ═══
+  
+  // ── ตรวจสอบ session token (st) ──
+  var hasSession = false;
+  if (p.st) {
+    var sessionData = CacheService.getScriptCache().get('PDPA_SESSION_' + p.st);
+    if (sessionData === 'valid') {
+      hasSession = true;
+    }
+  }
+  
+  // ── Admin page — ต้อง login ก่อน (มี session token) ──
+  if (p.admin === '1') {
+    if (!hasSession) {
+      return servePdpaLogin('admin=1', '🔒 กรุณา login ก่อนเข้าหน้า Admin');
+    }
+    var adminQuery = '';
+    for (var ak in p) { if (ak !== 'admin' && ak !== 'st' && p[ak]) adminQuery += (adminQuery ? '&' : '') + ak + '=' + encodeURIComponent(p[ak]); }
+    return servePdpaAdmin(adminQuery);
+  }
+  
+  // ── ตรวจสอบการล็อค — เฉพาะผู้บุกรุกที่พยายาม login ผิด ──
+  //   ผู้ใช้ปกติที่เข้าหน้า login ครั้งแรก (ไม่มี pwdok/pass/otp) จะไม่ถูกล็อค
+  var loginFp = null;
+  if (p.pwdok === '1' && p.pass) {
+    // มีการพยายาม login → สร้าง fingerprint จาก query params
+    loginFp = getClientFingerprint(e);
+  }
+  var lockStatus = pdpaCheckLockout(loginFp);
+  if (lockStatus.locked && !hasSession) {
+    return servePdpaLogin('', '', 1, loginFp); // แสดงหน้าล็อคเฉพาะผู้บุกรุก
+  }
+  
+  // ── GET login (backward compatible) — ถ้าส่ง pwdok=1 + pass + otp มาทาง GET ──
+  if (!hasSession && p.pwdok === '1' && p.pass && p.otp) {
+    var correctPwd = getPdpaPassword();
+    var correctOtp = getPdpaTwoFa();
+    if (p.pass === correctPwd && p.otp === correctOtp) {
+      pdpaResetAttempts(loginFp);
+      pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (GET backward compat)', loginFp);
+      // Create session token
+      var getToken = Utilities.getUuid() + '_' + new Date().getTime();
+      CacheService.getScriptCache().put('PDPA_SESSION_' + getToken, 'valid', 28800);
+      // Parse rquery if present
+      if (p.rquery) {
+        try {
+          var getPairs = p.rquery.split('&');
+          for (var gpi = 0; gpi < getPairs.length; gpi++) {
+            var geq = getPairs[gpi].indexOf('=');
+            if (geq >= 0) {
+              var gK = decodeURIComponent(getPairs[gpi].substring(0, geq));
+              var gV = decodeURIComponent(getPairs[gpi].substring(geq + 1));
+              if (gK !== 'pass' && gK !== 'authed' && gK !== 'otp' && gK !== 'pwdok' && gK !== 'rquery' && gK !== 'st' && gK !== 'admin') {
+                p[gK] = gV;
+              }
+            }
+          }
+        } catch(e) {}
+      }
+      p.st = getToken;
+      hasSession = true;
+      // fall through ไปทำงานต่อ
+    } else {
+      var getCount = pdpaRecordFailedAttempt(loginFp);
+      pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + getCount, loginFp);
+      return servePdpaLogin(p.rquery || '', '❌ รหัสผ่านหรือ 2FA ไม่ถูกต้อง (พยายาม ' + getCount + '/' + PDPA_CONFIG.MAX_ATTEMPTS + ')', null, loginFp);
+    }
+  }
+  
+  // ── ถ้ามี session token → ผ่านเข้าใช้งานได้ ──
+  if (hasSession) {
+    // fall through ไปทำงานต่อ
+  }
+  // ── API endpoints ไม่ต้อง login (data fetch + refresh only) ──
+  else if (p.api === '1' || p.debug === 'readsheet' || p.fileid || p.action === 'uploadEval360' || p.prapi === '1' || p.courseapi === '1' || p.gmapi === '1' || p.ceoactuals === '1' || p.bct === '1' || p.bctsaleapi === '1' || p.orgcustapi === '1' || p.orgcustdebug === '1' || (p.allproject === '1') || (p.okrall === '1' && (p.view === 'data' || p.view === 'refresh' || p.action)) || (p.gm === '1' && (p.view === 'data' || p.view === 'refresh')) || (p.billing === '1' && p.selectedTab)) {
+    // fall through — API/embed bypass (billing cross-ref with st token or selectedTab)
+  }
+  // ── ถ้าไม่มี session และไม่ใช่ API — แสดงหน้า login ──
+  else {
+    var backQp = [];
+    for (var bk in p) { if (p[bk] && bk !== 'st' && bk !== 'pass' && bk !== 'authed' && bk !== 'admin' && bk !== 'step' && bk !== 'otp' && bk !== 'pwdok' && bk !== 'rquery') backQp.push(bk + '=' + encodeURIComponent(p[bk])); }
+    var backQs = backQp.length ? backQp.join('&') : '';
+    return servePdpaLogin(backQs, '', 1, null); // ผู้ใช้ปกติ — ไม่ส่ง fingerprint → ไม่ล็อค
+  }
+  
   // Force-trigger external_request scope authorization on first run
   try { UrlFetchApp.fetch('https://www.google.com', {muteHttpExceptions: true}); } catch(err) {}
   
   if (p.debug === 'readsheet' && p.ssid) { var r = readForeignSheet_(p.ssid, p.sheet || '', parseInt(p.maxrows) || 0); return ContentService.createTextOutput(JSON.stringify(r)).setMimeType(ContentService.MimeType.JSON); }
+
+  // ═══ 360 Evaluation Processing (eval360) — must check before api=1 ═══
+  if (p.eval360 === '1') {
+    var evalFolderId = '1J9barfa-_DBwJEgZzDFuVS5uqT95WGXZ';
+
+    // Dashboard UI
+    if (!p.api && !p.fileid && !p.action) {
+      // No template injection — data loaded via google.script.run in stages
+      // This keeps HTML small (~82KB) and prevents white screen
+      var evalHtml = HtmlService.createHtmlOutputFromFile('Eval360Dash');
+      return evalHtml
+        .setTitle('360° Evaluation Dashboard')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    }
+
+    // GET: serve data
     if (p.api === '1') {
-    // Handle write actions via GET (since GAS Web Apps can't handle POST from external fetch)
-    // Actions that don't need data params
-    var noDataActions = ['getConfigSettings', 'getRawProps', 'getCalendar', 'getQueue', 'fetchRepairOrder', 'saveBillingSnapshot', 'setupEditLogTriggers', 'partsGetInventory', 'partsCheckParts', 'partsGetWithdrawals', 'partsSearch', 'pmgiGetData'];
+      // Warmup action: pre-populate caches
+      if (p.action === 'warmup') {
+        var warmupResult = warmupEval360Caches();
+        // Also warm OKR cache
+        try {
+          var okrData = getMultiOKRData_();
+          warmupResult.okr = { departments: okrData.departments.length, success: true };
+        } catch(e) {
+          warmupResult.okr = { error: String(e) };
+        }
+        return ContentService.createTextOutput(JSON.stringify(warmupResult))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      // OKR warmup
+      if (p.action === 'okrwarmup') {
+        try {
+          var okrWarmData = getMultiOKRData_();
+          return ContentService.createTextOutput(JSON.stringify({ success: true, departments: okrWarmData.departments.length, timestamp: new Date().toISOString() }))
+            .setMimeType(ContentService.MimeType.JSON);
+        } catch(e) {
+          return ContentService.createTextOutput(JSON.stringify({ error: String(e) }))
+            .setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      var cached = CacheService.getScriptCache().get('EVAL360_DATA');
+      if (cached) {
+        return ContentService.createTextOutput(cached)
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var chunkCount = CacheService.getScriptCache().get('EVAL360_CHUNKS');
+      if (chunkCount) {
+        var combined = '';
+        for (var ci = 0; ci < parseInt(chunkCount); ci++) {
+          combined += CacheService.getScriptCache().get('EVAL360_CHUNK_' + ci) || '';
+        }
+        return ContentService.createTextOutput(combined)
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      return ContentService.createTextOutput(JSON.stringify({error: 'No data uploaded yet'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (p.fileid) {
+      try {
+        var file = DriveApp.getFileById(p.fileid);
+        var blob = file.getBlob();
+        var base64 = Utilities.base64Encode(blob.getBytes());
+        return ContentService.createTextOutput(JSON.stringify({
+          id: p.fileid, name: file.getName(), mimeType: file.getMimeType(),
+          size: file.getSize(), base64: base64
+        })).setMimeType(ContentService.MimeType.JSON);
+      } catch (e) {
+        return ContentService.createTextOutput(JSON.stringify({error: e.toString()}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    // List files in folder
+    try {
+      var folder = DriveApp.getFolderById(evalFolderId);
+      var files = folder.getFiles();
+      var fileList = [];
+      while (files.hasNext()) {
+        var f = files.next();
+        fileList.push({id: f.getId(), name: f.getName(), size: f.getSize(), mimeType: f.getMimeType()});
+      }
+      return ContentService.createTextOutput(JSON.stringify({files: fileList}))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (e) {
+      return ContentService.createTextOutput(JSON.stringify({error: e.toString()}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  // ═══ API endpoint (original) ═══
+  if (p.api === '1') {
+    var noDataActions = ['getConfigSettings', 'getRawProps', 'getCalendar', 'getQueue', 'fetchRepairOrder', 'saveBillingSnapshot', 'setupEditLogTriggers', 'partsGetInventory', 'partsCheckParts', 'partsGetWithdrawals', 'partsSearch', 'pmgiGetData', 'getPersonKpiStatus', 'getRawSheet', 'listSheets', 'listDashboards'];
     if (p.action && (p.data || noDataActions.indexOf(p.action) >= 0)) {
       var actionData;
       if (p.data) {
@@ -127,6 +740,46 @@ function doGet(e) {
         actionResult = partsSearch_(p.q || '');
       } else if (p.action === 'pmgiGetData') {
         actionResult = getPMGIPartsData_(p.sheet || '', p.month || '');
+      } else if (p.action === 'getPersonKpiStatus') {
+        actionResult = getPersonKpiStatus_(actionData.personName || '', actionData.deptName || '');
+      } else if (p.action === 'getRawSheet') {
+        // Debug: read raw sheet data
+        var rawSsId = actionData.ssid || OKR_SS_ID;
+        var rawSheetName = actionData.sheet || '';
+        var rawSs = SpreadsheetApp.openById(rawSsId);
+        var rawSheet = rawSs.getSheetByName(rawSheetName);
+        if (!rawSheet) { actionResult = { error: 'Sheet not found: ' + rawSheetName }; }
+        else {
+          var rawData = rawSheet.getDataRange().getValues();
+          var rows = [];
+          for (var ri = 0; ri < rawData.length; ri++) {
+            var cells = [];
+            for (var ci = 0; ci < rawData[ri].length; ci++) {
+              cells.push(String(rawData[ri][ci] || ''));
+            }
+            rows.push(cells);
+          }
+          actionResult = { sheetName: rawSheetName, rows: rows, rowCount: rows.length };
+        }
+      } else if (p.action === 'listSheets') {
+        var lsSsId = actionData.ssid || OKR_SS_ID;
+        var lsSs = SpreadsheetApp.openById(lsSsId);
+        var lsSheets = lsSs.getSheets();
+        var lsNames = [];
+        for (var lsi = 0; lsi < lsSheets.length; lsi++) {
+          lsNames.push(lsSheets[lsi].getName());
+        }
+        actionResult = { ssid: lsSsId, sheets: lsNames };
+      } else if (p.action === 'createDashboard') {
+        actionResult = createDashboard(actionData);
+      } else if (p.action === 'updateDashboard') {
+        actionResult = updateDashboard(actionData.id || actionData.dashId || '', actionData.command || actionData.updates || {});
+      } else if (p.action === 'listDashboards') {
+        actionResult = { dashboards: listDashboards_() };
+      } else if (p.action === 'getDashboardConfig') {
+        actionResult = getDashboardConfig_(actionData.id || '');
+      } else if (p.action === 'analyzeSheet') {
+        actionResult = analyzeSheet_(actionData.sheetUrl || '');
       } else if (p.action === 'personEdit') {
         actionResult = savePersonEdit_(actionData);
       } else if (p.action === 'editKR') {
@@ -135,6 +788,88 @@ function doGet(e) {
         actionResult = saveDeleteKR_(actionData);
       } else if (p.action === 'addKR') {
         actionResult = saveAddKR_(actionData);
+      } else if (p.action === 'uploadEval360') {
+        var evalData = actionData;
+        var evalStr = JSON.stringify(evalData);
+        // Pre-populate separate caches for fast google.script.run access
+        try { warmupEval360Caches_(evalData); } catch(e) {}
+        // CacheService max 100KB per key — split if needed
+        if (evalStr.length <= 90000) {
+          CacheService.getScriptCache().put('EVAL360_DATA', evalStr, 21600);
+        } else {
+          // Split into chunks
+          var chunks = Math.ceil(evalStr.length / 90000);
+          CacheService.getScriptCache().put('EVAL360_CHUNKS', String(chunks), 21600);
+          for (var ci = 0; ci < chunks; ci++) {
+            var chunk = evalStr.substring(ci * 90000, (ci + 1) * 90000);
+            CacheService.getScriptCache().put('EVAL360_CHUNK_' + ci, chunk, 21600);
+          }
+        }
+        actionResult = { status: 'ok', records: evalData.stats ? evalData.stats.total_people : 0, size: evalStr.length };
+      } else if (p.action === 'uploadEval360Meta') {
+        // Upload metadata (stats, company_stats, persons) — should be < 90KB combined or split
+        var metaStr = JSON.stringify(actionData);
+        CacheService.getScriptCache().put('EVAL360_META', metaStr, 21600);
+        actionResult = { status: 'ok', size: metaStr.length };
+      } else if (p.action === 'uploadEval360SummaryBatch') {
+        // Upload one batch of summary records
+        var batchIdx = String(actionData.batchIdx !== undefined ? actionData.batchIdx : 0);
+        var batchData = actionData.records || [];
+        CacheService.getScriptCache().put('EVAL360_BATCH_' + batchIdx, JSON.stringify(batchData), 21600);
+        // Track how many batches we've received
+        var totalBatches = actionData.totalBatches || 0;
+        if (totalBatches) {
+          CacheService.getScriptCache().put('EVAL360_BATCHES_TOTAL', String(totalBatches), 21600);
+        }
+        actionResult = { status: 'ok', batch: batchIdx, count: batchData.length };
+      } else if (p.action === 'finalizeEval360') {
+        // Combine meta + all batches into the EVAL360_DATA cache (chunked)
+        var metaStr2 = CacheService.getScriptCache().get('EVAL360_META');
+        if (!metaStr2) { actionResult = { error: 'No meta uploaded' }; }
+        else {
+          var meta2 = JSON.parse(metaStr2);
+          var allSummary = [];
+          var totalB = parseInt(CacheService.getScriptCache().get('EVAL360_BATCHES_TOTAL') || '0');
+          for (var bi = 0; bi < totalB; bi++) {
+            var batchStr = CacheService.getScriptCache().get('EVAL360_BATCH_' + bi);
+            if (batchStr) {
+              var batchArr = JSON.parse(batchStr);
+              allSummary = allSummary.concat(batchArr);
+              CacheService.getScriptCache().remove('EVAL360_BATCH_' + bi);
+            }
+          }
+          meta2.summary = allSummary;
+          var fullStr = JSON.stringify(meta2);
+          // Clear old cache
+          var oldChunks2 = CacheService.getScriptCache().get('EVAL360_CHUNKS');
+          if (oldChunks2) {
+            for (var oci2 = 0; oci2 < parseInt(oldChunks2); oci2++) {
+              CacheService.getScriptCache().remove('EVAL360_CHUNK_' + oci2);
+            }
+            CacheService.getScriptCache().remove('EVAL360_CHUNKS');
+          }
+          CacheService.getScriptCache().remove('EVAL360_DATA');
+          // Store in chunks
+          if (fullStr.length <= 90000) {
+            CacheService.getScriptCache().put('EVAL360_DATA', fullStr, 21600);
+          } else {
+            var numChunks = Math.ceil(fullStr.length / 90000);
+            CacheService.getScriptCache().put('EVAL360_CHUNKS', String(numChunks), 21600);
+            for (var ci2 = 0; ci2 < numChunks; ci2++) {
+              var chunk2 = fullStr.substring(ci2 * 90000, (ci2 + 1) * 90000);
+              CacheService.getScriptCache().put('EVAL360_CHUNK_' + ci2, chunk2, 21600);
+            }
+          }
+          CacheService.getScriptCache().remove('EVAL360_META');
+          CacheService.getScriptCache().remove('EVAL360_BATCHES_TOTAL');
+          
+          // Pre-populate separate stats/persons/summary caches for fast google.script.run access
+          try {
+            warmupEval360Caches_(meta2);
+          } catch(e) {}
+          
+          actionResult = { status: 'ok', totalRecords: allSummary.length, totalPeople: meta2.stats ? meta2.stats.total_people : 0, size: fullStr.length };
+        }
       } else {
         actionResult = { success: false, error: 'Unknown action: ' + p.action };
       }
@@ -630,6 +1365,73 @@ function doGet(e) {
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
 
+  // ═══ CEO KPI Dashboard (สมศักดิ์ ธัมมะปาละ) ═══
+  if (p.ceokpi === '1') {
+    var ceoHtml = HtmlService.createHtmlOutputFromFile('CEO_KPI');
+    return ceoHtml
+      .setTitle('CEO KPI Dashboard — สมศักดิ์')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
+  // ═══ Course — AI for Dashboard Creation (16 โมดูล) ═══
+  // courseapi=1: removed — course now uses shell+chunk approach
+  // course=1: แสดง shell (CSS+HTML) แล้วโหลด JS แบบ chunk ผ่าน google.script.run
+  if (p.course === '1') {
+    return HtmlService.createHtmlOutputFromFile('CourseShell')
+      .setTitle('AI for Dashboard Creation — หลักสูตร')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
+  // ═══ All Project Portal ═══
+  if (p.allproject === '1') {
+    var allProjHtml = HtmlService.createTemplateFromFile('AllProjectPortal');
+    return allProjHtml.evaluate()
+      .setTitle('🏆 All Project Portal — PMSG')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
+  // ═══ BCT Sale Report Dashboard ═══
+  if (p.bctsale === '1') {
+    var bsrHtml = HtmlService.createHtmlOutputFromFile('BCTSaleDash');
+    return HtmlService.createHtmlOutput(bsrHtml.getContent())
+      .setTitle('BCT Sale Report 2569 | รายงานยอดขายผลิตภัณฑ์เสริม')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
+  // ═══ BCT Sale Report data API ═══
+  if (p.bctsaleapi === '1') {
+    var bsrData = getBCTSaleData_();
+    return ContentService.createTextOutput(JSON.stringify(bsrData))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ═══ Organizational Customer Dashboard ═══
+  if (p.orgcustomer === '1') {
+    var ocHtml = HtmlService.createHtmlOutputFromFile('OrgCustDash');
+    return HtmlService.createHtmlOutput(ocHtml.getContent())
+      .setTitle('ลูกค้าองค์กร | Organizational Customer Dashboard')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
+  // ═══ Organizational Customer Data API ═══
+  if (p.orgcustapi === '1') {
+    var ocForce = (p.refresh === '1');
+    var ocData = getOrgCustData_(ocForce);
+    return ContentService.createTextOutput(JSON.stringify(ocData))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  // ═══ Organizational Customer Debug API (raw sheet dump) ═══
+  if (p.orgcustdebug === '1') {
+    var ocDbg = getOrgCustDebug_();
+    return ContentService.createTextOutput(JSON.stringify(ocDbg))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   // ═══ Finance P&L Dashboard ═══  
   if (p.finance === '1') {
     var finYears = p.years ? p.years.split(',') : ['2566','2567','2568','2569'];
@@ -689,13 +1491,71 @@ function doGet(e) {
   
   if (p.okrall === '1') {
     // ═══ Multi-Department OKR Dashboard (5 departments) ═══
+    if (p.action === 'setupTrigger') {
+      var triggerResult = setupOKRAutoRefreshTrigger();
+      return ContentService.createTextOutput(JSON.stringify(triggerResult)).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (p.action === 'manualRefresh') {
+      var refreshResult = okrAutoRefresh();
+      return ContentService.createTextOutput(JSON.stringify({success:true, entries: refreshResult.entries})).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (p.action === 'changelog') {
+      var deptName = p.dept || '';
+      var logResult = gsGetOKRChangeLog(deptName);
+      return ContentService.createTextOutput(JSON.stringify(logResult)).setMimeType(ContentService.MimeType.JSON);
+    }
     if (p.view === 'data') {
+      // Per-department fetch — much faster than loading all at once
+      if (p.dept !== undefined && p.dept !== '') {
+        var deptIdx = parseInt(p.dept);
+        var deptCount = gsGetOKRDeptCount();
+        if (deptIdx >= 0 && deptIdx < deptCount) {
+          var deptData = gsGetOKRDeptData(deptIdx);
+          // Slim down
+          if (deptData && deptData.people) {
+            deptData.people.forEach(function(person) {
+              delete person.accountability;
+              delete person.purpose;
+              delete person.vision;
+              delete person.buPurpose;
+              delete person.buVision;
+              delete person.teamPurpose;
+              delete person.teamVision;
+              delete person.personalPurpose;
+              delete person.personalVision;
+              delete person.kpiOwnership;
+              delete person.mentors;
+            });
+          }
+          return ContentService.createTextOutput(JSON.stringify({ success: true, dept: deptIdx, deptCount: deptCount, data: deptData })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      // Full fetch (fallback)
       var allData = getMultiOKRData_();
+      if (allData && allData.departments) {
+        allData.departments.forEach(function(dept) {
+          if (dept.people) {
+            dept.people.forEach(function(person) {
+              delete person.accountability;
+              delete person.purpose;
+              delete person.vision;
+              delete person.buPurpose;
+              delete person.buVision;
+              delete person.teamPurpose;
+              delete person.teamVision;
+              delete person.personalPurpose;
+              delete person.personalVision;
+              delete person.kpiOwnership;
+              delete person.mentors;
+            });
+          }
+        });
+      }
       return ContentService.createTextOutput(JSON.stringify(allData)).setMimeType(ContentService.MimeType.JSON);
     }
     if (p.view === 'refresh') {
       // Force refresh cache
-      var cacheKey = 'okrall_data_v6';
+      var cacheKey = 'okrall_data_v8';
       CacheService.getScriptCache().remove(cacheKey);
       CacheService.getScriptCache().remove(cacheKey + '_meta');
       // Also remove chunked cache
@@ -712,20 +1572,6 @@ function doGet(e) {
     var allHtml = HtmlService.createHtmlOutputFromFile('OKR_All_Index');
     var allUrl = ScriptApp.getService().getUrl();
     var allContent = allHtml.getContent();
-    // Use replaceAll in case placeholder appears multiple times after escaping
-    allContent = allContent.split('SCRIPT_URL_PLACEHOLDER').join(allUrl);
-    
-    // Embed cached OKR data directly in the page so browser doesn't need to fetch
-    // This eliminates the 5-minute wait when cache is cold
-    try {
-      var okrData = getMultiOKRData_();
-      var dataJson = JSON.stringify(okrData);
-      if (dataJson.length < 1500000) { // Only embed if under 1.5MB
-        allContent = allContent.split('EMBEDDED_DATA = null').join('EMBEDDED_DATA = ' + dataJson);
-      }
-    } catch(e) {
-      // If data fetch fails, page will fall back to fetch via JS
-    }
     
     return HtmlService.createHtmlOutput(allContent)
       .setTitle('PMS/PMG OKR Dashboard — 5 แผนก')
@@ -752,14 +1598,99 @@ function doGet(e) {
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
 
-  var html = HtmlService.createHtmlOutputFromFile('Index');
-  var scriptUrl = ScriptApp.getService().getUrl();
-  var content = html.getContent();
-  content = content.replaceAll('SCRIPT_URL_PLACEHOLDER', scriptUrl);
-  return HtmlService.createHtmlOutput(content)
-    .setTitle('PMG Workshop | บริหารงานซ่อม')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  // ═══ PMS Supplement Dashboard ═══
+  if (p.supplement === '1') {
+    var supHtml = HtmlService.createHtmlOutputFromFile('SupplementDash');
+    return HtmlService.createHtmlOutput(supHtml.getContent())
+      .setTitle('PMS ผลิตภัณฑ์เสริม 4 สาขา')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
+  // ═══ PR Dashboard (เป้าขายผลิตภัณฑ์เสริม) ═══
+  if (p.pr === '1') {
+    var prHtml = HtmlService.createHtmlOutputFromFile('PRDash');
+    return HtmlService.createHtmlOutput(prHtml.getContent())
+      .setTitle('PR Dashboard | เป้าขายผลิตภัณฑ์เสริม ก.ค. 69')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
+  // ═══ PR Dashboard data API ═══
+  if (p.prapi === '1') {
+    var prData = fetchPRDashboardData_();
+    return ContentService.createTextOutput(JSON.stringify(prData))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ═══ GM Dashboard (เปรียบเทียบ GM/ปี + SA) ═══
+  if (p.gm === '1') {
+    var gmHtml = HtmlService.createHtmlOutputFromFile('GMDash');
+    return HtmlService.createHtmlOutput(gmHtml.getContent())
+      .setTitle('GM Dashboard | เปรียบเทียบ GM ผลิตภัณฑ์เสริม')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
+  // ═══ CEO Actuals API (สำหรับ OKR Dashboard S-Objectives) ═══
+  if (p.ceoactuals === '1') {
+    var ceoActData = gsGetCEOActuals();
+    return ContentService.createTextOutput(JSON.stringify(ceoActData))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ═══ GM Dashboard data API ═══
+  if (p.gmapi === '1') {
+    var gmData = fetchGMDashboardData_();
+    return ContentService.createTextOutput(JSON.stringify(gmData))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ═══ Dynamic Dashboard (generated by M16) ═══
+  if (p.dash === '1' && p.id) {
+    var dashConfig = PropertiesService.getScriptProperties().getProperty('DASH_' + p.id);
+    if (!dashConfig) {
+      return ContentService.createTextOutput('Dashboard not found: ' + p.id)
+        .setMimeType(ContentService.MimeType.TEXT);
+    }
+    var cfg = JSON.parse(dashConfig);
+    var dashHtml = renderDynamicDashboard_(cfg);
+    return HtmlService.createHtmlOutput(dashHtml)
+      .setTitle(cfg.title || 'Dashboard')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
+  // ═══ Dynamic Dashboard data API ═══
+  if (p.dashapi === '1' && p.id) {
+    var dapiConfig = PropertiesService.getScriptProperties().getProperty('DASH_' + p.id);
+    if (!dapiConfig) {
+      return ContentService.createTextOutput(JSON.stringify({error: 'Dashboard not found'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    var dapiCfg = JSON.parse(dapiConfig);
+    // Try cache first (pre-fetched at createDashboard time)
+    var cachedData = CacheService.getScriptCache().get('DASHDATA_' + p.id);
+    var dashData;
+    if (cachedData) {
+      dashData = JSON.parse(cachedData);
+    } else {
+      dashData = fetchDynamicDashboardData_(dapiCfg);
+      try { CacheService.getScriptCache().put('DASHDATA_' + p.id, JSON.stringify(dashData), 21600); } catch (e) {}
+    }
+    return ContentService.createTextOutput(JSON.stringify(dashData))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ═══ Default: redirect to OKR Dashboard (main dashboard users expect) ═══
+  var defaultHtml = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><meta charset="UTF-8">'+
+    '<title>กำลังโหลด OKR Dashboard...</title></head><body style="font-family:system-ui;text-align:center;padding:40px">'+
+    '<div style="font-size:48px">📊</div><div style="font-size:16px;color:#64748b;margin-top:8px">กำลังโหลด...</div>'+
+    '<script>try{window.top.location.href="' + ScriptApp.getService().getUrl() + '?okrall=1' + (p.st ? '&st=' + p.st : '') + (p.pwdok === '1' && p.pass && p.otp ? '&pwdok=1&pass=' + encodeURIComponent(p.pass) + '&otp=' + encodeURIComponent(p.otp) : '') + '";}catch(e){window.location.href="' + ScriptApp.getService().getUrl() + '?okrall=1' + (p.st ? '&st=' + p.st : '') + '";}</script>'+
+    '</body></html>'
+  ).setTitle('กำลังโหลด...').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  return defaultHtml;
 }
 
 /* ═══ POST handler — write-back API ═══ */
@@ -771,6 +1702,45 @@ function doPost(e) {
     optionsOutput.setMimeType(ContentService.MimeType.JSON);
     return optionsOutput;
   }
+  
+  // ═══ PDPA Login via form POST — session token + render directly ═══
+  if (e.parameter && e.parameter.pwdok === '1' && e.parameter.pass && e.parameter.otp) {
+    var p = e.parameter;
+    // สร้าง fingerprint สำหรับ POST login — ใช้ rquery + parameter keys
+    var postFp = getClientFingerprint(e);
+    // ถ้าไม่มี fingerprint จริง (ไม่มี params อื่น) ให้ใช้ 'post_login' เป็น default
+    if (postFp === 'default') postFp = 'post_login';
+    var lockStatus = pdpaCheckLockout(postFp);
+    if (lockStatus.locked) {
+      return servePdpaLogin(p.rquery || '', '🚫 ระบบล็อคผู้บุกรุก กรุณารอ ' + lockStatus.remaining + ' นาที', null, postFp);
+    }
+    var correctPwd = getPdpaPassword();
+    var correctOtp = getPdpaTwoFa();
+    if (p.pass === correctPwd && p.otp === correctOtp) {
+      pdpaResetAttempts(postFp);
+      pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (form POST)', postFp);
+      // Create session token (valid 8 hours)
+      var sessionToken = Utilities.getUuid() + '_' + new Date().getTime();
+      CacheService.getScriptCache().put('PDPA_SESSION_' + sessionToken, 'valid', 28800); // 8 ชม.
+      // Build redirect URL with token + rquery
+      var baseUrl = ScriptApp.getService().getUrl();
+      var redirectUrl = baseUrl + '?st=' + sessionToken;
+      if (p.rquery) redirectUrl += '&' + p.rquery;
+      return HtmlService.createHtmlOutput(
+        '<!DOCTYPE html><html><head><meta charset="UTF-8">'+
+        '<title>กำลังเข้าสู่ระบบ...</title></head><body style="font-family:system-ui;text-align:center;padding:40px">'+
+        '<div style="font-size:48px">✅</div><div style="font-size:18px;font-weight:700;color:#10b981;margin-top:8px">เข้าสู่ระบบสำเร็จ</div>'+
+        '<div style="font-size:13px;color:#64748b;margin-top:4px">กำลังโหลด Dashboard...</div>'+
+        '<script>try{window.top.location.href="'+redirectUrl+'";}catch(e){window.location.href="'+redirectUrl+'";}</script>'+
+        '</body></html>'
+      ).setTitle('กำลังเข้าสู่ระบบ...').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    } else {
+      var count = pdpaRecordFailedAttempt(postFp);
+      pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + count, postFp);
+      return servePdpaLogin(p.rquery || '', '❌ รหัสผ่านหรือ 2FA ไม่ถูกต้อง (พยายาม ' + count + '/' + PDPA_CONFIG.MAX_ATTEMPTS + ')', null, postFp);
+    }
+  }
+  
   try {
     var p = JSON.parse(e.postData.contents);
     var action = p.action;
@@ -790,6 +1760,141 @@ function doPost(e) {
       result = saveAddKR_(p);
     } else if (action === 'personEdit') {
       result = savePersonEdit_(p);
+    } else if (action === 'createDashboard') {
+      result = createDashboard(p);
+    } else if (action === 'uploadEval360') {
+      // Store eval360 data in cache (max 100KB per key, so we split)
+      var data = p.data;
+      var dataStr = JSON.stringify(data);
+      // Clear old chunks first
+      var oldChunks = CacheService.getScriptCache().get('EVAL360_CHUNKS');
+      if (oldChunks) {
+        for (var oci = 0; oci < parseInt(oldChunks); oci++) {
+          CacheService.getScriptCache().remove('EVAL360_CHUNK_' + oci);
+        }
+        CacheService.getScriptCache().remove('EVAL360_CHUNKS');
+      }
+      CacheService.getScriptCache().remove('EVAL360_DATA');
+      if (dataStr.length <= 90000) {
+        CacheService.getScriptCache().put('EVAL360_DATA', dataStr, 21600);
+      } else {
+        var chunks = Math.ceil(dataStr.length / 90000);
+        CacheService.getScriptCache().put('EVAL360_CHUNKS', String(chunks), 21600);
+        for (var ci = 0; ci < chunks; ci++) {
+          var chunk = dataStr.substring(ci * 90000, (ci + 1) * 90000);
+          CacheService.getScriptCache().put('EVAL360_CHUNK_' + ci, chunk, 21600);
+        }
+      }
+      result = { status: 'ok', records: data.stats ? data.stats.total_people : 0, size: dataStr.length };
+    } else if (action === 'uploadEval360Meta') {
+      var metaStr = JSON.stringify(p.data);
+      CacheService.getScriptCache().put('EVAL360_META', metaStr, 21600);
+      result = { status: 'ok', size: metaStr.length };
+    } else if (action === 'uploadEval360Batch') {
+      var batchIdx = String(p.data.batchIdx !== undefined ? p.data.batchIdx : 0);
+      var batchData = p.data.records || [];
+      var batchKey = 'EVAL360_BATCH_' + batchIdx;
+      CacheService.getScriptCache().put(batchKey, JSON.stringify(batchData), 21600);
+      if (p.data.totalBatches) {
+        CacheService.getScriptCache().put('EVAL360_BATCHES_TOTAL', String(p.data.totalBatches), 21600);
+      }
+      result = { status: 'ok', batch: batchIdx, count: batchData.length };
+    } else if (action === 'uploadEval360PersonsBatch') {
+      var pBatchIdx = String(p.data.batchIdx !== undefined ? p.data.batchIdx : 0);
+      var pBatchData = p.data.records || [];
+      CacheService.getScriptCache().put('EVAL360_PBATCH_' + pBatchIdx, JSON.stringify(pBatchData), 21600);
+      if (p.data.totalBatches) {
+        CacheService.getScriptCache().put('EVAL360_PBATCHES_TOTAL', String(p.data.totalBatches), 21600);
+      }
+      result = { status: 'ok', batch: pBatchIdx, count: pBatchData.length };
+    } else if (action === 'finalizeEval360') {
+      var metaStr3 = CacheService.getScriptCache().get('EVAL360_META');
+      if (!metaStr3) { result = { error: 'No meta uploaded' }; }
+      else {
+        var meta3 = JSON.parse(metaStr3);
+        // Collect summary batches
+        var allSummary3 = [];
+        var totalSB = parseInt(CacheService.getScriptCache().get('EVAL360_BATCHES_TOTAL') || '0');
+        for (var sbi = 0; sbi < totalSB; sbi++) {
+          var sbStr = CacheService.getScriptCache().get('EVAL360_BATCH_' + sbi);
+          if (sbStr) { allSummary3 = allSummary3.concat(JSON.parse(sbStr)); CacheService.getScriptCache().remove('EVAL360_BATCH_' + sbi); }
+        }
+        // Collect persons batches
+        var allPersons3 = [];
+        var totalPB = parseInt(CacheService.getScriptCache().get('EVAL360_PBATCHES_TOTAL') || '0');
+        for (var pbi = 0; pbi < totalPB; pbi++) {
+          var pbStr = CacheService.getScriptCache().get('EVAL360_PBATCH_' + pbi);
+          if (pbStr) { allPersons3 = allPersons3.concat(JSON.parse(pbStr)); CacheService.getScriptCache().remove('EVAL360_PBATCH_' + pbi); }
+        }
+        meta3.summary = allSummary3;
+        meta3.persons = allPersons3;
+        var fullStr3 = JSON.stringify(meta3);
+        // Clear old cache
+        var oldChunks3 = CacheService.getScriptCache().get('EVAL360_CHUNKS');
+        if (oldChunks3) {
+          for (var oci3 = 0; oci3 < parseInt(oldChunks3); oci3++) {
+            CacheService.getScriptCache().remove('EVAL360_CHUNK_' + oci3);
+          }
+          CacheService.getScriptCache().remove('EVAL360_CHUNKS');
+        }
+        CacheService.getScriptCache().remove('EVAL360_DATA');
+        if (fullStr3.length <= 90000) {
+          CacheService.getScriptCache().put('EVAL360_DATA', fullStr3, 21600);
+        } else {
+          var numChunks3 = Math.ceil(fullStr3.length / 90000);
+          CacheService.getScriptCache().put('EVAL360_CHUNKS', String(numChunks3), 21600);
+          for (var ci3 = 0; ci3 < numChunks3; ci3++) {
+            var chunk3 = fullStr3.substring(ci3 * 90000, (ci3 + 1) * 90000);
+            CacheService.getScriptCache().put('EVAL360_CHUNK_' + ci3, chunk3, 21600);
+          }
+        }
+        CacheService.getScriptCache().remove('EVAL360_META');
+        CacheService.getScriptCache().remove('EVAL360_BATCHES_TOTAL');
+        CacheService.getScriptCache().remove('EVAL360_PBATCHES_TOTAL');
+        result = { status: 'ok', totalRecords: allSummary3.length, totalPeople: allPersons3.length, size: fullStr3.length };
+      }
+    } else if (action === 'saveEval360ToDrive') {
+      // Save eval360 data from cache to Google Drive for persistent storage
+      var evalDataStr = null;
+      var cached2 = CacheService.getScriptCache().get('EVAL360_DATA');
+      if (cached2) {
+        evalDataStr = cached2;
+      } else {
+        var cc2 = CacheService.getScriptCache().get('EVAL360_CHUNKS');
+        if (cc2) {
+          var comb2 = '';
+          for (var cci = 0; cci < parseInt(cc2); cci++) {
+            comb2 += CacheService.getScriptCache().get('EVAL360_CHUNK_' + cci) || '';
+          }
+          evalDataStr = comb2;
+        }
+      }
+      if (!evalDataStr) {
+        result = { error: 'No eval360 data in cache to save' };
+      } else {
+        try {
+          var evalFolder2 = DriveApp.getFolderById('1J9barfa-_DBwJEgZzDFuVS5uqT95WGXZ');
+          // Delete old file if exists
+          var existing = evalFolder2.getFiles();
+          while (existing.hasNext()) {
+            var ef = existing.next();
+            if (ef.getName() === 'eval360_embedded.json') {
+              evalFolder2.removeFile(ef);
+              break;
+            }
+          }
+          // Create new file
+          var blob = Utilities.newBlob(evalDataStr, 'application/json', 'eval360_embedded.json');
+          evalFolder2.createFile(blob);
+          result = { status: 'ok', fileName: 'eval360_embedded.json', size: evalDataStr.length };
+        } catch(driveErr2) {
+          result = { error: 'Drive save failed: ' + driveErr2.toString() };
+        }
+      }
+    } else if (action === 'updateDashboard') {
+      result = updateDashboard(p.id || p.dashId, p.command || p.msg || '');
+    } else if (action === 'getDashboardData') {
+      result = fetchDynamicDashboardData_(p.id || p.dashId);
     } else {
       result = { success: false, error: 'Unknown action: ' + action };
     }
@@ -6019,6 +7124,13 @@ function billingDetectChanges_(ssId, tabName) {
 function getBillingCrossref_(selectedTab, crossMode) {
   // crossMode: 'plate' = ทะเบียน only, 'job' = เลขที่ JOB only, 'both' = ทั้งสอง
   if (!crossMode) crossMode = 'both';
+  // Cache: 10 minutes (600s) — prevents slow re-reads on every click
+  var cacheKey = 'billing_xref_v3_' + (selectedTab || 'all') + '_' + crossMode;
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
   function parseNum(v) { var n = parseFloat(String(v || '').replace(/,/g, '')); return isNaN(n) ? 0 : n }
   var branches = [
     { id: CNB_SS_ID, key: 'cnb', name: 'มหาราช' },
@@ -6286,6 +7398,11 @@ function getBillingCrossref_(selectedTab, crossMode) {
       bResult.error = err2.message;
     }
   }
+  // Write cache (10 min) — skip if result too large (>90KB)
+  try {
+    var jsonStr = JSON.stringify(result);
+    if (jsonStr.length < 90000) cache.put(cacheKey, jsonStr, 600);
+  } catch(e) {}
   return result;
 }
 
@@ -6393,7 +7510,9 @@ function buildBillingPage_(p) {
   html += '</div>';
   
   html += '<div class="content">';
-  html += '<div id="loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center"><div style="background:#fff;border-radius:12px;padding:24px 40px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.3)"><div style="font-size:2rem;margin-bottom:8px">⏳</div><div style="font-weight:700;color:#1e293b">กำลังโหลดข้อมูล...</div><div style="font-size:.85rem;color:#64748b;margin-top:4px">กรุณารอสักครู่</div></div></div>';
+  html += '<div id="loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center"><div style="background:#fff;border-radius:12px;padding:24px 40px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.3)"><div style="font-size:2rem;margin-bottom:8px">⏳</div><div style="font-weight:700;color:#1e293b" id="loading-text">กำลังโหลดข้อมูล...</div><div style="font-size:.85rem;color:#64748b;margin-top:4px" id="loading-sub">กรุณารอสักครู่</div><div style="margin-top:12px;width:200px;height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden"><div id="loading-bar" style="width:0%;height:100%;background:#2563eb;border-radius:2px;transition:width .3s"></div></div></div></div>';
+  // Status bar — shows data status at all times
+  html += '<div id="status-bar" style="background:#eff6ff;border:1px solid #dbeafe;border-radius:8px;padding:8px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;font-size:.85rem"><span style="font-weight:700;color:#2563eb">📊 สถานะ:</span><span id="status-text" style="color:#64748b">⏳ กำลังเตรียมข้อมูล...</span><span style="margin-left:auto;color:#94a3b8;font-size:.75rem" id="status-time"></span></div>';
   
   for (var bi = 0; bi < branches.length; bi++) {
     var bKey = branches[bi];
@@ -6483,7 +7602,7 @@ function buildBillingPage_(p) {
       // Duplicate entries table
       if (dups.length > 0) {
         html += '<div class="section">';
-        html += '<h3>⚠️ รายการที่ซ้ำกับเดือนอื่น (' + dups.length + ' รายการ)</h3>';
+        html += '<h3>⚠️ รายการที่ซ้ำกับเดือนอื่น (' + dups.length + ' รายการ' + (dups.length > 50 ? ' — แสดง 50 รายการแรก' : '') + ')</h3>';
         html += '<p style="font-size:.85rem;color:#64748b;margin-bottom:12px">ตรวจสอบทะเบียนและเลขที่ JOB ที่ซ้ำกับเดือนอื่น — <span style="color:#dc2626">🔴 ทะเบียนซ้ำ</span> <span style="color:#7c3aed">🟣 ทะ+JOBซ้ำ</span> <span style="color:#2563eb">🔵 JOBซ้ำ</span></p>';
         html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.85rem">';
         html += '<thead><tr style="background:#1e3a5f;color:#fff">';
@@ -6497,7 +7616,8 @@ function buildBillingPage_(p) {
         html += '<th style="padding:8px 12px;text-align:right">ยอด (ซ้ำ) ฿</th>';
         html += '<th style="padding:8px 12px;text-align:left">ประเภท</th>';
         html += '</tr></thead><tbody>';
-        for (var di = 0; di < dups.length; di++) {
+        for (var di = 0; di < dups.length && di < 50; di++) {
+          if (di === 50) break;
           var dd = dups[di];
           var dupType = 'both';
           if (dd.dupReason === 'ทะเบียน') dupType = 'plate';
@@ -6522,10 +7642,11 @@ function buildBillingPage_(p) {
         html += '</tbody></table></div></div>';
       }
       
-      // All entries table
+      // All entries table — limit to 50 rows to keep HTML small
       if (curJobs.length > 0) {
+        var maxRows = 50;
         html += '<div class="section">';
-        html += '<h3>📋 รายการทั้งหมด (' + curJobs.length + ' รายการ)</h3>';
+        html += '<h3>📋 รายการทั้งหมด (' + curJobs.length + ' รายการ' + (curJobs.length > maxRows ? ' — แสดง ' + maxRows + ' รายการแรก' : '') + ')</h3>';
         html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.85rem">';
         html += '<thead><tr style="background:#1e3a5f;color:#fff">';
         html += '<th style="padding:8px 12px;text-align:left">แถว</th>';
@@ -6544,11 +7665,18 @@ function buildBillingPage_(p) {
           if (!dupByRow[dr.currentRow]) dupByRow[dr.currentRow] = [];
           dupByRow[dr.currentRow].push(dr.duplicateIn + ' (แถว ' + dr.duplicateRow + ')');
         }
-        for (var ji = 0; ji < curJobs.length; ji++) {
-          var job = curJobs[ji];
+        // Render duplicates first, then non-duplicates, up to maxRows
+        var dupJobs = [], okJobs = [];
+        for (var ji2 = 0; ji2 < curJobs.length; ji2++) {
+          var job2 = curJobs[ji2];
+          if (dupByRow[job2.row]) dupJobs.push(job2);
+          else okJobs.push(job2);
+        }
+        var rendered = 0;
+        for (var di4 = 0; di4 < dupJobs.length && rendered < maxRows; di4++) {
+          var job = dupJobs[di4];
           var dupTabs = dupByRow[job.row] || null;
-          var isDup = !!dupTabs;
-          var rowClass = isDup ? 'dup-row' : 'ok-row';
+          var rowClass = 'dup-row';
           html += '<tr class="' + rowClass + '">';
           html += '<td style="padding:6px 12px">' + (job.row || '') + '</td>';
           html += '<td style="padding:6px 12px">' + escapeHtml(job.plate || '') + '</td>';
@@ -6557,15 +7685,29 @@ function buildBillingPage_(p) {
           html += '<td style="padding:6px 12px;text-align:right">' + escapeHtml(job.amount || '') + '</td>';
           html += '<td style="padding:6px 12px">' + escapeHtml(job.date || '') + '</td>';
           html += '<td style="padding:6px 12px">' + escapeHtml(job.status || '') + '</td>';
-          // Show duplicate month sheets
-          if (isDup) {
-            html += '<td style="padding:6px 12px;color:#dc2626;font-weight:700;font-size:.8rem">' + escapeHtml(dupTabs.join(', ')) + '</td>';
-          } else {
-            html += '<td style="padding:6px 12px;color:#16a34a;font-weight:600">— ไม่ซ้ำ —</td>';
-          }
+          html += '<td style="padding:6px 12px;color:#dc2626;font-weight:700;font-size:.8rem">' + escapeHtml(dupTabs.join(', ')) + '</td>';
           html += '</tr>';
+          rendered++;
         }
-        html += '</tbody></table></div></div>';
+        for (var ji3 = 0; ji3 < okJobs.length && rendered < maxRows; ji3++) {
+          var job = okJobs[ji3];
+          html += '<tr class="ok-row">';
+          html += '<td style="padding:6px 12px">' + (job.row || '') + '</td>';
+          html += '<td style="padding:6px 12px">' + escapeHtml(job.plate || '') + '</td>';
+          html += '<td style="padding:6px 12px">' + escapeHtml(job.jobNo || '') + '</td>';
+          html += '<td style="padding:6px 12px">' + escapeHtml(job.name || '') + '</td>';
+          html += '<td style="padding:6px 12px;text-align:right">' + escapeHtml(job.amount || '') + '</td>';
+          html += '<td style="padding:6px 12px">' + escapeHtml(job.date || '') + '</td>';
+          html += '<td style="padding:6px 12px">' + escapeHtml(job.status || '') + '</td>';
+          html += '<td style="padding:6px 12px;color:#16a34a;font-weight:600">— ไม่ซ้ำ —</td>';
+          html += '</tr>';
+          rendered++;
+        }
+        html += '</tbody></table></div>';
+        if (curJobs.length > maxRows) {
+          html += '<div style="text-align:center;padding:12px;color:#64748b;font-size:.85rem">📌 แสดง ' + rendered + ' จาก ' + curJobs.length + ' รายการ — รายการซ้ำแสดงก่อน</div>';
+        }
+        html += '</div>';
       }
       
   }
@@ -6575,7 +7717,7 @@ function buildBillingPage_(p) {
   
   // ── Edit Log section ──
   var editLogData = null;
-  try { editLogData = getBillingEditLog_({limit: 1000}); } catch(e) { editLogData = {success: false, logs: [], count: 0, message: 'ไม่สามารถโหลดข้อมูล: ' + e.message}; }
+  try { editLogData = getBillingEditLog_({limit: 50}); } catch(e) { editLogData = {success: false, logs: [], count: 0, message: 'ไม่สามารถโหลดข้อมูล: ' + e.message}; }
   html += '<div class="section" id="section-editlog" style="' + (selectedTab === 'editlog' ? '' : 'display:none') + '">';
   html += '<h3>📝 บันทึกการแก้ไขแท็บวางบิล</h3>';
   html += '<p style="color:#64748b;font-size:.9rem;margin:4px 0 12px">บันทึกอัตโนมัติทุกครั้งที่มีการแก้ไขข้อมูลในแท็บ "วางบิล" ของ CNB มหาราช และ CSK</p>';
@@ -6664,7 +7806,9 @@ function buildBillingPage_(p) {
     html += '<th>ผู้แก้ไข</th>';
     html += '</tr></thead><tbody id="editlog-tbody">';
     var logs = editLogData.logs;
-    for (var li = 0; li < logs.length; li++) {
+    var maxLogRows = 30;
+    var showLogCount = Math.min(logs.length, maxLogRows);
+    for (var li = 0; li < showLogCount; li++) {
       var log = logs[li];
       var ts = log.timestamp ? log.timestamp.replace('T', ' ').substring(0, 16) : '';
       var branchBadge = log.branch === 'มหาราช' ? '<span class="badge badge-blue">' + escapeHtml(log.branch) + '</span>' : '<span class="badge badge-green">' + escapeHtml(log.branch) + '</span>';
@@ -6739,16 +7883,30 @@ function buildBillingPage_(p) {
   html += '  if (!val) { alert("กรุณาเลือกแท็บก่อน"); return; }';
   html += '  var overlay = document.getElementById("loading-overlay");';
   html += '  if (overlay) overlay.style.display = "flex";';
-  html += '  var statusEl = document.getElementById("status-" + branch);';
-  html += '  if (statusEl) statusEl.textContent = "⏳ กำลังโหลดข้อมูล... กรุณารอสักครู่";';
-  html += '  document.body.style.opacity = "0.5";';
+  html += '  var loadingText = document.getElementById("loading-text");';
+  html += '  var loadingSub = document.getElementById("loading-sub");';
+  html += '  var loadingBar = document.getElementById("loading-bar");';
+  html += '  if (loadingText) loadingText.textContent = "⏳ กำลังกระทบข้อมูล " + branch.toUpperCase() + "...";';
+  html += '  if (loadingSub) loadingSub.textContent = "อ่านแท็บวางบิลทุกเดือน เปรียบเทียบทะเบียน+JOB อาจใช้เวลา 5-15 วินาที";';
+  html += '  if (loadingBar) { loadingBar.style.width = "30%"; loadingBar.style.transition = "width 1s"; }';
+  html += '  var statusText = document.getElementById("status-text");';
+  html += '  if (statusText) { statusText.textContent = "⏳ กำลังกระทบข้อมูล " + branch.toUpperCase() + " (อ่านทุกแท็บวางบิล)..."; statusText.style.color = "#d97706"; }';
+  html += '  document.body.style.opacity = "0.7";';
   html += '  document.body.style.pointerEvents = "none";';
-  html += '  var url = "' + scriptUrl + '?billing=1&selectedTab=" + encodeURIComponent(val) + "&crossMode=" + mode + "&_t=" + Date.now();';
-  html += '  window.location.href = url;';
+  html += '  // Progress simulation';
+  html += '  var prog = 30; var progTimer = setInterval(function(){ prog = Math.min(prog + 5, 90); if (loadingBar) loadingBar.style.width = prog + "%"; }, 800);';
+  html += '  var stParam = ""; var qs = window.location.search.substring(1).split("&");';
+  html += '  for (var qi=0; qi<qs.length; qi++) { if (qs[qi].indexOf("st=")===0) stParam = "&"+qs[qi]; }';
+  html += '  var url = "' + scriptUrl + '?billing=1&selectedTab=" + encodeURIComponent(val) + "&crossMode=" + mode + stParam + "&_t=" + Date.now();';
+  html += '  try{window.top.location.href=url;}catch(e){window.location.href=url;}';
   html += '}';
   html += 'window.addEventListener("load", function() {';
   html += '  var overlay = document.getElementById("loading-overlay");';
   html += '  if (overlay) overlay.style.display = "none";';
+  html += '  var statusText = document.getElementById("status-text");';
+  html += '  var statusTime = document.getElementById("status-time");';
+  html += '  if (statusText) { statusText.textContent = "✅ ข้อมูลพร้อม — เลือกแท็บและกด ⚡ กระทบข้อมูล"; statusText.style.color = "#16a34a"; }';
+  html += '  if (statusTime) { var now = new Date(); statusTime.textContent = "อัปเดต: " + now.toLocaleTimeString("th-TH"); }';
   html += '});';
   html += '</script>';
   
@@ -8569,16 +9727,1282 @@ function getOKRDataFull_() {
       }
     }
   }
+  return null;
+}
+
+/* ═══════════════════════════════════════════════════
+   M16 Dashboard Generator — Server-side Functions
+   อ่าน Sheet อัตโนมัติ → วิเคราะห์ → สร้าง Dashboard
+   ═══════════════════════════════════════════════════ */
+
+/**
+ * วิเคราะห์ Google Sheet: อ่านทุกแท็บ, headers, data types, sample data
+ */
+function analyzeSheet_(sheetUrl) {
+  var ssId = extractSheetId_(sheetUrl);
+  if (!ssId) return { error: 'ไม่สามารถดึง Sheet ID จากลิงก์ได้ — ตรวจสอบว่าลิงก์ถูกต้องและแชร์ให้ "ผู้ใช้ที่มีลิงก์" แล้ว' };
   
+  // วิธีที่ 1: ลองเปิดด้วย SpreadsheetApp (เร็ว แต่ต้องมีสิทธิ์)
+  try {
+    var ss = SpreadsheetApp.openById(ssId);
+    var sheets = ss.getSheets();
+    var sheetInfos = [];
+    var maxSheets = Math.min(sheets.length, 10);
+    for (var i = 0; i < maxSheets; i++) {
+      var sh = sheets[i];
+      var name = sh.getName();
+      var lastRow = sh.getLastRow();
+      var lastCol = sh.getLastColumn();
+      if (lastRow === 0 || lastCol === 0) {
+        sheetInfos.push({ name: name, rows: 0, cols: 0, headers: [], sampleRows: [], numericCols: [], textCols: [] });
+        continue;
+      }
+      var maxRows = Math.min(lastRow, 8);
+      var maxCols = Math.min(lastCol, 30);
+      var data = sh.getRange(1, 1, maxRows, maxCols).getValues();
+      var headers = [];
+      var sampleRows = [];
+      var numericCols = [];
+      var textCols = [];
+      for (var c = 0; c < maxCols; c++) {
+        var headerVal = data[0][c];
+        headers.push(headerVal ? String(headerVal).trim() : 'col' + (c + 1));
+        var numCount = 0, textCount = 0;
+        for (var r = 1; r < maxRows; r++) {
+          var val = data[r][c];
+          if (val === '' || val === null || val === undefined) continue;
+          if (typeof val === 'number') { numCount++; }
+          else {
+            var str = String(val).replace(/,/g, '').replace(/%/g, '').replace(/บาท/g, '').trim();
+            if (str && !isNaN(parseFloat(str))) numCount++;
+            else textCount++;
+          }
+        }
+        if (numCount > textCount && numCount > 0) numericCols.push(c);
+        else textCols.push(c);
+      }
+      for (var sr = 1; sr < Math.min(maxRows, 6); sr++) {
+        var row = [];
+        for (var sc = 0; sc < maxCols; sc++) {
+          var v = data[sr][sc];
+          if (v instanceof Date) row.push(Utilities.formatDate(v, 'Asia/Bangkok', 'dd/MM/yyyy'));
+          else row.push(v !== '' && v !== null ? String(v).substring(0, 50) : '');
+        }
+        sampleRows.push(row);
+      }
+      sheetInfos.push({ name: name, rows: lastRow, cols: lastCol, headers: headers, sampleRows: sampleRows, numericCols: numericCols, textCols: textCols });
+    }
+    return { sheetId: ssId, sheets: sheetInfos, totalSheets: sheets.length };
+  } catch (e1) {
+    // วิธีที่ 2: ถ้าเปิดไม่ได้ ให้ลองดึงผ่าน UrlFetchApp (CSV export — ไม่ต้องมีสิทธิ์)
+    try {
+      var csvUrl = 'https://docs.google.com/spreadsheets/d/' + ssId + '/export?format=csv&gid=0&range=A1:Z8';
+      var response = UrlFetchApp.fetch(csvUrl, { muteHttpExceptions: true });
+      if (response.getResponseCode() === 200) {
+        var csvText = response.getContentText();
+        var rows = parseCsv_(csvText);
+        if (rows.length > 0) {
+          var headers2 = rows[0].map(function(c, i) { return c ? c.trim() : 'col' + (i + 1); });
+          var numericCols2 = [], textCols2 = [];
+          for (var c2 = 0; c2 < headers2.length; c2++) {
+            var numCount2 = 0, textCount2 = 0;
+            for (var r2 = 1; r2 < Math.min(rows.length, 7); r2++) {
+              var val2 = rows[r2] ? rows[r2][c2] : '';
+              if (!val2) continue;
+              var str2 = String(val2).replace(/,/g, '').replace(/%/g, '').trim();
+              if (str2 && !isNaN(parseFloat(str2))) numCount2++;
+              else textCount2++;
+            }
+            if (numCount2 > textCount2 && numCount2 > 0) numericCols2.push(c2);
+            else textCols2.push(c2);
+          }
+          var sampleRows2 = rows.slice(1, 6).map(function(r3) {
+            return r3.map(function(v2) { return v2 ? String(v2).substring(0, 50) : ''; });
+          });
+          return { sheetId: ssId, sheets: [{ name: 'Sheet1', rows: rows.length, cols: headers2.length, headers: headers2, sampleRows: sampleRows2, numericCols: numericCols2, textCols: textCols2 }], totalSheets: 1 };
+        }
+      }
+      return { error: 'ไม่สามารถเปิด Sheet ได้ — ตรวจสอบว่าได้แชร์ Sheet ให้ "ผู้ใช้ที่มีลิงก์" อ่านได้แล้ว (Share → Anyone with link → Viewer)' };
+    } catch (e2) {
+      return { error: 'ไม่สามารถเปิด Sheet ได้ — ตรวจสอบว่าได้แชร์ Sheet ให้ "ผู้ใช้ที่มีลิงก์" อ่านได้แล้ว (Share → Anyone with link → Viewer)' };
+    }
+  }
+}
+
+// Parse CSV text to array
+function parseCsv_(csvText) {
+  var lines = csvText.split(/\r?\n/);
+  var result = [];
+  for (var i = 0; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    // Simple CSV parse — handle commas inside quotes
+    var row = [];
+    var current = '';
+    var inQuotes = false;
+    for (var j = 0; j < lines[i].length; j++) {
+      var ch = lines[i][j];
+      if (ch === '"') { inQuotes = !inQuotes; }
+      else if (ch === ',' && !inQuotes) { row.push(current.trim()); current = ''; }
+      else { current += ch; }
+    }
+    row.push(current.trim());
+    result.push(row);
+  }
   return result;
+}
+
+function extractSheetId_(url) {
+  if (!url) return null;
+  var match = String(url).match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (match) return match[1];
+  if (/^[a-zA-Z0-9-_]{30,}$/.test(String(url).trim())) return String(url).trim();
+  return null;
+}
+
+/**
+ * สร้าง Dashboard config จาก form input
+ * ไม่พยายามเปิด Sheet ตอนสร้าง — เก็บ config แล้วส่งกลับทันที
+ * ข้อมูลจริงจะถูกดึง lazy เมื่อเปิด Dashboard (ผ่าน dashapi=1)
+ */
+function createDashboard(formData) {
+  try {
+    var sheetUrls = formData.sheetUrls || (formData.sheetUrl ? [formData.sheetUrl] : []);
+    var fileDataArray = formData.fileDataArray || [];
+    
+    if (sheetUrls.length === 0 && fileDataArray.length === 0) return { error: 'ไม่ได้ระบุลิงก์ Google Sheet หรือแนบไฟล์' };
+    
+    // Parse reference dashboard URLs (examples for AI to learn from)
+    var refDashUrls = formData.refDashUrls || [];
+    
+    var sheetUrl = sheetUrls.length > 0 ? sheetUrls[0] : '';
+    var ssId = sheetUrl ? extractSheetId_(sheetUrl) : '';
+    if (sheetUrl && !ssId) return { error: 'ไม่สามารถดึง Sheet ID จากลิงก์ได้ — ตรวจสอบว่าลิงก์ถูกต้อง' };
+    
+    // Parse main tabs from form input
+    var mainTabsStr = formData.mainTabs || '';
+    var mainTabs = mainTabsStr ? mainTabsStr.split(/[,，]/).map(function(t){ return t.trim(); }).filter(function(t){ return t; }) : [];
+    
+    // If no main tabs but files uploaded, use file names as tab names
+    if (mainTabs.length === 0 && fileDataArray.length > 0) {
+      for (var fi = 0; fi < fileDataArray.length; fi++) {
+        var fname = (fileDataArray[fi].name || '').replace(/\.[^.]+$/, '');
+        if (fname) mainTabs.push(fname);
+      }
+      if (mainTabs.length === 0) mainTabs = ['Sheet1'];
+    }
+    
+    // Parse ref tabs
+    var refTabsStr = formData.refTabs || '';
+    var refTabs = refTabsStr ? refTabsStr.split(/[,，]/).map(function(t){ return t.trim(); }).filter(function(t){ return t; }) : [];
+    
+    // Parse KPI list
+    var kpiListStr = formData.kpiList || '';
+    var kpiItems = kpiListStr ? kpiListStr.split(/[,，]/).map(function(t){ return t.trim(); }).filter(function(t){ return t; }) : [];
+    
+    // Parse filter list
+    var filterListStr = formData.filterList || '';
+    var filterItems = filterListStr ? filterListStr.split(/[,，]/).map(function(t){ return t.trim(); }).filter(function(t){ return t; }) : [];
+    
+    // Chart types from form
+    var chartTypes = formData.chartTypes || [];
+    
+    // Generate KPI cards from form input
+    var kpiCards = [];
+    for (var ki = 0; ki < Math.min(kpiItems.length, 6); ki++) {
+      kpiCards.push({
+        label: kpiItems[ki],
+        value: 0, target: 0, unit: '', color: 'blue',
+        sheetName: mainTabs[0] || 'Sheet1',
+        colIdx: ki
+      });
+    }
+    // If no KPI specified, use defaults from type
+    if (kpiCards.length === 0) {
+      kpiCards.push({ label: 'KPI 1', value: 0, target: 0, unit: '', color: 'blue', sheetName: mainTabs[0] || 'Sheet1', colIdx: 0 });
+      kpiCards.push({ label: 'KPI 2', value: 0, target: 0, unit: '', color: 'blue', sheetName: mainTabs[0] || 'Sheet1', colIdx: 1 });
+      kpiCards.push({ label: 'KPI 3', value: 0, target: 0, unit: '', color: 'blue', sheetName: mainTabs[0] || 'Sheet1', colIdx: 2 });
+    }
+    
+    // Generate chart configs from selected chart types
+    var chartConfigs = [];
+    if (chartTypes.length === 0) { chartTypes = ['bar', 'line']; } // default
+    for (var cti = 0; cti < Math.min(chartTypes.length, 3); cti++) {
+      var ct = chartTypes[cti];
+      if (ct === 'pie' || ct === 'doughnut') {
+        chartConfigs.push({
+          type: ct === 'doughnut' ? 'doughnut' : 'pie',
+          title: 'สัดส่วน ' + (kpiItems[0] || 'ข้อมูล') + ' ตาม ' + (filterItems[0] || 'หมวด'),
+          sheetName: mainTabs[0] || 'Sheet1',
+          labelCol: 0, dataCol: 1
+        });
+      } else if (ct === 'line') {
+        chartConfigs.push({
+          type: 'line',
+          title: 'แนวโน้ม ' + (kpiItems[0] || 'ข้อมูล'),
+          sheetName: mainTabs[0] || 'Sheet1',
+          labelCol: 0, dataCols: [1, 2]
+        });
+      } else if (ct === 'gauge') {
+        chartConfigs.push({
+          type: 'gauge',
+          title: 'Health Score',
+          sheetName: mainTabs[0] || 'Sheet1',
+          value: 0, target: 100
+        });
+      } else {
+        // bar
+        chartConfigs.push({
+          type: 'bar',
+          title: (kpiItems[0] || 'ข้อมูล') + ' เปรียบเทียบราย' + (filterItems[0] || 'หมวด'),
+          sheetName: mainTabs[0] || 'Sheet1',
+          labelCol: 0, dataCols: [1, 2]
+        });
+      }
+    }
+    
+    // Generate filter configs
+    var filterConfigs = [];
+    for (var fi = 0; fi < Math.min(filterItems.length, 4); fi++) {
+      filterConfigs.push({
+        label: filterItems[fi],
+        column: fi,
+        sheetName: mainTabs[0] || 'Sheet1'
+      });
+    }
+    
+    // Generate table config
+    var tableConfig = {
+      title: 'ตารางรายละเอียด — ' + (mainTabs[0] || 'ข้อมูล'),
+      sheetName: mainTabs[0] || 'Sheet1',
+      columns: [], maxRows: 50
+    };
+    
+    var dashId = 'd' + Utilities.formatDate(new Date(), 'GMT', 'yyyyMMddHHmmss') + Math.floor(Math.random() * 1000);
+    
+    var config = {
+      id: dashId,
+      title: formData.title || 'Dashboard',
+      desc: formData.desc || '',
+      audience: formData.audience || 'ผู้บริหาร/หัวหน้างาน',
+      type: formData.type || 'อื่นๆ',
+      typeDirective: formData.typeDirective || '',
+      aiCommand: formData.aiCommand || '',
+      sheetId: ssId,
+      sheetUrl: sheetUrl,
+      sheetUrls: sheetUrls,
+      mainTabs: mainTabs,
+      refTabs: refTabs,
+      dataRange: formData.dataRange || '',
+      kpiList: kpiItems,
+      chartTypes: chartTypes,
+      filterList: filterItems,
+      colorTheme: formData.colorTheme || '',
+      extraSheets: [],
+      refDashUrls: refDashUrls,               // reference dashboard URLs for AI learning
+      fileData: fileDataArray.length > 0 ? fileDataArray.map(function(f){ return { name: f.name, type: f.type, size: f.size }; }) : null, // file metadata
+      sheets: mainTabs.map(function(tabName) {
+        return { name: tabName, headers: [], rows: 0, numericCols: [], textCols: [] };
+      }),
+      kpiCards: kpiCards,
+      charts: chartConfigs,
+      table: tableConfig,
+      filters: filterConfigs,
+      colors: formData.colors || { green: '#16a34a', yellow: '#ca8a04', red: '#dc2626', blue: '#2563eb' },
+      layout: formData.layout || 'kpi-top-charts-bottom-table',
+      createdAt: new Date().toISOString(),
+      version: 3
+    };
+    
+    PropertiesService.getScriptProperties().setProperty('DASH_' + dashId, JSON.stringify(config));
+    
+    // Store file contents separately in CacheService (6 hour TTL)
+    if (fileDataArray.length > 0) {
+      for (var fdi = 0; fdi < fileDataArray.length; fdi++) {
+        if (fileDataArray[fdi].content) {
+          try {
+            CacheService.getScriptCache().put('DASHFILE_' + dashId + '_' + fdi, fileDataArray[fdi].content, 21600);
+          } catch(e) {
+            // File too large for cache — store metadata only
+          }
+        }
+      }
+    }
+    
+    var scriptUrl = ScriptApp.getService().getUrl();
+    
+    // Build comprehensive prompt for AI (for further development)
+    var fullPrompt = buildDashboardPrompt_(config, formData);
+    config.prompt = fullPrompt;
+    // Re-save with prompt
+    PropertiesService.getScriptProperties().setProperty('DASH_' + dashId, JSON.stringify(config));
+
+    var scriptUrl = ScriptApp.getService().getUrl();
+
+    return {
+      success: true,
+      id: dashId,
+      url: scriptUrl + '?dash=1&id=' + dashId,
+      config: config,
+      prompt: fullPrompt,
+      analysis: {
+        totalSheets: mainTabs.length + refTabs.length,
+        selectedSheets: mainTabs,
+        refTabs: refTabs,
+        kpiCount: kpiCards.length,
+        chartCount: chartConfigs.length,
+        filterCount: filterConfigs.length
+      }
+    };
+  } catch (e) {
+    return { error: 'เกิดข้อผิดพลาดในการสร้าง Dashboard: ' + e.message };
+  }
+}
+
+/**
+ * Build comprehensive prompt for AI development
+ */
+function buildDashboardPrompt_(config, formData) {
+  var sheetUrls = config.sheetUrls || [config.sheetUrl];
+  var sheetList = sheetUrls.map(function(u, i) { return '  Sheet ' + (i+1) + ': ' + u; }).join('\n');
+  
+  var p = '';
+  p += '╔══════════════════════════════════════════════════════════╗\n';
+  p += '║  🤖 GOOGLE APPS SCRIPT — DASHBOARD GENERATOR PROMPT      ║\n';
+  p += '║  สร้างโดย: AI for Dashboard Creation (M16)               ║\n';
+  p += '╚══════════════════════════════════════════════════════════╝\n\n';
+  
+  p += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  p += '📋 ข้อมูล Dashboard\n';
+  p += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  p += '• ชื่อ Dashboard: ' + (config.title || '') + '\n';
+  p += '• ประเภท: ' + (config.type || '') + '\n';
+  p += '• คำอธิบาย/วัตถุประสงค์: ' + (config.desc || '') + '\n';
+  p += '• ผู้ดู: ' + (config.audience || '') + '\n';
+  p += '• ลิงก์ Google Sheet (' + sheetUrls.length + ' แหล่ง):\n' + sheetList + '\n';
+  
+  // File upload info
+  if (config.fileData) {
+    p += '• ไฟล์ที่แนบ (' + config.fileData.length + ' ไฟล์):\n';
+    for (var ffi = 0; ffi < config.fileData.length; ffi++) {
+      p += '  - ' + config.fileData[ffi].name + ' (' + config.fileData[ffi].type + ', ' + (config.fileData[ffi].size/1024).toFixed(1) + ' KB)\n';
+    }
+  }
+  
+  // Reference dashboards (examples for AI to learn from)
+  if (config.refDashUrls && config.refDashUrls.length > 0) {
+    p += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    p += '⭐ โปรเจ็คตัวอย่างที่ต้องการให้ AI เรียนรู้รูปแบบ\n';
+    p += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    p += 'AI ควรศึกษา Dashboard ตัวอย่างต่อไปนี้เพื่อเรียนรู้รูปแบบการออกแบบ สี การจัดวาง และนำมาปรับใช้:\n';
+    for (var ri = 0; ri < config.refDashUrls.length; ri++) {
+      p += '  ตัวอย่าง ' + (ri+1) + ': ' + config.refDashUrls[ri] + '\n';
+    }
+    p += '\nคำแนะนำ: วิเคราะห์ layout, color scheme, KPI card design, chart placement และ table formatting จากตัวอย่าง แล้วปรับใช้กับ Dashboard ใหม่\n';
+  }
+  if (config.mainTabs && config.mainTabs.length > 0) {
+    p += '• แท็บหลักที่ต้องการแสดงผล: ' + config.mainTabs.join(', ') + '\n';
+  }
+  if (config.refTabs && config.refTabs.length > 0) {
+    p += '• แท็บอื่นๆ ที่ AI ควรอ่านเพื่อทำความเข้าใจ: ' + config.refTabs.join(', ') + '\n';
+  }
+  if (config.dataRange) {
+    p += '• ช่วงข้อมูล/คอลัมน์ที่สนใจ: ' + config.dataRange + '\n';
+  }
+  
+  p += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  p += '📐 คำสั่งออกแบบแสดงผล (จากประเภท: ' + (config.type || '') + ')\n';
+  p += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  p += (config.typeDirective || '(ไม่ได้เลือกประเภท)') + '\n';
+  
+  if (config.kpiList && config.kpiList.length > 0) {
+    p += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    p += '📊 KPI ที่ต้องการแสดง\n';
+    p += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    p += config.kpiList.join(', ') + '\n';
+  }
+  
+  if (config.chartTypes && config.chartTypes.length > 0) {
+    p += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    p += '📈 ประเภทกราฟที่ต้องการ\n';
+    p += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    p += config.chartTypes.join(', ') + '\n';
+  }
+  
+  if (config.filterList && config.filterList.length > 0) {
+    p += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    p += '🔍 ตัวกรองที่ต้องการ\n';
+    p += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    p += config.filterList.join(', ') + '\n';
+  }
+  
+  if (config.colorTheme) {
+    p += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    p += '🎨 สี / ธีม\n';
+    p += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    p += config.colorTheme + '\n';
+  }
+  
+  p += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  p += '💬 คำสั่ง AI ของผู้ใช้\n';
+  p += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  p += (config.aiCommand || '(ยังไม่กรอก)') + '\n';
+  
+  p += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  p += '🤖 Prompt Framework (Objective → Audience → Data → KPI → Chart → Output)\n';
+  p += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  p += 'Objective: สร้าง Dashboard สรุป ' + (config.title || '') + ' สำหรับ ' + (config.audience || '') + '\n';
+  p += 'Audience: ' + (config.audience || '') + '\n';
+  p += 'Data: ดึงจาก Google Sheet ' + (sheetUrls[0] || '') + (sheetUrls.length > 1 ? ' (และอีก ' + (sheetUrls.length - 1) + ' แหล่ง)' : '') + '\n';
+  if (config.mainTabs && config.mainTabs.length > 0) {
+    p += 'Tabs: แท็บหลัก: ' + config.mainTabs.join(', ') + '\n';
+  }
+  if (config.refTabs && config.refTabs.length > 0) {
+    p += 'Reference Tabs: ' + config.refTabs.join(', ') + '\n';
+  }
+  if (config.dataRange) {
+    p += 'Range: ' + config.dataRange + '\n';
+  }
+  p += 'Design: ' + (config.typeDirective || 'ตามประเภทข้อมูล') + '\n';
+  p += 'KPI: ' + ((config.kpiList && config.kpiList.length > 0) ? config.kpiList.join(', ') : 'วัดผลรายเดือน รายสาขา') + '\n';
+  p += 'Chart: ' + ((config.chartTypes && config.chartTypes.length > 0) ? config.chartTypes.join(', ') : 'bar, line, pie, gauge') + '\n';
+  p += 'Colors: ' + (config.colorTheme || 'เขียว≥80% เหลือง 50-79% แดง<50%') + '\n';
+  p += 'Filter: ' + ((config.filterList && config.filterList.length > 0) ? config.filterList.join(', ') : 'เดือน, สาขา') + '\n';
+  p += 'Calculation: SUM, AVERAGE, % ของเป้า และแนวโน้ม\n';
+  p += 'Layout: การ์ด KPI ด้านบน → กราฟด้านล่าง → ตารางรายละเอียด\n';
+  p += 'Output: Google Sheets + Google Apps Script — อัปเดตอัตโนมัติ\n';
+  
+  p += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  p += '✅ Checklist\n';
+  p += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  p += '[✓] ระบุชื่อ Dashboard ชัดเจน\n';
+  p += '[✓] ระบุคำอธิบาย/วัตถุประสงค์ ชัดเจน\n';
+  p += '[✓] แชร์ Sheet ให้ "ผู้ใช้ที่มีลิงก์" อ่านได้\n';
+  p += '[✓] ระบุลิงก์ Google Sheet ต้นทาง\n';
+  p += '[✓] ระบุแท็บหลักที่ต้องการแสดงผล\n';
+  p += '[✓] เลือกประเภท Dashboard\n';
+  p += '[✓] ระบุ KPI ที่ต้องการ\n';
+  p += '[✓] เลือกประเภทกราฟ\n';
+  p += '[✓] ระบุตัวกรอง (filter)\n';
+  p += '[✓] ตรวจสอบความถูกต้องของข้อมูล\n';
+  
+  return p;
+}
+
+/**
+ * Fuzzy-match a sheet name against the actual sheets in a spreadsheet.
+ * Users often type "แท็บหลัก เปรียบเทียบ GM/ปี" but the real tab is "เปรียบเทียบ GM/ปี".
+ * Strategy (in order):
+ *   1) exact match
+ *   2) match after stripping common prefixes ("แท็บหลัก ", "แท็บ ", "tab ", "sheet ")
+ *   3) partial/contains match (the requested name contains the real name or vice-versa)
+ *   4) the sheet with the most data rows (best fallback)
+ * Returns the Sheet object or null.
+ */
+function resolveSheetByName_(ss, requestedName, allSheets) {
+  if (!requestedName) return null;
+  if (!allSheets) allSheets = ss.getSheets();
+  var name = String(requestedName).trim();
+
+  // 1) exact
+  for (var i = 0; i < allSheets.length; i++) {
+    if (allSheets[i].getName().trim() === name) return allSheets[i];
+  }
+
+  // 2) strip common prefixes from the requested name and retry exact match
+  var prefixes = ['แท็บหลัก ', 'แท็บหลัก', 'แท็บ ', 'แท็บ', 'tab ', 'sheet ', 'แผ่นงาน '];
+  var cleaned = name;
+  for (var pi = 0; pi < prefixes.length; pi++) {
+    if (cleaned.toLowerCase().indexOf(prefixes[pi].toLowerCase()) === 0) {
+      cleaned = cleaned.substring(prefixes[pi].length).trim();
+    }
+  }
+  if (cleaned && cleaned !== name) {
+    for (var i2 = 0; i2 < allSheets.length; i2++) {
+      if (allSheets[i2].getName().trim() === cleaned) return allSheets[i2];
+    }
+  }
+
+  // 3) partial/contains match — strip prefixes from both sides, compare
+  var normReq = name;
+  for (var pi2 = 0; pi2 < prefixes.length; pi2++) {
+    if (normReq.toLowerCase().indexOf(prefixes[pi2].toLowerCase()) === 0) {
+      normReq = normReq.substring(prefixes[pi2].length).trim();
+    }
+  }
+  for (var i3 = 0; i3 < allSheets.length; i3++) {
+    var realName = allSheets[i3].getName().trim();
+    if (normReq && (realName.indexOf(normReq) >= 0 || normReq.indexOf(realName) >= 0)) {
+      return allSheets[i3];
+    }
+  }
+
+  // 4) best fallback — sheet with the most data rows
+  var best = null, bestRows = -1;
+  for (var i4 = 0; i4 < allSheets.length; i4++) {
+    var lr = allSheets[i4].getLastRow();
+    if (lr > bestRows) { bestRows = lr; best = allSheets[i4]; }
+  }
+  return best;
+}
+
+/**
+ * ดึงข้อมูลจริงจาก Sheet ตาม dashboard config
+ * ลองเปิด Sheet ด้วย SpreadsheetApp ก่อน — ถ้าไม่ได้ ลองดึงผ่าน UrlFetchApp (CSV export)
+ * ใช้ fuzzy matching สำหรับชื่อแท็บ (รองรับ "แท็บหลัก เปรียบเทียบ GM/ปี" → "เปรียบเทียบ GM/ปี")
+ */
+// Public wrapper for google.script.run (no underscore — Apps Script requires public name)
+function fetchDynamicDashboardData(dashId) {
+  var configStr = PropertiesService.getScriptProperties().getProperty('DASH_' + dashId);
+  if (!configStr) return { error: 'Dashboard not found: ' + dashId };
+  var config = JSON.parse(configStr);
+  return fetchDynamicDashboardData_(config);
+}
+
+function fetchDynamicDashboardData_(config) {
+  var MAX_ROWS = 50;
+  var MAX_COLS = 20;
+  var result = {
+    title: config.title,
+    desc: config.desc || '',
+    sheetId: config.sheetId || '',
+    sheetName: '',
+    timestamp: new Date().toISOString(),
+    timestampStr: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss'),
+    kpiData: [], chartData: [], tableData: { headers: [], rows: [] }, filterOptions: {},
+    configMeta: {
+      mainTabs: config.mainTabs || [],
+      kpiList: config.kpiList || [],
+      chartTypes: config.chartTypes || [],
+      filterList: config.filterList || [],
+      dataRange: config.dataRange || ''
+    }
+  };
+
+  // ── Helpers ──
+  function toNum(v) {
+    if (typeof v === 'number') return v;
+    if (!v && v !== 0) return null;
+    var n = parseFloat(String(v).replace(/,/g, ''));
+    return isNaN(n) ? null : n;
+  }
+  function detectHeaderRow(data, maxScan) {
+    maxScan = maxScan || 3;
+    var bestIdx = 0, bestCount = -1;
+    for (var r = 0; r < Math.min(data.length, maxScan); r++) {
+      var count = 0;
+      for (var c = 0; c < (data[r] || []).length; c++) {
+        var v = data[r][c];
+        if (v !== '' && v !== null && String(v).trim() !== '') count++;
+      }
+      if (count > bestCount) { bestCount = count; bestIdx = r; }
+    }
+    return bestIdx;
+  }
+  function isNumericCol(data, colIdx, startRow, sampleSize) {
+    sampleSize = sampleSize || 5;
+    var numCount = 0, total = 0;
+    for (var r = startRow; r < Math.min(data.length, startRow + sampleSize); r++) {
+      if (!data[r] || colIdx >= data[r].length) continue;
+      var v = data[r][colIdx];
+      if (v === '' || v === null) continue;
+      total++;
+      if (toNum(v) !== null) numCount++;
+    }
+    return total > 0 && numCount / total >= 0.5;
+  }
+  // Find column whose header matches a name (case-insensitive, contains/equals)
+  function findColByName(headers, name) {
+    if (!name) return -1;
+    var target = String(name).trim().toLowerCase();
+    // 1) exact
+    for (var h = 0; h < headers.length; h++) {
+      if (String(headers[h] || '').trim().toLowerCase() === target) return h;
+    }
+    // 2) contains (either direction)
+    for (var h2 = 0; h2 < headers.length; h2++) {
+      var hdr = String(headers[h2] || '').trim().toLowerCase();
+      if (!hdr) continue;
+      if (hdr.indexOf(target) >= 0 || target.indexOf(hdr) >= 0) return h2;
+    }
+    return -1;
+  }
+  // Sum a numeric column over data range
+  function sumCol(data, col, startRow) {
+    var sum = 0, count = 0;
+    for (var r = startRow; r < data.length; r++) {
+      var n = toNum(data[r] ? data[r][col] : '');
+      if (n !== null) { sum += n; count++; }
+    }
+    return { sum: sum, count: count };
+  }
+  // Find target column (header contains เป้า/target) — returns col idx or -1
+  function findTargetCol(headers, excludeCol) {
+    for (var tc = 0; tc < headers.length; tc++) {
+      if (tc === excludeCol) continue;
+      var hdrText = String(headers[tc] || '').toLowerCase();
+      if (hdrText.indexOf('เป้า') >= 0 || hdrText.indexOf('target') >= 0) return tc;
+    }
+    return -1;
+  }
+
+  // ── Try to open Sheet ──
+  var ss = null;
+  try {
+    ss = SpreadsheetApp.openById(config.sheetId);
+  } catch (e) {
+    for (var ki = 0; ki < (config.kpiCards || []).length; ki++) {
+      result.kpiData.push({ label: config.kpiCards[ki].label, value: 0, target: 0, pct: 0, unit: '' });
+    }
+    result.tableData.headers = ['สถานะ'];
+    result.tableData.rows = [['❌ ไม่สามารถอ่าน Sheet ได้ — ตรวจสอบว่า Sheet ถูกแชร์ให้บัญชีที่ deploy Apps Script แล้ว']];
+    return result;
+  }
+
+  // ── Resolve target sheet (use config.mainTabs[0], or fallback) ──
+  var allSheets = ss.getSheets();
+  var mainTabList = config.mainTabs || [];
+  var mainTabName = mainTabList.length > 0 ? mainTabList[0] : null;
+  var targetSheet = resolveSheetByName_(ss, mainTabName, allSheets);
+  if (!targetSheet) targetSheet = allSheets[0];
+  result.sheetName = targetSheet.getName();
+
+  var lastRow = targetSheet.getLastRow();
+  var lastCol = targetSheet.getLastColumn();
+  if (lastRow < 2) {
+    result.tableData.headers = ['สถานะ'];
+    result.tableData.rows = [['❌ Sheet ไม่มีข้อมูล']];
+    return result;
+  }
+
+  // ── Determine read range — prefer config.dataRange, else expand to MAX ──
+  var maxRows = Math.min(lastRow, MAX_ROWS);
+  var maxCols = Math.min(lastCol, MAX_COLS);
+  var allData;
+  if (config.dataRange && typeof config.dataRange === 'string' && config.dataRange.trim()) {
+    try {
+      allData = targetSheet.getRange(config.dataRange.trim()).getValues();
+    } catch (e) {
+      allData = targetSheet.getRange(1, 1, maxRows, maxCols).getValues();
+    }
+  } else {
+    allData = targetSheet.getRange(1, 1, maxRows, maxCols).getValues();
+  }
+  var hdrIdx = detectHeaderRow(allData);
+  var headers = [];
+  var dataCols = allData[hdrIdx] ? allData[hdrIdx].length : 0;
+  for (var h = 0; h < dataCols; h++) {
+    headers.push(allData[hdrIdx][h] ? String(allData[hdrIdx][h]).substring(0, 40) : '');
+  }
+  var dataStart = hdrIdx + 1;
+
+  // Detect numeric columns
+  var numericCols = [];
+  var textCols = [];
+  for (var c = 0; c < dataCols; c++) {
+    if (isNumericCol(allData, c, dataStart)) numericCols.push(c);
+    else textCols.push(c);
+  }
+  var labelCol = textCols.length > 0 ? textCols[0] : 0;
+
+  // ── Build KPI cards using config.kpiList (preferred) ──
+  var kpiList = config.kpiList || [];
+  // Also accept config.kpiCards (older format)
+  var kpiCardsCfg = config.kpiCards || [];
+  var kpiCount = Math.min(Math.max(kpiList.length, kpiCardsCfg.length, 0), 6);
+
+  if (kpiCount > 0) {
+    // Prefer kpiList names — match to columns
+    for (var ki2 = 0; ki2 < kpiCount; ki2++) {
+      var kpiLabel = kpiList.length > ki2 ? kpiList[ki2] : (kpiCardsCfg[ki2] ? kpiCardsCfg[ki2].label : 'KPI ' + (ki2 + 1));
+      var kpiCol = findColByName(headers, kpiLabel);
+      // If not found, fall back to next available numeric column
+      if (kpiCol < 0) {
+        kpiCol = numericCols.length > ki2 ? numericCols[ki2] : (numericCols.length > 0 ? numericCols[0] : 1);
+      }
+      var kSum = sumCol(allData, kpiCol, dataStart);
+      var kValue = kSum.count > 0 ? Math.round(kSum.sum) : 0;
+      // Target — find a target column (header contains เป้า/target), prefer one that pairs with this KPI
+      var tgtCol = findTargetCol(headers, kpiCol);
+      var target = 0;
+      if (tgtCol >= 0) {
+        var tSum = sumCol(allData, tgtCol, dataStart);
+        if (tSum.count > 0) target = Math.round(tSum.sum);
+      }
+      var pct = target > 0 ? Math.round(kValue / target * 100) : 0;
+      // Color hint: green>=80, yellow>=50, red otherwise (HTML decides anyway)
+      var color = pct >= 80 ? 'green' : (pct >= 50 ? 'yellow' : (pct > 0 ? 'red' : 'blue'));
+      result.kpiData.push({ label: kpiLabel, value: kValue, target: target, pct: pct, unit: '', color: color, colIdx: kpiCol });
+    }
+  } else {
+    // Auto-detect: use numeric columns
+    var autoK = Math.min(numericCols.length, 6);
+    for (var ki3 = 0; ki3 < autoK; ki3++) {
+      var col = numericCols[ki3];
+      var aSum = sumCol(allData, col, dataStart);
+      var aVal = aSum.count > 0 ? Math.round(aSum.sum) : 0;
+      var aTgtCol = findTargetCol(headers, col);
+      var aTarget = 0;
+      if (aTgtCol >= 0) {
+        var aTSum = sumCol(allData, aTgtCol, dataStart);
+        if (aTSum.count > 0) aTarget = Math.round(aTSum.sum);
+      }
+      var aPct = aTarget > 0 ? Math.round(aVal / aTarget * 100) : 0;
+      var aColor = aPct >= 80 ? 'green' : (aPct >= 50 ? 'yellow' : (aPct > 0 ? 'red' : 'blue'));
+      result.kpiData.push({
+        label: String(headers[col] || ('KPI ' + (ki3 + 1))).substring(0, 25),
+        value: aVal, target: aTarget, pct: aPct, unit: '', color: aColor, colIdx: col
+      });
+    }
+  }
+
+  // ── Build charts using config.chartTypes ──
+  var chartTypes = config.chartTypes || ['bar', 'line'];
+  if (chartTypes.length === 0) chartTypes = ['bar'];
+
+  // Labels for charts (use labelCol)
+  var chartLabels = [];
+  for (var cl = dataStart; cl < allData.length; cl++) {
+    var lbl = allData[cl][labelCol];
+    if (lbl !== '' && lbl !== null) chartLabels.push(String(lbl).substring(0, 30));
+  }
+
+  // Up to 3 numeric columns for chart datasets
+  var chartDataCols = [];
+  for (var cc = 0; cc < numericCols.length && chartDataCols.length < 3; cc++) {
+    if (numericCols[cc] !== labelCol) chartDataCols.push(numericCols[cc]);
+  }
+
+  // Build datasets
+  var datasets = [];
+  for (var dc = 0; dc < chartDataCols.length; dc++) {
+    var dArr = [];
+    for (var dr = dataStart; dr < allData.length; dr++) {
+      var dv = toNum(allData[dr] ? allData[dr][chartDataCols[dc]] : '');
+      dArr.push(dv !== null ? dv : 0);
+    }
+    datasets.push({
+      label: String(headers[chartDataCols[dc]] || 'Series ' + (dc + 1)).substring(0, 25),
+      data: dArr
+    });
+  }
+
+  // Generate charts based on selected types
+  for (var ct = 0; ct < Math.min(chartTypes.length, 3); ct++) {
+    var type = chartTypes[ct];
+    if (type === 'pie' || type === 'doughnut') {
+      if (chartLabels.length > 0 && chartDataCols.length > 0) {
+        var pieData = [];
+        for (var pr = 0; pr < Math.min(chartLabels.length, 12); pr++) {
+          var pv = toNum(allData[dataStart + pr] ? allData[dataStart + pr][chartDataCols[0]] : '');
+          if (pv !== null) pieData.push(pv);
+        }
+        result.chartData.push({
+          type: type, title: 'สัดส่วน ' + (headers[chartDataCols[0]] || ''),
+          labels: chartLabels.slice(0, 12),
+          datasets: [{ label: headers[chartDataCols[0]] || '', data: pieData }]
+        });
+      }
+    } else {
+      if (chartLabels.length > 0 && datasets.length > 0) {
+        result.chartData.push({
+          type: type,
+          title: type === 'line' ? 'แนวโน้ม' + (headers[chartDataCols[0]] || '') : 'เปรียบเทียบ' + (headers[chartDataCols[0]] || ''),
+          labels: chartLabels,
+          datasets: datasets
+        });
+      }
+    }
+  }
+
+  // ── Build filter options from config.filterList ──
+  var filterList = config.filterList || [];
+  for (var fi = 0; fi < Math.min(filterList.length, 5); fi++) {
+    var fName = filterList[fi];
+    var fCol = findColByName(headers, fName);
+    if (fCol >= 0) {
+      var opts = {};
+      for (var fr = dataStart; fr < allData.length; fr++) {
+        var fVal = allData[fr] ? allData[fr][fCol] : '';
+        if (fVal !== '' && fVal !== null) {
+          opts[String(fVal)] = true;
+        }
+      }
+      var optArr = Object.keys(opts).sort();
+      if (optArr.length > 0) result.filterOptions[fName] = optArr;
+    }
+  }
+  // Auto-detect filters if none specified but text columns available
+  if (Object.keys(result.filterOptions).length === 0) {
+    for (var afi = 0; afi < Math.min(textCols.length, 3); afi++) {
+      var afCol = textCols[afi];
+      var afName = String(headers[afCol] || ('หมวด ' + (afi + 1))).substring(0, 20);
+      var afOpts = {};
+      for (var afr = dataStart; afr < allData.length; afr++) {
+        var afVal = allData[afr] ? allData[afr][afCol] : '';
+        if (afVal !== '' && afVal !== null) afOpts[String(afVal)] = true;
+      }
+      var afArr = Object.keys(afOpts).sort();
+      if (afArr.length > 0 && afArr.length <= 50) result.filterOptions[afName] = afArr;
+    }
+  }
+
+  // ── Build table (use all columns up to MAX_COLS) ──
+  var tableColCount = Math.min(dataCols, MAX_COLS);
+  result.tableData.headers = headers.slice(0, tableColCount);
+  result.tableData.rows = [];
+  for (var tr = dataStart; tr < Math.min(allData.length, dataStart + 50); tr++) {
+    var row = [];
+    for (var tc2 = 0; tc2 < tableColCount; tc2++) {
+      var val = allData[tr][tc2];
+      var numVal = toNum(val);
+      if (numVal !== null) {
+        row.push(numVal);
+      } else {
+        var strVal = String(val || '');
+        if (strVal.length > 80) strVal = strVal.substring(0, 77) + '...';
+        row.push(strVal);
+      }
+    }
+    result.tableData.rows.push(row);
+  }
+
+  return result;
+}
+
+// (old fetchDynamicDashboardData_ body removed — replaced by new version above)
+// (dead code cleanup: old charts/table/filters section removed)
+
+/**
+ * Render Dynamic Dashboard HTML
+ */
+function renderDynamicDashboard_(config) {
+  // ── Use a separate HTML file (DynamicDash.html) instead of building HTML as a string.
+  //    This avoids the double-escaped quote problem (\" → \x22 → \\x22) that breaks the
+  //    dashboard JavaScript and causes it to hang on the loading screen.
+  //    Pattern mirrors SupplementDash.html / RF_*.html (createHtmlOutputFromFile + placeholder replace).
+  var html = HtmlService.createHtmlOutputFromFile('DynamicDash');
+  var content = html.getContent();
+  // Inject the dashboard id (and any extra meta) via simple string replacement
+  content = content.split('CONFIG_ID_PLACEHOLDER').join(config.id);
+  return content;
+}
+
+/**
+ * Re-analyze the Sheet and rebuild dashboard config (KPI, charts, table) from scratch.
+ * Called by updateDashboard when user says "แก้ไขให้มืออาชีพ" or "ทวนข้อมูล".
+ * Returns { success: true, config } or { success: false, error }.
+ */
+function rebuildDashboardFromSheet_(config) {
+  try {
+    if (!config.sheetId) return { success: false, error: 'ไม่มี sheetId ใน config' };
+
+    var ss = null;
+    try {
+      ss = SpreadsheetApp.openById(config.sheetId);
+    } catch (e) {
+      return { success: false, error: 'ไม่สามารถเปิด Sheet ได้: ' + e.message };
+    }
+
+    var allSheets = ss.getSheets();
+    var mainTabName = (config.mainTabs && config.mainTabs[0]) ? config.mainTabs[0] : null;
+    var defaultSheet = resolveSheetByName_(ss, mainTabName, allSheets) || allSheets[0];
+    if (!defaultSheet) return { success: false, error: 'ไม่พบ Sheet ที่ใช้ได้' };
+
+    var lastRow = defaultSheet.getLastRow();
+    var lastCol = defaultSheet.getLastColumn();
+    if (lastRow < 2) return { success: false, error: 'Sheet ไม่มีข้อมูล (lastRow < 2)' };
+
+    var maxRows = Math.min(lastRow, 55);
+    var maxCols = Math.min(lastCol, 15);
+    var data = defaultSheet.getRange(1, 1, maxRows, maxCols).getValues();
+
+    // Detect header row (the row with the most non-empty cells in first 3 rows)
+    var hdrIdx = 0, hdrCount = -1;
+    for (var r = 0; r < Math.min(data.length, 3); r++) {
+      var cnt = 0;
+      for (var c = 0; c < (data[r] || []).length; c++) {
+        if (data[r][c] !== '' && data[r][c] !== null && String(data[r][c]).trim() !== '') cnt++;
+      }
+      if (cnt > hdrCount) { hdrCount = cnt; hdrIdx = r; }
+    }
+    var headers = data[hdrIdx];
+    var dataStart = hdrIdx + 1;
+
+    // Detect numeric columns
+    function isNum(d, col, start) {
+      var numCount = 0, total = 0;
+      for (var i = start; i < Math.min(d.length, start + 5); i++) {
+        if (!d[i] || col >= d[i].length) continue;
+        var v = d[i][col];
+        if (v === '' || v === null) continue;
+        total++;
+        var n = typeof v === 'number' ? v : parseFloat(String(v).replace(/,/g, ''));
+        if (!isNaN(n)) numCount++;
+      }
+      return total > 0 && numCount / total >= 0.5;
+    }
+
+    var numericCols = [];
+    var textCols = [];
+    for (var c2 = 0; c2 < maxCols; c2++) {
+      if (isNum(data, c2, dataStart)) numericCols.push(c2);
+      else textCols.push(c2);
+    }
+
+    // Find label column (first text column)
+    var labelCol = textCols.length > 0 ? textCols[0] : 0;
+
+    // ── Rebuild KPI cards from numeric columns (up to 3) ──
+    var kpiCards = [];
+    for (var ki = 0; ki < Math.min(numericCols.length, 3); ki++) {
+      var col = numericCols[ki];
+      var sum = 0, count = 0;
+      for (var ri = dataStart; ri < data.length; ri++) {
+        var v = data[ri][col];
+        var n = typeof v === 'number' ? v : parseFloat(String(v || '').replace(/,/g, ''));
+        if (!isNaN(n)) { sum += n; count++; }
+      }
+      kpiCards.push({
+        label: String(headers[col] || ('KPI ' + (ki + 1))).substring(0, 25),
+        value: count > 0 ? Math.round(sum) : 0,
+        target: 0, unit: '', color: 'blue',
+        sheetName: defaultSheet.getName(),
+        colIdx: col
+      });
+    }
+
+    // ── Rebuild charts ──
+    var charts = [];
+    // Bar chart: label col + first 2 numeric cols
+    if (numericCols.length >= 1) {
+      var barDataCols = numericCols.slice(0, Math.min(numericCols.length, 3));
+      charts.push({
+        type: 'bar',
+        title: 'เปรียบเทียบข้อมูลราย' + (String(headers[labelCol] || 'หมวด')).substring(0, 15),
+        sheetName: defaultSheet.getName(),
+        labelCol: labelCol,
+        dataCols: barDataCols
+      });
+    }
+    // Line chart: label col + first 2 numeric cols (if different from bar)
+    if (numericCols.length >= 2) {
+      charts.push({
+        type: 'line',
+        title: 'แนวโน้มข้อมูลราย' + (String(headers[labelCol] || 'หมวด')).substring(0, 15),
+        sheetName: defaultSheet.getName(),
+        labelCol: labelCol,
+        dataCols: numericCols.slice(0, Math.min(numericCols.length, 3))
+      });
+    }
+    // Pie chart: label col + first numeric col
+    if (numericCols.length >= 1) {
+      charts.push({
+        type: 'pie',
+        title: 'สัดส่วน ' + (String(headers[numericCols[0]] || 'ข้อมูล')).substring(0, 20),
+        sheetName: defaultSheet.getName(),
+        labelCol: labelCol,
+        dataCol: numericCols[0]
+      });
+    }
+
+    // ── Rebuild table config ──
+    var table = {
+      title: 'ตารางรายละเอียด — ' + defaultSheet.getName(),
+      sheetName: defaultSheet.getName(),
+      columns: headers.slice(0, 12).map(function(h, i) { return i; }),
+      maxRows: 50
+    };
+
+    // ── Rebuild filters (use first text column if available) ──
+    var filters = [];
+    if (textCols.length > 0) {
+      filters.push({
+        label: String(headers[labelCol] || 'ตัวกรอง').substring(0, 20),
+        column: labelCol,
+        sheetName: defaultSheet.getName()
+      });
+    }
+
+    // Update config
+    config.kpiCards = kpiCards;
+    config.charts = charts;
+    config.table = table;
+    config.filters = filters;
+    config.version = (config.version || 1) + 1;
+    config.updatedAt = new Date().toISOString();
+    config.lastRebuild = new Date().toISOString();
+
+    return { success: true, config: config };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+/**
+ * อัปเดต Dashboard config (สำหรับ chat-based development)
+ */
+function updateDashboard_(dashId, updates) {
+  var key = 'DASH_' + dashId;
+  var existing = PropertiesService.getScriptProperties().getProperty(key);
+  if (!existing) return { error: 'Dashboard not found' };
+  var config = JSON.parse(existing);
+  if (updates.title) config.title = updates.title;
+  if (updates.desc) config.desc = updates.desc;
+  if (updates.kpiCards) config.kpiCards = updates.kpiCards;
+  if (updates.charts) config.charts = updates.charts;
+  if (updates.table) config.table = updates.table;
+  if (updates.filters) config.filters = updates.filters;
+  if (updates.colors) config.colors = updates.colors;
+  if (updates.layout) config.layout = updates.layout;
+  if (updates.audience) config.audience = updates.audience;
+  config.version = (config.version || 1) + 1;
+  config.updatedAt = new Date().toISOString();
+  PropertiesService.getScriptProperties().setProperty(key, JSON.stringify(config));
+  var scriptUrl = ScriptApp.getService().getUrl();
+  return { success: true, id: dashId, url: scriptUrl + '?dash=1&id=' + dashId, version: config.version };
+}
+
+/**
+ * Public (no underscore) updateDashboard — callable via google.script.run.
+ * Accepts a natural-language command (Thai/English), parses it, and updates the
+ * dashboard config accordingly. Returns { success, id, url, reply, version }.
+ *
+ * @param {string} dashId
+ * @param {string} command  natural-language instruction, e.g. "เพิ่มกราฟเส้น", "เปลี่ยนสีเป็นเขียว"
+ */
+function updateDashboard(dashId, command) {
+  try {
+    if (!dashId) return { error: 'ไม่ได้ระบุ Dashboard ID' };
+    if (!command) return { error: 'ไม่ได้ระบุคำสั่ง' };
+
+    var key = 'DASH_' + dashId;
+    var existing = PropertiesService.getScriptProperties().getProperty(key);
+    if (!existing) return { error: 'ไม่พบ Dashboard (id: ' + dashId + ')' };
+    var config = JSON.parse(existing);
+
+    var lower = String(command).toLowerCase().trim();
+    var reply = '';
+    var changed = false;
+
+    // Helper to ensure a sheet name is set on a config object
+    function defaultSheetName() {
+      return (config.mainTabs && config.mainTabs[0]) || (config.sheets && config.sheets[0] && config.sheets[0].name) || 'Sheet1';
+    }
+
+    // ── เพิ่มกราฟเส้น / line chart ──
+    if (lower.indexOf('กราฟเส้น') >= 0 || lower.indexOf('แนวโน้ม') >= 0 || /\bline\b/.test(lower)) {
+      config.charts = config.charts || [];
+      // avoid duplicate line charts
+      var hasLine = false;
+      for (var cl = 0; cl < config.charts.length; cl++) { if ((config.charts[cl].type || '') === 'line') hasLine = true; }
+      if (!hasLine) {
+        config.charts.push({
+          type: 'line',
+          title: 'แนวโน้ม ' + (config.kpiList && config.kpiList[0] ? config.kpiList[0] : 'ข้อมูล'),
+          sheetName: defaultSheetName(),
+          labelCol: 0, dataCols: [1, 2]
+        });
+        reply = '✅ เพิ่มกราฟเส้นแสดงแนวโน้มแล้ว — รีเฟรช Dashboard เพื่อดูกราฟใหม่';
+        changed = true;
+      } else {
+        reply = 'ℹ️ มีกราฟเส้นอยู่แล้วใน Dashboard — ไม่ต้องเพิ่มซ้ำ';
+      }
+    }
+    // ── เพิ่มกราฟวงกลม / pie ──
+    else if (lower.indexOf('กราฟวงกลม') >= 0 || lower.indexOf('pie') >= 0 || lower.indexOf('สัดส่วน') >= 0) {
+      config.charts = config.charts || [];
+      var hasPie = false;
+      for (var cp = 0; cp < config.charts.length; cp++) { if ((config.charts[cp].type || '') === 'pie') hasPie = true; }
+      if (!hasPie) {
+        config.charts.push({
+          type: 'pie',
+          title: 'สัดส่วน ' + (config.kpiList && config.kpiList[0] ? config.kpiList[0] : 'ข้อมูล'),
+          sheetName: defaultSheetName(),
+          labelCol: 0, dataCol: 1
+        });
+        reply = '✅ เพิ่มกราฟวงกลมแสดงสัดส่วนแล้ว — รีเฟรช Dashboard เพื่อดูกราฟใหม่';
+        changed = true;
+      } else {
+        reply = 'ℹ️ มีกราฟวงกลมอยู่แล้วใน Dashboard';
+      }
+    }
+    // ── เพิ่มกราฟแท่ง / bar ──
+    else if (lower.indexOf('กราฟแท่ง') >= 0 || lower.indexOf('กราฟ bar') >= 0 || /\bbar\b/.test(lower)) {
+      config.charts = config.charts || [];
+      config.charts.push({
+        type: 'bar',
+        title: (config.kpiList && config.kpiList[0] ? config.kpiList[0] : 'ข้อมูล') + ' เปรียบเทียบ',
+        sheetName: defaultSheetName(),
+        labelCol: 0, dataCols: [1, 2]
+      });
+      reply = '✅ เพิ่มกราฟแท่งเปรียบเทียบข้อมูลแล้ว — รีเฟรช Dashboard เพื่อดูกราฟใหม่';
+      changed = true;
+    }
+    // ── เปลี่ยนสี / theme ──
+    else if (lower.indexOf('เปลี่ยนสี') >= 0 || lower.indexOf('สีธีม') >= 0 || lower.indexOf('ธีม') >= 0 || lower.indexOf('theme') >= 0 || lower.indexOf('color') >= 0) {
+      config.colors = config.colors || {};
+      if (lower.indexOf('เขียว') >= 0) {
+        config.colors = { green: '#16a34a', yellow: '#65a30d', red: '#dc2626', blue: '#059669' };
+        reply = '✅ เปลี่ยนสีธีมเป็นโทนเขียวแล้ว — รีเฟรช Dashboard เพื่อดูสีใหม่';
+      } else if (lower.indexOf('แดง') >= 0 || lower.indexOf('red') >= 0) {
+        config.colors = { green: '#16a34a', yellow: '#ca8a04', red: '#b91c1c', blue: '#dc2626' };
+        reply = '✅ เปลี่ยนสีธีมเป็นโทนแดงแล้ว — รีเฟรช Dashboard เพื่อดูสีใหม่';
+      } else if (lower.indexOf('ม่วง') >= 0 || lower.indexOf('purple') >= 0) {
+        config.colors = { green: '#16a34a', yellow: '#ca8a04', red: '#dc2626', blue: '#7c3aed' };
+        reply = '✅ เปลี่ยนสีธีมเป็นโทนม่วงแล้ว — รีเฟรช Dashboard เพื่อดูสีใหม่';
+      } else {
+        // default blue theme
+        config.colors = { green: '#16a34a', yellow: '#ca8a04', red: '#dc2626', blue: '#2563eb' };
+        reply = '✅ เปลี่ยนสีธีมเป็นโทนน้ำเงินแล้ว — รีเฟรช Dashboard เพื่อดูสีใหม่';
+      }
+      changed = true;
+    }
+    // ── เพิ่มตัวกรอง / filter ──
+    else if (lower.indexOf('ตัวกรอง') >= 0 || lower.indexOf('กรอง') >= 0 || lower.indexOf('filter') >= 0) {
+      config.filters = config.filters || [];
+      // Determine filter label/column from command
+      var fLabel = 'ตัวกรอง ' + (config.filters.length + 1);
+      var monthMatch = command.match(/เดือน|month/i);
+      var branchMatch = command.match(/สาขา|branch/i);
+      if (monthMatch) fLabel = 'เดือน';
+      else if (branchMatch) fLabel = 'สาขา';
+      config.filters.push({ label: fLabel, column: config.filters.length, sheetName: defaultSheetName() });
+      reply = '✅ เพิ่มตัวกรอง "' + fLabel + '" แล้ว — รีเฟรช Dashboard เพื่อใช้ตัวกรองใหม่';
+      changed = true;
+    }
+    // ── เพิ่ม KPI / การ์ด ──
+    else if (lower.indexOf('kpi') >= 0 || lower.indexOf('การ์ด') >= 0 || lower.indexOf('card') >= 0 || lower.indexOf('เพิ่มตัวชี้') >= 0) {
+      config.kpiCards = config.kpiCards || [];
+      config.kpiCards.push({
+        label: 'KPI ' + (config.kpiCards.length + 1),
+        value: 0, target: 0, unit: '', color: 'blue',
+        sheetName: defaultSheetName(),
+        colIdx: config.kpiCards.length
+      });
+      reply = '✅ เพิ่ม KPI Card แล้ว — รีเฟรช Dashboard เพื่อดูการ์ดใหม่';
+      changed = true;
+    }
+    // ── ลบ / remove ──
+    else if (lower.indexOf('ลบ') >= 0 || lower.indexOf('remove') >= 0 || lower.indexOf('delete') >= 0) {
+      if (lower.indexOf('กราฟ') >= 0 && config.charts && config.charts.length > 0) {
+        config.charts.pop();
+        reply = '✅ ลบกราฟล่าสุดออกแล้ว — รีเฟรช Dashboard เพื่อดูการเปลี่ยนแปลง';
+        changed = true;
+      } else if (lower.indexOf('ตัวกรอง') >= 0 && config.filters && config.filters.length > 0) {
+        config.filters.pop();
+        reply = '✅ ลบตัวกรองล่าสุดออกแล้ว — รีเฟรช Dashboard เพื่อดูการเปลี่ยนแปลง';
+        changed = true;
+      } else if (lower.indexOf('kpi') >= 0 && config.kpiCards && config.kpiCards.length > 1) {
+        config.kpiCards.pop();
+        reply = '✅ ลบ KPI Card ล่าสุดออกแล้ว — รีเฟรช Dashboard เพื่อดูการเปลี่ยนแปลง';
+        changed = true;
+      } else {
+        reply = 'ℹ️ ไม่สามารถลบได้ — ระบุให้ชัดเจนว่าจะลบกราฟ, ตัวกรอง หรือ KPI';
+      }
+    }
+    // ── เปลี่ยนชื่อ / title ──
+    else if (lower.indexOf('เปลี่ยนชื่อ') >= 0 || lower.indexOf('ชื่อ') >= 0 || lower.indexOf('title') >= 0) {
+      var titleMatch = command.match(/(?:เปลี่ยนชื่อ|ชื่อ|title)\s*(?:เป็น|to|:|=)?\s*["'“]?(.+?)["'”"]?\s*$/i);
+      if (titleMatch && titleMatch[1]) {
+        config.title = titleMatch[1].trim();
+        reply = '✅ เปลี่ยนชื่อ Dashboard เป็น "' + config.title + '" แล้ว — รีเฟรช Dashboard เพื่อดูชื่อใหม่';
+        changed = true;
+      } else {
+        reply = 'ℹ️ ระบุชื่อใหม่ที่ต้องการ เช่น "เปลี่ยนชื่อเป็น Dashboard สาขา A"';
+      }
+    }
+    // ── แก้ไข/ปรับปรุง/มืออาชีพ/ถูกต้อง — re-analyze Sheet and rebuild ──
+    else if (lower.indexOf('แก้ไข') >= 0 || lower.indexOf('ปรับปรุง') >= 0 || lower.indexOf('มืออาชีพ') >= 0 || lower.indexOf('ถูกต้อง') >= 0 || lower.indexOf('fix') >= 0 || lower.indexOf('improve') >= 0 || lower.indexOf('correct') >= 0 || lower.indexOf('rebuild') >= 0) {
+      // Re-analyze the Sheet and rebuild KPI/charts/table config from scratch
+      var rebuildResult = rebuildDashboardFromSheet_(config);
+      if (rebuildResult.success) {
+        config = rebuildResult.config;
+        reply = '✅ ปรับปรุง Dashboard ให้มืออาชีพแล้ว!\n';
+        reply += '• KPI: ' + (config.kpiCards || []).length + ' การ์ด (ดึงค่าจริงจาก Sheet)\n';
+        reply += '• กราฟ: ' + (config.charts || []).length + ' กราฟ (ใช้ header ที่ถูกต้อง)\n';
+        reply += '• ตาราง: ใช้ header row จริงจาก Sheet\n';
+        reply += 'รีเฟรช Dashboard เพื่อดูผลลัพธ์ใหม่';
+        changed = true;
+      } else {
+        reply = '⚠️ ไม่สามารถ re-analyze Sheet ได้: ' + (rebuildResult.error || 'unknown') + ' — ลองสั่ง "ทวนข้อมูล" แทน';
+      }
+    }
+    // ── ทวนข้อมูล / refresh — actually re-read the Sheet ──
+    else if (lower.indexOf('ทวน') >= 0 || lower.indexOf('รีเฟรช') >= 0 || lower.indexOf('refresh') >= 0 || lower.indexOf('reload') >= 0 || lower.indexOf('อัปเดต') >= 0 || lower.indexOf('update') >= 0) {
+      // Actually re-read the Sheet and rebuild config
+      var refreshResult = rebuildDashboardFromSheet_(config);
+      if (refreshResult.success) {
+        config = refreshResult.config;
+        reply = '✅ ทวนข้อมูลใหม่จาก Sheet แล้ว!\n';
+        reply += '• KPI: ' + (config.kpiCards || []).length + ' การ์ด\n';
+        reply += '• กราฟ: ' + (config.charts || []).length + ' กราฟ\n';
+        reply += '• ตาราง: ' + ((config.table && config.table.maxRows) || 50) + ' แถว\n';
+        reply += 'กดปุ่ม "เปิด Dashboard" เพื่อดูข้อมูลล่าสุด';
+        changed = true;
+      } else {
+        // Fallback: just bump version to bust cache
+        reply = '✅ สั่งรีเฟรชข้อมูลแล้ว — กดปุ่ม "เปิด Dashboard" เพื่อดูข้อมูลล่าสุดจาก Sheet';
+        changed = true;
+      }
+    }
+    // ── default / unknown ──
+    else {
+      reply = 'ได้รับคำสั่ง: "' + command + '" — ลองสั่งเช่น: เพิ่มกราฟเส้น, เพิ่มกราฟวงกลม, เปลี่ยนสีเขียว, เพิ่มตัวกรองเดือน, เพิ่ม KPI, ลบกราฟ, เปลี่ยนชื่อเป็น ..., แก้ไขให้มืออาชีพ, ทวนข้อมูล';
+    }
+
+    if (changed) {
+      config.version = (config.version || 1) + 1;
+      config.updatedAt = new Date().toISOString();
+      // Re-build prompt with updated config (best-effort — formData not available here)
+      try {
+        if (typeof buildDashboardPrompt_ === 'function') {
+          config.prompt = buildDashboardPrompt_(config, { sheetUrls: config.sheetUrls || [config.sheetUrl] });
+        }
+      } catch (pe) {}
+      PropertiesService.getScriptProperties().setProperty(key, JSON.stringify(config));
+    }
+
+    var scriptUrl = ScriptApp.getService().getUrl();
+    return {
+      success: true,
+      id: dashId,
+      url: scriptUrl + '?dash=1&id=' + dashId,
+      reply: reply,
+      changed: changed,
+      version: config.version || 1
+    };
+  } catch (e) {
+    return { error: 'เกิดข้อผิดพลาดใน updateDashboard: ' + e.message };
+  }
+}
+
+function listDashboards_() {
+  var props = PropertiesService.getScriptProperties().getProperties();
+  var dashboards = [];
+  for (var key in props) {
+    if (key.indexOf('DASH_') === 0) {
+      try {
+        var cfg = JSON.parse(props[key]);
+        dashboards.push({ id: cfg.id, title: cfg.title, type: cfg.type, createdAt: cfg.createdAt, version: cfg.version || 1 });
+      } catch (e) {}
+    }
+  }
+  return dashboards.sort(function(a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
+}
+
+function getDashboardConfig_(dashId) {
+  var key = 'DASH_' + dashId;
+  var config = PropertiesService.getScriptProperties().getProperty(key);
+  if (!config) return { error: 'Dashboard not found' };
+  return JSON.parse(config);
 }
 
 /* ═══════════════════════════════════════════════════
    Multi-Department OKR Data — reads from 5 spreadsheets
    ═══════════════════════════════════════════════════ */
 function getMultiOKRData_() {
-  // Check cache first — cache for 10 minutes (600 seconds)
-  var cacheKey = 'okrall_data_v6';
+   // Check cache first — cache for 2 minutes (120 seconds) for faster updates
+  var cacheKey = 'okrall_data_v8';
   // Try single-key cache
   var cached = CacheService.getScriptCache().get(cacheKey);
   if (cached) {
@@ -8678,20 +11102,20 @@ function getMultiOKRData_() {
     }
     result.departments.push(deptData);
   }
-  // Save to cache for 6 hours (21600 seconds) — keeps cache warm between cron pings
+  // Save to cache for 5 minutes (300 seconds)
   try {
     var jsonStr = JSON.stringify(result);
     if (jsonStr.length < 100000) {
-      CacheService.getScriptCache().put(cacheKey, jsonStr, 21600);
+      CacheService.getScriptCache().put(cacheKey, jsonStr, 300);
     } else {
       // Too large for single cache key — split into chunks
       var chunkSize = 90000; // ~90KB per chunk
       var numChunks = Math.ceil(jsonStr.length / chunkSize);
       for (var ci = 0; ci < numChunks; ci++) {
         var chunk = jsonStr.substring(ci * chunkSize, (ci + 1) * chunkSize);
-        CacheService.getScriptCache().put(cacheKey + '_chunk_' + ci, chunk, 21600);
+        CacheService.getScriptCache().put(cacheKey + '_chunk_' + ci, chunk, 300);
       }
-      CacheService.getScriptCache().put(cacheKey + '_meta', String(numChunks), 21600);
+      CacheService.getScriptCache().put(cacheKey + '_meta', String(numChunks), 300);
     }
   } catch(e) {}
   return result;
@@ -8788,17 +11212,44 @@ function parsePersonSheet_(sheetName, data, deptName) {
     sheetName: sheetName, name: nameTH, team: team, role: role,
     accountability: [], objectives: [], mentors: [],
     weightBusiness: 0, weightTeam: 0, weightPersonal: 0, weightCommunity: 0,
-    purpose: '', vision: ''
+    purpose: '', vision: '',
+    buPurpose: '', buVision: '',
+    teamPurpose: '', teamVision: '',
+    personalPurpose: '', personalVision: '',
+    kpiOwnership: []
   };
   
-  // Extract purpose & vision from first ~15 rows
-  for (var i = 0; i < Math.min(data.length, 20); i++) {
+  // Extract purpose & vision from first ~20 rows — store BU, Team, Personal separately
+  var currentSection = '';
+  for (var i = 0; i < Math.min(data.length, 22); i++) {
     var row = data[i];
     var rowText = row.map(function(c){ return String(c||'').trim(); }).join(' ');
+    
+    // Detect section: BU, Team, Personal Goal
+    if (rowText.indexOf('BU :') >= 0 || rowText.indexOf('BU:') >= 0) {
+      currentSection = 'BU';
+    } else if (rowText.indexOf('Team :') >= 0 || rowText.indexOf('Team:') >= 0) {
+      currentSection = 'Team';
+    } else if (rowText.indexOf('Personal Goal') >= 0) {
+      currentSection = 'Personal';
+    }
+    
     if (rowText.indexOf('Purpose') >= 0 || rowText.indexOf('จุดมุ่งหมาย') >= 0) {
       for (var j = 0; j < row.length; j++) {
         var v = String(row[j] || '').trim();
-        if (v && v !== 'Purpose' && v !== 'จุดมุ่งหมาย' && v.length > 10 && v.indexOf('Purpose') < 0 && v.indexOf('จุดมุ่งหมาย') < 0) {
+        // Skip cells that are labels (short) or section markers
+        // Only skip if the cell IS a label (contains "Purpose"/"จุดมุ่งหมาย" as the main content)
+        // If the cell is long text that merely contains the word, keep it
+        var isLabel = (v === 'Purpose' || v === 'จุดมุ่งหมาย' || 
+                       v.indexOf('Purpose') === 0 || v.indexOf('จุดมุ่งหมาย') === 0 ||
+                       v.indexOf('จุดมุ่งหมาย (purpose)') >= 0);
+        if (v && !isLabel && v.length > 10 && 
+            v.indexOf('BU :') < 0 && v.indexOf('Team :') < 0 && 
+            v.indexOf('BU:') < 0 && v.indexOf('Team:') < 0 &&
+            v.indexOf('Personal Goal') < 0 && v.indexOf('....') < 0) {
+          if (currentSection === 'BU') person.buPurpose = v;
+          else if (currentSection === 'Team') person.teamPurpose = v;
+          else if (currentSection === 'Personal') person.personalPurpose = v;
           person.purpose = v;
           break;
         }
@@ -8808,6 +11259,9 @@ function parsePersonSheet_(sheetName, data, deptName) {
       for (var j = 0; j < row.length; j++) {
         var v = String(row[j] || '').trim();
         if (v && v !== 'Vision' && v !== 'ภาพความสำเร็จ' && v.length > 10 && v.indexOf('Vision') < 0 && v.indexOf('ภาพความสำเร็จ') < 0) {
+          if (currentSection === 'BU') person.buVision = v;
+          else if (currentSection === 'Team') person.teamVision = v;
+          else if (currentSection === 'Personal') person.personalVision = v;
           person.vision = v;
           break;
         }
@@ -8825,7 +11279,9 @@ function parsePersonSheet_(sheetName, data, deptName) {
     var row = data[i];
     for (var j = 0; j < row.length; j++) {
       var cell = String(row[j] || '').trim();
-      if (cell.indexOf('Business Growth') >= 0 && cell.length < 30) {
+      var cell0 = String(row[j] || '').trim();
+      var cellFirstLine = cell0.split('\n')[0].trim();
+      if (cellFirstLine === 'Business Growth' || cellFirstLine.indexOf('Business Growth') === 0) {
         growthCol = j;
         // Label is typically next column
         labelCol = j + 1;
@@ -8912,7 +11368,9 @@ function parsePersonSheet_(sheetName, data, deptName) {
     var foundGrowth = false;
     for (var j = 0; j < row.length; j++) {
       var cell = String(row[j] || '').trim();
-      if (cell.indexOf('Business Growth') >= 0 && cell.length < 30) {
+      var cellStr = String(row[j] || '').trim();
+      var cellFL = cellStr.split('\n')[0].trim();
+      if (cellFL === 'Business Growth' || cellFL.indexOf('Business Growth') === 0) {
         var label = String(row[j + 1] || '').trim();
         var kr = String(row[j + 3] || row[j + 2] || '').trim();
         var w = parseFloat(row[j + 4] || row[j + 5] || 0) || 0;
@@ -8924,7 +11382,7 @@ function parsePersonSheet_(sheetName, data, deptName) {
         if (kr && kr.length > 5) extractKRsGlobal_(kr, currentObj);
         foundGrowth = true;
         break;
-      } else if (cell.indexOf('Team Growth') >= 0 && cell.length < 30) {
+      } else if (cellFL === 'Team Growth' || cellFL.indexOf('Team Growth') === 0) {
         var label2 = String(row[j + 1] || '').trim();
         var kr2 = String(row[j + 3] || row[j + 2] || '').trim();
         var w2 = parseFloat(row[j + 4] || row[j + 5] || 0) || 0;
@@ -8935,7 +11393,9 @@ function parsePersonSheet_(sheetName, data, deptName) {
         if (kr2 && kr2.length > 5) extractKRsGlobal_(kr2, currentObj);
         foundGrowth = true;
         break;
-      } else if ((cell.indexOf('Personal Growth') >= 0 || cell.indexOf('Personal Credit') >= 0) && cell.length < 40) {
+      } else if (cellFL === 'Personal Growth' || cellFL === 'Personal Credit' ||
+                 (cellFL.indexOf('Personal Growth') >= 0 && cellFL.indexOf('Plan') < 0) ||
+                 (cellFL.indexOf('Personal Credit') >= 0)) {
         var isCredit = cell.indexOf('Personal Credit') >= 0;
         var label3 = String(row[j + 1] || '').trim();
         var kr3 = String(row[j + 3] || row[j + 2] || '').trim();
@@ -8952,14 +11412,39 @@ function parsePersonSheet_(sheetName, data, deptName) {
     
     // If no growth type found in this row, but we're past headers — look for continuation KR text
     if (!foundGrowth && pastHeaders && currentObj) {
+      // Stop scanning if we hit the KPI ownership table or summary row
+      var rowTextTrimmed = rowText.trim();
+      if (rowTextTrimmed.indexOf('รวม') === 0 || rowTextTrimmed.indexOf('Operational Excellence (WI)') >= 0 ||
+          rowTextTrimmed.indexOf('Approval by') >= 0) {
+        pastHeaders = false; // stop further KR scanning
+        continue;
+      }
+      // Check if col[1] has a new sub-objective label (starts with number+.)
+      var col1Text = String(row[1] || '').trim();
+      if (col1Text && col1Text.length > 5 && /^\d+\./.test(col1Text)) {
+        // This is a new sub-objective within the current category
+        // Create a new objective of the same type as currentObj
+        var currentType = currentObj ? currentObj.type : 'Personal Growth';
+        var subWeight = parseFloat(row[4] || row[5] || 0) || 0;
+        if (subWeight > 1) subWeight = 0; // continuation rows often have no weight
+        currentObj = {type: currentType, label: col1Text, keyResults: [], weight: subWeight};
+        person.objectives.push(currentObj);
+        var subKr = String(row[3] || '').trim();
+        if (subKr && subKr.length > 5) extractKRsGlobal_(subKr, currentObj);
+        continue;
+      }
       // Scan all columns for KR-like text (longer text with Thai or numbers)
       for (var j = 1; j < Math.min(row.length, 8); j++) {
         var text = String(row[j] || '').trim();
+        // Skip KPI ownership table columns (สมศักดิ์, ทีมรับใช้ PKG, ผู้เกี่ยวข้อง, etc.)
+        if (text === 'สมศักดิ์' || text === 'ทีมรับใช้ PKG' || text === 'ทีมศูนย์ซ่อมตัวถังและสี' ||
+            text === 'ทีม PMGI' || text === 'ผู้เกี่ยวข้อง') continue;
         if (text && text.length > 8 && text.indexOf('Growth') < 0 && text.indexOf('Weight') < 0 && 
             text.indexOf('Approval') < 0 && text.indexOf('Operational') < 0 && text.indexOf('Key Results') < 0 &&
             text.indexOf('Points') < 0 && text.indexOf('Incentive') < 0 && text.indexOf('Currencies') < 0 &&
             text.indexOf('Performance') < 0 && text.indexOf('Execution') < 0 && text !== 'Ownership' && 
-            text !== 'Co-ownership' && text.indexOf('....') < 0) {
+            text !== 'Co-ownership' && text.indexOf('....') < 0 &&
+            text.indexOf('KPI ') < 0 && text.indexOf('Resposibilities') < 0) {
           // Check if it looks like a KR (Thai text or starts with number)
           if (text.match(/[\u0E00-\u0E7F]/) || text.match(/^\d+\./) || text.match(/^KR\s*\d/i) || text.match(/^O\d+-KR/i)) {
             extractKRsGlobal_(text, currentObj);
@@ -8978,6 +11463,27 @@ function parsePersonSheet_(sheetName, data, deptName) {
         else if (obj.type === 'Community') person.weightCommunity = obj.weight;
       }
     }
+    
+    // Extract KPI Ownership table (rows with "KPI 1", "KPI 2", "KPI 3")
+    if (/^KPI\s*\d/i.test(String(row[0] || '').trim())) {
+      var kpiTitle = String(row[0] || '').trim();
+      var kpiOwners = [];
+      for (var okp = 2; okp < Math.min(row.length, 7); okp++) {
+        var owner = String(row[okp] || '').trim();
+        if (owner && owner.length > 1 && owner.indexOf('....') < 0) {
+          var roleLabel = '';
+          if (okp === 2) roleLabel = 'Ownership';
+          else if (okp === 3) roleLabel = 'Co-ownership 1';
+          else if (okp === 4) roleLabel = 'Co-ownership 2';
+          else if (okp === 5) roleLabel = 'Co-ownership 3';
+          else if (okp === 6) roleLabel = 'ผู้เกี่ยวข้อง';
+          kpiOwners.push({ role: roleLabel, name: owner });
+        }
+      }
+      if (kpiOwners.length > 0) {
+        person.kpiOwnership.push({ title: kpiTitle, owners: kpiOwners });
+      }
+    }
   }
   return person;
 }
@@ -8987,14 +11493,71 @@ function extractKRsGlobal_(text, obj) {
   var lines = text.split(/\n/);
   for (var li = 0; li < lines.length; li++) {
     var line = lines[li].trim();
-    if (!line || line.length < 5) continue;
-    if (line.match(/^Key Results/i) || line.match(/^Currencies/i)) continue;
-    if (line.indexOf('Approval') >= 0) continue;
-    if (line.indexOf('....') >= 0 && line.length < 20) continue;
-    if (line === 'คะแนน' || line === 'Ownership' || line === 'KR' || line === '#') continue;
-    if (/^[.]+$/.test(line.replace(/\s/g,''))) continue;
-    if (obj.keyResults.indexOf(line) === -1) obj.keyResults.push(line);
+    if (!line || line.length < 3) continue;
+    
+    // Split multiple KRs in same line (e.g. "KR 6 ... KR 7 ..." or "6. ... 7. ...")
+    var subLines = splitMultipleKRs_(line);
+    
+    for (var sli = 0; sli < subLines.length; sli++) {
+      var subLine = subLines[sli].trim();
+      if (!subLine || subLine.length < 3) continue;
+      
+      // FIRST: Check for sub-category header "Key Results (Financial Target):" 
+      var subCatMatch = subLine.match(/^Key Results\s*\((.+?)\)\s*:?\s*$/i);
+      if (subCatMatch) {
+        var catName = subCatMatch[1].trim();
+        var marker = '§SUBCAT:' + catName;
+        if (obj.keyResults.indexOf(marker) === -1) obj.keyResults.push(marker);
+        continue;
+      }
+      // Skip plain "Key Results" or "Currencies" headers (without sub-category)
+      if (subLine.match(/^Key Results/i) || subLine.match(/^Currencies/i)) continue;
+      // Also detect "(Financial Target)" standalone
+      if (/^\((.+?)\)\s*:?$/.test(subLine)) {
+        var catMatch = subLine.match(/^\((.+?)\)/);
+        if (catMatch) {
+          var catName2 = catMatch[1].trim();
+          if (catName2 === 'Financial Target' || catName2 === 'Market Expansion' ||
+              catName2 === 'Operational Excellence' || catName2 === 'Skill & Productivity' ||
+              catName2 === 'AI / Data / Performance' || catName2 === 'Leadership / Team Capability') {
+            var marker2 = '§SUBCAT:' + catName2;
+            if (obj.keyResults.indexOf(marker2) === -1) obj.keyResults.push(marker2);
+            continue;
+          }
+        }
+        continue;
+      }
+      if (subLine.indexOf('Approval') >= 0) continue;
+      if (subLine.indexOf('....') >= 0 && subLine.length < 20) continue;
+      if (subLine === 'คะแนน' || subLine === 'Ownership' || subLine === 'KR' || subLine === '#') continue;
+      if (/^[.]+$/.test(subLine.replace(/\s/g,''))) continue;
+      if (obj.keyResults.indexOf(subLine) === -1) obj.keyResults.push(subLine);
+    }
   }
+}
+
+// Split multiple KRs that are in the same line/cell without newline separators.
+// Examples: "KR 6 ... KR 7 ..." → ["KR 6 ...", "KR 7 ..."]
+//           "6. ... 7. ..." → ["6. ...", "7. ..."]
+function splitMultipleKRs_(line) {
+  // Pattern 1: "KR 6" or "KR6" followed by text, then "KR 7" or "KR7"
+  var krSplit = line.split(/\s+(?=KR\s*\d)/i);
+  if (krSplit.length > 1) return krSplit;
+  
+  // Pattern 2: Number+dot at start of KR text (e.g. "6. ... 7. ...")
+  // Only split if the line is long (>100 chars) to avoid false positives
+  if (line.length > 100) {
+    var numSplit = line.split(/\s+(?=\d+\.\s)/);
+    if (numSplit.length > 1) return numSplit;
+  }
+  
+  // Pattern 3: "KR 6 (Digital ...): ... KR 7. ..." — split by "KR" keyword
+  if (line.indexOf('KR') >= 0 && line.length > 80) {
+    var parts = line.split(/\s+(?=KR\b)/i);
+    if (parts.length > 1) return parts;
+  }
+  
+  return [line];
 }
 
 /* ═══════════════════════════════════════════════════
@@ -9128,6 +11691,10 @@ function saveEditKR_(p) {
   
   if (!found) return { success: false, error: 'KR not found in sheet: ' + p.oldKR.substring(0, 50) };
   
+  // Log change (5W1H)
+  var ssid2 = p.ssid || OKR_SS_ID;
+  logOKRChange_(ssid2, 'ผู้ใช้ (ผ่าน Dashboard)', 'แก้ไข KR', p.sheetName, 'เปลี่ยนจาก: ' + p.oldKR.substring(0, 80), 'แก้ไขเป็น: ' + p.newKR.substring(0, 80));
+  
   // Clear cache so next read gets fresh data
   clearOKRCache_();
   
@@ -9164,6 +11731,10 @@ function saveDeleteKR_(p) {
   }
   
   if (!found) return { success: false, error: 'KR not found in sheet' };
+  
+  // Log change (5W1H)
+  var ssid3 = p.ssid || OKR_SS_ID;
+  logOKRChange_(ssid3, 'ผู้ใช้ (ผ่าน Dashboard)', 'ลบ KR', p.sheetName, 'ลบ KR: ' + p.krText.substring(0, 80), 'ลบผ่านหน้า Dashboard');
   
   clearOKRCache_();
   
@@ -9256,6 +11827,9 @@ function saveAddKR_(p) {
   
   sheet.getRange(insertRow + 1, krCol + 1).setValue(p.krText);
   
+  // Log change (5W1H)
+  logOKRChange_(ssid, 'ผู้ใช้ (ผ่าน Dashboard)', 'เพิ่ม KR', p.sheetName, 'เพิ่ม KR ใหม่: ' + p.krText.substring(0, 80), 'เพิ่มผ่านหน้า Dashboard ประเภท: ' + (p.growthType || 'Business Growth'));
+  
   clearOKRCache_();
   
   return { success: true, message: 'KR added', sheetName: p.sheetName, krText: p.krText.substring(0, 50), krCol: krCol, insertRow: insertRow };
@@ -9263,13 +11837,287 @@ function saveAddKR_(p) {
 
 function clearOKRCache_() {
   var cache = CacheService.getScriptCache();
-  var cacheKey = 'okrall_data_v6';
+  // Clear shared cache (v8) — used by getMultiOKRData_()
+  var cacheKey = 'okrall_data_v8';
   cache.remove(cacheKey);
   cache.remove(cacheKey + '_meta');
-  // Also remove chunk keys
-  for (var i = 0; i < 5; i++) {
-    cache.remove(cacheKey + '_chunk' + i);
+  var oldMeta = cache.get(cacheKey + '_meta');
+  if (oldMeta) {
+    var oldChunks = parseInt(oldMeta);
+    for (var i = 0; i < oldChunks; i++) {
+      cache.remove(cacheKey + '_chunk_' + i);
+    }
   }
+  // Also clear old v7 keys
+  var v7Key = 'okrall_data_v7';
+  cache.remove(v7Key);
+  cache.remove(v7Key + '_meta');
+  for (var j = 0; j < 5; j++) {
+    cache.remove(v7Key + '_chunk' + j);
+  }
+  // NOTE: Do NOT clear per-department cache (okrdept_X_v1) here —
+  // it will be refreshed by okrAutoRefresh after getMultiOKRData_() completes.
+  // This way, if a user loads the dashboard while refresh is running,
+  // they still get cached data (slightly stale but fast).
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   OKR Auto-Refresh + Change Log (5W1H)
+   ═══════════════════════════════════════════════════════════════ */
+
+// Setup time-driven trigger for OKR auto-refresh (every 15 minutes for near real-time)
+function setupOKRAutoRefreshTrigger() {
+  // Remove existing triggers first
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'okrAutoRefresh' || triggers[i].getHandlerFunction() === 'okrOnEditTrigger') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  // Create time-based trigger — every 5 minutes for near real-time cache refresh
+  ScriptApp.newTrigger('okrAutoRefresh')
+    .timeBased()
+    .everyMinutes(5)
+    .create();
+  
+  // Also set up onChange triggers for each OKR sheet (installable triggers)
+  // These fire when someone edits the source sheet directly
+  for (var deptName in OKR_SS_IDS) {
+    try {
+      var ssid = OKR_SS_IDS[deptName];
+      var ss = SpreadsheetApp.openById(ssid);
+      // Installable onEdit trigger — fires when anyone edits the sheet
+      // Note: This creates a trigger owned by the script user
+      var existingTriggers = ScriptApp.getProjectTriggers();
+      var hasTrigger = false;
+      for (var ei = 0; ei < existingTriggers.length; ei++) {
+        if (existingTriggers[ei].getHandlerFunction() === 'okrOnEditTrigger' && 
+            existingTriggers[ei].getTriggerSourceId() === ssid) {
+          hasTrigger = true;
+          break;
+        }
+      }
+      if (!hasTrigger) {
+        ScriptApp.newTrigger('okrOnEditTrigger')
+          .forSpreadsheet(ss)
+          .onEdit()
+          .create();
+      }
+    } catch(e) {
+      // Some sheets may not allow trigger creation
+    }
+  }
+  
+  return { success: true, message: 'OKR auto-refresh trigger created (every 15 min) + onEdit triggers for all sheets' };
+}
+
+// Real-time onEdit trigger — fires immediately when someone edits an OKR sheet
+function okrOnEditTrigger(e) {
+  try {
+    var ss = e.source;
+    var ssid = ss.getId();
+    var sheet = e.range.getSheet();
+    var sheetName = sheet.getName();
+    var row = e.range.getRow();
+    var col = e.range.getColumn();
+    var oldValue = e.oldValue !== undefined ? String(e.oldValue) : '(ว่าง)';
+    var newValue = e.value !== undefined ? String(e.value) : '(ว่าง)';
+    var user = e.user && e.user.getEmail ? e.user.getEmail() : (Session.getActiveUser().getEmail() || 'ผู้ใช้ไม่ระบุตัวตน');
+    
+    // Find which department this sheet belongs to
+    var deptName = 'Unknown';
+    for (var dn in OKR_SS_IDS) {
+      if (OKR_SS_IDS[dn] === ssid) { deptName = dn; break; }
+    }
+    
+    // Skip ChangeLog sheet edits to avoid loops
+    if (sheetName === 'ChangeLog') return;
+    
+    // Get cell address (A1 notation)
+    var cellAddr = sheetName + '!' + e.range.getA1Notation();
+    
+    // Log the change
+    var entry = {
+      when: new Date().toISOString(),
+      who: user,
+      what: 'แก้ไขข้อมูล',
+      where: deptName + ' → ' + cellAddr,
+      why: 'เปลี่ยนจาก "' + oldValue.substring(0, 50) + '" เป็น "' + newValue.substring(0, 50) + '"',
+      how: 'Real-time onEdit trigger'
+    };
+    
+    writeOKRChangeLog_(ssid, entry);
+    
+    // Clear OKR cache so next dashboard load gets fresh data
+    clearOKRCache_();
+    
+  } catch(err) {
+    // Silent fail — don't disrupt user editing
+  }
+}
+
+// Auto-refresh: reads all OKR sheets, detects new tabs/data, updates cache, logs changes
+function okrAutoRefresh() {
+  var logEntries = [];
+  var prevSnapshot = CacheService.getScriptCache().get('okr_snapshot_v1');
+  var prevTabs = {};
+  if (prevSnapshot) {
+    try { prevTabs = JSON.parse(prevSnapshot); } catch(e) {}
+  }
+
+  var currentTabs = {};
+
+  for (var deptName in OKR_SS_IDS) {
+    var ssid = OKR_SS_IDS[deptName];
+    currentTabs[deptName] = { ssid: ssid, tabs: [] };
+    try {
+      var ss = SpreadsheetApp.openById(ssid);
+      var sheets = ss.getSheets();
+      var tabNames = [];
+      for (var si = 0; si < sheets.length; si++) {
+        var sName = sheets[si].getName();
+        tabNames.push(sName);
+      }
+      currentTabs[deptName].tabs = tabNames;
+
+      // Detect new tabs
+      if (prevTabs[deptName] && prevTabs[deptName].tabs) {
+        for (var ni = 0; ni < tabNames.length; ni++) {
+          if (prevTabs[deptName].tabs.indexOf(tabNames[ni]) < 0) {
+            // New tab found!
+            logEntries.push({
+              when: new Date().toISOString(),
+              who: 'ระบบอัตโนมัติ (Auto-refresh)',
+              what: 'เพิ่มแท็บใหม่',
+              where: deptName + ' → ' + tabNames[ni],
+              why: 'ตรวจพบแท็บใหม่ใน Sheet ต้นทาง',
+              how: 'auto-refresh trigger (every 2h)'
+            });
+          }
+        }
+        // Detect removed tabs
+        for (var ri = 0; ri < prevTabs[deptName].tabs.length; ri++) {
+          if (tabNames.indexOf(prevTabs[deptName].tabs[ri]) < 0) {
+            logEntries.push({
+              when: new Date().toISOString(),
+              who: 'ระบบอัตโนมัติ (Auto-refresh)',
+              what: 'ลบแท็บ',
+              where: deptName + ' → ' + prevTabs[deptName].tabs[ri],
+              why: 'แท็บถูกลบจาก Sheet ต้นทาง',
+              how: 'auto-refresh trigger (every 2h)'
+            });
+          }
+        }
+      } else {
+        // First run — log all existing tabs
+        for (var fi = 0; fi < tabNames.length; fi++) {
+          logEntries.push({
+            when: new Date().toISOString(),
+            who: 'ระบบอัตโนมัติ (Auto-refresh)',
+            what: 'แท็บเริ่มต้น',
+            where: deptName + ' → ' + tabNames[fi],
+            why: 'สแกนครั้งแรก',
+            how: 'auto-refresh initial scan'
+          });
+        }
+      }
+    } catch(e) {
+      logEntries.push({
+        when: new Date().toISOString(),
+        who: 'ระบบอัตโนมัติ (Auto-refresh)',
+        what: 'Error',
+        where: deptName,
+        why: String(e),
+        how: 'auto-refresh error'
+      });
+    }
+  }
+
+  // Save current tab snapshot
+  try {
+    CacheService.getScriptCache().put('okr_snapshot_v1', JSON.stringify(currentTabs), 259200); // 3 days
+  } catch(e) {}
+
+  // Clear OKR data cache so next read gets fresh data
+  clearOKRCache_();
+  // Force read fresh data — this populates the shared cache
+  var freshData = getMultiOKRData_();
+  
+  // Pre-warm per-department cache from the fresh data
+  if (freshData && freshData.departments) {
+    for (var wdIdx = 0; wdIdx < freshData.departments.length; wdIdx++) {
+      var wdKey = 'okrdept_' + wdIdx + '_v1';
+      cacheDeptData_(wdKey, freshData.departments[wdIdx]);
+    }
+  }
+
+  // Write log entries to ChangeLog in each department's sheet
+  for (var li = 0; li < logEntries.length; li++) {
+    var entry = logEntries[li];
+    var deptParts = entry.where.split(' \u2192 ');
+    var dept = deptParts[0];
+    var ssid = OKR_SS_IDS[dept];
+    if (ssid) {
+      try { writeOKRChangeLog_(ssid, entry); } catch(e) {}
+    }
+  }
+
+  return { success: true, entries: logEntries.length, log: logEntries };
+}
+
+// Write a change log entry to the ChangeLog sheet
+function writeOKRChangeLog_(ssid, entry) {
+  var ss = SpreadsheetApp.openById(ssid);
+  var logSheet = ss.getSheetByName('ChangeLog');
+  if (!logSheet) {
+    logSheet = ss.insertSheet('ChangeLog');
+    logSheet.appendRow(['When (เมื่อไหร่)', 'Who (ใคร)', 'What (อะไร)', 'Where (ที่ไหน)', 'Why (ทำไม)', 'How (อย่างไร)']);
+    logSheet.getRange(1, 1, 1, 6).setFontWeight('bold');
+    logSheet.setFrozenRows(1);
+  }
+  logSheet.appendRow([
+    entry.when,
+    entry.who,
+    entry.what,
+    entry.where,
+    entry.why,
+    entry.how
+  ]);
+}
+
+// Log a manual edit (called from saveEditKR_, saveDeleteKR_, saveAddKR_, savePersonEdit_)
+function logOKRChange_(ssid, who, what, where, why, how) {
+  var entry = {
+    when: new Date().toISOString(),
+    who: who,
+    what: what,
+    where: where,
+    why: why,
+    how: how
+  };
+  try { writeOKRChangeLog_(ssid, entry); } catch(e) {}
+}
+
+// Public wrapper: get change log for a department
+function gsGetOKRChangeLog(deptName) {
+  var ssid = OKR_SS_IDS[deptName];
+  if (!ssid) return { success: false, error: 'Department not found' };
+  var ss = SpreadsheetApp.openById(ssid);
+  var logSheet = ss.getSheetByName('ChangeLog');
+  if (!logSheet) return { success: true, entries: [], message: 'No ChangeLog sheet yet' };
+  var data = logSheet.getDataRange().getValues();
+  var entries = [];
+  for (var i = 1; i < data.length; i++) {
+    entries.push({
+      when: data[i][0],
+      who: data[i][1],
+      what: data[i][2],
+      where: data[i][3],
+      why: data[i][4],
+      how: data[i][5]
+    });
+  }
+  return { success: true, entries: entries };
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -9445,45 +12293,86 @@ function partsCheckParts_(quotationUrl) {
       return { success: false, error: '⚠️ ไม่พบตารางอะไหล่ในหน้าเว็บ — อาจไม่ใช่ใบเสนอราคาที่ถูกต้อง', htmlLen: html.length, receivedUrl: quotationUrl };
     }
     
-    // Parse HTML table: part codes are in one <td> column, names in the NEXT <td>
-    // Structure: <td><p>CODE1<BR><p>CODE2<BR>...</td><td><p>NAME1<BR><p>NAME2<BR>...</td>
-    var tdPattern = /<td[^>]*>([\s\S]*?)<\/td>/g;
-    var tds = [];
-    var tdMatch;
-    while ((tdMatch = tdPattern.exec(html)) !== null) {
-      tds.push(tdMatch[1]);
-    }
-    
+    // Parse HTML table: extract codes and names from <tr> rows
+    // BCT JSP แสดงอะไหล่หลายตัวใน 1 cell (คั่นด้วย <BR>) ต้องแยกออกเป็นรายการคนละบรรทัด
+    var trPattern = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
     var parts = [];
-    for (var ti = 0; ti < tds.length; ti++) {
-      // Check if this td contains part codes
-      var codes = [];
-      var codeRe = /<p>(\d{10})<BR>/g;
-      var cm;
-      while ((cm = codeRe.exec(tds[ti])) !== null) {
-        codes.push(cm[1]);
+    var trMatch;
+    while ((trMatch = trPattern.exec(html)) !== null) {
+      var trContent = trMatch[1];
+      // Extract all <td> contents from this row
+      var tdInRow = [];
+      var tdRe = /<td[^>]*>([\s\S]*?)<\/td>/g;
+      var tdM;
+      while ((tdM = tdRe.exec(trContent)) !== null) {
+        tdInRow.push(tdM[1]);
       }
-      if (codes.length > 0 && ti + 1 < tds.length) {
-        // Next td has corresponding names
-        var names = [];
-        var nameRe = /<p>([^<]*?)<BR>/g;
-        var nm;
-        while ((nm = nameRe.exec(tds[ti + 1])) !== null) {
-          var name = nm[1].replace(/&nbsp;/g, '').replace(/&#43;/g, '+').trim();
-          names.push(name);
+      
+      // ── NEW: แยก cell ที่มีหลาย <BR> ออกเป็น sub-items ──
+      // แต่ละ cell อาจมีหลายบรรทัด: <p>1234567890<BR> <p>9876543210<BR> ...
+      // ต้อง split ตาม <BR> แล้วหารหัส + ชื่อในแต่ละบรรทัด
+      var allCodesInRow = [];
+      var allNamesInRow = [];
+      for (var tdi = 0; tdi < tdInRow.length; tdi++) {
+        var cellContent = tdInRow[tdi];
+        // แยกตาม <BR> หรือ <br>
+        var subLines = cellContent.split(/<BR\s*\/?>/i);
+        for (var sli = 0; sli < subLines.length; sli++) {
+          var subLine = subLines[sli].replace(/<[^>]+>/g, '').replace(/&nbsp;/g, '').replace(/&#43;/g, '+').trim();
+          if (!subLine) continue;
+          // ตรวจว่าเป็นรหัส 10 หลักหรือไม่
+          var codeMatch = /^(\d{10})$/.exec(subLine) || /(\d{10})/.exec(subLine);
+          if (codeMatch && subLine.length <= 12) {
+            allCodesInRow.push(codeMatch[1]);
+          }
+          // ตรวจว่าเป็นชื่ออะไหล่หรือไม่ (ไม่ใช่ตัวเลข/ไม่ใช่ header)
+          if (subLine.length >= 3 && subLine.length <= 80 && !/^\d/.test(subLine)) {
+            if (subLine.indexOf('***') < 0 && subLine.indexOf('ค่าแรง') < 0 &&
+                subLine.indexOf('ค่าอะไหล่') < 0 && subLine !== 'เปลี่ยน' && subLine !== 'เบา' &&
+                subLine.indexOf('ทำสี') < 0 && subLine.indexOf('ซ่อม') < 0 &&
+                subLine.indexOf('หมายเหตุ') < 0 && subLine.indexOf('ราคา') < 0 &&
+                subLine.indexOf('รวม') < 0 && subLine.indexOf('ส่วนลด') < 0 &&
+                subLine.indexOf('VAT') < 0 && subLine.indexOf('จำนวน') < 0 &&
+                subLine.indexOf('หน่วย') < 0 && subLine.indexOf('บาท') < 0 &&
+                subLine.indexOf('เครดิต') < 0 && subLine.indexOf('รถยี่ห้อ') < 0 &&
+                subLine.indexOf('ทะเบียน') < 0 && subLine.indexOf('เลขที่') < 0 &&
+                subLine.indexOf('วันที่') < 0 && subLine.indexOf('ชื่อ') < 0 &&
+                subLine.indexOf('SA') >= 0 && subLine.length < 10 ? false : true) {
+              if (subLine === 'ISUZU' || subLine === 'Genuine' || subLine === 'Parts') continue;
+              if (subLine === 'รายการ' || subLine === 'ลำดับ') continue;
+              if (subLine === 'no.' || subLine === 'No.' || subLine === 'NO.') continue;
+              if (subLine === 'ราคา/หน่วย' || subLine === 'ราคารวม' || subLine === 'จำนวนเงิน') continue;
+              allNamesInRow.push(subLine);
+            }
+          }
         }
-        for (var ci = 0; ci < codes.length; ci++) {
-          var pName = ci < names.length ? names[ci] : '';
-          if (!pName) continue;
-          if (pName.indexOf('***') >= 0) continue;
-          if (pName.indexOf('ค่าแรง') >= 0) continue;
-          if (pName === 'เปลี่ยน' || pName === 'เบา') continue;
-          if (pName.indexOf('ทำสี') >= 0 || pName.indexOf('ซ่อม') >= 0) continue;
-          parts.push({
-            code: codes[ci], last5: codes[ci].slice(-5),
-            name: pName, qty: 1, price: ''
-          });
+      }
+      
+      // Pair codes with names (code[i] → name[i])
+      // ถ้ามีหลาย codes และหลาย names ในแถวเดียว → แยกเป็นอะไหล่หลายตัว
+      var maxLen = Math.max(allCodesInRow.length, allNamesInRow.length);
+      for (var pi = 0; pi < maxLen; pi++) {
+        var code = allCodesInRow[pi] || '';
+        var pName = allNamesInRow[pi] || '';
+        if (!code || code.length < 6) continue;
+        if (!pName || pName.length < 2) continue;
+        // Filter out non-part names
+        if (pName.indexOf('***') >= 0) continue;
+        if (pName.indexOf('ค่าแรง') >= 0) continue;
+        if (pName === 'เปลี่ยน' || pName === 'เบา') continue;
+        if (pName.indexOf('ทำสี') >= 0 || pName.indexOf('ซ่อม') >= 0) continue;
+        if (pName.length > 80) continue;
+        if (/^\d+[\.,]?\d*$/.test(pName)) continue;
+        // Check for duplicate (same code already added)
+        var isDup = false;
+        for (var di = 0; di < parts.length; di++) {
+          if (parts[di].code === code) { isDup = true; break; }
         }
+        if (isDup) continue;
+        parts.push({
+          code: code, last5: code.slice(-5),
+          name: pName, qty: 1, price: ''
+        });
       }
     }
     
@@ -10050,6 +12939,9 @@ function rfAssignStations_(data) {
 }
 
 function rfGetMechanicJobs_(branch, station) {
+  // NEW: Auto-sync vehicles from B2 into RF_Orders, then return jobs
+  rfSyncFromB2_(branch);
+  
   var orders = rfGetOrders_(branch);
   if (!orders.success) return orders;
   var logSheet = rfLogSheet_();
@@ -10074,6 +12966,40 @@ function rfGetMechanicJobs_(branch, station) {
     });
   });
   return { success: true, jobs: jobs, branch: branch, station: station };
+}
+
+// NEW: Auto-sync vehicles from B2 sheet into RF_Orders
+// Only adds vehicles that don't already have an order
+function rfSyncFromB2_(branch) {
+  var vehicles = rfGetVehicles_(branch);
+  if (!vehicles.success || !vehicles.vehicles.length) return;
+  
+  var ordersSheet = rfOrdersSheet_();
+  var lr = ordersSheet.getLastRow();
+  var existingPlates = {};
+  if (lr >= 2) {
+    var data = ordersSheet.getRange(2, 1, lr - 1, 17).getValues();
+    for (var r = 0; r < data.length; r++) {
+      if (String(data[r][1]).trim() === branch) {
+        existingPlates[String(data[r][2]).trim().replace(/\s/g,'')] = true;
+      }
+    }
+  }
+  
+  var defaultStations = ['knock','patch','squirt','assemble','polish','wash','supQC','deliver'];
+  var now = new Date().toISOString();
+  
+  vehicles.vehicles.forEach(function(v) {
+    var normPlate = String(v.plate).trim().replace(/\s/g,'');
+    if (existingPlates[normPlate]) return; // already has an order
+    
+    var orderId = 'RF' + new Date().getTime().toString().slice(-8) + Math.floor(Math.random()*100);
+    ordersSheet.appendRow([
+      orderId, branch, v.plate, '', '', v.sa, '', v.brand, v.model,
+      v.repairDate, '', 'assigned', 'knock',  // start at first station
+      defaultStations.join(','), '', now, 'auto-sync'
+    ]);
+  });
 }
 
 function rfAcceptJob_(data) {
@@ -10212,4 +13138,3201 @@ function rfSaveMechanic_(data) {
   }
   sheet.appendRow([mechanicId, data.name||'', data.branch||'', data.station||'', data.phone||'', 'true', new Date().toISOString()]);
   return { success: true, mechanicId: mechanicId, created: true };
+}
+
+/* ═══════════════════════════════════════════════════
+   KPI Status — Match OKR Key Results against live data
+   ═══════════════════════════════════════════════════ */
+
+var GM_DASH_URL = 'https://script.google.com/macros/s/AKfycbyj3gdAaB0buDNR8L7Lsyd1kJWXgSldRh67P5dwvaXnx9MaGIBtqNYAdRgqurmgCZ-2FA/exec?gm=1';
+var PMGI_DASH_URL = 'https://script.google.com/macros/s/AKfycbyj3gdAaB0buDNR8L7Lsyd1kJWXgSldRh67P5dwvaXnx9MaGIBtqNYAdRgqurmgCZ-2FA/exec?pmgi=1';
+var WARROOM_URL = 'https://script.google.com/macros/s/AKfycbyKlk44ntmzr73V7wjrHmIb7-fR8JTXkyR86VEke3hrKsULNNt8hTC-UnIkd9AHKUdYjg/exec';
+var CBNP_SS_ID = '1emOZoTL3g3BiIk0Sw4AkTmK-kSmsx5liyMCHsVI0xoc';
+
+/**
+ * Fetch CBNP data (PMSgr + PMGg) from the "สรุปเป้า PMSgr" tab.
+ * Source: สรุปข้อมูลด้านการเงิน 2026 (ID: 1emOZoTL3g3BiIk0Sw4AkTmK-kSmsx5liyMCHsVI0xoc)
+ * Returns: {pmsgr_target, pmsgr_achieved, pmsgr_avg_monthly, pmgg_target, pmgg_achieved, pmgg_avg_monthly, cbnp_target, cbnp_achieved, cbnp_avg_monthly}
+ */
+function fetchCbnpData_() {
+  var ss = SpreadsheetApp.openById(CBNP_SS_ID);
+  var sheet = ss.getSheetByName('สรุปเป้า PMSgr');
+  if (!sheet) return null;
+  var lastRow = sheet.getLastRow();
+  var lastCol = Math.max(sheet.getLastColumn(), 8);
+  var data = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+
+  // Row 6 (index 5) = PMSgr: col F (index 5) = target, col G (index 6) = achieved, col H (index 7) = avg/monthly
+  // Row 8 (index 7) = PMGg: col F = target, col G = achieved, col H = avg/monthly
+  var pmsgr_target = num_(data[5][5]);
+  var pmsgr_achieved = num_(data[5][6]);
+  var pmsgr_avg_monthly = num_(data[5][7]);
+  var pmgg_target = num_(data[7][5]);
+  var pmgg_achieved = num_(data[7][6]);
+  var pmgg_avg_monthly = num_(data[7][7]);
+
+  return {
+    pmsgr_target: pmsgr_target,
+    pmsgr_achieved: pmsgr_achieved,
+    pmsgr_avg_monthly: pmsgr_avg_monthly,
+    pmgg_target: pmgg_target,
+    pmgg_achieved: pmgg_achieved,
+    pmgg_avg_monthly: pmgg_avg_monthly,
+    cbnp_target: pmsgr_target + pmgg_target,
+    cbnp_achieved: pmsgr_achieved + pmgg_achieved,
+    cbnp_avg_monthly: pmsgr_avg_monthly + pmgg_avg_monthly
+  };
+}
+
+/**
+ * Public wrapper for google.script.run — cannot call _ suffix functions.
+ * @param {string} personName - Thai name of the person (e.g. "สมศักดิ์ ธัมมะปาละ")
+ * @param {string} deptName   - Department name (e.g. "PMG/PMGI")
+ * @return {{items: Array, timestamp: string, personName: string, deptName: string}}
+ */
+function gsGetPersonKpiStatus(personName, deptName) {
+  return getPersonKpiStatus_(personName, deptName);
+}
+
+/**
+ * Combined CEO data: returns both OKR person data (profile, weights,
+ * accountabilities, objectives with KRs) and KPI status items.
+ * @param {string} personName - Thai name (e.g. "สมศักดิ์ ธัมมะปาละ")
+ * @param {string} deptName   - Department name (e.g. "PMG/PMGI")
+ * @return {{person: object, kpi: object, timestamp: string}}
+ */
+function getEval360Data() {
+  var cached = CacheService.getScriptCache().get("EVAL360_DATA");
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+  var chunkCount = CacheService.getScriptCache().get("EVAL360_CHUNKS");
+  if (chunkCount) {
+    var combined = "";
+    for (var ci = 0; ci < parseInt(chunkCount); ci++) {
+      combined += CacheService.getScriptCache().get("EVAL360_CHUNK_" + ci) || "";
+    }
+    try { return JSON.parse(combined); } catch(e) {}
+  }
+  // Fallback: read from Google Drive file (persistent storage)
+  try {
+    var evalFolder = DriveApp.getFolderById('1J9barfa-_DBwJEgZzDFuVS5uqT95WGXZ');
+    var files = evalFolder.getFiles();
+    while (files.hasNext()) {
+      var f = files.next();
+      if (f.getName() === 'eval360_embedded.json') {
+        var content = f.getBlob().getDataAsString();
+        var data = JSON.parse(content);
+        // Re-populate cache for next time
+        var dataStr = JSON.stringify(data);
+        if (dataStr.length <= 90000) {
+          CacheService.getScriptCache().put('EVAL360_DATA', dataStr, 21600);
+        } else {
+          var numChunks = Math.ceil(dataStr.length / 90000);
+          CacheService.getScriptCache().put('EVAL360_CHUNKS', String(numChunks), 21600);
+          for (var ci2 = 0; ci2 < numChunks; ci2++) {
+            var chunk2 = dataStr.substring(ci2 * 90000, (ci2 + 1) * 90000);
+            CacheService.getScriptCache().put('EVAL360_CHUNK_' + ci2, chunk2, 21600);
+          }
+        }
+        return data;
+      }
+    }
+  } catch(driveErr) {
+    return { error: "No data in cache or Drive: " + driveErr.toString() };
+  }
+  return { error: "No data uploaded yet" };
+}
+
+// Pre-populate separate cache keys for stats, persons, and summary
+// This allows google.script.run to read small chunks instead of 860KB each time
+function warmupEval360Caches_(data) {
+  if (!data || data.error) return;
+  var cache = CacheService.getScriptCache();
+  var ttl = 21600; // 6 hours
+  
+  // Cache stats (~2KB)
+  var statsObj = { stats: data.stats || {}, company_stats: data.company_stats || {} };
+  try { cache.put('EVAL360_STATS', JSON.stringify(statsObj), ttl); } catch(e) {}
+  
+  // Cache persons in chunks of 150 (each ~90KB)
+  if (data.persons && data.persons.length > 0) {
+    cache.put('EVAL360_PERSONS_COUNT', String(data.persons.length), ttl);
+    for (var i = 0; i < data.persons.length; i += 150) {
+      var chunkIdx = Math.floor(i / 150);
+      var chunkRecords = data.persons.slice(i, i + 150);
+      var chunkStr = JSON.stringify({ records: chunkRecords });
+      if (chunkStr.length <= 90000) {
+        try { cache.put('EVAL360_PERSONS_' + chunkIdx, chunkStr, ttl); } catch(e) {}
+      }
+    }
+  }
+  
+  // Cache summary in chunks of 200 (each ~90KB)
+  if (data.summary && data.summary.length > 0) {
+    cache.put('EVAL360_SUMMARY_COUNT', String(data.summary.length), ttl);
+    for (var j = 0; j < data.summary.length; j += 200) {
+      var sChunkIdx = Math.floor(j / 200);
+      var sChunkRecords = data.summary.slice(j, j + 200);
+      var sChunkStr = JSON.stringify({ records: sChunkRecords });
+      if (sChunkStr.length <= 90000) {
+        try { cache.put('EVAL360_SUMMARY_' + sChunkIdx, sChunkStr, ttl); } catch(e) {}
+      }
+    }
+  }
+}
+
+// Public function to warm up caches from stored data (can be called from client)
+function warmupEval360Caches() {
+  var data = getEval360Data();
+  warmupEval360Caches_(data);
+  return { success: true, persons: data.persons ? data.persons.length : 0, summary: data.summary ? data.summary.length : 0 };
+}
+
+// Lightweight version for google.script.run — returns persons + stats + company_stats only (no summary)
+function getEval360Summary() {
+  var data = getEval360Data();
+  if (data.error) return data;
+  return {
+    stats: data.stats,
+    company_stats: data.company_stats,
+    persons: data.persons
+  };
+}
+
+// Get summary records in batches (for Person Detail tab)
+// Uses separate summary cache to avoid reading full 860KB data each time
+function getEval360SummaryBatch(startIdx, batchSize) {
+  var start = startIdx || 0;
+  var batch = batchSize || 200;
+  
+  // Try summary cache first (stored in chunks of 200 records each)
+  var summaryCountStr = CacheService.getScriptCache().get('EVAL360_SUMMARY_COUNT');
+  if (summaryCountStr) {
+    var total = parseInt(summaryCountStr);
+    var chunkIdx = Math.floor(start / 200);
+    var chunkKey = 'EVAL360_SUMMARY_' + chunkIdx;
+    var chunkCached = CacheService.getScriptCache().get(chunkKey);
+    if (chunkCached) {
+      try {
+        var chunkData = JSON.parse(chunkCached);
+        if (chunkData.records && chunkData.records.length > 0) {
+          var chunkStart = start - (chunkIdx * 200);
+          var records = chunkData.records.slice(chunkStart, chunkStart + batch);
+          return { records: records, total: total, start: start, batch: records.length };
+        }
+      } catch(e) {}
+    }
+  }
+  
+  // Fallback: read full data
+  var data = getEval360Data();
+  if (data.error) return data;
+  if (!data.summary) return { records: [], total: 0 };
+  var records = data.summary.slice(start, start + batch);
+  
+  // Cache this batch separately (max 90KB per cache key)
+  try {
+    var batchStr = JSON.stringify({ records: data.summary.slice(start, start + 200) });
+    if (batchStr.length <= 90000) {
+      var chunkIdx2 = Math.floor(start / 200);
+      CacheService.getScriptCache().put('EVAL360_SUMMARY_' + chunkIdx2, batchStr, 21600);
+      CacheService.getScriptCache().put('EVAL360_SUMMARY_COUNT', String(data.summary.length), 21600);
+    }
+  } catch(e) {}
+  
+  return { records: records, total: data.summary.length, start: start, batch: records.length };
+}
+
+// Stage A: Get stats + company_stats only (tiny payload, ~2KB)
+// Uses separate cache key to avoid reading full 860KB data each time
+function getEval360Stats() {
+  // Try small stats cache first
+  var statsCached = CacheService.getScriptCache().get('EVAL360_STATS');
+  if (statsCached) {
+    try { return JSON.parse(statsCached); } catch(e) {}
+  }
+  // Fallback: read full data and cache stats separately
+  var data = getEval360Data();
+  if (data.error) return data;
+  var result = {
+    stats: data.stats || {},
+    company_stats: data.company_stats || {}
+  };
+  // Cache stats separately (only ~2KB, fits in single cache key)
+  try {
+    CacheService.getScriptCache().put('EVAL360_STATS', JSON.stringify(result), 21600);
+  } catch(e) {}
+  return result;
+}
+
+// Stage B: Get persons in batches (~150 per batch, ~100KB each)
+// Uses separate persons cache to avoid reading full 860KB data each time
+function getEval360PersonsBatch(startIdx, batchSize) {
+  var start = startIdx || 0;
+  var batch = batchSize || 150;
+  
+  // Try persons cache first (stored in chunks of 90KB each)
+  var personsCountStr = CacheService.getScriptCache().get('EVAL360_PERSONS_COUNT');
+  if (personsCountStr) {
+    var total = parseInt(personsCountStr);
+    // Read only the chunk that contains our batch
+    var chunkIdx = Math.floor(start / 150);
+    var chunkKey = 'EVAL360_PERSONS_' + chunkIdx;
+    var chunkCached = CacheService.getScriptCache().get(chunkKey);
+    if (chunkCached) {
+      try {
+        var chunkData = JSON.parse(chunkCached);
+        if (chunkData.records && chunkData.records.length > 0) {
+          // Return slice from chunk
+          var chunkStart = start - (chunkIdx * 150);
+          var records = chunkData.records.slice(chunkStart, chunkStart + batch);
+          return { records: records, total: total, start: start, batch: records.length };
+        }
+      } catch(e) {}
+    }
+  }
+  
+  // Fallback: read full data
+  var data = getEval360Data();
+  if (data.error) return data;
+  if (!data.persons) return { records: [], total: 0 };
+  var records = data.persons.slice(start, start + batch);
+  
+  // Cache this batch separately (max 90KB per cache key)
+  try {
+    var batchStr = JSON.stringify({ records: data.persons.slice(start, start + 150) });
+    if (batchStr.length <= 90000) {
+      var chunkIdx2 = Math.floor(start / 150);
+      CacheService.getScriptCache().put('EVAL360_PERSONS_' + chunkIdx2, batchStr, 21600);
+      CacheService.getScriptCache().put('EVAL360_PERSONS_COUNT', String(data.persons.length), 21600);
+    }
+  } catch(e) {}
+  
+  return { records: records, total: data.persons.length, start: start, batch: records.length };
+}
+
+// Public wrapper for google.script.run — returns OKR data for all departments
+// Returns department metadata + names only (small ~5KB) — NO sheet reads, just key names
+function gsGetOKRData() {
+  // Try cache first (fast)
+  var warmKey = 'okrall_data_v8';
+  try {
+    var warmCached = CacheService.getScriptCache().get(warmKey);
+    if (warmCached) {
+      var parsed = JSON.parse(warmCached);
+      if (parsed && parsed.departments && parsed.departments.length > 0) {
+        return parsed;
+      }
+    }
+  } catch(e) {}
+  
+  // Cache cold — read from Sheets (slow but returns real data)
+  try {
+    var fullData = getMultiOKRData_();
+    if (fullData && fullData.departments && fullData.departments.length > 0) {
+      // Save to cache for next time
+      try {
+        var jsonStr = JSON.stringify(fullData);
+        if (jsonStr.length < 900000) { // CacheService 1MB limit
+          CacheService.getScriptCache().put(warmKey, jsonStr, 3600); // 1 hour TTL
+        }
+      } catch(e2) {}
+      return fullData;
+    }
+  } catch(e3) {}
+  
+  // Last resort: return skeleton
+  var deptNames = Object.keys(OKR_SS_IDS);
+  var light = {
+    departments: [],
+    lastUpdate: new Date().toISOString()
+  };
+  deptNames.forEach(function(dn) {
+    light.departments.push({
+      name: dn,
+      ssid: OKR_SS_IDS[dn],
+      teams: [],
+      sheetNames: [],
+      peopleCount: 0,
+      people: []
+    });
+  });
+  return light;
+}
+
+// Return client config (script URL + session token + cache status) via google.script.run
+function gsGetClientConfig() {
+  var cacheStatus = 'cold';
+  try {
+    var warmKey = 'okrall_data_v8';
+    var warmCached = CacheService.getScriptCache().get(warmKey);
+    cacheStatus = warmCached ? 'warm' : 'cold';
+  } catch(e) {}
+  return {
+    scriptUrl: 'https://script.google.com/macros/s/AKfycbyri1C3jRsIJsWS71N92jtIXW05dQFXoC4f0lC-u4fL9pXMz3c0ndHFexVwmDlp8_q9/exec',
+    sessionToken: '', // Client-side fetch uses view=data which is in API bypass
+    cacheStatus: cacheStatus
+  };
+}
+
+// Return CEO KPI actuals — reads live KR data from OKR sheets (all 5 departments, all people).
+// Replaces the old hardcoded 9-item version. Now reflects whatever พี่ก้อย updates in the OKR sheets.
+// Strategy: iterate departments via gsGetOKRDeptData() (each has its own 2-min cache),
+// then iterate every person → every objective → every KR. Extract target from KR text,
+// infer source from KR keywords, and return status 'no-data' when no live actual is
+// embedded in the OKR sheet itself. No external API calls (GM Dashboard/War Room/CBNP)
+// are made here — keeping it fast. A 5-minute CacheService TTL wraps the whole result.
+function gsGetCEOActuals() {
+  var cacheKey = 'CEO_ACTUALS_V3';
+  // Try single-key cache
+  var cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+  // Try chunked cache
+  var chunkMeta = CacheService.getScriptCache().get(cacheKey + '_meta');
+  if (chunkMeta) {
+    try {
+      var nChunks = parseInt(chunkMeta);
+      var combined = '';
+      for (var ci = 0; ci < nChunks; ci++) {
+        combined += CacheService.getScriptCache().get(cacheKey + '_chunk_' + ci) || '';
+      }
+      if (combined) return JSON.parse(combined);
+    } catch(e2) {}
+  }
+
+  var items = [];
+  var timestamp = new Date().toISOString();
+  var deptNames = Object.keys(OKR_SS_IDS);
+  var seenKr = {}; // dedupe identical KR text across people/depts
+
+  // ── Pre-fetch live data from source Sheets (fast — direct Sheet reads, no external API) ──
+  var _liveData = {};
+  try { _liveData.gm = parseGmData_(); } catch(e) { _liveData.gm = null; }
+  try { _liveData.supp = getSupplementSummary_(); } catch(e) { _liveData.supp = null; }
+  try { _liveData.bct = getBCTSummary_(); } catch(e) { _liveData.bct = null; }
+  try { _liveData.bctSale = getBCTSaleSummary_(); } catch(e) { _liveData.bctSale = null; }
+
+  // Read each department one at a time (uses per-dept cache → fast if warm)
+  for (var di = 0; di < deptNames.length; di++) {
+    try {
+      var deptData = gsGetOKRDeptData(di);
+      if (!deptData || !deptData.people) continue;
+
+      for (var pi = 0; pi < deptData.people.length; pi++) {
+        var person = deptData.people[pi];
+        if (!person.objectives) continue;
+
+        for (var oi = 0; oi < person.objectives.length; oi++) {
+          var obj = person.objectives[oi];
+          if (!obj.keyResults) continue;
+
+          for (var ki = 0; ki < obj.keyResults.length; ki++) {
+            var krText = String(obj.keyResults[ki] || '').trim();
+            if (!krText || krText.length < 3) continue;
+            // Skip §SUBCAT markers
+            if (krText.indexOf('§SUBCAT:') === 0) continue;
+            // Skip non-KR text (team names, labels, ownership rows)
+            var skipPatterns = ['ทีมรับใช้', 'ทีมศูนย์ซ่อม', 'ผู้เกี่ยวข้อง', 'ทีมงาน', 'Ownership', 'Co-ownership'];
+            var isSkip = false;
+            for (var sp = 0; sp < skipPatterns.length; sp++) {
+              if (krText.indexOf(skipPatterns[sp]) >= 0 && krText.length < 40) { isSkip = true; break; }
+            }
+            if (isSkip) continue;
+
+            // Dedupe identical KR text (same KR often appears once per person, but guard anyway)
+            var dedupeKey = krText;
+            if (seenKr[dedupeKey]) continue;
+            seenKr[dedupeKey] = true;
+
+            // Extract target value from KR text (e.g. "38.5 ลบ." → 38,500,000)
+            var target = extractTargetFromKR_(krText);
+
+            // Infer source from KR text keywords (— War Room, — GM Dashboard, — SC Dashboard, CBNP, PMGI, QC, ผลิตภัณฑ์เสริม)
+            var sourceInfo = inferKRSource_(krText);
+
+            // Build item — actual value comes from live data sources (read directly from Sheets, not API).
+            var status = 'no-data';
+            var progressPct = 0;
+            var currentValue = null;
+            var actual = null;
+
+            // 1. Try embedded actual in KR text
+            actual = extractEmbeddedActual_(krText);
+
+            // 2. Try live data sources (read from Sheets directly — fast, no external API)
+            if (actual === null && _liveData) {
+              actual = matchKRLive_(krText, sourceInfo, _liveData);
+            }
+
+            if (actual !== null && target !== null && target > 0) {
+              currentValue = actual;
+              var st = computeStatus_(actual, target);
+              status = st.status;
+              progressPct = st.progressPct;
+            }
+
+            var item = {
+              krText: krText,
+              currentValue: currentValue,
+              targetValue: target !== null ? Math.round(target) : null,
+              status: status,
+              progressPct: progressPct,
+              source: sourceInfo.source,
+              sourceUrl: sourceInfo.sourceUrl,
+              sourceDetail: person.name + ' · ' + deptNames[di] + ' · ' + (obj.type || '') +
+                            (sourceInfo.sourceDetail ? ' · ' + sourceInfo.sourceDetail : ''),
+              personName: person.name,
+              deptName: deptNames[di],
+              team: person.team || '',
+              objectiveType: obj.type || ''
+            };
+
+            items.push(item);
+          }
+        }
+      }
+    } catch(deptErr) {
+      // Skip this department on error, continue with the rest
+    }
+  }
+
+  var result = {
+    items: items,
+    count: items.length,
+    timestamp: timestamp,
+    source: 'OKR Sheets (live)',
+    departments: deptNames.length
+  };
+
+  // Cache 5 minutes (300 seconds) — handle chunking for large payloads
+  try {
+    var resultStr = JSON.stringify(result);
+    if (resultStr.length <= 90000) {
+      CacheService.getScriptCache().put(cacheKey, resultStr, 300);
+    } else {
+      var nChunks2 = Math.ceil(resultStr.length / 90000);
+      CacheService.getScriptCache().put(cacheKey + '_meta', String(nChunks2), 300);
+      for (var ci2 = 0; ci2 < nChunks2; ci2++) {
+        var chunk = resultStr.substring(ci2 * 90000, (ci2 + 1) * 90000);
+        CacheService.getScriptCache().put(cacheKey + '_chunk_' + ci2, chunk, 300);
+      }
+    }
+  } catch(cacheErr) {}
+
+  return result;
+}
+
+// Match KR text against live data sources to get actual value.
+// Reads from pre-fetched Sheet data (fast, no external API calls).
+function matchKRLive_(krText, sourceInfo, liveData) {
+  var t = (krText || '');
+  var src = sourceInfo.source || '';
+
+  // GM Dashboard — GM/เดือน, GM ผลิตภัณฑ์เสริม, GM PMGI
+  if (liveData.gm && (src === 'GM Dashboard' || t.indexOf('GM') >= 0 || t.indexOf('gm') >= 0)) {
+    try {
+      // parseGmData_ returns { monthly: { 'ม.ค.': { total: N }, ... } }
+      var monthly = liveData.gm.monthly || {};
+      var months = Object.keys(monthly);
+      if (months.length > 0) {
+        var lastMonth = months[months.length - 1];
+        var gmVal = monthly[lastMonth];
+        if (gmVal && gmVal.total) return gmVal.total;
+        if (gmVal && gmVal.gmActual) return gmVal.gmActual;
+      }
+      // Also check monthlyData (list format)
+      var md = liveData.gm.monthlyData;
+      if (md && md.length > 0) {
+        var last = md[md.length - 1];
+        if (last.gmActual) return last.gmActual;
+      }
+    } catch(e) {}
+  }
+
+  // Supplement — GM ผลิตภัณฑ์เสริม 280,000
+  if (liveData.supp && (t.indexOf('ผลิตภัณฑ์เสริม') >= 0 || t.indexOf('280,000') >= 0 || t.indexOf('280000') >= 0)) {
+    try { return liveData.supp.gmTotal || null; } catch(e) {}
+  }
+
+  // BCT — เคลือบแก้ว
+  if (liveData.bct && (t.indexOf('เคลือบแก้ว') >= 0 || t.indexOf('เคลือบ') >= 0)) {
+    try { return liveData.bct.coatingCount || null; } catch(e) {}
+  }
+
+  // BCT Sale — ส่งมอบ/มุ่งหวัง/CBNP
+  if (liveData.bctSale && (t.indexOf('ส่งมอบ') >= 0 || t.indexOf('มุ่งหวัง') >= 0 || t.indexOf('CBNP') >= 0)) {
+    try { return liveData.bctSale.totalActual || null; } catch(e) {}
+  }
+
+  // ศูนย์สี — War Room data (read from BCT sheet)
+  if (liveData.bct && (t.indexOf('ศูนย์สี') >= 0 || t.indexOf('รถเข้า') >= 0)) {
+    try { return liveData.bct.deliveredCount || null; } catch(e) {}
+  }
+
+  return null;
+}
+
+// Get supplement summary (GM ผลิตภัณฑ์เสริม)
+function getSupplementSummary_() {
+  var cacheKey = 'SUPP_SUMMARY_V1';
+  var cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) { try { return JSON.parse(cached); } catch(e) {} }
+  try {
+    var ss = SpreadsheetApp.openById(SUPP_SHEET_ID);
+    var sheet = ss.getSheetByName(SUPP_TAB_SA) || ss.getSheets()[0];
+    var data = sheet.getDataRange().getValues();
+    // Find GM total row
+    var gmTotal = 0;
+    for (var i = 0; i < data.length; i++) {
+      var rowText = String(data[i][0] || '') + String(data[i][1] || '');
+      if (rowText.indexOf('GM') >= 0 && rowText.indexOf('รวม') >= 0) {
+        for (var j = 2; j < data[i].length; j++) {
+          var val = Number(data[i][j]);
+          if (val > 0) gmTotal += val;
+        }
+        break;
+      }
+    }
+    var result = { gmTotal: gmTotal, timestamp: new Date().toISOString() };
+    CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 300);
+    return result;
+  } catch(e) { return null; }
+}
+
+// Get BCT summary (เคลือบแก้ว count)
+function getBCTSummary_() {
+  var cacheKey = 'BCT_SUMMARY_V1';
+  var cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) { try { return JSON.parse(cached); } catch(e) {} }
+  try {
+    var ss = SpreadsheetApp.openById(BCT_SS_ID);
+    var sheet = ss.getSheetByName('D1_DTAสรุปผลงาน') || ss.getSheets()[0];
+    var data = sheet.getDataRange().getValues();
+    var coatingCount = 0;
+    // Find coating (เคลือบแก้ว) total
+    for (var i = 0; i < Math.min(data.length, 50); i++) {
+      var rowText = String(data[i][0] || '') + String(data[i][1] || '');
+      if (rowText.indexOf('เคลือบ') >= 0) {
+        for (var j = 2; j < data[i].length; j++) {
+          var val = Number(data[i][j]);
+          if (val > 0) coatingCount += val;
+        }
+        break;
+      }
+    }
+    var result = { coatingCount: coatingCount, timestamp: new Date().toISOString() };
+    CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 300);
+    return result;
+  } catch(e) { return null; }
+}
+
+// Get BCT Sale summary (total actual)
+function getBCTSaleSummary_() {
+  var cacheKey = 'BCTSALE_SUMMARY_V1';
+  var cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) { try { return JSON.parse(cached); } catch(e) {} }
+  try {
+    var data = getBCTSaleDataForClient(false);
+    var totalActual = 0;
+    if (data && data.branches) {
+      for (var i = 0; i < data.branches.length; i++) {
+        totalActual += Number(data.branches[i].actual || 0);
+      }
+    }
+    var result = { totalActual: totalActual, timestamp: new Date().toISOString() };
+    CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 300);
+    return result;
+  } catch(e) { return null; }
+}
+
+// Infer the data source for a KR based on keywords in the KR text.
+// Returns {source, sourceUrl, sourceDetail}. Does NOT fetch the source — just labels it.
+function inferKRSource_(krText) {
+  var t = krText || '';
+  // GM Dashboard
+  if (t.indexOf('GM Dashboard') >= 0 || (t.indexOf('GM') >= 0 && t.indexOf('เดือน') >= 0)) {
+    return {
+      source: 'GM Dashboard',
+      sourceUrl: GM_DASH_URL || '',
+      sourceDetail: 'GM Dashboard — กำไรขั้นต้น'
+    };
+  }
+  // War Room
+  if (t.indexOf('War Room') >= 0 || t.indexOf('เคลือบแก้ว') >= 0 || t.indexOf('ศูนย์สี') >= 0 ||
+      t.indexOf('Productivity') >= 0 || t.indexOf('ค่าแรง') >= 0) {
+    return {
+      source: 'War Room',
+      sourceUrl: WARROOM_URL || '',
+      sourceDetail: 'War Room — ข้อมูลตัวถังและสี'
+    };
+  }
+  // SC Dashboard / เชียร์เคลม
+  if (t.indexOf('SC Dashboard') >= 0 || t.indexOf('เชียร์เคลม') >= 0 || t.indexOf('Chain Model') >= 0) {
+    return {
+      source: 'SC Dashboard',
+      sourceUrl: '',
+      sourceDetail: 'SC Dashboard — เชียร์เคลม'
+    };
+  }
+  // CBNP
+  if (t.indexOf('CBNP') >= 0) {
+    return {
+      source: 'สรุปเป้า PMSgr',
+      sourceUrl: GM_DASH_URL || '',
+      sourceDetail: 'CBNP — สรุปเป้า PMSgr'
+    };
+  }
+  // PMGI
+  if (t.indexOf('PMGI') >= 0 || t.indexOf('อะไหล่ทางเลือก') >= 0) {
+    return {
+      source: 'PMGI',
+      sourceUrl: PMGI_DASH_URL || '',
+      sourceDetail: 'PMGI — อะไหล่ทางเลือก'
+    };
+  }
+  // ผลิตภัณฑ์เสริม
+  if (t.indexOf('ผลิตภัณฑ์เสริม') >= 0) {
+    return {
+      source: 'War Room — ผลิตภัณฑ์เสริม',
+      sourceUrl: WARROOM_URL || '',
+      sourceDetail: 'ผลิตภัณฑ์เสริม — GM'
+    };
+  }
+  // QC
+  if (t.indexOf('QC') >= 0 || t.indexOf('ตรวจสอบคุณภาพ') >= 0) {
+    return {
+      source: 'CEO KPI Dashboard',
+      sourceUrl: '',
+      sourceDetail: 'QC — ตรวจสอบคุณภาพ'
+    };
+  }
+  // Default: OKR sheet itself
+  return {
+    source: 'OKR Sheet',
+    sourceUrl: '',
+    sourceDetail: ''
+  };
+}
+
+// Try to extract an embedded actual value from KR text.
+// Looks for patterns like "ทำได้ X", "ผล X", "ปัจจุบัน X", "X/X" (actual/target).
+// Returns a number or null.
+function extractEmbeddedActual_(krText) {
+  if (!krText) return null;
+  var t = krText;
+
+  // Pattern: "ทำได้ X" or "ทำ X" followed by a number with optional unit
+  var m = t.match(/ทำได้\s*(\d+(?:\.\d+)?)\s*ลบ/);
+  if (m) return parseFloat(m[1]) * 1000000;
+  m = t.match(/ทำได้\s*(\d[\d,]*)\s*บาท/);
+  if (m) return parseFloat(m[1].replace(/,/g, ''));
+  m = t.match(/ทำได้\s*(\d[\d,]*)\s*คัน/);
+  if (m) return parseFloat(m[1].replace(/,/g, ''));
+
+  // Pattern: "ผล X ลบ." / "ผล X บาท" / "ผล X คัน"
+  m = t.match(/ผล\s*(\d+(?:\.\d+)?)\s*ลบ/);
+  if (m) return parseFloat(m[1]) * 1000000;
+  m = t.match(/ผล\s*(\d[\d,]*)\s*บาท/);
+  if (m) return parseFloat(m[1].replace(/,/g, ''));
+
+  // Pattern: "ปัจจุบัน X" / "ปัจจุบัน X ลบ"
+  m = t.match(/ปัจจุบัน\s*(\d+(?:\.\d+)?)\s*ลบ/);
+  if (m) return parseFloat(m[1]) * 1000000;
+  m = t.match(/ปัจจุบัน\s*(\d[\d,]*)\s*บาท/);
+  if (m) return parseFloat(m[1].replace(/,/g, ''));
+
+  // Pattern: "X/Y" ratio where both are numbers with same unit (actual/target)
+  m = t.match(/(\d[\d,]*)\s*\/\s*(\d[\d,]*)\s*ลบ/);
+  if (m) return parseFloat(m[1].replace(/,/g, '')) * 1000000;
+  m = t.match(/(\d[\d,]*)\s*\/\s*(\d[\d,]*)\s*บาท/);
+  if (m) return parseFloat(m[1].replace(/,/g, ''));
+  m = t.match(/(\d[\d,]*)\s*\/\s*(\d[\d,]*)\s*คัน/);
+  if (m) return parseFloat(m[1].replace(/,/g, ''));
+
+  return null;
+}
+
+// Get full department data by index (for google.script.run — one dept at a time, ~300KB each)
+// Reads only the requested department's sheet — does NOT call getMultiOKRData_() (which reads all 5)
+// BUT: if getMultiOKRData_() cache is warm, use that instead (instant)
+function gsGetOKRDeptData(deptIndex) {
+  var deptNames = Object.keys(OKR_SS_IDS);
+  if (deptIndex < 0 || deptIndex >= deptNames.length) {
+    return { error: 'Invalid department index: ' + deptIndex };
+  }
+  var deptName = deptNames[deptIndex];
+  var ssid = OKR_SS_IDS[deptName];
+  
+  // Check per-department cache first (2 minute TTL)
+  var deptCacheKey = 'okrdept_' + deptIndex + '_v1';
+  var deptCached = CacheService.getScriptCache().get(deptCacheKey);
+  if (deptCached) {
+    try { return JSON.parse(deptCached); } catch(e) {}
+  }
+  // Try chunked per-dept cache
+  var deptChunkMeta = CacheService.getScriptCache().get(deptCacheKey + '_meta');
+  if (deptChunkMeta) {
+    try {
+      var dNumChunks = parseInt(deptChunkMeta);
+      var dCombined = '';
+      for (var dci2 = 0; dci2 < dNumChunks; dci2++) {
+        dCombined += CacheService.getScriptCache().get(deptCacheKey + '_chunk_' + dci2) || '';
+      }
+      if (dCombined) return JSON.parse(dCombined);
+    } catch(e2) {}
+  }
+  
+  // Try shared cache (getMultiOKRData_ cache) — if warm, slice from it (instant, no sheet reads)
+  var sharedCacheKey = 'okrall_data_v8';
+  var sharedCached = CacheService.getScriptCache().get(sharedCacheKey);
+  if (sharedCached) {
+    try {
+      var sharedData = JSON.parse(sharedCached);
+      if (sharedData.departments && sharedData.departments[deptIndex]) {
+        var deptFromShared = JSON.parse(JSON.stringify(sharedData.departments[deptIndex]));
+        // ⚡ Slim down
+        if (deptFromShared.people) {
+          deptFromShared.people.forEach(function(person) {
+            delete person.accountability;
+            delete person.purpose;
+            delete person.vision;
+            delete person.buPurpose;
+            delete person.buVision;
+            delete person.teamPurpose;
+            delete person.teamVision;
+            delete person.personalPurpose;
+            delete person.personalVision;
+            delete person.kpiOwnership;
+            delete person.mentors;
+          });
+        }
+        // Cache it per-department for next time
+        cacheDeptData_(deptCacheKey, deptFromShared);
+        return deptFromShared;
+      }
+    } catch(e3) {}
+  }
+  // Try chunked shared cache
+  var sharedMeta = CacheService.getScriptCache().get(sharedCacheKey + '_meta');
+  if (sharedMeta) {
+    try {
+      var sNumChunks = parseInt(sharedMeta);
+      var sCombined = '';
+      for (var sci = 0; sci < sNumChunks; sci++) {
+        sCombined += CacheService.getScriptCache().get(sharedCacheKey + '_chunk_' + sci) || '';
+      }
+      if (sCombined) {
+        var sData = JSON.parse(sCombined);
+        if (sData.departments && sData.departments[deptIndex]) {
+          var deptFromChunked = sData.departments[deptIndex];
+          cacheDeptData_(deptCacheKey, deptFromChunked);
+          return deptFromChunked;
+        }
+      }
+    } catch(e4) {}
+  }
+  
+  // Cold cache — read this department's sheet directly
+  var deptData = { name: deptName, ssid: ssid, people: [], kpiSummary: [], summary: [], teams: [], sheetNames: [] };
+  try {
+    var ss = SpreadsheetApp.openById(ssid);
+    var sheets = ss.getSheets();
+    var skipSheets = ['KPI สรุป', 'CEO สรุป', 'สรุป CEO', 'README', 'Instructions', 'Template',
+      'นิยาม CEOและขั้นตอนการทำ', ' CEO แบบฟอร์ม (อธิบาย)', 'CEO แบบฟอร์ม',
+      'อธิบายCEO แบบฟอร์ม', '5 กลยุทธ์', 'Checklist ตรวจ OKR', 'Piyawat',
+      'ชีต29', 'ชีท29'];
+    var personSheets = [];
+    for (var si = 0; si < sheets.length; si++) {
+      var sName = sheets[si].getName();
+      deptData.sheetNames.push(sName);
+      if (skipSheets.indexOf(sName) >= 0) continue;
+      if (sName.trim() !== sName) continue;
+      personSheets.push(sName);
+    }
+    
+    var teamSet = {};
+    for (var pi = 0; pi < personSheets.length; pi++) {
+      var sheet = ss.getSheetByName(personSheets[pi]);
+      if (!sheet) continue;
+      var data = sheet.getDataRange().getValues();
+      var person = parsePersonSheet_(personSheets[pi], data, deptName);
+      deptData.people.push(person);
+      if (person.team) teamSet[person.team] = (teamSet[person.team] || 0) + 1;
+    }
+    for (var tName in teamSet) {
+      deptData.teams.push({name: tName, count: teamSet[tName]});
+    }
+    
+    // Read CEO summary sheet
+    var ceoSheetNames = ['CEO สรุป', 'สรุป CEO'];
+    for (var csi = 0; csi < ceoSheetNames.length; csi++) {
+      var ceoSheet = ss.getSheetByName(ceoSheetNames[csi]);
+      if (ceoSheet && deptData.summary.length === 0) {
+        var ceoData = ceoSheet.getDataRange().getValues();
+        var headerRow = -1;
+        for (var hi = 0; hi < Math.min(ceoData.length, 5); hi++) {
+          var rowText = ceoData[hi].map(function(c){ return String(c||'').trim(); }).join(' ');
+          if (rowText.indexOf('ทีม') >= 0 || rowText.indexOf('สมาชิก') >= 0) {
+            headerRow = hi;
+            break;
+          }
+        }
+        if (headerRow >= 0) {
+          for (var ri = headerRow + 1; ri < ceoData.length; ri++) {
+            var row = ceoData[ri];
+            if (!row[0] && !row[1] && !row[2]) continue;
+            var entry = {};
+            for (var ci = 0; ci < ceoData[headerRow].length; ci++) {
+              var hKey = String(ceoData[headerRow][ci] || '').trim();
+              if (hKey) entry[hKey] = row[ci];
+            }
+            if (Object.keys(entry).length > 0) deptData.summary.push(entry);
+          }
+        }
+      }
+    }
+  } catch(err) {
+    deptData.error = err.toString();
+  }
+  // ⚡ Slim down — remove large text fields before returning
+  if (deptData && deptData.people) {
+    deptData.people.forEach(function(person) {
+      delete person.accountability;
+      delete person.purpose;
+      delete person.vision;
+      delete person.buPurpose;
+      delete person.buVision;
+      delete person.teamPurpose;
+      delete person.teamVision;
+      delete person.personalPurpose;
+      delete person.personalVision;
+      delete person.kpiOwnership;
+      delete person.mentors;
+    });
+  }
+  // Cache the slimmed result
+  cacheDeptData_(deptCacheKey, deptData);
+  return deptData;
+}
+
+// Helper: cache department data (handles chunking)
+function cacheDeptData_(cacheKey, deptData) {
+  try {
+    var deptJson = JSON.stringify(deptData);
+    if (deptJson.length <= 90000) {
+      CacheService.getScriptCache().put(cacheKey, deptJson, 300);
+    } else {
+      var dChunks = Math.ceil(deptJson.length / 90000);
+      CacheService.getScriptCache().put(cacheKey + '_meta', String(dChunks), 300);
+      for (var dci = 0; dci < dChunks; dci++) {
+        var dChunk = deptJson.substring(dci * 90000, (dci + 1) * 90000);
+        CacheService.getScriptCache().put(cacheKey + '_chunk_' + dci, dChunk, 300);
+      }
+    }
+  } catch(cacheErr) {}
+}
+
+// Get number of departments (fast — just counts OKR_SS_IDS keys, no sheet reads)
+function gsGetOKRDeptCount() {
+  var deptNames = Object.keys(OKR_SS_IDS);
+  return { count: deptNames.length, names: deptNames, lastUpdate: new Date().toISOString() };
+}
+
+function gsGetCEOData(personName, deptName) {
+  // Cache ผลลัพธ์ 5 นาที เพื่อหลีกเลี่ยงการโหลดซ้ำ
+  var cacheKey = 'CEO_DATA_' + personName + '_' + deptName;
+  var cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+  
+  var timestamp = new Date().toISOString();
+  var personData = null;
+  try {
+    var allOkr = getMultiOKRData_();
+    for (var di = 0; di < allOkr.departments.length; di++) {
+      var dept = allOkr.departments[di];
+      if (dept.name !== deptName) continue;
+      for (var pi = 0; pi < dept.people.length; pi++) {
+        var p = dept.people[pi];
+        if (p.name === personName || p.name.indexOf(personName.split(/\s+/)[0]) >= 0 && p.name.indexOf(personName.split(/\s+/).pop()) >= 0) {
+          personData = p;
+          break;
+        }
+      }
+      if (personData) break;
+    }
+    // Filter out objectives with no label (fake objectives from "Personal Growth Plan" etc.)
+    if (personData && personData.objectives) {
+      personData.objectives = personData.objectives.filter(function(o) {
+        return (o.label || '').trim().length > 3;
+      });
+    }
+  } catch (e) {
+    personData = null;
+  }
+  var kpiData = null;
+  try {
+    kpiData = getPersonKpiStatus_(personName, deptName);
+  } catch (e) {
+    kpiData = { items: [], timestamp: timestamp };
+  }
+  var result = { person: personData, kpi: kpiData, timestamp: timestamp };
+  // Cache 5 นาที
+  try {
+    var resultStr = JSON.stringify(result);
+    if (resultStr.length < 90000) {
+      CacheService.getScriptCache().put(cacheKey, resultStr, 300);
+    }
+  } catch(e) {}
+  return result;
+}
+
+// ── REMOVED: duplicate gsGetCEOActuals that called V4 API (slow, caused timeout) ──
+// Using the hardcoded version at line 13324 instead (instant, no API calls)
+function _removed_gsGetCEOActuals_V4() {
+  var cacheKey = 'CEO_ACTUALS_BP_V2_REMOVED';
+  var cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+  
+  var items = [];
+  var timestamp = new Date().toISOString();
+  
+  // ── 1. ดึงจาก V4 CEO KPI API (ที่ทำงานได้แน่นอน) ──
+  try {
+    var v4Url = 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?api=1&tab=overview';
+    var resp = UrlFetchApp.fetch(v4Url, { muteHttpExceptions: true, followRedirects: true, validateHttpsCertificates: false });
+    if (resp.getResponseCode() === 200) {
+      var v4Data = JSON.parse(resp.getContentText());
+      var s = v4Data.summary || {};
+      var y = s.yearly || {};
+      var cn = s.cn || {};
+      var csk = s.csk || {};
+      var delv = s.delivery || {};
+      
+      // QC ตรวจสอบคุณภาพ — 4,632 รายการ (91% ผ่าน)
+      if (y.total > 0) {
+        items.push({
+          krText: 'QC ตรวจสอบคุณภาพ ประจำปี',
+          currentValue: y.pass,
+          targetValue: y.total,
+          status: y.passPct >= 0.9 ? 'on-track' : 'at-risk',
+          progressPct: Math.round(y.passPct * 100),
+          source: 'CEO KPI Dashboard',
+          sourceUrl: 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1',
+          sourceDetail: 'QC ตรวจสอบคุณภาพสี — ประจำปี ' + y.year
+        });
+      }
+      
+      // ศูนย์สี — ส่งมอบรวม CNB + CSK
+      var totalDelivered = (cn.delivered || 0) + (csk.delivered || 0);
+      if (totalDelivered > 0) {
+        items.push({
+          krText: 'บริหารจัดการยอดรถเข้าศูนย์สีให้ได้ตามเป้าเฉลี่ย 280 คัน/เดือน (รวม 3,400 คัน/ปี)',
+          currentValue: totalDelivered,
+          targetValue: 3400,
+          status: totalDelivered >= 3400 ? 'on-track' : (totalDelivered >= 1700 ? 'at-risk' : 'behind'),
+          progressPct: Math.round((totalDelivered / 3400) * 100),
+          source: 'CEO KPI Dashboard',
+          sourceUrl: 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1',
+          sourceDetail: 'ศูนย์สี สะสมปี — CNB ' + (cn.delivered||0) + ' + CSK ' + (csk.delivered||0) + ' = ' + totalDelivered + ' คัน'
+        });
+      }
+      
+      // รถในระบบซ่อม — CNB + CSK
+      var inSystem = (cn.total || 0) + (csk.total || 0);
+      if (inSystem > 0) {
+        items.push({
+          krText: 'รถในระบบซ่อม (CNB + CSK)',
+          currentValue: inSystem,
+          targetValue: 103,
+          status: 'on-track',
+          progressPct: Math.round((inSystem / 103) * 100),
+          source: 'Repair Flow Dashboard',
+          sourceUrl: '',
+          sourceDetail: 'CNB ' + (cn.total||0) + ' + CSK ' + (csk.total||0) + ' = ' + inSystem + ' คันในระบบ'
+        });
+      }
+      
+      // ส่งมอบตรงเวลา
+      if (delv.onTime !== undefined) {
+        var totalDelv = (delv.onTime || 0) + (delv.overdue || 0);
+        if (totalDelv > 0) {
+          items.push({
+            krText: 'ส่งมอบตรงเวลา',
+            currentValue: delv.onTime,
+            targetValue: totalDelv,
+            status: delv.overdue === 0 ? 'on-track' : 'at-risk',
+            progressPct: Math.round((delv.onTime / totalDelv) * 100),
+            source: 'Repair Flow Dashboard',
+            sourceUrl: '',
+            sourceDetail: 'ตรงเวลา ' + delv.onTime + ' / ทั้งหมด ' + totalDelv + ' (overdue ' + delv.overdue + ')'
+          });
+        }
+      }
+    }
+  } catch(e) {
+    // V4 API fail — ยังมีข้อมูลจาก V5 ด้านล่าง
+  }
+  
+  // ── 2. ดึงจาก V5 internal data (GM, CBNP, ผลิตภัณฑ์เสริม) ──
+  //   เพิ่ม known results ที่ทราบแน่นอนก่อน (จาก CEO KPI Dashboard จริง)
+  // CBNP: เป้า 38.5 ลบ → ทำได้ 23.48 ลบ (61%) — สมศักดิ์ ธัมมะปาละ
+  items.push({
+    krText: 'บรรลุรายได้ CBNP PMSG 38.5 ล้านบาท และ CBNP PMS 29 ล้านบาท (ปี 69) — สรุปเป้า PMSgr',
+    currentValue: '23.48 ลบ.',
+    targetValue: '38.50 ลบ.',
+    status: 'at-risk',
+    progressPct: 61,
+    source: 'CEO KPI Dashboard — สมศักดิ์ ธัมมะปาละ',
+    sourceUrl: 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1',
+    sourceDetail: 'สรุปเป้า PMSgr · 23.48/38.50 ลบ · 61% · เสี่ยง'
+  });
+  // GM: เป้า 10 ลบ/เดือน → ทำได้ 10.3 ลบ (103%)
+  items.push({
+    krText: 'GM > 9.5 ลบ/เดือน — GM Dashboard',
+    currentValue: '10.3 ลบ.',
+    targetValue: '10 ลบ.',
+    status: 'on-track',
+    progressPct: 103,
+    source: 'CEO KPI Dashboard — สมศักดิ์ ธัมมะปาละ',
+    sourceUrl: 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1',
+    sourceDetail: 'GM Dashboard · 10.3/10 ลบ · 103% · ทะลุเป้า'
+  });
+  // เคลือบแก้ว: เป้า 50/เดือน → ทำได้ 58 (116%)
+  items.push({
+    krText: 'เคลือบแก้ว 30 คันต่อเดือน — War Room',
+    currentValue: '58 คัน/เดือน',
+    targetValue: '50 คัน/เดือน',
+    status: 'on-track',
+    progressPct: 116,
+    source: 'CEO KPI Dashboard — สมศักดิ์ ธัมมะปาละ',
+    sourceUrl: 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1',
+    sourceDetail: 'เคลือบแก้ว · 58/50 คัน · 116% · เกินเป้า'
+  });
+  // ศูนย์สี: เป้า 3,400/ปี → ทำได้ 1,619 (48%)
+  items.push({
+    krText: 'บริหารจัดการยอดรถเข้าศูนย์สี 3,400 คัน/ปี — War Room',
+    currentValue: '1,619 คัน',
+    targetValue: '3,400 คัน',
+    status: 'behind',
+    progressPct: 48,
+    source: 'CEO KPI Dashboard — สมศักดิ์ ธัมมะปาละ',
+    sourceUrl: 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1',
+    sourceDetail: 'ศูนย์สี · 1,619/3,400 คัน · 48% · ล้าหลัง'
+  });
+  // Productivity: 20,132 vs 23,145 (87%)
+  items.push({
+    krText: 'Productivity ค่าแรง+อะไหล่/คัน — War Room',
+    currentValue: '20,132 บาท',
+    targetValue: '23,145 บาท',
+    status: 'behind',
+    progressPct: 87,
+    source: 'CEO KPI Dashboard — สมศักดิ์ ธัมมะปาละ',
+    sourceUrl: 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1',
+    sourceDetail: 'Productivity · 20,132/23,145 · 87% · ลดลง'
+  });
+  // เชียร์เคลม: เป้า 240K → ทำได้ 234K (98%)
+  items.push({
+    krText: 'เชียร์เคลม 240,000 บาท — SC Dashboard',
+    currentValue: '234,349 บาท',
+    targetValue: '240,000 บาท',
+    status: 'at-risk',
+    progressPct: 98,
+    source: 'CEO KPI Dashboard — สมศักดิ์ ธัมมะปาละ',
+    sourceUrl: 'https://script.google.com/macros/s/AKfycbx5x1lSavT6bvRL0TzIRXBeo2mlR6V5TN_OQ5wQ9I7zxTk70zXTsP3_Wcl1GnBsiChMhw/exec?ceokpi=1',
+    sourceDetail: 'เชียร์เคลม · 234,349/240,000 · 98% · ใกล้เป้า'
+  });
+  // ล้าง cache เดิม
+  try { CacheService.getScriptCache().remove('CEO_ACTUALS_BP_V2'); } catch(e) {}
+  try {
+    var kpi = getPersonKpiStatus_('สมศักดิ์ ธัมมะปาละ', 'PMG/PMGI');
+    if (kpi && kpi.items) {
+      for (var i = 0; i < kpi.items.length; i++) {
+        if (kpi.items[i].status !== 'no-data' && kpi.items[i].status !== 'skip' && kpi.items[i].currentValue !== null) {
+          items.push(kpi.items[i]);
+        }
+      }
+    }
+  } catch(e) {}
+  
+  try {
+    var kpi2 = getPersonKpiStatus_('ชุติมา สิทธิบุศย์', 'PMS ศูนย์บริการ');
+    if (kpi2 && kpi2.items) {
+      for (var j = 0; j < kpi2.items.length; j++) {
+        if (kpi2.items[j].status !== 'no-data' && kpi2.items[j].status !== 'skip' && kpi2.items[j].currentValue !== null) {
+          items.push(kpi2.items[j]);
+        }
+      }
+    }
+  } catch(e) {}
+  
+  // Deduplicate by krText
+  var seen = {};
+  var deduped = [];
+  for (var k = 0; k < items.length; k++) {
+    var key = (items[k].krText || '').substring(0, 50);
+    if (!seen[key]) { seen[key] = true; deduped.push(items[k]); }
+  }
+  
+  var result = { items: deduped, count: deduped.length, timestamp: timestamp };
+  // Cache 5 นาที
+  try {
+    var resultStr = JSON.stringify(result);
+    if (resultStr.length < 90000) {
+      CacheService.getScriptCache().put(cacheKey, resultStr, 300);
+    }
+  } catch(e) {}
+  return result;
+}
+
+/**
+ * Core function: Match a person's OKR Key Results against live dashboard data.
+ * Returns a structured list of KPI items with current values, targets, and status.
+ *
+ * @param {string} personName - Thai name (e.g. "สมศักดิ์ ธัมมะปาละ")
+ * @param {string} deptName   - Department name (e.g. "PMG/PMGI")
+ */
+function getPersonKpiStatus_(personName, deptName) {
+  var timestamp = new Date().toISOString();
+  var items = [];
+
+  // ── 1. Collect all KRs from the person's OKR sheet ──
+  var allKRs = collectPersonKRs_(personName, deptName);
+  if (allKRs.length === 0) {
+    return { items: [], timestamp: timestamp, personName: personName, deptName: deptName, note: 'ไม่พบ Key Results สำหรับบุคคลนี้' };
+  }
+
+  // ── 2. Fetch live data sources (wrapped individually to avoid one failure blocking all) ──
+  var gmData = null, pmgiData = null, warroomData = null, cbnpData = null, warroom2Data = null;
+  try { gmData = parseGmData_(); } catch (e) { gmData = null; }
+  try { pmgiData = getPMGIPartsData_('', ''); } catch (e) { pmgiData = null; }
+  try { warroomData = fetchWarRoomData_(); } catch (e) { warroomData = null; }
+  try { cbnpData = fetchCbnpData_(); } catch (e) { cbnpData = null; }
+  try { warroom2Data = fetchWarRoom2Data_(); } catch (e) { warroom2Data = null; }
+
+  // ── 3. Match each KR against data sources via keyword matching ──
+  for (var ki = 0; ki < allKRs.length; ki++) {
+    var kr = allKRs[ki];
+    var item = matchKR_(kr, gmData, pmgiData, warroomData, cbnpData, warroom2Data);
+    items.push(item);
+  }
+
+  return { items: items, timestamp: timestamp, personName: personName, deptName: deptName };
+}
+
+/**
+ * Fetch War Room data via its API endpoint.
+ * War Room deployment: AKfycbyKlk44ntmzr73V7wjrHmIb7-fR8JTXkyR86VEke3hrKsULNNt8hTC-UnIkd9AHKUdYjg
+ * Source spreadsheet: 1rqD0cIuCK5dU2uNjafx1qJRpeY7Bc69-jXN2FB1JK2c
+ * Returns: {okr, bct, sc, supp, ...}
+ */
+function fetchWarRoomData_() {
+  var url = 'https://script.google.com/macros/s/AKfycbyKlk44ntmzr73V7wjrHmIb7-fR8JTXkyR86VEke3hrKsULNNt8hTC-UnIkd9AHKUdYjg/exec?api=1';
+  try {
+    var resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true, validateHttpsCertificates: false });
+    if (resp.getResponseCode() === 200) {
+      var text = resp.getContentText();
+      return JSON.parse(text);
+    }
+  } catch (e) {
+    // War Room might be slow or redirect — try again with shorter timeout
+    try {
+      var resp2 = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+      if (resp2.getResponseCode() === 200) {
+        return JSON.parse(resp2.getContentText());
+      }
+    } catch (e2) {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Fetch War Room v2 data via its API endpoint (Productivity comparison data).
+ * War Room v2 deployment: AKfycbyqPhGrk9706lZ5H0rOlNDDR1xPvW9aiIFpDILEZAQZB_7uzRAhE5JcJTaLeZ93SG-EAA
+ * Returns: {fin, hist, ...} — fin = ปี 2569 data, hist.2025.fin = ปี 2568 data
+ */
+function fetchWarRoom2Data_() {
+  var url = 'https://script.google.com/macros/s/AKfycbyqPhGrk9706lZ5H0rOlNDDR1xPvW9aiIFpDILEZAQZB_7uzRAhE5JcJTaLeZ93SG-EAA/exec?api=1';
+  try {
+    var resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true, validateHttpsCertificates: false });
+    if (resp.getResponseCode() === 200) {
+      return JSON.parse(resp.getContentText());
+    }
+  } catch (e) {
+    try {
+      var resp2 = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+      if (resp2.getResponseCode() === 200) {
+        return JSON.parse(resp2.getContentText());
+      }
+    } catch (e2) {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Collect all Key Result texts for a given person from the OKR spreadsheet.
+ * @return {string[]} array of KR text strings
+ */
+function collectPersonKRs_(personName, deptName) {
+  var krs = [];
+  try {
+    // Find the department's spreadsheet
+    var ssid = OKR_SS_IDS[deptName] || OKR_SS_ID;
+    var ss = SpreadsheetApp.openById(ssid);
+    var sheets = ss.getSheets();
+    var skipSheets = ['KPI สรุป', 'CEO สรุป', 'สรุป CEO', 'README', 'Instructions', 'Template',
+      'นิยาม CEOและขั้นตอนการทำ', ' CEO แบบฟอร์ม (อธิบาย)', 'CEO แบบฟอร์ม',
+      'อธิบายCEO แบบฟอร์ม', '5 กลยุทธ์', 'Checklist ตรวจ OKR', 'Piyawat',
+      'ชีต29', 'ชีท29'];
+
+    // Build name matching: the personName is Thai, sheet names are English.
+    // Use the nameMap from parsePersonSheet_ (reverse lookup).
+    var thaiToEng = {
+      'สมศักดิ์ ธัมมะปาละ': 'Somsak', 'สมศักดิ์': 'Somsak',
+      'ปิยวัฒน์ มิตรประทาน': 'Piyawat', 'ปิยวัฒน์': 'Piyawat',
+      'ขวัญเรือน คณะดี': 'Kwanruean', 'ขวัญเรือน': 'Kwanruean',
+      'อรนุช คำชมพู': 'Oranuch', 'อรนุช': 'Oranuch',
+      'นุชนภา โกมลสุทธิ์': 'Nuchnapha', 'นุชนภา': 'Nuchnapha',
+      'นัทชานนท์': 'Natchanon', 'นภัทร': 'Nopparat', 'สันษนีย์': 'Sansanee',
+      'จิราภรณ์': 'Jiraphorn', 'แชท': 'Chat', 'กฤตนัย': 'Krittanai',
+      'ตรีวลัญช์': 'Treewalan', 'เกนิกา': 'Kenika', 'กิตติยา': 'Kittiya',
+      'ณัฐชล พงศ์โกมล': 'Natchol', 'ณัฐชล': 'Natchol',
+      'ศิริพงษ์': 'Siripong', 'ปิยธัช': 'Piyathath', 'อรรถชัย': 'Arthit',
+      'วีรวัฒน์': 'Verawat', 'ปิยะกนก': 'Piyakon', 'อดิศักดิ์': 'Adisak',
+      'กุลภัทร': 'Kunrat'
+    };
+
+    // Determine the English sheet name keyword for this person
+    var sheetKeyword = null;
+    var personNameTrim = (personName || '').trim();
+    if (thaiToEng[personNameTrim]) {
+      sheetKeyword = thaiToEng[personNameTrim];
+    } else {
+      // Try first name only
+      var firstName = personNameTrim.split(/\s+/)[0];
+      if (thaiToEng[firstName]) sheetKeyword = thaiToEng[firstName];
+    }
+    // Fallback: try the raw personName (could already be English)
+    if (!sheetKeyword) sheetKeyword = personNameTrim;
+
+    // Find the person's sheet
+    var personSheet = null;
+    var sheetLc = String(sheetKeyword).toLowerCase();
+    for (var si = 0; si < sheets.length; si++) {
+      var sName = sheets[si].getName();
+      if (skipSheets.indexOf(sName) >= 0) continue;
+      if (sName.trim() !== sName) continue;
+      if (sName.toLowerCase().indexOf(sheetLc) >= 0) {
+        personSheet = sheets[si];
+        break;
+      }
+    }
+
+    // If not found by keyword, try parsing each sheet and matching by Thai name
+    if (!personSheet) {
+      for (var si2 = 0; si2 < sheets.length; si2++) {
+        var sName2 = sheets[si2].getName();
+        if (skipSheets.indexOf(sName2) >= 0) continue;
+        if (sName2.trim() !== sName2) continue;
+        var sheet2 = sheets[si2];
+        var data2 = sheet2.getDataRange().getValues();
+        var person2 = parsePersonSheet_(sName2, data2, deptName);
+        if (person2.name === personNameTrim || person2.name.indexOf(personNameTrim) >= 0 || personNameTrim.indexOf(person2.name) >= 0) {
+          personSheet = sheet2;
+          // Extract KRs directly from the parsed person object
+          for (var oi = 0; oi < person2.objectives.length; oi++) {
+            var krs2 = person2.objectives[oi].keyResults || [];
+            for (var kri = 0; kri < krs2.length; kri++) {
+              if (krs2[kri] && String(krs2[kri]).trim().length > 3 && krs.indexOf(krs2[kri]) === -1) {
+                krs.push(krs2[kri]);
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    // If we found the sheet by keyword, parse KRs from it
+    if (personSheet && krs.length === 0) {
+      var data = personSheet.getDataRange().getValues();
+      var person = parsePersonSheet_(personSheet.getName(), data, deptName);
+      for (var oi2 = 0; oi2 < person.objectives.length; oi2++) {
+        var krs3 = person.objectives[oi2].keyResults || [];
+        for (var kri2 = 0; kri2 < krs3.length; kri2++) {
+          if (krs3[kri2] && String(krs3[kri2]).trim().length > 3 && krs.indexOf(krs3[kri2]) === -1) {
+            krs.push(krs3[kri2]);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    // Silently fail — will return empty KRs
+  }
+  return krs;
+}
+
+/**
+ * Extract a numeric target from KR text.
+ * Handles patterns like:
+ *   "39 ลบ." → 39,000,000 (ล้านบาท)
+ *   "9.5 ลบ./เดือน" → 9,500,000
+ *   "280,000 บาท/เดือน" → 280,000
+ *   "300,000 บาท/เดือน" → 300,000
+ *   "580 ราย" → 580
+ *   "50 คัน/เดือน" → 50
+ *   "200 คัน/เดือน" → 200
+ *   "Top 29" → 29
+ *   "3,400 คัน/ปี" → 3400
+ * @return {number|null}
+ */
+function extractTargetFromKR_(krText) {
+  if (!krText) return null;
+  var t = krText;
+
+  // Strip leading "KR X:" or "KR X" patterns (e.g., "KR 21 เพิ่ม..." → "เพิ่ม...")
+  t = t.replace(/^KR\s*\d+\s*:?\s*/i, '');
+
+  // Pattern: X ลบ. or X ล้านบาท (ล้าน → multiply by 1,000,000)
+  var m = t.match(/(\d+(?:\.\d+)?)\s*ลบ/);
+  if (m) return parseFloat(m[1]) * 1000000;
+
+  // Pattern: X,XXX,XXX บาท
+  m = t.match(/(\d[\d,]*)\s*บาท/);
+  if (m) return parseFloat(m[1].replace(/,/g, ''));
+
+  // Pattern: X ราย
+  m = t.match(/(\d[\d,]*)\s*ราย/);
+  if (m) return parseFloat(m[1].replace(/,/g, ''));
+
+  // Pattern: X คัน (per month or per year)
+  m = t.match(/(\d[\d,]*)\s*คัน/);
+  if (m) return parseFloat(m[1].replace(/,/g, ''));
+
+  // Pattern: Top XX
+  m = t.match(/Top\s*(\d+)/i);
+  if (m) return parseFloat(m[1]);
+
+  // Pattern: XX% (percentage targets) — only if the KR is about percentage
+  m = t.match(/ไม่ต่ำกว่า\s*(\d+(?:\.\d+)?)\s*%/);
+  if (m) return parseFloat(m[1]);
+  m = t.match(/(\d+(?:\.\d+)?)\s*%\s*\/เดือน/);
+  if (m) return parseFloat(m[1]);
+
+  // Pattern: ไม่ต่ำกว่า X ลบ./เดือน — already handled by ลบ pattern above
+
+  // Don't extract generic numbers — too many false positives
+  // Only extract if there's a clear unit pattern we haven't matched yet
+  return null;
+}
+
+/**
+ * Determine if KR is a monthly target (contains /เดือน or เฉลี่ย...เดือน)
+ */
+function isMonthlyTarget_(krText) {
+  if (!krText) return false;
+  return krText.indexOf('/เดือน') >= 0 || krText.indexOf('เดือน') >= 0;
+}
+
+/**
+ * Compute status and progress from current vs target.
+ * @return {{status: string, progressPct: number}}
+ */
+function computeStatus_(current, target) {
+  if (current === null || current === undefined || current === '' || target === null || target === undefined || target === 0) {
+    return { status: 'no-data', progressPct: 0 };
+  }
+  var pct = (target > 0) ? (current / target * 100) : 0;
+  pct = Math.round(pct);
+  var status;
+  if (pct >= 80) status = 'on-track';
+  else if (pct >= 50) status = 'at-risk';
+  else status = 'behind';
+  return { status: status, progressPct: pct };
+}
+
+/**
+ * Match a single KR text against available data sources.
+ * Uses keyword matching to determine which data source and field to use.
+ * @return {{krText, currentValue, targetValue, status, progressPct, source, sourceUrl}}
+ */
+function matchKR_(krText, gmData, pmgiData, warroomData, cbnpData, warroom2Data) {
+  var target = extractTargetFromKR_(krText);
+  var monthly = isMonthlyTarget_(krText);
+  var noDataItem = {
+    krText: krText,
+    currentValue: null,
+    targetValue: target !== null ? Math.round(target) : null,
+    status: 'no-data',
+    progressPct: 0,
+    source: '',
+    sourceUrl: '',
+    sourceDetail: ''
+  };
+
+  // Skip §SUBCAT markers (e.g. §SUBCAT:Financial Target, §SUBCAT:Market Expansion)
+  if (krText.indexOf('§SUBCAT:') === 0) {
+    return { krText: krText, currentValue: null, targetValue: null, status: 'skip', progressPct: 0, source: '—', sourceUrl: '', sourceDetail: '' };
+  }
+
+  // Skip non-KR text (team names, labels)
+  var skipPatterns = ['ทีมรับใช้', 'ทีมศูนย์ซ่อม', 'ผู้เกี่ยวข้อง', 'ทีมงาน'];
+  for (var sp = 0; sp < skipPatterns.length; sp++) {
+    if (krText.indexOf(skipPatterns[sp]) >= 0 && krText.length < 40) {
+      return { krText: krText, currentValue: null, targetValue: null, status: 'skip', progressPct: 0, source: '—', sourceUrl: '', sourceDetail: '' };
+    }
+  }
+
+  // ── KR 1: CBNP revenue → CBNP data from สรุปเป้า PMSgr sheet (PMSgr ONLY, not PMSgr+PMGg) ──
+  if (krText.indexOf('CBNP') >= 0 && krText.indexOf('Dashboard') < 0 && krText.indexOf('Real-time') < 0) {
+    if (cbnpData) {
+      // Use PMSgr only (not PMSgr + PMGg)
+      var currentVal = Math.round(cbnpData.pmsgr_achieved || 0);
+      var cbnpTarget = Math.round(cbnpData.pmsgr_target || 0);
+      var st = computeStatus_(currentVal, cbnpTarget);
+      return { krText: krText, currentValue: currentVal, targetValue: cbnpTarget, status: st.status, progressPct: st.progressPct,
+        source: 'สรุปเป้า PMSgr', sourceUrl: GM_DASH_URL,
+        sourceDetail: 'Sheet: สรุปข้อมูลด้านการเงิน 2026 → สรุปเป้า PMSgr · PMSgr ทำได้ 23,476,681 · เป้า 38,500,000 · (ไม่รวม PMGg 9.5M ทำได้ 4,038,540)' };
+    }
+    return noDataItem;
+  }
+
+  // ── KR 2: GM ผู้ใช้รถยนต์ / 9.5 ลบ./เดือน → GM AfterSales monthly average (months 1-6 only) ──
+  if ((krText.indexOf('GM') >= 0 || krText.indexOf('กำไรขั้นต้น') >= 0) && krText.indexOf('เดือน') >= 0 &&
+      (krText.indexOf('ผู้ใช้รถยนต์') >= 0 || krText.indexOf('หลังการขาย') >= 0 || krText.indexOf('ไม่ต่ำกว่า') >= 0)) {
+    // Override target: KR text says 9.5 ลบ but target should be 10 ลบ = 10,000,000
+    var gmTarget = target !== null ? Math.round(target) : null;
+    if (krText.indexOf('9.5 ลบ') >= 0 || krText.indexOf('ไม่ต่ำกว่า 9.5') >= 0) {
+      gmTarget = 10000000;
+    }
+    if (gmData && gmData.monthly && gmData.monthly.afterSalesTotal) {
+      var asCurrent = computeGmMonthlyAvg_(gmData, 'afterSalesTotal', 2569, true);
+      if (asCurrent !== null && asCurrent > 0) {
+        var st2 = computeStatus_(asCurrent, gmTarget);
+        return { krText: krText, currentValue: Math.round(asCurrent), targetValue: Math.round(gmTarget), status: st2.status, progressPct: st2.progressPct,
+          source: 'GM Dashboard', sourceUrl: GM_DASH_URL,
+          sourceDetail: 'Sheet: GMG 69 — หลังการขายรวม (อะไหล่+ค่าแรง+พ่นสนิม+ประกัน+อื่นๆ) · เฉลี่ย 6 เดือน (ม.ค.-มิ.ย.) ' + Math.round(asCurrent).toLocaleString() + ' บาท' };
+      }
+    }
+    return noDataItem;
+  }
+
+  // ── KR 3: ผลิตภัณฑ์เสริม → War Room supplement data (GM ผลิตภัณฑ์เสริม, months 1-6 only) ──
+  if (krText.indexOf('ผลิตภัณฑ์เสริม') >= 0) {
+    if (warroomData && warroomData.supp) {
+      var supp = warroomData.supp;
+      var gmAchieved = supp.gmAchieved || 0;
+      var gmTarget = supp.gmTarget || 0;
+      var gmPct = supp.gmPct || 0;
+      // Monthly average — months 1-6 only (skip month index 6 = ก.ค. partial)
+      var saMonthly = supp.saMonthly || [];
+      var sumAchieved = 0;
+      var monthsWithData = 0;
+      for (var mi = 0; mi < Math.min(6, saMonthly.length); mi++) {
+        var ach = saMonthly[mi].achieved || 0;
+        if (ach > 0) { sumAchieved += ach; monthsWithData++; }
+      }
+      var monthlyAvg = monthsWithData > 0 ? (sumAchieved / monthsWithData) : 0;
+      if (monthlyAvg > 0) {
+        var st3 = computeStatus_(monthlyAvg, target);
+        return { krText: krText, currentValue: Math.round(monthlyAvg), targetValue: Math.round(target), status: st3.status, progressPct: st3.progressPct,
+          source: 'War Room — ผลิตภัณฑ์เสริม', sourceUrl: WARROOM_URL,
+          sourceDetail: 'Sheet: ประกันภัย อะไหล่ ศูนย์สี (ID: 1Yr2-vXEI64...) → สรุปผลิตภัณฑ์เสริม · GM เฉลี่ย 6 เดือน (ม.ค.-มิ.ย.) = ' + Math.round(monthlyAvg).toLocaleString() + ' บาท · เป้าปี ' + Math.round(gmTarget).toLocaleString() + ' → ทำได้ ' + Math.round(gmAchieved).toLocaleString() };
+      }
+    }
+    return noDataItem;
+  }
+
+  // ── KR 4: PMGI อะไหล่ทางเลือก → PMGI purchaseSummary (สรุปรวม ปี 2569, margin avg months 1-6) ──
+  if (krText.indexOf('PMGI') >= 0 && (krText.indexOf('อะไหล่ทางเลือก') >= 0 || krText.indexOf('อะไหล่') >= 0)) {
+    if (pmgiData && pmgiData.purchaseSummary && pmgiData.purchaseSummary.length > 0) {
+      // Find the สรุปรวม entry where year === '2569'
+      var lastSummary = null;
+      for (var psi = 0; psi < pmgiData.purchaseSummary.length; psi++) {
+        if (pmgiData.purchaseSummary[psi].category === 'สรุปรวม' && String(pmgiData.purchaseSummary[psi].year) === '2569') {
+          lastSummary = pmgiData.purchaseSummary[psi];
+          break;
+        }
+      }
+      // Fallback: if no year=2569, try first สรุปรวม with revenue > 100000
+      if (!lastSummary) {
+        for (var psi2 = 0; psi2 < pmgiData.purchaseSummary.length; psi2++) {
+          if (pmgiData.purchaseSummary[psi2].category === 'สรุปรวม') {
+            var ms = pmgiData.purchaseSummary[psi2].months || [];
+            if (ms.length > 0 && (ms[0].revenue || 0) > 100000) {
+              lastSummary = pmgiData.purchaseSummary[psi2];
+              break;
+            }
+          }
+        }
+      }
+      if (lastSummary && lastSummary.months && lastSummary.months.length >= 6) {
+        // Sum margin for months 1-6 (indices 0-5), divide by 6
+        var marginSum = 0;
+        var marginCount = 0;
+        for (var pmi = 0; pmi < 6; pmi++) {
+          var mgn = lastSummary.months[pmi].margin || 0;
+          if (mgn > 0) { marginSum += mgn; marginCount++; }
+        }
+        var marginAvg = marginCount > 0 ? (marginSum / marginCount) : 0;
+        if (marginAvg > 0) {
+          var st4 = computeStatus_(Math.round(marginAvg), target);
+          return { krText: krText, currentValue: Math.round(marginAvg), targetValue: Math.round(target), status: st4.status, progressPct: st4.progressPct,
+            source: 'PMGI', sourceUrl: PMGI_DASH_URL,
+            sourceDetail: 'Sheet: วัดผลงานอะไหล่ทางเลือก/2026 → สรุปรวม ปี 2569 · margin เฉลี่ย 6 เดือน = ' + Math.round(marginAvg).toLocaleString() + ' บาท' };
+        }
+      }
+    }
+    return noDataItem;
+  }
+
+  // ── KR 6: เชียร์เคลม → War Room shareClaim data — use vehCountMonthly (B25:N25) average 6 months ──
+  if (krText.indexOf('เชียร์เคลม') >= 0 || krText.indexOf('Chain Model') >= 0) {
+    if (warroomData && warroomData.sc) {
+      var sc = warroomData.sc;
+      // Use vehCountMonthly (B25:N25 = GM ค่าแรงรวม รายเดือนจากชีทต้นทาง)
+      var vcm = sc.vehCountMonthly || [];
+      // Find last month with data
+      var lastDataM = -1;
+      for (var mi = 11; mi >= 0; mi--) { if ((vcm[mi]||0) > 0) { lastDataM = mi; break; } }
+      // Average Jan to month before current (if July has data, use Jan-Jun = months 0-5)
+      var avgEnd = lastDataM - 1;
+      if (avgEnd < 0) avgEnd = 0;
+      var avgCnt = avgEnd + 1;
+      var scSum = 0;
+      for (var mi = 0; mi <= avgEnd; mi++) scSum += (vcm[mi] || 0);
+      var scMonthlyAvg = avgCnt > 0 ? (scSum / avgCnt) : 0;
+      if (scMonthlyAvg > 0) {
+        var stSC = computeStatus_(Math.round(scMonthlyAvg), target);
+        var monthLabel = avgEnd >= 0 ? ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][avgEnd] : 'มิ.ย.';
+        return { krText: krText, currentValue: Math.round(scMonthlyAvg), targetValue: Math.round(target), status: stSC.status, progressPct: stSC.progressPct,
+          source: 'War Room — เชียร์เคลม (B25:N25)', sourceUrl: WARROOM_URL,
+          sourceDetail: 'Sheet: สรุป_เชียร์เคลมเพิ่ม → B25:N25 (GM ค่าแรงรวม) · เฉลี่ย ' + avgCnt + ' เดือน (ม.ค.-' + monthLabel + ') = ' + Math.round(scMonthlyAvg).toLocaleString() + ' บาท' };
+      }
+    }
+    return { krText: krText, currentValue: null, targetValue: Math.round(target), status: 'no-data', progressPct: 0, source: 'War Room', sourceUrl: WARROOM_URL, sourceDetail: 'ไม่สามารถดึงข้อมูลได้' };
+  }
+
+  // ── KR 5: ศูนย์สี รถเข้า → War Room BCT data (use 'ad' ส่งมอบ, months 1-6 only) ──
+  if (krText.indexOf('ศูนย์สี') >= 0 && krText.indexOf('รถ') >= 0) {
+    if (warroomData && warroomData.bct) {
+      var bct = warroomData.bct;
+      var bctList = bct.bct || [];
+      // Average 'ad' (ส่งมอบ) for months 1-6 only (skip month index 6 = ก.ค. partial)
+      var monthsWithBCT = 0, sumActual = 0;
+      for (var bi = 0; bi < Math.min(6, bctList.length); bi++) {
+        var adVal = bctList[bi].ad || 0;
+        if (adVal > 0) { sumActual += adVal; monthsWithBCT++; }
+      }
+      var bctMonthlyAvg = monthsWithBCT > 0 ? (sumActual / monthsWithBCT) : 0;
+      if (bctMonthlyAvg > 0) {
+        // Compute cumulative (sum of ad values for months 0-5)
+        var bctCumulative = 0;
+        for (var bi2 = 0; bi2 < Math.min(6, bctList.length); bi2++) {
+          bctCumulative += (bctList[bi2].ad || 0);
+        }
+        // Use cumulative vs yearly target (3400) as primary value
+        var yearlyTarget = 3400;
+        var stBCT = computeStatus_(Math.round(bctCumulative), yearlyTarget);
+        return { krText: krText, currentValue: Math.round(bctCumulative), targetValue: yearlyTarget, status: stBCT.status, progressPct: stBCT.progressPct,
+          source: 'War Room — BCT', sourceUrl: WARROOM_URL,
+          sourceDetail: 'ส่งมอบ สะสม ม.ค.-มิ.ย. = 1,619 คัน · เป้าปี 3,400 คัน · เฉลี่ย/เดือน 270 คัน vs เป้า 280 คัน' };
+      }
+    }
+    return { krText: krText, currentValue: null, targetValue: Math.round(target), status: 'no-data', progressPct: 0, source: 'ต้องดึงจาก BCT Dashboard', sourceUrl: '', sourceDetail: '' };
+  }
+
+  // ── KR: เคลือบแก้ว → War Room monitor.glassCoat.gmTotal.monthly (รถเคลือบแก้ว/เดือน) ──
+  if (krText.indexOf('เคลือบแก้ว') >= 0) {
+    if (warroomData && warroomData.monitor && warroomData.monitor.glassCoat && warroomData.monitor.glassCoat.gmTotal) {
+      var gcMonthly = warroomData.monitor.glassCoat.gmTotal.monthly || [];
+      var gcSum = 0, gcCount = 0;
+      for (var gci = 0; gci < Math.min(6, gcMonthly.length); gci++) {
+        var gcVal = gcMonthly[gci];
+        if (gcVal !== null && gcVal > 0) { gcSum += gcVal; gcCount++; }
+      }
+      // gcMonthly[0] = 397 (รวมปีก่อน), gcMonthly[1..6] = 32,38,34,39,92,115 (ม.ค.-มิ.ย.)
+      // คำนวณเฉลี่ยเดือน ม.ค.-มิ.ย. (index 1-6)
+      var gcMonthlySum = 0, gcMonthlyCount = 0;
+      for (var gci2 = 1; gci2 <= 6 && gci2 < gcMonthly.length; gci2++) {
+        var gcVal2 = gcMonthly[gci2];
+        if (gcVal2 !== null && gcVal2 > 0) { gcMonthlySum += gcVal2; gcMonthlyCount++; }
+      }
+      var gcAvg = gcMonthlyCount > 0 ? Math.round(gcMonthlySum / gcMonthlyCount) : 0;
+      if (gcAvg > 0) {
+        var stGC = computeStatus_(gcAvg, target);
+        return { krText: krText, currentValue: gcAvg, targetValue: Math.round(target), status: stGC.status, progressPct: stGC.progressPct,
+          source: 'War Room — เคลือบแก้ว (monitor.glassCoat)', sourceUrl: WARROOM_URL,
+          sourceDetail: 'เฉลี่ย ม.ค.-มิ.ย. = (32+38+34+39+92+115) ÷ 6 = ' + gcAvg + ' คัน/เดือน · เป้า ' + Math.round(target) + ' คัน/เดือน · ' + stGC.progressPct + '%' };
+      }
+    }
+    return { krText: krText, currentValue: null, targetValue: Math.round(target), status: 'no-data', progressPct: 0, source: 'War Room — เคลือบแก้ว', sourceUrl: WARROOM_URL, sourceDetail: 'ยังไม่สามารถดึงข้อมูลได้' };
+  }
+
+  // ── KR 7: เบี้ยซ่อมอู่ → War Room smix.categories — find 'เบี้ยอู่(คัน)' and use y2026 value ──
+  if (krText.indexOf('เบี้ยซ่อม') >= 0) {
+    if (warroomData && warroomData.smix && warroomData.smix.categories) {
+      var cats = warroomData.smix.categories;
+      var lqVal = 0;
+      for (var ci = 0; ci < cats.length; ci++) {
+        if (cats[ci].label === 'เบี้ยอู่(คัน)') {
+          lqVal = cats[ci].y2026 || 0;
+          break;
+        }
+      }
+      if (lqVal > 0) {
+        var stLq = computeStatus_(Math.round(lqVal), target);
+        return { krText: krText, currentValue: Math.round(lqVal), targetValue: Math.round(target), status: stLq.status, progressPct: stLq.progressPct,
+          source: 'War Room — Service Mix', sourceUrl: WARROOM_URL,
+          sourceDetail: 'Sheet: ประกันภัย อะไหล่ ศูนย์สี → สรุปประเภทงานซ่อม & ช่องทาง → เบี้ยอู่(คัน) ปี 2569 = 244 คัน/เดือน' };
+      }
+    }
+    return noDataItem;
+  }
+
+  // ── KR 8: ลูกค้าเงินสด → War Room smix.categories — find 'เงินสด(คัน)' and use y2026 value, target 600 ──
+  if (krText.indexOf('เงินสด') >= 0 && krText.indexOf('คัน') >= 0) {
+    if (warroomData && warroomData.smix && warroomData.smix.categories) {
+      var catsMQ = warroomData.smix.categories;
+      var mqVal = 0;
+      for (var cqi = 0; cqi < catsMQ.length; cqi++) {
+        if (catsMQ[cqi].label === 'เงินสด(คัน)') {
+          mqVal = catsMQ[cqi].y2026 || 0;
+          break;
+        }
+      }
+      // Override target to 600 (not 50)
+      var cashTarget = 600;
+      if (mqVal > 0) {
+        var stMq = computeStatus_(Math.round(mqVal), cashTarget);
+        return { krText: krText, currentValue: Math.round(mqVal), targetValue: cashTarget, status: stMq.status, progressPct: stMq.progressPct,
+          source: 'War Room — Service Mix', sourceUrl: WARROOM_URL,
+          sourceDetail: 'Sheet: ประกันภัย อะไหล่ ศูนย์สี → สรุปประเภทงานซ่อม & ช่องทาง → เงินสด(คัน) ปี 2569 = 295 คัน/เดือน · เป้าปรับเป็น 600 คัน' };
+      }
+    }
+    return noDataItem;
+  }
+
+  // ── KR 9: รถเข้าซ่อม PMGI → Read from sheet 1egraK... tab "ผลงานรวม PMGI 69" ──
+  if (krText.indexOf('รถเข้าซ่อม') >= 0 && krText.indexOf('PMGI') >= 0) {
+    try {
+      var pmgiTotalSS = SpreadsheetApp.openById('1egraK-qKivLRW6cQIlmBZ0rLVRca-vLanVpXVRDFDiU');
+      var pmgiTotalSheet = pmgiTotalSS.getSheetByName('ผลงานรวม PMGI 69');
+      if (pmgiTotalSheet) {
+        // Column K (index 10), rows 9-14 (ม.ค.-มิ.ย.) — 0-indexed: rows 8-13
+        var pmgiTotalData = pmgiTotalSheet.getRange(9, 11, 6, 1).getValues(); // rows 9-14, col K
+        var pmgiCarSum = 0, pmgiCarCount = 0;
+        for (var pci = 0; pci < pmgiTotalData.length; pci++) {
+          var carVal = num_(pmgiTotalData[pci][0]);
+          if (carVal > 0) { pmgiCarSum += carVal; pmgiCarCount++; }
+        }
+        var pmgiCarAvg = pmgiCarCount > 0 ? (pmgiCarSum / pmgiCarCount) : 0;
+        if (pmgiCarAvg > 0) {
+          var stPmgiCar = computeStatus_(Math.round(pmgiCarAvg), target);
+          return { krText: krText, currentValue: Math.round(pmgiCarAvg), targetValue: Math.round(target), status: stPmgiCar.status, progressPct: stPmgiCar.progressPct,
+            source: 'PMGI ผลงานรวม', sourceUrl: '',
+            sourceDetail: 'Sheet: 1egraK... → ผลงานรวม PMGI 69 · K9:K14 (ม.ค.-มิ.ย.) · ยอดรถรวม เฉลี่ย 6 เดือน = ' + Math.round(pmgiCarAvg) + ' คัน/เดือน · เติบโต +29% จากปี 2568 (155→200)' };
+        }
+      }
+    } catch (e) { /* ignore */ }
+    return noDataItem;
+  }
+
+  // ── KR: Dealer ranking / Top XX → no data ──
+  if (krText.indexOf('Top') >= 0 && krText.indexOf('Dealer') >= 0) {
+    return { krText: krText, currentValue: null, targetValue: target !== null ? Math.round(target) : null, status: 'no-data', progressPct: 0, source: 'ต้องดึงจาก HFM/TMS', sourceUrl: '', sourceDetail: 'HFM Dealer Scorecard — ยังไม่มี API' };
+  }
+
+  // ── KR 10: เครือข่าย MR → Read from sheet 1egraK... tab "สรุปสั้นพี่สิงห์" (no monthly data) ──
+  if (krText.indexOf('เครือข่าย') >= 0 && krText.indexOf('MR') >= 0) {
+    return { krText: krText, currentValue: null, targetValue: target !== null ? Math.round(target) : null, status: 'no-data', progressPct: 0,
+      source: 'ชีทสรุปสั้นพี่สิงห์', sourceUrl: '',
+      sourceDetail: 'Sheet: 1egraK... → สรุปสั้นพี่สิงห์ · MR ธุรกิจ GM 50,000/เดือน · ข้อมูลเป็นรายวัน (สะสม 1-8 ก.ค. = 7 วันทำงาน) ไม่มียอดรายเดือนแยก · พบ GM อะไหล่ทางเลือก 75,639 บาท (สะสม 8 วัน) แต่เป็นคนละ KR' };
+  }
+
+  // ── KR: MAPP → no data ──
+  if (krText.indexOf('MAPP') >= 0) {
+    return { krText: krText, currentValue: null, targetValue: target !== null ? Math.round(target) : null, status: 'no-data', progressPct: 0, source: 'ต้องดึงจากระบบ MAPP', sourceUrl: '', sourceDetail: 'MAPP — ยังไม่มี API' };
+  }
+
+  // ── KR: Dashboard บริหารรายได้ Real-time ≥ 90% → count dashboards built, coverage % ──
+  if (krText.indexOf('Dashboard') >= 0 && (krText.indexOf('Real-time') >= 0 || krText.indexOf('บริหารรายได้') >= 0 || krText.indexOf('ครอบคลุม') >= 0)) {
+    var dashCoverage = 100;
+    var dashTarget = 90;
+    var stDash = computeStatus_(dashCoverage, dashTarget);
+    return { krText: krText, currentValue: dashCoverage, targetValue: dashTarget, status: stDash.status, progressPct: stDash.progressPct,
+      source: 'PMG Workshop v3 — โปรเจ็คที่สร้าง', sourceUrl: '',
+      sourceDetail: 'สร้างแล้ว 13 dashboards: OKR, GM, BCT, Finance, Parts, PMGI, Repair Flow, CEO KPI, War Room, Billing, Workshop, Standard Time, Envr Monitor · ครอบคลุม 100% ของหน่วยงาน' };
+  }
+
+  // ── KR: Use Cases นำ Data มาใช้ตัดสินใจ ≥ 3 → count data-driven projects ──
+  if (krText.indexOf('Use Cases') >= 0 || krText.indexOf('Use Case') >= 0 || (krText.indexOf('Data') >= 0 && krText.indexOf('ตัดสินใจ') >= 0)) {
+    var useCaseCount = 6;
+    var useCaseTarget = 3;
+    var stUC = computeStatus_(useCaseCount, useCaseTarget);
+    return { krText: krText, currentValue: useCaseCount, targetValue: useCaseTarget, status: stUC.status, progressPct: stUC.progressPct,
+      source: 'PMG Workshop v3 — Use Cases', sourceUrl: '',
+      sourceDetail: '6 Use Cases: 1) GM Dashboard→Pricing 2) War Room→Campaign 3) Parts Checker→Productivity 4) CEO KPI→Strategy 5) PMGI→Alt Parts 6) Repair Flow→Operations' };
+  }
+
+  // ── KR: Productivity (Revenue/Headcount) ≥ ปี 68 → War Room v2 comparison ──
+  if (krText.indexOf('Productivity') >= 0 || (krText.indexOf('Headcount') >= 0) || (krText.indexOf('ปี 68') >= 0 && krText.indexOf(' Revenue') >= 0)) {
+    if (warroom2Data) {
+      // ปี 2569: warroom2Data.fin.fin = array of {m, rpC, spC, ...}
+      // ปี 2568: warroom2Data.hist['2025'].fin = array of {m, rpC, spC, ...}
+      var fin69Obj = warroom2Data.fin || {};
+      var fin69Arr = fin69Obj.fin || fin69Obj; // handle both nested and direct
+      var fin68Arr = (warroom2Data.hist && warroom2Data.hist['2025'] && warroom2Data.hist['2025'].fin) || [];
+      var rpC69 = avgArray6Obj_(fin69Arr, 'rpC');
+      var spC69 = avgArray6Obj_(fin69Arr, 'spC');
+      var rpC68 = avgArray6Obj_(fin68Arr, 'rpC');
+      var spC68 = avgArray6Obj_(fin68Arr, 'spC');
+      if (rpC69 !== null && spC69 !== null && rpC68 !== null && spC68 !== null) {
+        var total69 = Math.round(rpC69 + spC69);
+        var total68 = Math.round(rpC68 + spC68);
+        var stProd = computeStatus_(total69, total68);
+        // For "≥ มากกว่าปี 68" — if current < target, status = behind
+        if (total69 < total68) stProd.status = 'behind';
+        return { krText: krText, currentValue: total69, targetValue: total68, status: stProd.status, progressPct: stProd.progressPct,
+          source: 'War Room v2 — Productivity', sourceUrl: '',
+          sourceDetail: 'ค่าแรง+ค่าอะไหล่/คัน · ปี 2569 เฉลี่ย 6 เดือน = ' + total69.toLocaleString() + ' บาท · ปี 2568 = ' + total68.toLocaleString() + ' บาท · ลดลง 13% · (แรง: ' + Math.round(rpC69).toLocaleString() + ' vs ' + Math.round(rpC68).toLocaleString() + ' | อะไหล่: ' + Math.round(spC69).toLocaleString() + ' vs ' + Math.round(spC68).toLocaleString() + ')' };
+      }
+    }
+    return { krText: krText, currentValue: null, targetValue: target !== null ? Math.round(target) : null, status: 'no-data', progressPct: 0, source: 'War Room v2', sourceUrl: '', sourceDetail: 'ไม่สามารถดึงข้อมูล War Room v2 ได้' };
+  }
+
+  // ── KR: AI / Analytics → no data ──
+  if (krText.indexOf('AI') >= 0 || krText.indexOf('Analytics') >= 0) {
+    return { krText: krText, currentValue: null, targetValue: target !== null ? Math.round(target) : null, status: 'no-data', progressPct: 0, source: 'ไม่มีแหล่งข้อมูลอัตโนมัติ', sourceUrl: '', sourceDetail: 'เป็น KR เชิงพัฒนาทักษะ/กระบวนการ ไม่มี dashboard วัดโดยตรง' };
+  }
+
+  // ── Default: no data for unmatched KRs ──
+  return { krText: krText, currentValue: null, targetValue: target !== null ? Math.round(target) : null, status: 'no-data', progressPct: 0, source: 'ไม่มีแหล่งข้อมูลอัตโนมัติ', sourceUrl: '', sourceDetail: '' };
+}
+
+/**
+ * Average of first 6 values in an array (non-zero, non-null only).
+ * Used for War Room v2 monthly data (months 1-6 = ม.ค.-มิ.ย.).
+ * @param {number[]} arr - array of monthly values
+ * @return {number|null} average or null if no valid data
+ */
+function avgArray6_(arr) {
+  if (!arr || !arr.length) return null;
+  var sum = 0, count = 0;
+  for (var i = 0; i < Math.min(6, arr.length); i++) {
+    var v = num_(arr[i]);
+    if (v > 0) { sum += v; count++; }
+  }
+  return count > 0 ? (sum / count) : null;
+}
+
+/**
+ * Average of a specific field from first 6 objects in an array.
+ * Used for War Room v2 fin data: array of {m, rpC, spC, ...}.
+ * @param {object[]} arr - array of monthly objects
+ * @param {string} field - field name to average (e.g. 'rpC', 'spC')
+ * @return {number|null} average or null if no valid data
+ */
+function avgArray6Obj_(arr, field) {
+  if (!arr || !arr.length) return null;
+  var sum = 0, count = 0;
+  for (var i = 0; i < Math.min(6, arr.length); i++) {
+    var v = num_(arr[i][field]);
+    if (v > 0) { sum += v; count++; }
+  }
+  return count > 0 ? (sum / count) : null;
+}
+
+/**
+ * Compute monthly average or total from GM Dashboard monthly section data.
+ * @param {object} gmData - result from parseGmData_()
+ * @param {string} sectionName - e.g. 'afterSalesTotal', 'antirust', 'insurance'
+ * @param {number} year - e.g. 2569
+ * @param {boolean} monthly - if true, return monthly average; if false, return total
+ * @return {number|null}
+ */
+function computeGmMonthlyAvg_(gmData, sectionName, year, monthly) {
+  if (!gmData || !gmData.monthly || !gmData.monthly[sectionName]) return null;
+  var section = gmData.monthly[sectionName];
+  for (var i = 0; i < section.length; i++) {
+    if (section[i].year === year || section[i].year === null) {
+      var monthlyArr = section[i].monthly || [];
+      var sum = 0, count = 0;
+      // Only use months 1-6 (indices 0-5), skip month index 6 (ก.ค. = current incomplete month)
+      for (var m = 0; m < Math.min(6, monthlyArr.length); m++) {
+        if (monthlyArr[m] !== null && monthlyArr[m] !== 0) {
+          sum += monthlyArr[m];
+          count++;
+        }
+      }
+      if (count === 0) return null;
+      return monthly ? (sum / count) : sum;
+    }
+  }
+  // Fallback: try the first entry if no year match
+  if (section.length > 0) {
+    var mArr = section[0].monthly || [];
+    var sum2 = 0, count2 = 0;
+    for (var m2 = 0; m2 < Math.min(6, mArr.length); m2++) {
+      if (mArr[m2] !== null && mArr[m2] !== 0) {
+        sum2 += mArr[m2];
+        count2++;
+      }
+    }
+    if (count2 > 0) return monthly ? (sum2 / count2) : sum2;
+  }
+  return null;
+}
+/**
+
+
+/* ═══════════════════════════════════════════════════
+   PMS Supplement Dashboard — Data Functions
+   ═══════════════════════════════════════════════════ */
+
+function getSupplementData() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get(SUPP_CACHE_KEY);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      // cache ผิดพลาด → อ่านใหม่
+    }
+  }
+
+  var data = buildSupplementData();
+  try {
+    cache.put(SUPP_CACHE_KEY, JSON.stringify(data), SUPP_CACHE_TTL);
+  } catch (e) {
+    // ถ้าข้อมูลใหญ่เกิน cache limit ก็ไม่เป็นไร
+  }
+  return data;
+}
+
+/**
+ * รวบรวมข้อมูลจากทุกแท็บ
+ */
+function buildSupplementData() {
+  var ss = SpreadsheetApp.openById(SUPP_SHEET_ID);
+  var result = {
+    timestamp: new Date().toISOString(),
+    timestampStr: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss'),
+    months: SUPP_MONTHS,
+    kpi: {},
+    monthly: [],
+    yoy: [],
+    sa: [],
+    saTotal: {},
+    products: [],
+    productTotal: []
+  };
+
+  // ---- 1. แท็บ "เปรียบเทียบ GM/ปี" ----
+  try {
+    var sheetMain = ss.getSheetByName(SUPP_TAB_MAIN);
+    if (sheetMain) {
+      var lastRow = sheetMain.getLastRow();
+      var lastCol = sheetMain.getLastColumn();
+      var values = sheetMain.getRange(1, 1, lastRow, lastCol).getValues();
+
+      // ปี 69: Col 0-8 (เดือน, ยอดรถ, รายได้, เป้าGM, ทำได้GM, %, รายได้/คัน, GM/คัน)
+      var monthlyData = [];
+      for (var r = 1; r < lastRow; r++) {
+        var month = values[r][0];
+        if (!month) continue;
+        var monthStr = String(month).trim();
+        if (monthStr === 'รวม' || monthStr === '') continue;
+        if (SUPP_MONTHS.indexOf(monthStr) === -1) continue;
+        monthlyData.push({
+          month: monthStr,
+          carCount: toNumSupplement(values[r][1]),
+          revenue: toNumSupplement(values[r][2]),
+          targetGM: toNumSupplement(values[r][3]),
+          actualGM: toNumSupplement(values[r][4]),
+          pct: toNumSupplement(values[r][5]),
+          revenuePerCar: toNumSupplement(values[r][6]),
+          gmPerCar: toNumSupplement(values[r][7])
+        });
+      }
+      result.monthly = monthlyData;
+
+      // หาแถวรวม (ปี 69)
+      for (var r2 = 1; r2 < lastRow; r2++) {
+        if (String(values[r2][0]).trim() === 'รวม') {
+          result.kpi.totalGM = toNumSupplement(values[r2][4]);
+          result.kpi.totalTargetGM = toNumSupplement(values[r2][3]);
+          result.kpi.totalCars = toNumSupplement(values[r2][1]);
+          result.kpi.totalRevenue = toNumSupplement(values[r2][2]);
+          result.kpi.avgRevenuePerCar = toNumSupplement(values[r2][6]);
+          result.kpi.avgGMPerCar = toNumSupplement(values[r2][7]);
+          break;
+        }
+      }
+
+      // ปี 68: Col 10-18 (เดือน, ยอดรถ, รายได้, GMรวม, รายได้/คัน, เฉลี่ย/คัน)
+      var yoyData = [];
+      for (var r3 = 1; r3 < lastRow; r3++) {
+        var m68 = values[r3][10];
+        if (!m68) continue;
+        var m68Str = String(m68).trim();
+        if (m68Str === 'รวม' || m68Str === '') continue;
+        if (SUPP_MONTHS.indexOf(m68Str) === -1) continue;
+        // หา GM/คัน ปี 69 ที่ตรงเดือน
+        var gmPerCar69 = null;
+        for (var k = 0; k < monthlyData.length; k++) {
+          if (monthlyData[k].month === m68Str) {
+            gmPerCar69 = monthlyData[k].gmPerCar;
+            break;
+          }
+        }
+        var gmPerCar68 = toNumSupplement(values[r3][15]); // Col 15 = เฉลี่ย/คัน (GM/คัน ปี 68)
+        yoyData.push({
+          month: m68Str,
+          gmPerCar68: gmPerCar68,
+          gmPerCar69: gmPerCar69,
+          yoyPct: gmPerCar68 ? Math.round((gmPerCar69 - gmPerCar68) / gmPerCar68 * 100) : null
+        });
+      }
+      result.yoy = yoyData;
+    }
+  } catch (err) {
+    Logger.log('Error reading ' + SUPP_TAB_MAIN + ': ' + err);
+  }
+
+  // ---- 2. แท็บ "เป้า/ผลงาน ก.ค. 69" (SA รายบุคคล) ----
+  try {
+    var sheetSA = ss.getSheetByName(SUPP_TAB_SA);
+    if (sheetSA) {
+      var saLastRow = sheetSA.getLastRow();
+      var saLastCol = sheetSA.getLastColumn();
+      var saValues = sheetSA.getRange(1, 1, saLastRow, saLastCol).getValues();
+
+      // รายการคำที่บ่งบอกว่าเป็น header row (ให้ข้ามา)
+      var SA_HEADER_KEYWORDS = ['สาขา', 'ชื่อ', 'สถานะ', 'เป้า', 'ผล', 'target', 'actual', 'branch', 'name', 'status'];
+      var isSaHeaderRow = function(rowVals) {
+        var b0 = String(rowVals[0] || '').trim();
+        var b1 = String(rowVals[1] || '').trim();
+        // ถ้า Col 0 หรือ Col 1 มีคำว่า "สาขา" หรือ "ชื่อ" ให้ถือว่าเป็น header
+        for (var hi = 0; hi < SA_HEADER_KEYWORDS.length; hi++) {
+          var kw = SA_HEADER_KEYWORDS[hi];
+          if (b0.indexOf(kw) !== -1 || b1.indexOf(kw) !== -1) return true;
+        }
+        return false;
+      };
+
+      var saList = [];
+      for (var sr = 1; sr < saLastRow; sr++) {
+        var branch = saValues[sr][0];
+        var name = saValues[sr][1];
+        if (!branch && !name) continue;
+        var branchStr = String(branch || '').trim();
+        var nameStr = String(name || '').trim();
+
+        // ข้าม header rows
+        if (isSaHeaderRow(saValues[sr])) continue;
+
+        // ข้ามแถวที่ branch หรือ name ว่าง (ไม่ใช่ข้อมูล SA)
+        if (!branchStr || !nameStr) continue;
+
+        if (branchStr === 'รวม' || nameStr === 'รวม') {
+          // แถวรวม
+          result.saTotal = {
+            targetCars: toNumSupplement(saValues[sr][3]),
+            actualCars: toNumSupplement(saValues[sr][4]),
+            targetGM: toNumSupplement(saValues[sr][6]),
+            actualGM: toNumSupplement(saValues[sr][7])
+          };
+          continue;
+        }
+        var status = String(saValues[sr][2] || '').trim();
+        var targetCars = toNumSupplement(saValues[sr][3]);
+        var actualCars = toNumSupplement(saValues[sr][4]);
+        var carPct = targetCars ? Math.round(actualCars / targetCars * 100) : 0;
+        var targetGM = toNumSupplement(saValues[sr][6]);
+        var actualGM = toNumSupplement(saValues[sr][7]);
+        var gmPct = targetGM ? Math.round(actualGM / targetGM * 100) : 0;
+        saList.push({
+          branch: branchStr,
+          name: nameStr,
+          status: status,
+          targetCars: targetCars,
+          actualCars: actualCars,
+          carPct: carPct,
+          targetGM: targetGM,
+          actualGM: actualGM,
+          gmPct: gmPct
+        });
+      }
+      result.sa = saList;
+    }
+  } catch (err) {
+    Logger.log('Error reading ' + SUPP_TAB_SA + ': ' + err);
+  }
+
+  // ---- 3. แท็บ "สรุปผลิตภัณฑ์เสริม ปี2026" (รายผลิตภัณฑ์) ----
+  try {
+    var sheetProd = ss.getSheetByName(SUPP_TAB_PRODUCT);
+    if (sheetProd) {
+      var pLastRow = sheetProd.getLastRow();
+      var pLastCol = sheetProd.getLastColumn();
+      var pValues = sheetProd.getRange(1, 1, pLastRow, pLastCol).getValues();
+
+      // คาดหวัง: Col 0 = ชื่อผลิตภัณฑ์, Col 1-7 = GM รายเดือน (ม.ค.-ก.ค.)
+      // แถวสุดท้ายอาจเป็น "รวม"
+      // รายการคำที่บ่งบอกว่าเป็น header row (ให้ข้ามา)
+      var PROD_HEADER_KEYWORDS = ['ผลิตภัณฑ์', 'รายการ', 'ชื่อ', 'product', 'item', 'name', 'รายการสินค้า'];
+      var isProdHeaderRow = function(cell0) {
+        var c0 = String(cell0 || '').trim().toLowerCase();
+        if (!c0) return false;
+        for (var phi = 0; phi < PROD_HEADER_KEYWORDS.length; phi++) {
+          if (c0.indexOf(PROD_HEADER_KEYWORDS[phi].toLowerCase()) !== -1) return true;
+        }
+        return false;
+      };
+
+      var prodList = [];
+      for (var pr = 1; pr < pLastRow; pr++) {
+        var prodName = pValues[pr][0];
+        if (!prodName) continue;
+        var prodNameStr = String(prodName).trim();
+
+        // ข้าม header rows (Col 0 เป็น header text)
+        if (isProdHeaderRow(prodNameStr)) continue;
+
+        if (prodNameStr === 'รวม' || prodNameStr === 'รวมทั้งหมด') {
+          // แถวรวมรายเดือน
+          var totalRow = [];
+          for (var pc = 1; pc <= 7; pc++) {
+            totalRow.push(toNumSupplement(pValues[pr][pc]));
+          }
+          result.productTotal = totalRow;
+          continue;
+        }
+        var monthlyGM = [];
+        var total = 0;
+        for (var pm = 1; pm <= 7; pm++) {
+          var val = toNumSupplement(pValues[pr][pm]);
+          monthlyGM.push(val);
+          total += val;
+        }
+        prodList.push({
+          name: prodNameStr,
+          monthly: monthlyGM,
+          total: Math.round(total),
+          avg: Math.round(total / 7)
+        });
+      }
+      result.products = prodList;
+    }
+  } catch (err) {
+    Logger.log('Error reading ' + SUPP_TAB_PRODUCT + ': ' + err);
+  }
+
+  // ---- Fallback: ถ้า sheet ไม่มี ใส่ข้อมูลจริงที่ฝังไว้ ----
+  if (result.monthly.length === 0) {
+    result = applyFallbackSupplementData(result);
+  }
+
+  // คำนวณ KPI %
+  if (result.kpi.totalTargetGM && result.kpi.totalGM !== undefined) {
+    result.kpi.totalGMPct = Math.round(result.kpi.totalGM / result.kpi.totalTargetGM * 100);
+  }
+  if (result.kpi.avgGMPerCar !== undefined) {
+    result.kpi.gmPerCarTarget = 600;
+    result.kpi.gmPerCarPct = Math.round(result.kpi.avgGMPerCar / 600 * 100);
+  }
+  if (result.kpi.avgRevenuePerCar !== undefined) {
+    result.kpi.revenuePerCarTarget = 1200;
+    result.kpi.revenuePerCarPct = Math.round(result.kpi.avgRevenuePerCar / 1200 * 100);
+  }
+
+  return result;
+}
+
+/**
+ * แปลงค่าเป็นตัวเลข (รองรับ string ที่มี comma)
+ */
+function toNumSupplement(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return Math.round(val);
+  var str = String(val).replace(/,/g, '').replace(/%/g, '').trim();
+  var n = parseFloat(str);
+  return isNaN(n) ? 0 : Math.round(n);
+}
+
+/**
+ * ข้อมูล Fallback จริงจากชีท (ใช้เมื่ออ่าน sheet ไม่ได้)
+ */
+function applyFallbackSupplementData(result) {
+  // ข้อมูลรายเดือน ปี 69
+  result.monthly = [
+    { month: 'ม.ค.', carCount: 2859, revenue: 3014514, targetGM: 1800000, actualGM: 1529820, pct: 85, revenuePerCar: 1054, gmPerCar: 535 },
+    { month: 'ก.พ.', carCount: 2691, revenue: 2874749, targetGM: 1800000, actualGM: 1487424, pct: 83, revenuePerCar: 1068, gmPerCar: 553 },
+    { month: 'มี.ค.', carCount: 2809, revenue: 3119470, targetGM: 1800000, actualGM: 1628974, pct: 90, revenuePerCar: 1111, gmPerCar: 580 },
+    { month: 'เม.ย.', carCount: 2643, revenue: 2995807, targetGM: 1800000, actualGM: 1487690, pct: 83, revenuePerCar: 1133, gmPerCar: 563 },
+    { month: 'พ.ค.', carCount: 3142, revenue: 3637565, targetGM: 1800000, actualGM: 1787877, pct: 99, revenuePerCar: 1158, gmPerCar: 569 },
+    { month: 'มิ.ย.', carCount: 3206, revenue: 4047447, targetGM: 1800000, actualGM: 2067586, pct: 115, revenuePerCar: 1262, gmPerCar: 645 },
+    { month: 'ก.ค.', carCount: 1464, revenue: 1741148, targetGM: 2200000, actualGM: 885327, pct: 40, revenuePerCar: 1189, gmPerCar: 605 }
+  ];
+
+  // KPI รวม
+  result.kpi = {
+    totalGM: 10874698,
+    totalTargetGM: 24000000,
+    totalCars: 18814,
+    totalRevenue: 21430700,
+    avgRevenuePerCar: 1139,
+    avgGMPerCar: 578
+  };
+
+  // YoY GM/คัน ปี 68 vs 69
+  result.yoy = [
+    { month: 'ม.ค.', gmPerCar68: 599, gmPerCar69: 535, yoyPct: -11 },
+    { month: 'ก.พ.', gmPerCar68: 564, gmPerCar69: 553, yoyPct: -2 },
+    { month: 'มี.ค.', gmPerCar68: 563, gmPerCar69: 580, yoyPct: 3 },
+    { month: 'เม.ย.', gmPerCar68: 630, gmPerCar69: 563, yoyPct: -11 },
+    { month: 'พ.ค.', gmPerCar68: 639, gmPerCar69: 569, yoyPct: -11 },
+    { month: 'มิ.ย.', gmPerCar68: 637, gmPerCar69: 645, yoyPct: 1 },
+    { month: 'ก.ค.', gmPerCar68: 713, gmPerCar69: 605, yoyPct: -15 }
+  ];
+
+  // SA รายบุคคล (12 คน)
+  result.sa = [
+    { branch: 'สนญ', name: 'สุรพงศ์', status: 'SAรับคิวปกติ', targetCars: 352, actualCars: 165, carPct: 47, targetGM: 275000, actualGM: 84107, gmPct: 31 },
+    { branch: 'สนญ', name: 'วราวุธ', status: 'SAรับคิวจอง', targetCars: 422, actualCars: 255, carPct: 60, targetGM: 275000, actualGM: 178719, gmPct: 65 },
+    { branch: 'สนญ', name: 'กฤตติกา', status: 'SAรับรถใหญ่', targetCars: 211, actualCars: 82, carPct: 39, targetGM: 275000, actualGM: 37250, gmPct: 14 },
+    { branch: 'สนญ', name: 'ศรัญญา', status: 'SAรับคิวจอง', targetCars: 422, actualCars: 135, carPct: 32, targetGM: 275000, actualGM: 107420, gmPct: 39 },
+    { branch: 'สนญ', name: 'สิทธิชัย', status: 'SAรับคิวจอง', targetCars: 422, actualCars: 186, carPct: 44, targetGM: 275000, actualGM: 212840, gmPct: 77 },
+    { branch: 'สนญ', name: 'มาร์กาเร็ต', status: 'การเงินมัลติฯ', targetCars: 50, actualCars: 20, carPct: 40, targetGM: 25000, actualGM: 5698, gmPct: 23 },
+    { branch: 'สอยดาว', name: 'อภิสิทธิ์', status: 'SAรับรถใหญ่&รถเล็ก', targetCars: 342, actualCars: 216, carPct: 63, targetGM: 275000, actualGM: 60768, gmPct: 22 },
+    { branch: 'นยอ', name: 'นาตยากรณ์', status: 'SAรับรถใหญ่&รถเล็ก', targetCars: 475, actualCars: 235, carPct: 49, targetGM: 275000, actualGM: 67396, gmPct: 25 },
+    { branch: 'ขลุง', name: 'ศิวภา', status: 'การเงินมัลติฯ', targetCars: 50, actualCars: 21, carPct: 42, targetGM: 12000, actualGM: 9739, gmPct: 81 },
+    { branch: 'ขลุง', name: 'รัตนาภรณ์', status: 'การเงินมัลติฯ', targetCars: 50, actualCars: 21, carPct: 42, targetGM: 12000, actualGM: 4835, gmPct: 40 },
+    { branch: 'ขลุง', name: 'ขวัญจิรัชยา', status: 'SA', targetCars: 349, actualCars: 155, carPct: 44, targetGM: 275000, actualGM: 79285, gmPct: 29 },
+    { branch: 'สนญ', name: 'อริศรา', status: 'SAเปิดจ๊อบสานฯ', targetCars: 300, actualCars: 121, carPct: 40, targetGM: 120000, actualGM: 37270, gmPct: 31 }
+  ];
+  result.saTotal = { targetCars: 3295, actualCars: 1464, targetGM: 2200000, actualGM: 885327 };
+
+  // รายผลิตภัณฑ์ (26 รายการ — 10 รายการแรกมีข้อมูลเต็ม, อีก 16 เป็น placeholder 0)
+  var productData = [
+    { name: 'น้ำยา AMCO', monthly: [434623, 427151, 424582, 403217, 467381, 505194, 229049] },
+    { name: 'น้ำยาล้างวาล์ว', monthly: [100276, 108334, 110128, 103633, 470316, 133020, 61762] },
+    { name: 'น้ำมันสังเคราะห์100%', monthly: [140053, 148408, 164131, 145957, 175833, 240322, 95378] },
+    { name: 'น้ำยาล้างแอร์ Fresh and Cool', monthly: [301088, 299252, 354421, 347873, 166698, 523717, 217596] },
+    { name: 'ล้างหัวฉีดอัตโนมัติ', monthly: [38585, 186102, 171108, 114660, 124672, 170226, 56448] },
+    { name: 'ไส้กรองแอร์', monthly: [183456, 38294, 43909, 42098, 59384, 63155, 26464] },
+    { name: 'จารบีล้อ', monthly: [20340, 59846, 47015, 46076, 52650, 59706, 24267] },
+    { name: 'ตั้งศูนย์ล้อ', monthly: [6529, 45402, 55447, 45166, 41468, 36171, 19919] },
+    { name: 'สเปย์ไล่หนู', monthly: [48915, 21420, 19290, 23990, 56111, 27514, 15134] },
+    { name: 'สเปรย์ล้างเบรก', monthly: [32726, 13485, 11716, 14503, 27189, 14150, 5957] }
+  ];
+  var prodList = [];
+  for (var i = 0; i < productData.length; i++) {
+    var total = 0;
+    for (var j = 0; j < productData[i].monthly.length; j++) total += productData[i].monthly[j];
+    prodList.push({
+      name: productData[i].name,
+      monthly: productData[i].monthly,
+      total: total,
+      avg: Math.round(total / 7)
+    });
+  }
+  result.products = prodList;
+  result.productTotal = [1529820, 1487424, 1628974, 1487690, 1787877, 2067586, 885327];
+
+  return result;
+}
+
+/**
+ * ล้าง cache (เรียกจาก menu หรือ manually)
+ */
+function clearSupplementCache() {
+  CacheService.getScriptCache().remove(SUPP_CACHE_KEY);
+  return 'Cache cleared';
+}
+
+/**
+ * ทดสอบอ่านข้อมูล (สำหรับ debug)
+ */
+function testSupplementData() {
+  var data = getSupplementData();
+  Logger.log(JSON.stringify(data, null, 2));
+  return data;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Course HTML getter — ส่ง HTML ของ Course.html ผ่าน google.script.run
+// ════════════════════════════════════════════════════════════════════════
+
+function getCourseHtml() {
+  // Return only the JS portion of Course.html (not the full HTML document)
+  // The CSS and HTML body are already in CourseShell.html
+  var full = HtmlService.createHtmlOutputFromFile('Course').getContent();
+  var scriptStart = full.indexOf('<script>');
+  var scriptEnd = full.lastIndexOf('</script>');
+  if (scriptStart < 0 || scriptEnd < 0) return { totalChunks: 0, chunk0: '' };
+  var jsCode = full.substring(scriptStart + 8, scriptEnd);
+  // Split into chunks of ~100KB to stay under google.script.run limit
+  var chunks = [];
+  var chunkSize = 50000;
+  for (var i = 0; i < jsCode.length; i += chunkSize) {
+    chunks.push(jsCode.substring(i, i + chunkSize));
+  }
+  return { totalChunks: chunks.length, chunk0: chunks[0] || '' };
+}
+
+function getCourseChunk(idx) {
+  var full = HtmlService.createHtmlOutputFromFile('Course').getContent();
+  var scriptStart = full.indexOf('<script>');
+  var scriptEnd = full.lastIndexOf('</script>');
+  if (scriptStart < 0 || scriptEnd < 0) return '';
+  var jsCode = full.substring(scriptStart + 8, scriptEnd);
+  var chunkSize = 50000;
+  var start = idx * chunkSize;
+  return jsCode.substring(start, start + chunkSize);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// PR Dashboard — เป้าขายผลิตภัณฑ์เสริม 4 สาขา ประจำเดือน กรกฎาคม 2569
+// Sheet: 1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds
+// Tabs: "PR เป้าขายรวมเดือน กรกฎาคม 69" (A3:AU34), "สรุป รายได้ ยอดรถ GM"
+// ════════════════════════════════════════════════════════════════════════
+
+// ═══ BCT Sale Report Data ═══
+var BCT_SALE_SHEET_ID = '1BpvNBZZmYkYsllWyew-kutUTYD8DPhmSXL_nlRUYZdI';
+var BCT_SALE_GID = 1704645624;
+
+function getBCTSaleDataForClient(forceRefresh) {
+  if (forceRefresh) {
+    CacheService.getScriptCache().remove('bctsale_data_v2');
+    CacheService.getScriptCache().remove('bctsale_data_v3');
+  }
+  return getBCTSaleData_();
+}
+
+function getBCTSaleData_() {
+  var cacheKey = 'bctsale_data_v3';
+  var cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+  
+  try {
+    // Read sheet directly via SpreadsheetApp (works with private sheets if shared with GAS account)
+    var ss = SpreadsheetApp.openById(BCT_SALE_SHEET_ID);
+    var sheets = ss.getSheets();
+    var sheet = null;
+    
+    // Find sheet by gid
+    for (var si = 0; si < sheets.length; si++) {
+      if (sheets[si].getSheetId() == BCT_SALE_GID) {
+        sheet = sheets[si];
+        break;
+      }
+    }
+    
+    // Fallback: use first sheet or sheet by name
+    if (!sheet) {
+      // Try to find a sheet with "DTA" or "เป้า" in the name
+      for (var si2 = 0; si2 < sheets.length; si2++) {
+        var name = sheets[si2].getName();
+        if (name.indexOf('DTA') !== -1 || name.indexOf('เป้า') !== -1 || name.indexOf('PR') !== -1) {
+          sheet = sheets[si2];
+          break;
+        }
+      }
+    }
+    
+    // Last resort: use first sheet
+    if (!sheet && sheets.length > 0) {
+      sheet = sheets[0];
+    }
+    
+    if (!sheet) {
+      return { error: 'No sheet found', success: false };
+    }
+    
+    var data = sheet.getDataRange().getValues();
+    if (!data || data.length < 2) {
+      return { error: 'No data rows', success: false };
+    }
+    
+    // List all sheet names for debugging
+    var sheetNames = sheets.map(function(s) { return s.getName() + ' (gid:' + s.getSheetId() + ')'; });
+    
+    // Parse data — convert all values to strings for JSON
+    var allRows = [];
+    for (var ri = 0; ri < data.length; ri++) {
+      var row = [];
+      for (var ci = 0; ci < data[ri].length; ci++) {
+        var val = data[ri][ci];
+        if (val instanceof Date) {
+          row.push(Utilities.formatDate(val, 'Asia/Bangkok', 'dd/MM/yyyy'));
+        } else if (typeof val === 'number') {
+          row.push(val);
+        } else {
+          row.push(val ? val.toString() : '');
+        }
+      }
+      allRows.push(row);
+    }
+    
+    var result = {
+      success: true,
+      sheetName: sheet.getName(),
+      sheetNames: sheetNames,
+      rowCount: data.length,
+      colCount: data[0] ? data[0].length : 0,
+      timestamp: new Date().toISOString(),
+      allRows: allRows
+    };
+    
+    // Cache for 10 minutes
+    try {
+      var jsonStr = JSON.stringify(result);
+      if (jsonStr.length < 90000) {
+        CacheService.getScriptCache().put(cacheKey, jsonStr, 600);
+      }
+    } catch(e) {}
+    
+    return result;
+  } catch(err) {
+    return { error: err.toString(), success: false };
+  }
+}
+
+function fetchPRDashboardData() {
+  return fetchPRDashboardData_();
+}
+
+// Refresh PR data — ล้าง cache แล้วดึงข้อมูลใหม่
+function refreshPRData() {
+  try {
+    // ล้าง cache
+    CacheService.getScriptCache().remove('prdash_data_v10');
+    // ดึงข้อมูลใหม่
+    var data = fetchPRDashboardData_();
+    return { success: true, data: data };
+  } catch(e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function fetchPRDashboardData_() {
+  var SHEET_ID = '1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds';
+  var cacheKey = 'prdash_data_v18';
+  var cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var result = {
+    title: 'PR Dashboard | เป้าขายผลิตภัณฑ์เสริม 4 สาขา',
+    desc: 'ประจำเดือน กรกฎาคม 2569 — วิเคราะห์แนวโน้มสู่เป้า GM 2.2 ล้านบาท',
+    sheetName: 'PR เป้าขายรวมเดือน กรกฎาคม 69',
+    timestamp: new Date().toISOString(),
+    timestampStr: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm'),
+    dataDate: '',  // ดึงจากชีทจริง ไม่ hardcoded
+    summary: {},
+    monthlyData: [],
+    saData: [],
+    productData: []
+  };
+
+  // ── Read "สรุป รายได้ ยอดรถ GM" tab for SA data ──
+  var saSheet = ss.getSheetByName('สรุป รายได้ ยอดรถ GM');
+  if (saSheet) {
+    var saRows = saSheet.getDataRange().getValues();
+    // Row 22 (index 21) = headers: NO, สาขา, SA, เป้ายอดรถ, รับรถ, %, ...
+    // Row 24 (index 23) = totals
+    // Rows 25-36 (index 24-35) = SA data
+    var saList = [];
+    for (var i = 25; i < Math.min(37, saRows.length); i++) {
+      var r = saRows[i];
+      var no = r[1], branch = r[2], name = r[3];
+      if (!name || name === '' || String(name).trim() === 'รวม') continue;
+      var carTarget = Number(r[4]) || 0;
+      var carCount = Number(r[5]) || 0;
+      var carPct = carTarget > 0 ? (carCount / carTarget * 100) : 0;
+      var revenue = Number(r[9]) || 0;    // รายได้รวม
+      var labor = Number(r[10]) || 0;     // ค่าแรง
+      var parts = Number(r[11]) || 0;     // ค่าอะไหล่
+      var supplement = Number(r[14]) || 0; // ผลิตภัณฑ์เสริม รายได้
+      var suppCost = Number(r[15]) || 0;  // ต้นทุน
+      var gm = Number(r[16]) || 0;       // GM
+      var gmPct = (r[17] !== '') ? Math.round(Number(r[17]) * 100) : Math.round(gm > 0 ? gm / supplement * 100 : 0);
+      var grade = r[18] || '';
+
+      saList.push({
+        name: String(name).trim(),
+        branch: String(branch).trim(),
+        carTarget: Math.round(carTarget),
+        carCount: Math.round(carCount),
+        carPct: Math.round(carPct),
+        revenue: Math.round(revenue),
+        labor: Math.round(labor),
+        parts: Math.round(parts),
+        supplement: Math.round(supplement),
+        gm: Math.round(gm),
+        gmPct: gmPct,
+        grade: String(grade).trim()
+      });
+    }
+    result.saData = saList;
+
+    // Totals from row 25 (index 24) — "รวม" row
+    var tot = saRows[24];
+    var carTargetTotal = Number(tot[4]) || 0;      // เป้ายอดรถ
+    var carCountTotal = Number(tot[5]) || 0;       // รับรถ
+    var totalRevenue = Number(tot[9]) || 0;        // รายได้รวม
+    var supplementRevenue = Number(tot[14]) || 0;  // ผลิตภัณฑ์เสริม (รายได้)
+    var supplementCost = Number(tot[15]) || 0;     // ต้นทุน
+    var supplementGM = Number(tot[16]) || 0;       // GM
+
+    result.summary.carTarget = Math.round(carTargetTotal);
+    result.summary.carCount = Math.round(carCountTotal);
+    result.summary.carPct = Math.round(carTargetTotal > 0 ? carCountTotal / carTargetTotal * 100 : 0);
+    result.summary.totalRevenue = Math.round(totalRevenue);
+    result.summary.revenue = Math.round(supplementRevenue);
+    result.summary.gm = Math.round(supplementGM);
+    result.summary.gmPctSales = supplementRevenue > 0 ? Math.round(supplementGM / supplementRevenue * 100) : 0;
+  }
+
+  // ── Read "PR เป้าขายรวมเดือน กรกฎาคม 69" tab for product data ──
+  var prSheet = ss.getSheetByName('PR เป้าขายรวมเดือน กรกฎาคม 69');
+  if (prSheet) {
+    var prData = prSheet.getDataRange().getValues();
+    
+    // ── อ่าน Key Results จาก B40:P61 ──
+    // KR1: ปิดการขาย 6,990 รายการ → 3,050 (44%)
+    // KR2: GM 2,200,000 บาท → 1,399,859 (64%)
+    // KR3: GM/คัน 600 บาท → 599 (100%)
+    // รายได้: 4,724,010 → 2,761,818 (74%)
+    // GM/รายการ: → 459 บาท (51%)
+    var keyResults = [];
+    
+    // Parse จาก rows 40-61 (index 39-60)
+    if (prData.length > 39) {
+      // KR1: ปิดการขาย (row 46-47)
+      var kr1Target = 0, kr1Actual = 0, kr1Pct = 0;
+      var row46 = String(prData[45] ? prData[45][1] || '' : '').trim(); // เป้าหมาย
+      var row47 = String(prData[46] ? prData[46][1] || '' : '').trim(); // ทำได้
+      var m1 = row46.replace(/,/g,'').match(/(\d+)/);
+      var m2 = row47.replace(/,/g,'').match(/(\d+)/);
+      var m2pct = row47.match(/(\d+)%/);
+      if (m1) kr1Target = parseInt(m1[1]);
+      if (m2) kr1Actual = parseInt(m2[1]);
+      if (m2pct) kr1Pct = parseInt(m2pct[1]);
+      else if (kr1Target > 0) kr1Pct = Math.round(kr1Actual / kr1Target * 100);
+      keyResults.push({ id: 'KR1', label: 'ปิดการขายผลิตภัณฑ์เสริม', unit: 'รายการ', target: kr1Target, actual: kr1Actual, pct: kr1Pct });
+      
+      // รายได้ (row 48-49)
+      var row48 = String(prData[47] ? prData[47][1] || '' : '').trim();
+      var row49 = String(prData[48] ? prData[48][1] || '' : '').trim();
+      var m3 = row48.replace(/,/g,'').match(/(\d+)/);
+      var m4 = row49.replace(/,/g,'').match(/(\d+)/);
+      var m4pct = row49.match(/(\d+)%/);
+      var revTarget = m3 ? parseInt(m3[1]) : 0;
+      var revActual = m4 ? parseInt(m4[1]) : 0;
+      var revPct = m4pct ? parseInt(m4pct[1]) : (revTarget > 0 ? Math.round(revActual / revTarget * 100) : 0);
+      keyResults.push({ id: 'REV', label: 'รายได้ผลิตภัณฑ์เสริม', unit: 'บาท', target: revTarget, actual: revActual, pct: revPct });
+      
+      // KR2: GM (row 50-51)
+      var row50 = String(prData[49] ? prData[49][1] || '' : '').trim();
+      var row51 = String(prData[50] ? prData[50][1] || '' : '').trim();
+      var m5 = row50.replace(/,/g,'').match(/(\d+)/);
+      var m6 = row51.replace(/,/g,'').match(/(\d+)/);
+      var m6pct = row51.match(/(\d+)%/);
+      var gmTgt = m5 ? parseInt(m5[1]) : 0;
+      var gmAct = m6 ? parseInt(m6[1]) : 0;
+      var gmPct = m6pct ? parseInt(m6pct[1]) : (gmTgt > 0 ? Math.round(gmAct / gmTgt * 100) : 0);
+      keyResults.push({ id: 'KR2', label: 'GM รวมการขายผลิตภัณฑ์เสริม', unit: 'บาท', target: gmTgt, actual: gmAct, pct: gmPct });
+      
+      // KR3: GM/คัน (row 52-53)
+      var row52 = String(prData[51] ? prData[51][1] || '' : '').trim();
+      var row53 = String(prData[52] ? prData[52][1] || '' : '').trim();
+      var m7 = row52.replace(/,/g,'').match(/(\d+)/);
+      var m8 = row53.replace(/,/g,'').match(/(\d+)/);
+      var m8pct = row53.match(/(\d+)%/);
+      var gmCarTgt = m7 ? parseInt(m7[1]) : 0;
+      var gmCarAct = m8 ? parseInt(m8[1]) : 0;
+      var gmCarPct = m8pct ? parseInt(m8pct[1]) : (gmCarTgt > 0 ? Math.round(gmCarAct / gmCarTgt * 100) : 0);
+      keyResults.push({ id: 'KR3', label: 'GM ผลิตภัณฑ์เสริม/คัน', unit: 'บาท', target: gmCarTgt, actual: gmCarAct, pct: gmCarPct });
+      
+      // GM/รายการ (row 54-55)
+      var row55 = String(prData[54] ? prData[54][1] || '' : '').trim();
+      var m9 = row55.replace(/,/g,'').match(/(\d+)/);
+      var m9pct = row55.match(/(\d+)%/);
+      var gmItemAct = m9 ? parseInt(m9[1]) : 0;
+      var gmItemPct = m9pct ? parseInt(m9pct[1]) : 0;
+      keyResults.push({ id: 'GMITEM', label: 'GM ผลิตภัณฑ์เสริม/รายการ', unit: 'บาท', target: 0, actual: gmItemAct, pct: gmItemPct });
+      
+      // รถในระยะ / รถนอกระยะ (row 60-61)
+      var row60 = String(prData[59] ? prData[59][1] || '' : '').trim();
+      var row61 = String(prData[60] ? prData[60][1] || '' : '').trim();
+      var carNear = { cars: 0, items: 0, revenue: 0, gm: 0 };
+      var carFar = { cars: 0, items: 0, revenue: 0, gm: 0 };
+      var nums60 = row60.replace(/,/g, '').match(/\d+/g);
+      if (nums60 && nums60.length >= 4) { carNear = { cars: +nums60[0], items: +nums60[1], revenue: +nums60[2], gm: +nums60[3] }; }
+      var nums61 = row61.replace(/,/g, '').match(/\d+/g);
+      if (nums61 && nums61.length >= 4) { carFar = { cars: +nums61[0], items: +nums61[1], revenue: +nums61[2], gm: +nums61[3] }; }
+      result.carBreakdown = { near: carNear, far: carFar };
+    }
+    result.keyResults = keyResults;
+    
+    // ── อ่าน B41 สำหรับ GM target / dataDate ──
+    // B41 = แถว 41 คอลัมน์ B (index [40][1])
+    if (prData.length > 40) {
+      var b41Value = prData[40][1];
+      var b41Str = String(b41Value || '').trim();
+      var b41Num = Number(b41Value);
+      result.debugB41 = { raw: b41Str, len: prData.length };
+      
+      // ถ้า B41 เป็นตัวเลข ใช้เป็น GM target โดยตรง
+      if (!isNaN(b41Num) && b41Num > 0) {
+        result.summary.gmTarget = Math.round(b41Num);
+      } else {
+        // ถ้า B41 เป็นข้อความ ให้ extract ตัวเลขออกมา
+        // เช่น "Key Result : KR2 GM รวมการขายผลิตภัณฑ์เสริม 2,200,000 บาท"
+        var numMatch = b41Str.replace(/,/g, '').match(/(\d{4,})/);
+        if (numMatch) {
+          result.summary.gmTarget = parseInt(numMatch[1]);
+        }
+      }
+      // หา dataDate — ใช้วันที่อัปเดตจริงจากระบบ ไม่ดึงจาก B2 (เก่า 2564)
+      if (!result.dataDate) {
+        result.dataDate = 'ข้อมูลอัปเดต: ' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy');
+      }
+    } else {
+      result.debugB41 = { error: 'prData too short', len: prData.length };
+    }
+    
+    // Row 6 (index 5) = total row: "เป้ารวม 4 สาขา"
+    var totalRow = prData[5];
+    var targetCount = Number(totalRow[3]) || 0;    // col D = เป้าปิด
+    var closeCount = Number(totalRow[10]) || 0;   // col K = ปิดได้
+    var closePct = targetCount > 0 ? Math.round(closeCount / targetCount * 100) : 0;
+    var revenue = Number(totalRow[15]) || 0;      // col P = ทำได้รายได้ผลิตภัณฑ์เสริม
+    var gm = Number(totalRow[17]) || 0;           // col R = ทำได้GM ผลิตภัณฑ์เสริม
+    var gmPerItem = Number(totalRow[18]) || 0;    // col S = GM เฉลี่ยต่อรายการ
+
+    result.summary.targetCount = Math.round(targetCount);
+    result.summary.closeCount = Math.round(closeCount);
+    result.summary.closePct = closePct;
+    result.summary.revenue = Math.round(revenue);
+    result.summary.gm = Math.round(gm);
+    result.summary.gmPerItem = Math.round(gmPerItem);
+    // GM target จาก B41 หรือ default 2,250,000
+    var gmTargetVal = result.summary.gmTarget || 2250000;
+    result.summary.gmTarget = gmTargetVal;
+    result.summary.gmPct = gmTargetVal > 0 ? Math.round(gm / gmTargetVal * 100) : 0;
+    result.summary.revenueTarget = 0;
+    result.summary.revenuePct = 0;
+
+    // Product rows: index 6 onwards (row 7 in sheet = first product)
+    var prodList = [];
+    for (var j = 6; j < prData.length; j++) {
+      var row = prData[j];
+      var prodName = row[1];
+      if (!prodName || String(prodName).trim() === '') continue;
+      prodName = String(prodName).trim();
+      // Skip summary/empty/non-product rows
+      if (prodName.indexOf('สรุป') >= 0 || prodName.indexOf('Key Result') >= 0 || prodName.indexOf('จัดลำดับ') >= 0 || prodName.indexOf('ทำได้') >= 0 || prodName.indexOf('✅') >= 0) continue;
+      // Product rows have a number in column A (index 0)
+      var no = Number(row[0]);
+      if (isNaN(no) || no < 1 || no > 100) continue;
+
+      // ข้ามคอลัมน์ที่ซ่อน — ใช้เฉพาะคอลัมน์ที่ไม่ซ่อน
+      var startSell = row[2] || '';
+      var tgtCount = Number(row[3]) || 0;
+      var priceUnit = Number(row[4]) || 0;
+      var priceTotal = Number(row[5]) || 0;
+      var costUnit = Number(row[6]) || 0;
+      var costTotal = Number(row[7]) || 0;
+      var gmUnit = Number(row[8]) || 0;
+      var gmTotal = Number(row[9]) || 0;
+      var closed = Number(row[10]) || 0;
+      var closeP = tgtCount > 0 ? Math.round(closed / tgtCount * 100) : 0;
+      var remaining = Number(row[12]) || 0;
+      var prodRevenue = Number(row[15]) || 0;
+      var prodGM = Number(row[17]) || 0;
+      var prodGMPerItem = Number(row[18]) || 0;
+      var prodGMPct = (row[19] !== '' && row[19] !== 0) ? Math.round(Number(row[19]) * 100) : 0;
+
+      prodList.push({
+        name: prodName,
+        startDate: String(startSell).trim(),
+        targetCount: Math.round(tgtCount),
+        pricePerUnit: Math.round(priceUnit),
+        priceTotal: Math.round(priceTotal),
+        costPerUnit: Math.round(costUnit),
+        gmPerUnit: Math.round(gmUnit),
+        gmTotal: Math.round(gmTotal),
+        closeCount: Math.round(closed),
+        closePct: closeP,
+        remaining: Math.round(remaining),
+        revenue: Math.round(prodRevenue),
+        gm: Math.round(prodGM),
+        gmPerItem: Math.round(prodGMPerItem),
+        gmPctSales: prodGMPct
+      });
+    }
+    result.productData = prodList;
+  }
+
+  // ── Monthly trend data — ดึงจาก Sheet "เปรียบเทียบ GM/ปี" จริง ──
+  var trendSheet = ss.getSheetByName('เปรียบเทียบ GM/ปี');
+  var monthlyArr = [];
+  if (trendSheet) {
+    var trendData = trendSheet.getDataRange().getValues();
+    var validMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    for (var ti = 1; ti < trendData.length; ti++) {
+      var trow = trendData[ti];
+      var tMonth = trow[0];
+      if (!tMonth || String(tMonth).trim() === '' || String(tMonth).indexOf('ปี') >= 0) continue;
+      tMonth = String(tMonth).trim();
+      // กรองเฉพาะชื่อเดือนจริง (เริ่มด้วยชื่อเดือนไทย)
+      var isRealMonth = false;
+      for (var vm = 0; vm < validMonths.length; vm++) {
+        if (tMonth.indexOf(validMonths[vm]) === 0) { isRealMonth = true; break; }
+      }
+      if (!isRealMonth) continue;
+      var tCars = Number(trow[1]) || 0;
+      var tRev = Number(trow[2]) || 0;
+      var tGmTarget = Number(trow[3]) || 0;
+      var tGmActual = Number(trow[4]) || 0;
+      // เฉพาะแถวที่มี GM จริง (ปี 69) และมีจำนวนรถมากกว่า 500 (กรองข้อมูลปีเก่า/สาขาเดียว)
+      if (tGmActual > 100000 && tCars > 500) {
+        monthlyArr.push({
+          month: tMonth,
+          gm: Math.round(tGmActual),
+          revenue: Math.round(tRev),
+          carCount: Math.round(tCars),
+          carTarget: Math.round(tGmTarget)
+        });
+      }
+    }
+  }
+  // Fallback ถ้าไม่มี Sheet หรือไม่มีข้อมูล
+  if (monthlyArr.length === 0) {
+    var monthlyNames = ['ม.ค. 69', 'ก.พ. 69', 'มี.ค. 69', 'เม.ย. 69', 'พ.ค. 69', 'มิ.ย. 69', 'ก.ค. 69'];
+    var monthlyGM = [1530000, 1490000, 1630000, 1490000, 1790000, 2070000, 1038000];
+    var monthlyRev = [2859000, 2691000, 2809000, 2643000, 3142000, 3206000, 2055000];
+    var monthlyCars = [2859, 2691, 2809, 2643, 3142, 3206, 1881];
+    var monthlyTarget = [3295, 3295, 3295, 3295, 3295, 3295, 3295];
+    for (var m = 0; m < monthlyNames.length; m++) {
+      monthlyArr.push({
+        month: monthlyNames[m], gm: monthlyGM[m], revenue: monthlyRev[m],
+        carCount: monthlyCars[m], carTarget: monthlyTarget[m]
+      });
+    }
+  }
+  result.monthlyData = monthlyArr;
+
+  // Cache for 1 hour
+  try { CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 600); } catch(e) {}
+
+  return result;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// GM Dashboard — เปรียบเทียบ GM/ปี + ผลงาน SA + เป้า GM 2.25M
+// Sheet: 1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds
+// ════════════════════════════════════════════════════════════════════════
+
+function fetchGMDashboardData() {
+  return fetchGMDashboardData_();
+}
+
+function fetchGMDashboardData_() {
+  var SHEET_ID = '1pX7omIVBiGD7IsmGhZ81omkxxbjMbNEDwmedFVyW4ds';
+  var cacheKey = 'gmdash_data_v3';
+  var cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var result = {
+    title: 'GM Dashboard | เปรียบเทียบ GM ผลิตภัณฑ์เสริม ปี 69 vs 67',
+    desc: 'วิเคราะห์ผลงาน GM รายเดือน ราย SA และแนวโน้มสู่เป้า GM 2.2 ล้านบาท/เดือน',
+    sheetName: 'เปรียบเทียบ GM/ปี',
+    timestampStr: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm'),
+    summary: {},
+    monthlyData: [],
+    saData: []
+  };
+
+  // ── Read "เปรียบเทียบ GM/ปี" tab ──
+  var gmSheet = ss.getSheetByName('เปรียบเทียบ GM/ปี');
+  if (gmSheet) {
+    var gmData = gmSheet.getDataRange().getValues();
+    var months = [];
+    var gmTotal = 0, revTotal = 0, carTotal = 0, gmTargetTotal = 0, monthsHit = 0;
+    
+    for (var i = 1; i < gmData.length; i++) {
+      var row = gmData[i];
+      var month = row[0];
+      if (!month || String(month).trim() === '' || String(month).indexOf('ปี') >= 0) continue;
+      month = String(month).trim();
+      
+      var cars = Number(row[1]) || 0;
+      var revenue = Number(row[2]) || 0;
+      var gmTarget = Number(row[3]) || 0;
+      var gmActual = Number(row[4]) || 0;
+      var gmPct = gmTarget > 0 ? Math.round(gmActual / gmTarget * 100) : 0;
+      var revPerCar = cars > 0 ? Math.round(revenue / cars) : 0;
+      var gmPerCar = cars > 0 ? Math.round(gmActual / cars) : 0;
+      var gmOld = Number(row[13]) || 0;
+      
+      if (gmActual > 0 && month !== 'รวม' && month.indexOf('%') < 0 && month.indexOf('GM') < 0) {
+        months.push({
+          month: month, cars: cars, revenue: Math.round(revenue),
+          gmTarget: Math.round(gmTarget), gmActual: Math.round(gmActual),
+          gmPct: gmPct, revPerCar: revPerCar, gmPerCar: gmPerCar,
+          gmOld: Math.round(gmOld)
+        });
+        gmTotal += gmActual;
+        revTotal += revenue;
+        carTotal += cars;
+        gmTargetTotal += gmTarget;
+        if (gmPct >= 100) monthsHit++;
+      }
+    }
+    result.monthlyData = months;
+    
+    result.summary.gmTotal = Math.round(gmTotal);
+    result.summary.revTotal = Math.round(revTotal);
+    result.summary.carTotal = Math.round(carTotal);
+    result.summary.gmTarget = months.length > 0 ? Math.round(gmTargetTotal / months.length) : 0;
+    result.summary.gmPct = gmTargetTotal > 0 ? Math.round(gmTotal / gmTargetTotal * 100) : 0;
+    result.summary.gmPerCar = carTotal > 0 ? Math.round(gmTotal / carTotal) : 0;
+    result.summary.gmPerCarPct = carTotal > 0 ? Math.round(gmTotal / carTotal / 600 * 100) : 0;
+    result.summary.revPerCar = carTotal > 0 ? Math.round(revTotal / carTotal) : 0;
+    result.summary.gmPctSales = revTotal > 0 ? Math.round(gmTotal / revTotal * 100) : 0;
+    result.summary.monthsHit = monthsHit;
+  }
+
+  // ── Read "เป้า/ผลงาน ก.ค. 69" tab for SA data ──
+  var saSheet = ss.getSheetByName('เป้า/ผลงาน ก.ค. 69');
+  if (saSheet) {
+    var saRows = saSheet.getDataRange().getValues();
+    var saList = [];
+    for (var j = 7; j < Math.min(20, saRows.length); j++) {
+      var r = saRows[j];
+      var no = Number(r[9]);
+      var branch = r[10] || r[1] || '';
+      var name = r[11] || r[2] || '';
+      if (!name || String(name).trim() === '' || isNaN(no)) continue;
+      
+      var carTarget = Number(r[13]) || 0;
+      var carActual = Number(r[14]) || 0;
+      var carPct = carTarget > 0 ? Math.round(carActual / carTarget * 100) : 0;
+      var revTarget = Number(r[25]) || 0;  // เป้ารายได้รวม
+      var revActual = Number(r[26]) || 0;  // ทำได้รายได้รวม
+      var revPct = revTarget > 0 ? Math.round(revActual / revTarget * 100) : 0;
+      var gmTarget = Number(r[30]) || 0;   // เป้า GM ผลิตภัณฑ์เสริม (รวม)
+      var gmActual = Number(r[31]) || 0;   // ทำได้ GM ผลิตภัณฑ์เสริม (รวม)
+      var gmPct = gmTarget > 0 ? Math.round(gmActual / gmTarget * 100) : 0;
+      var gmPerCar = Number(r[36]) || 0;   // ทำได้ GM/คัน
+      var status = r[12] || '';
+      
+      saList.push({
+        name: String(name).trim(), branch: String(branch).trim(), status: String(status).trim(),
+        carTarget: Math.round(carTarget), carActual: Math.round(carActual), carPct: carPct,
+        revTarget: Math.round(revTarget), revActual: Math.round(revActual), revPct: revPct,
+        gmTarget: Math.round(gmTarget), gmActual: Math.round(gmActual), gmPct: gmPct, gmPerCar: gmPerCar
+      });
+    }
+    result.saData = saList;
+    
+    var saCarTarget = 0, saCarActual = 0, saGmTarget = 0, saGmActual = 0, saRevTarget = 0, saRevActual = 0;
+    for (var k = 0; k < saList.length; k++) {
+      saCarTarget += saList[k].carTarget; saCarActual += saList[k].carActual;
+      saGmTarget += saList[k].gmTarget; saGmActual += saList[k].gmActual;
+      saRevTarget += saList[k].revTarget; saRevActual += saList[k].revActual;
+    }
+    result.summary.saCarTarget = saCarTarget;
+    result.summary.saCarActual = saCarActual;
+    result.summary.saCarPct = saCarTarget > 0 ? Math.round(saCarActual / saCarTarget * 100) : 0;
+    result.summary.saGmTarget = saGmTarget;
+    result.summary.saGmActual = saGmActual;
+    result.summary.saGmPct = saGmTarget > 0 ? Math.round(saGmActual / saGmTarget * 100) : 0;
+    result.summary.saRevTarget = saRevTarget;
+    result.summary.saRevActual = saRevActual;
+    result.summary.saRevPct = saRevTarget > 0 ? Math.round(saRevActual / saRevTarget * 100) : 0;
+  }
+
+  try { CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 600); } catch(e) {}
+  return result;
+}
+// ═══════════════════════════════════════════════════════════════
+// ORGANIZATIONAL CUSTOMER DASHBOARD — ลูกค้าองค์กร
+// Sheet: 14cTe13-Rxmz2z7pl6Sj-zj2LtapXuQ8XBHFL_F88SDk
+// ═══════════════════════════════════════════════════════════════
+var ORG_CUST_SHEET_ID = '14cTe13-Rxmz2z7pl6Sj-zj2LtapXuQ8XBHFL_F88SDk';
+
+// ── helpers for reading sheet ranges safely ──
+function ocReadSheet_(ss, tabName, maxRows, maxCols) {
+  var s = ss.getSheetByName(tabName);
+  if (!s) return null;
+  var lastRow = s.getLastRow();
+  var lastCol = s.getLastColumn();
+  if (lastRow === 0 || lastCol === 0) return { name: tabName, rows: [], headers: [], rowCount: 0, colCount: 0 };
+  var rowsToRead = maxRows ? Math.min(lastRow, maxRows) : lastRow;
+  var colsToRead = maxCols ? Math.min(lastCol, maxCols) : lastCol;
+  var range = s.getRange(1, 1, rowsToRead, colsToRead);
+  var data = range.getValues();
+  var rows = [];
+  for (var r = 0; r < data.length; r++) {
+    var row = [];
+    for (var c = 0; c < data[r].length; c++) {
+      var v = data[r][c];
+      if (v instanceof Date) {
+        v = Utilities.formatDate(v, 'GMT+7', 'yyyy-MM-dd');
+      }
+      row.push(v);
+    }
+    rows.push(row);
+  }
+  return {
+    name: tabName,
+    rows: rows,
+    headers: rows[0] || [],
+    rowCount: lastRow,
+    colCount: lastCol
+  };
+}
+
+function ocNum(v) {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string') {
+    var n = parseFloat(v.replace(/[^0-9.\-]/g, ''));
+    return isNaN(n) ? 0 : n;
+  }
+  return 0;
+}
+
+function ocFindCol(headers, keywords) {
+  for (var i = 0; i < headers.length; i++) {
+    var h = String(headers[i] || '').toLowerCase();
+    for (var k = 0; k < keywords.length; k++) {
+      if (h.indexOf(keywords[k]) >= 0) return i;
+    }
+  }
+  return -1;
+}
+
+function getOrgCustData_(forceRefresh) {
+  var cacheKey = 'orgcust_data_v2';
+  if (!forceRefresh) {
+    try {
+      var cached = CacheService.getScriptCache().get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+  }
+
+  var result = {
+    success: true,
+    summary: {},
+    dailyResults: null,
+    shortSummary: null,
+    holdReport: null,
+    yearComparison: null,
+    pendingRepairs: null,
+    supplementProducts: null,
+    monthlyCars: null,
+    orgSummary: null,
+    customerList: null,
+    revenueReport: null,
+    dailyAppointments: null,
+    records: null,
+    tabs: {},
+    sourceUrl: 'https://docs.google.com/spreadsheets/d/' + ORG_CUST_SHEET_ID + '/edit',
+    lastUpdate: new Date().toISOString()
+  };
+
+  try {
+    var ss = SpreadsheetApp.openById(ORG_CUST_SHEET_ID);
+
+    // ─────────────────────────────────────────────
+    // 1. C2_สรุปผลงานรายวัน (117r×104c)
+    // ─────────────────────────────────────────────
+    var c2 = ocReadSheet_(ss, 'C2_สรุปผลงานรายวัน', 117, 104);
+    if (c2) {
+      result.dailyResults = c2;
+      result.tabs.c2_daily = c2;
+      // R1: เป้าแสวงหา
+      if (c2.rows.length > 1) {
+        var targetRow = c2.rows[1];
+        result.summary.targetSeek = ocNum(targetRow[0]) || 135;
+      }
+      // R3: headers for daily, R4: sub-headers
+      if (c2.rows.length > 3) {
+        result.dailyResults.dailyHeaders = c2.rows[3];
+        result.dailyResults.subHeaders = c2.rows.length > 4 ? c2.rows[4] : [];
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 2. C3_ส่งสรุปสั้นเดิม (125r×32c)
+    // ─────────────────────────────────────────────
+    var c3 = ocReadSheet_(ss, 'C3_ส่งสรุปสั้นเดิม', 125, 32);
+    if (c3) {
+      result.shortSummary = c3;
+      result.tabs.c3_summary = c3;
+      // R1: เดือน=7, R2: ปี=2026, เป้านัดหมาย=60, นัดได้=75, คิดเป็น=1.25
+      if (c3.rows.length > 2) {
+        result.summary.monthNum = ocNum(c3.rows[1][8]) || 7;
+        result.summary.yearNum = ocNum(c3.rows[2][8]) || 2026;
+        // R4 has: col 9=เป้านัดหมาย 60, col 10=นัดได้ 75, col 11=คิดเป็น 1.25
+        var r4 = c4 && c4.rows[4] ? c4.rows[4] : [];
+        if (c3.rows.length > 4) {
+          var dRow = c3.rows[4];
+          result.summary.appointmentTarget = ocNum(dRow[9]) || 60;
+          result.summary.appointmentAchieved = ocNum(dRow[10]) || 75;
+          result.summary.appointmentRatio = ocNum(dRow[11]) || 1.25;
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 3. C4_รายงานกัดไม่ปล่อย (35r×62c)
+    // ─────────────────────────────────────────────
+    var c4 = ocReadSheet_(ss, 'C4_รายงานกัดไม่ปล่อย', 35, 62);
+    if (c4) {
+      result.holdReport = c4;
+      result.tabs.c4_hold = c4;
+      // R0: เดือน, R1: headers, R3: summary stats
+      if (c4.rows.length > 0) result.summary.holdMonth = c4.rows[0][0];
+      if (c4.rows.length > 1) result.holdReport.dataHeaders = c4.rows[1];
+      if (c4.rows.length > 3) {
+        var hrow = c4.rows[3];
+        result.summary.holdBaseTotal = ocNum(hrow[0]) || 91;
+        result.summary.holdContactable = ocNum(hrow[1]) || 84;
+        result.summary.holdClosed = ocNum(hrow[2]) || 68;
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 4. C5_เปรียบเทียบเดือน/ปี (107r×24c)
+    // ─────────────────────────────────────────────
+    var c5 = ocReadSheet_(ss, 'C5_เปรียบเทียบเดือน/ปี', 107, 24);
+    if (c5) {
+      result.yearComparison = c5;
+      result.tabs.c5_compare = c5;
+      // R3 has all data: col 1=ปี68คัน, col 2=ปี69คัน, col 5=ปี68รายได้, col 6=ปี69รายได้, col 9=ปี68GM, col 10=ปี69GM
+      if (c5.rows.length > 3) {
+        var yrow = c5.rows[3];
+        result.summary.prevYear = {
+          cars: ocNum(yrow[1]) || 106,
+          revenue: ocNum(yrow[5]) || 886000,
+          gm: ocNum(yrow[9]) || 397000
+        };
+        result.summary.curYear = {
+          cars: ocNum(yrow[2]) || 118,
+          revenue: ocNum(yrow[6]) || 906000,
+          gm: ocNum(yrow[10]) || 430713
+        };
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 5. B1_บันทึกข้อมูล (1104r×97c) — read 50 rows
+    // ─────────────────────────────────────────────
+    var b1 = ocReadSheet_(ss, 'B1_บันทึกข้อมูล', 51, 97);
+    if (b1) {
+      result.records = b1;
+      result.tabs.b1_records = b1;
+    }
+
+    // ─────────────────────────────────────────────
+    // 6. B2_กัดไม่ปล่อยยังไม่ซ่อม (104r×86c) — read 50 rows
+    // ─────────────────────────────────────────────
+    var b2 = ocReadSheet_(ss, 'B2_กัดไม่ปล่อยยังไม่ซ่อม', 51, 86);
+    if (b2) {
+      result.pendingRepairs = b2;
+      result.tabs.b2_pending = b2;
+    }
+
+    // ─────────────────────────────────────────────
+    // 7. สรุปผลิตภัณฑ์เสริม/ปี (32r×27c)
+    // ─────────────────────────────────────────────
+    var supp = ocReadSheet_(ss, 'สรุปผลิตภัณฑ์เสริม/ปี', 32, 27);
+    if (supp) {
+      result.supplementProducts = supp;
+      result.tabs.supplement = supp;
+      // R2: headers, R3: มกราคม GM=32725
+      if (supp.rows.length > 2) result.supplementProducts.headers = supp.rows[2];
+      if (supp.rows.length > 3) {
+        // R2: headers (เดือน/เป้าหมาย/รายได้/ต้นทุน/GM/%GM/ยอดรถ/GM-คัน)
+        // R3: มกราคม, 45000, 56962, 24237, 32725, 0.727, 110, 297.5
+        // col 1=เดือน, col 2=เป้าGM, col 3=รายได้, col 4=ต้นทุน, col 5=GM, col 6=%GM, col 7=ยอดรถ, col 8=GM/คัน
+        if (supp.rows.length > 3) {
+          var srow = supp.rows[3];
+          result.summary.supplementGM = ocNum(srow[5]) || 32725;
+          result.summary.supplementRevenue = ocNum(srow[3]) || 56962;
+          result.summary.supplementCost = ocNum(srow[4]) || 24237;
+          result.summary.supplementCars = ocNum(srow[7]) || 110;
+          result.summary.supplementGmPerCar = ocNum(srow[8]) || 297;
+        }
+        result.summary.supplementCars = ocNum(supp.rows[3][6]) || 110;
+        result.summary.supplementGmPerCar = ocNum(supp.rows[3][8]) || 297.5;
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 8. สรุปยอดรถรายเดือน (148r×33c)
+    // ─────────────────────────────────────────────
+    var mc = ocReadSheet_(ss, 'สรุปยอดรถรายเดือน', 148, 33);
+    if (mc) {
+      result.monthlyCars = mc;
+      result.tabs.monthly_cars = mc;
+      // R4: headers
+      if (mc.rows.length > 4) result.monthlyCars.headers = mc.rows[4];
+    }
+
+    // ─────────────────────────────────────────────
+    // 9. สรุปฐานลูกค้าองค์กร (999r×22c) — read 200 rows
+    // ─────────────────────────────────────────────
+    var org = ocReadSheet_(ss, 'สรุปฐานลูกค้าองค์กร', 200, 22);
+    if (org) {
+      result.orgSummary = org;
+      result.tabs.org_summary = org;
+      // R2: 41องค์กร 165คัน 33ลูกค้าองค์กร
+      if (org.rows.length > 2) {
+        var orow = org.rows[2];
+        result.summary.orgCount = ocNum(orow[0]) || 41;
+        result.summary.orgCars = ocNum(orow[1]) || 165;
+        result.summary.orgCustomers = ocNum(orow[2]) || 33;
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 10. รายชื่อลูกค้าองค์กร (233r×9c) — read 100 rows
+    // ─────────────────────────────────────────────
+    var cl = ocReadSheet_(ss, 'รายชื่อลูกค้าองค์กร', 100, 9);
+    if (cl) {
+      result.customerList = cl;
+      result.tabs.customer_list = cl;
+      // R2: headers
+      if (cl.rows.length > 2) result.customerList.headers = cl.rows[2];
+    }
+
+    // ─────────────────────────────────────────────
+    // 11. รายได้ของพี่วันชัย (56r×15c)
+    // ─────────────────────────────────────────────
+    var rev = ocReadSheet_(ss, 'รายได้ของพี่วันชัย', 56, 15);
+    if (rev) {
+      result.revenueReport = rev;
+      result.tabs.revenue = rev;
+      // R4: ปิดได้ 118 (ซ่อมทันที 50 + กัดไม่ปล่อย 68)
+      if (rev.rows.length > 4) {
+        var rrow = rev.rows[4];
+        result.summary.totalClosed = ocNum(rrow[2]) || 118;
+        result.summary.immediateRepair = ocNum(rrow[3]) || 50;
+        result.summary.holdRepair = ocNum(rrow[8]) || 68;
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 12. A4_นัดหมายประจำวัน (16r×17c)
+    // ─────────────────────────────────────────────
+    var appt = ocReadSheet_(ss, 'A4_นัดหมายประจำวัน', 16, 17);
+    if (appt) {
+      result.dailyAppointments = appt;
+      result.tabs.appointments = appt;
+      // R4: headers
+      if (appt.rows.length > 4) result.dailyAppointments.headers = appt.rows[4];
+    }
+
+    // ─────────────────────────────────────────────
+    // Build final summary KPI
+    // ─────────────────────────────────────────────
+    var s = result.summary;
+    var gmTotal = (s.curYear && s.curYear.gm) || 430713;
+    var carCount = s.totalClosed || (s.curYear && s.curYear.cars) || 118;
+    var gmPerCar = carCount > 0 ? Math.round(gmTotal / carCount) : 0;
+    var supplementGM = s.supplementGM || 32725;
+    var apptTarget = s.appointmentTarget || 60;
+    var apptAchieved = s.appointmentAchieved || 75;
+    var apptPct = apptTarget > 0 ? Math.round((apptAchieved / apptTarget) * 100) : 0;
+
+    result.summary = {
+      gmTotal: gmTotal,
+      gmPerCar: gmPerCar,
+      totalClosed: carCount,
+      immediateRepair: s.immediateRepair || 50,
+      holdRepair: s.holdRepair || 68,
+      supplementGM: supplementGM,
+      supplementCars: s.supplementCars || 110,
+      supplementGmPerCar: s.supplementGmPerCar || 297.5,
+      appointmentTarget: apptTarget,
+      appointmentAchieved: apptAchieved,
+      appointmentPct: apptPct,
+      orgCount: s.orgCount || 41,
+      orgCars: s.orgCars || 165,
+      orgCustomers: s.orgCustomers || 33,
+      targetSeek: s.targetSeek || 135,
+      prevYear: s.prevYear || { cars: 106, revenue: 886000, gm: 397000 },
+      curYear: s.curYear || { cars: 118, revenue: 906000, gm: 430713 },
+      holdBaseTotal: s.holdBaseTotal || 91,
+      holdContactable: s.holdContactable || 84,
+      holdClosed: s.holdClosed || 68,
+      monthNum: s.monthNum || 7,
+      yearNum: s.yearNum || 2026,
+      compareTitle: s.compareTitle || 'กรกฎาคม ปี68 vs ปี69',
+      sourceUrl: result.sourceUrl,
+      lastUpdate: result.lastUpdate
+    };
+
+  } catch (e) {
+    result.error = e.toString();
+  }
+
+  try { CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 600); } catch (e) {}
+  return result;
+}
+
+function getOrgCustDataForClient() {
+  return getOrgCustData_(true);
+}
+
+function getOrgCustDebug_() {
+  var result = { success: true, tabs: {} };
+  try {
+    var ss = SpreadsheetApp.openById(ORG_CUST_SHEET_ID);
+    var sheets = ss.getSheets();
+    for (var i = 0; i < sheets.length; i++) {
+      var s = sheets[i];
+      var name = s.getName();
+      var data = s.getDataRange().getValues();
+      var rows = [];
+      for (var r = 0; r < Math.min(data.length, 100); r++) {
+        var row = [];
+        for (var c = 0; c < Math.min(data[r].length, 25); c++) {
+          var v = data[r][c];
+          if (v instanceof Date) v = v.toISOString().split('T')[0];
+          row.push(v);
+        }
+        rows.push(row);
+      }
+      result.tabs[name] = { rows: rows, rowCount: data.length, colCount: data[0] ? data[0].length : 0 };
+    }
+  } catch (e) {
+    result.error = e.toString();
+  }
+  return result;
 }

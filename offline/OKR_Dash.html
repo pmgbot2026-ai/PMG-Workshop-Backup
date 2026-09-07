@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PMS/PMG OKR Dashboard — 5 กลุ่มงาน | CEO Contract 2.0</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <style>
     :root {
       --bg: #f0f4f8;
@@ -831,7 +831,6 @@
   </style>
 </head>
 <body>
-<!--CEO_ACTUALS_INJECT-->
 <div style="position:fixed;top:8px;right:8px;z-index:99999;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(220,38,38,0.3);cursor:default;font-family:system-ui,sans-serif;letter-spacing:0.3px" title="ข้อมูลส่วนบุคคล PDPA — ห้ามส่งออกหรือเผยแพร่โดยไม่ได้รับอนุญาต">🔒 ข้อมูลลับ PDPA</div>
 
   <!-- ═════════ Header ═════════ -->
@@ -885,29 +884,64 @@
   </div>
 
 <script>
+// ── OFFLINE MODE STUB ──────────────────────────────────────
+// Mock google.script.run + fetch for standalone HTML (no server)
+if (typeof window !== 'undefined') {
+  if (typeof window.google === 'undefined') {
+    window.google = { script: { run: {} } };
+  }
+  var _gsrTarget = window.google.script.run;
+  _gsrTarget._success = null;
+  _gsrTarget._failure = null;
+  _gsrTarget.withSuccessHandler = function(fn){ this._success = fn; return _proxyRef; };
+  _gsrTarget.withFailureHandler  = function(fn){ this._failure = fn; return _proxyRef; };
+  _gsrTarget.withUserObject      = function(o){ return _proxyRef; };
+  var _proxyRef = new Proxy(_gsrTarget, {
+    get: function(target, prop, receiver) {
+      if (prop === '_success' || prop === '_failure') return target[prop];
+      if (typeof target[prop] === 'function') return target[prop];
+      // Unknown property = a server function name → return stub function
+      return function() {
+        console.log('[Offline] google.script.run.' + String(prop) + ' called (stubbed)', arguments);
+        var self = target;
+        setTimeout(function(){
+          if (typeof self._success === 'function') {
+            try { self._success([]); } catch(e){ console.warn('[Offline] success handler error:', e); }
+          }
+        }, 50);
+        return _proxyRef;
+      };
+    }
+  });
+  window.google.script.run = _proxyRef;
+  // Mock fetch() to return empty data (avoids CORS/network errors offline)
+  if (typeof window.fetch === 'function' && !window._fetchStubbed) {
+    window._origFetch = window.fetch;
+    window.fetch = function(url, opts) {
+      console.log('[Offline] fetch() stubbed:', url);
+      return Promise.resolve({
+        ok: true, status: 200, redirected: false,
+        text:  function(){ return Promise.resolve(''); },
+        json:  function(){ return Promise.resolve({}); },
+        blob:  function(){ return Promise.resolve(new Blob([''])); },
+        clone: function(){ return this; },
+        headers: { get: function(){ return null; } }
+      });
+    };
+    window._fetchStubbed = true;
+  }
+}
+// ── END OFFLINE MODE STUB ──────────────────────────────────
+
+
+
 /* ═══════════════════════════════════════════════════
    PMS/PMG Multi-Department OKR Dashboard — Client logic
    ═══════════════════════════════════════════════════ */
-var SCRIPT_URL = '';
-var SESSION_TOKEN = '';
-var CACHE_STATUS = 'unknown'; // 'cold' or 'warm'
-
-// Fetch URL + token from server (ไม่ใช้ template injection เพราะ sandbox escape ทุกอย่าง)
-try {
-  google.script.run
-    .withSuccessHandler(function(info) {
-      if (info) {
-        SCRIPT_URL = info.scriptUrl || '';
-        SESSION_TOKEN = info.sessionToken || '';
-        CACHE_STATUS = info.cacheStatus || 'unknown';
-      }
-    })
-    .gsGetClientConfig();
-} catch(e) {}
-
-// Fallback: use current full URL (preserve query params like ?okrall=1)
-if (!SCRIPT_URL) {
-  SCRIPT_URL = window.location.href.split('#')[0]; // full URL including query params
+var SCRIPT_URL = '#';
+// Fallback: if placeholder wasn't replaced by server (local testing), use window.location
+if (SCRIPT_URL === '#' || !SCRIPT_URL) {
+  SCRIPT_URL = window.location.origin + window.location.pathname;
 }
 
 // Department sheet IDs (for source sheet links)
@@ -920,8 +954,7 @@ var OKR_SS_IDS_CLIENT = {
 };
 
 var D = null;             // Full data object { departments, lastUpdate }
-var CEO_KPI_ACTUALS = null; // Loaded via google.script.run
-var EMBEDDED_DATA = null; // Data loaded via fetch
+var EMBEDDED_DATA = null; // Server can inject cached data here for instant load
 var currentDept = 0;       // Selected department index for กลุ่มงาน tab
 var kpiFilterDept = -1;    // KPI tab filter: -1 = all, 0..4 = specific dept
 var personModalDept = '';  // Dept name for person modal (for edit)
@@ -986,151 +1019,118 @@ function init() {
 }
 
 function loadData() {
-  // Check sessionStorage cache first (instant load on revisits)
-  try {
-    var ssCache = sessionStorage.getItem('okr_data_cache');
-    if (ssCache) {
-      var cached = JSON.parse(ssCache);
-      if (cached && cached.departments && cached.departments.length > 0) {
-        D = cached;
-        onLoaded();
-        // Refresh in background (silent)
-        setTimeout(function(){ _refreshDataSilent(); }, 2000);
-        return;
-      }
+  // Check if server embedded cached data directly in the page
+  if (EMBEDDED_DATA && EMBEDDED_DATA.departments) {
+    D = EMBEDDED_DATA;
+    EMBEDDED_DATA = null; // free memory
+    onLoaded();
+    return;
+  }
+  
+  // Show loading with progress message — user sees the page immediately
+  var ls = document.getElementById('loadingScreen');
+  if (ls) {
+    ls.innerHTML = '<div style="text-align:center;padding:40px">' +
+      '<div style="font-size:1.4rem;margin-bottom:12px">📊 กำลังโหลดข้อมูล OKR...</div>' +
+      '<div style="font-size:0.85rem;color:var(--text3);margin-bottom:16px" id="loadProgress">กรุณารอสักครู่ — อ่านข้อมูลจาก 5 กลุ่มงาน</div>' +
+      '<div class="spinner"></div>' +
+      '</div>';
+  }
+
+  // Progress timer
+  var elapsed = 0;
+  var progressTimer = setInterval(function() {
+    elapsed += 10;
+    var pe = document.getElementById('loadProgress');
+    if (pe) {
+      if (elapsed < 30) pe.textContent = 'กรุณารอสักครู่ — อ่านข้อมูลจาก 5 กลุ่มงาน (' + elapsed + ' วินาที)';
+      else if (elapsed < 60) pe.textContent = 'กำลังประมวลผลข้อมูล... (' + elapsed + ' วินาที)';
+      else if (elapsed < 120) pe.textContent = 'เกือบเสร็จแล้ว กรุณารออีกสักครู่... (' + elapsed + ' วินาที)';
+      else pe.textContent = 'ใช้เวลานานกว่าปกติ — กรุณารอต่อ... (' + elapsed + ' วินาที)';
     }
-  } catch(e) {}
-  
-  // Show skeleton with dept names (no data yet)
-  var deptNames = ['PMG/PMGI', 'PMS ช่าง 4 สาขา', 'PMS ขาย', 'PMS ศูนย์บริการ', 'PMS/PMG Backoffice'];
-  D = {
-    departments: deptNames.map(function(nm) {
-      return { name: nm, ssid: '', teams: [], sheetNames: [], people: [], kpiSummary: [], summary: [], _loaded: false };
-    }),
-    lastUpdate: new Date().toISOString(),
-    _skeleton: true
-  };
-  onLoaded();
-  
-  // Step 1: Get config (SCRIPT_URL + SESSION_TOKEN) first, THEN fetch data
-  var pe = document.getElementById('loadProgress');
-  var pb = document.getElementById('progBar');
-  if (pe) pe.textContent = 'เชื่อมต่อกับ server...';
-  if (pb) pb.style.width = '5%';
-  
-  var configReady = false;
-  
-  function startDataFetch() {
-    // Show loading indicator
-    var ls = document.getElementById('loadingScreen');
-    if (ls) {
-      ls.innerHTML = '<div style="text-align:center;padding:20px;background:rgba(37,99,235,.08);border-radius:10px;margin:10px 0">' +
-        '<div style="font-size:1rem;margin-bottom:8px">⏳ กำลังดึงข้อมูลจาก 5 กลุ่มงาน...</div>' +
-        '<div style="font-size:0.8rem;color:var(--text3)" id="loadProgress">กำลังโหลดข้อมูล OKR... (อาจใช้เวลา 30-60 วินาทีในครั้งแรก)</div>' +
-        '<div style="margin-top:10px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div id="progBar" style="height:6px;background:linear-gradient(90deg,#2563eb,#10b981);border-radius:3px;width:10%;transition:width .5s"></div></div>' +
-        '</div>';
-    }
-    var pe2 = document.getElementById('loadProgress');
-    var pb2 = document.getElementById('progBar');
-    if (pe2) pe2.textContent = 'กำลังโหลดข้อมูลผ่าน server... (อาจใช้เวลา 30-60 วินาทีในครั้งแรก)';
-    if (pb2) pb2.style.width = '10%';
-    
-    // Use google.script.run instead of fetch (sandbox blocks fetch)
-    try {
-      google.script.run
-        .withSuccessHandler(function(data) {
-          if (data && data.departments && data.departments.length > 0) {
-            D = data;
-            D._skeleton = false;
-            try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
-            if (pe2) pe2.textContent = '✅ โหลดครบแล้ว (' + D.departments.length + ' กลุ่มงาน)';
-            if (pb2) pb2.style.width = '100%';
-            onLoaded();
-          } else {
-            if (pe2) pe2.textContent = '⚠️ ไม่ได้รับข้อมูล — ลองอีกครั้ง...';
-          }
-        })
-        .withFailureHandler(function(err) {
-          console.warn('gsGetOKRData failed', err);
-          if (pe2) pe2.textContent = '⚠️ โหลดไม่สำเร็จ: ' + (err.message || err) + ' — ลองอีกครั้งใน 5 วินาที';
-          // Retry after 5s
-          setTimeout(function() {
-            if (pe2) pe2.textContent = 'กำลังลองโหลดใหม่...';
-            try {
+  }, 10000);
+
+  // Use google.script.run — load all departments in PARALLEL for speed
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    // Step 1: Get department count (instant — no sheet reads)
+    google.script.run
+      .withSuccessHandler(function(meta) {
+        if (meta && meta.count && meta.names) {
+          // Build skeleton from dept names
+          D = {
+            departments: meta.names.map(function(nm) {
+              return {
+                name: nm,
+                ssid: OKR_SS_IDS_CLIENT[nm] || '',
+                teams: [],
+                sheetNames: [],
+                people: [],
+                kpiSummary: [],
+                summary: [],
+                _loaded: false
+              };
+            }),
+            lastUpdate: meta.lastUpdate || new Date().toISOString()
+          };
+          // Step 2: Load ALL departments in parallel (each google.script.run is independent)
+          var loadedCount = 0;
+          var totalDepts = meta.count;
+          for (var di = 0; di < totalDepts; di++) {
+            (function(idx) {
               google.script.run
-                .withSuccessHandler(function(data) {
-                  if (data && data.departments) { D = data; D._skeleton = false; onLoaded(); }
+                .withSuccessHandler(function(deptData) {
+                  if (deptData && !deptData.error && D.departments[idx]) {
+                    D.departments[idx].people = deptData.people || [];
+                    D.departments[idx].kpiSummary = deptData.kpiSummary || [];
+                    D.departments[idx].summary = deptData.summary || [];
+                    D.departments[idx].teams = deptData.teams || [];
+                    D.departments[idx].sheetNames = deptData.sheetNames || [];
+                    D.departments[idx]._loaded = true;
+                  }
+                  loadedCount++;
+                  var pe = document.getElementById('loadProgress');
+                  if (pe) {
+                    pe.textContent = 'โหลดแล้ว ' + loadedCount + '/' + totalDepts + ' กลุ่มงาน';
+                  }
+                  // When all loaded, render
+                  if (loadedCount >= totalDepts) {
+                    clearInterval(progressTimer);
+                    onLoaded();
+                  }
                 })
-                .gsGetOKRData();
-            } catch(e2) {}
-          }, 5000);
-        })
-        .gsGetOKRData();
-    } catch(e) {
-      // Last resort: try fetch (may work in some sandbox configs)
-      if (pe2) pe2.textContent = 'กำลังลองผ่าน fetch...';
-      var url = SCRIPT_URL || window.location.href.split('#')[0];
-      if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
-      else url += '?okrall=1&view=data';
-      fetch(url, { cache: 'no-store' })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data && data.departments) { D = data; D._skeleton = false; onLoaded(); }
-        })
-        .catch(function(err) {
-          if (pe2) pe2.textContent = '❌ โหลดไม่สำเร็จ — กรุณารีเฟรชหน้า';
-        });
-    }
-  }
-  
-  // Get config first, then fetch data
-  try {
-    google.script.run
-      .withSuccessHandler(function(info) {
-        if (info) {
-          if (info.scriptUrl) SCRIPT_URL = info.scriptUrl;
-          if (info.sessionToken) SESSION_TOKEN = info.sessionToken;
-          if (info.cacheStatus) CACHE_STATUS = info.cacheStatus;
-        }
-        configReady = true;
-        startDataFetch();
-      })
-      .gsGetClientConfig();
-  } catch(e) {
-    // Fallback: use current URL
-    startDataFetch();
-  }
-  
-  // Safety timeout: if config not ready in 3s, start fetch with fallback URL
-  setTimeout(function() {
-    if (!configReady) {
-      configReady = true;
-      startDataFetch();
-    }
-  }, 3000);
-  
-  // Load CEO actuals via google.script.run (async, non-blocking)
-  try {
-    google.script.run
-      .withSuccessHandler(function(ceoData) {
-        if (ceoData && ceoData.items) {
-          CEO_KPI_ACTUALS = ceoData;
-          // Re-render business plan if current tab
-          var activeTab = document.querySelector('.tab-btn.active');
-          if (activeTab && activeTab.getAttribute('data-tab') === 'businessplan') {
-            renderBusinessPlan();
+                .withFailureHandler(function(err) {
+                  console.warn('Dept ' + idx + ' failed', err);
+                  loadedCount++;
+                  if (loadedCount >= totalDepts) {
+                    clearInterval(progressTimer);
+                    onLoaded();
+                  }
+                })
+                .gsGetOKRDeptData(idx);
+            })(di);
           }
+        } else {
+          clearInterval(progressTimer);
+          onLoadError('No departments found');
         }
       })
-      .gsGetCEOActuals();
-  } catch(e) {}
+      .withFailureHandler(function(err) {
+        clearInterval(progressTimer);
+        // Try fetch as fallback
+        loadDataViaFetch(progressTimer);
+      })
+      .gsGetOKRDeptCount();
+    return;
+  }
+
+  // Fallback: fetch (for non-sandbox environments)
+  loadDataViaFetch(progressTimer);
 }
 
 function loadDataViaFetch(progressTimer) {
   var url = SCRIPT_URL;
   if (url.indexOf('?') > -1) url += '&okrall=1&view=data';
   else url += '?okrall=1&view=data';
-  if (SESSION_TOKEN) url += '&st=' + SESSION_TOKEN;
   
   var controller = new AbortController();
   var timeoutId = setTimeout(function() { controller.abort(); }, 300000);
@@ -1156,7 +1156,6 @@ function refreshUrl() {
   var t = '_t=' + Date.now();
   if (url.indexOf('?') > -1) url += '&okrall=1&view=data&' + t;
   else url += '?okrall=1&view=data&' + t;
-  if (SESSION_TOKEN) url += '&st=' + SESSION_TOKEN;
   return url;
 }
 
@@ -1171,34 +1170,6 @@ function onLoadError(msg) {
 }
 
 function onLoaded() {
-  // Save to sessionStorage for instant reload (skip if skeleton)
-  if (D && !D._skeleton) {
-    try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
-  }
-
-  // If skeleton (no real data yet), show loading banner but render skeleton
-  if (D && D._skeleton) {
-    // Show skeleton but with loading banner
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('section-overview').style.display = 'block';
-    document.getElementById('section-overview').classList.add('active');
-    // Show loading banner at top of overview
-    var banner = document.getElementById('dataLoadingBanner');
-    if (!banner) {
-      banner = document.createElement('div');
-      banner.id = 'dataLoadingBanner';
-      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#2563eb,#10b981);color:#fff;padding:8px 16px;font-size:14px;font-weight:600;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.15)';
-      document.body.appendChild(banner);
-    }
-    banner.textContent = '⏳ กำลังดึงข้อมูลจาก 5 กลุ่มงาน... (ครั้งแรกอาจใช้เวลา 30-60 วินาที)';
-    renderOverview();
-    return;
-  }
-
-  // Real data loaded — remove banner
-  var banner = document.getElementById('dataLoadingBanner');
-  if (banner) banner.remove();
-
   document.getElementById('loadingScreen').style.display = 'none';
   document.getElementById('section-overview').style.display = 'block';
   document.getElementById('section-overview').classList.add('active');
@@ -1215,26 +1186,6 @@ function onLoaded() {
 
   // Lazy render: only render overview on load, others on tab click
   renderOverview();
-}
-
-// Silent background refresh — updates data without UI disruption
-function _refreshDataSilent() {
-  try {
-    var url = SCRIPT_URL || '';
-    if (!url) return;
-    if (url.indexOf('?') > -1) url += '&okrall=1&view=data&_t=' + Date.now();
-    else url += '?okrall=1&view=data&_t=' + Date.now();
-    if (SESSION_TOKEN) url += '&st=' + SESSION_TOKEN;
-    fetch(url).then(function(r){ return r.json(); }).then(function(data){
-      if (data && data.departments && data.departments.length > 0) {
-        D = data;
-        try { sessionStorage.setItem('okr_data_cache', JSON.stringify(D)); } catch(e) {}
-        // Re-render current tab silently
-        var activeTab = document.querySelector('.tab-btn.active');
-        if (activeTab) activeTab.click();
-      }
-    }).catch(function(e){ /* silent fail */ });
-  } catch(e) {}
 }
 
 function refreshData() {
@@ -1318,159 +1269,31 @@ function switchTab(tabId, btn) {
 /* ═══════════════════════════════════════════════════
    Business Plan Tab (แผนธุรกิจ) — CPDG-style layout
    ═══════════════════════════════════════════════════ */
-
-/* ── buildCascadeRow_: สร้าง <tr> สำหรับตาราง Cascade alignment
-   - ค้นหาสถานะจริงจาก CEO_KPI_ACTUALS โดยใช้ keyword matching
-   - ถ้าเจอ → แสดง "✅ ค่าปัจจุบัน / เป้าหมาย (progress%)"
-   - ถ้าไม่เจอ → แสดงช่อง input วาง link + ช่องกรอก "แท็บ/ช่วงข้อมูล" (บันทึก localStorage)
-   - localStorage key: "bp_cascade_<planKey>" = JSON {link, tabRange}
-── */
-function buildCascadeRow_(planLabel, dashboardLabel, keywords) {
-  // Sanitize planLabel → localStorage key
-  var keyBase = planLabel.replace(/[^a-zA-Z0-9ก-๛]/g, '_').substring(0, 30);
-  var lsKey = 'bp_cascade_' + keyBase;
-
-  // อ่านค่าที่เคยบันทึกจาก localStorage
-  var savedLink = '', savedTabRange = '';
-  try {
-    var raw = localStorage.getItem(lsKey);
-    if (raw) {
-      var parsed = JSON.parse(raw);
-      savedLink = parsed.link || '';
-      savedTabRange = parsed.tabRange || '';
-    }
-  } catch(e) {}
-
-  // ค้นหาสถานะจริงจาก CEO_KPI_ACTUALS (โหลด async แล้ว)
-  var matched = null;
-  if (typeof CEO_KPI_ACTUALS !== 'undefined' && CEO_KPI_ACTUALS && CEO_KPI_ACTUALS.length > 0) {
-    var bestScore = 0;
-    for (var ai = 0; ai < CEO_KPI_ACTUALS.length; ai++) {
-      var kpiItem = CEO_KPI_ACTUALS[ai];
-      if (kpiItem.status === 'no-data' || kpiItem.status === 'skip' || kpiItem.currentValue === null || kpiItem.currentValue === undefined) continue;
-      var kpiText = String(kpiItem.krText || '').toLowerCase();
-      var matchScore = 0;
-      for (var kwi = 0; kwi < keywords.length; kwi++) {
-        if (kpiText.indexOf(String(keywords[kwi]).toLowerCase()) >= 0) matchScore++;
-      }
-      if (matchScore > bestScore) {
-        bestScore = matchScore;
-        matched = kpiItem;
-      }
-    }
-  }
-
-  var borderStyle = 'padding:6px 8px;border-bottom:1px solid #e2e8f0;';
-  var lastRowStyle = 'padding:6px 8px;'; // แถวสุดท้ายไม่มี border-bottom
-
-  // สร้างเนื้อหา cell สถานะ
-  var statusCell = '';
-  if (matched && (matched.progressPct || matched.currentValue)) {
-    // ── มีข้อมูลจริง → แสดงสถานะพร้อม progress ──
-    var pct = matched.progressPct || 0;
-    var cur = formatKpiValue_(matched.currentValue);
-    var tgt = formatKpiValue_(matched.targetValue);
-    var badge = pct >= 100 ? '✅' : (pct >= 80 ? '⚠️' : '🔴');
-    var statusColor = pct >= 100 ? '#10b981' : (pct >= 80 ? '#f59e0b' : '#ef4444');
-    statusCell = '<div style="text-align:center;line-height:1.6">' +
-      '<div style="font-weight:700;color:' + statusColor + '">' + badge + ' ' + pct + '%</div>' +
-      '<div style="font-size:11px;color:#64748b">' + esc(cur) + ' / ' + esc(tgt) + '</div>' +
-      (matched.sourceUrl ? '<a href="' + esc(matched.sourceUrl) + '" target="_blank" style="font-size:10px;color:#3b82f6;text-decoration:none">' + esc(matched.source || 'แหล่งข้อมูล') + ' ↗</a>' : '') +
-    '</div>';
-  } else {
-    // ── ไม่มีข้อมูลจริง → ช่องวาง link + ช่องกรอก แท็บ/ช่วง ──
-    var linkId = 'casc_link_' + keyBase;
-    var tabId = 'casc_tab_' + keyBase;
-    statusCell = '<div style="display:flex;flex-direction:column;gap:4px;align-items:stretch">' +
-      '<input type="text" id="' + linkId + '" placeholder="วาง link Google Sheet..." value="' + esc(savedLink) + '" ' +
-        'onchange="saveCascadeLink_(\'' + keyBase + '\')" ' +
-        'onclick="event.stopPropagation()" ' +
-        'style="font-size:11px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;width:100%;min-width:180px;box-sizing:border-box" />' +
-      '<input type="text" id="' + tabId + '" placeholder="แท็บ: ___ ช่วง: ___" value="' + esc(savedTabRange) + '" ' +
-        'onchange="saveCascadeLink_(\'' + keyBase + '\')" ' +
-        'onclick="event.stopPropagation()" ' +
-        'style="font-size:11px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;width:100%;min-width:180px;box-sizing:border-box;color:#64748b" />' +
-      '<button onclick="event.stopPropagation();refreshCascadeStatus_(\'' + keyBase + '\',' + JSON.stringify(keywords).replace(/"/g, '&quot;') + ')" ' +
-        'style="font-size:10px;padding:3px 8px;border:1px solid #3b82f6;border-radius:5px;background:#eff6ff;color:#1e40af;cursor:pointer;margin-top:2px">🔄 วัดผลจาก link</button>' +
-    '</div>';
-  }
-
-  return '<tr>' +
-    '<td style="' + borderStyle + '">' + esc(planLabel) + '</td>' +
-    '<td style="' + borderStyle + '">' + esc(dashboardLabel) + '</td>' +
-    '<td style="' + borderStyle + 'text-align:center">' + statusCell + '</td>' +
-  '</tr>';
-}
-
-/* ── saveCascadeLink_: บันทึก link + แท็บ/ช่วง ลง localStorage ── */
-function saveCascadeLink_(keyBase) {
-  var lsKey = 'bp_cascade_' + keyBase;
-  var linkEl = document.getElementById('casc_link_' + keyBase);
-  var tabEl = document.getElementById('casc_tab_' + keyBase);
-  if (!linkEl && !tabEl) return;
-  var data = { link: linkEl ? linkEl.value.trim() : '', tabRange: tabEl ? tabEl.value.trim() : '' };
-  try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
-  // แสดง feedback สั้นๆ
-  if (linkEl) {
-    var orig = linkEl.style.borderColor;
-    linkEl.style.borderColor = '#10b981';
-    setTimeout(function() { linkEl.style.borderColor = orig; }, 800);
-  }
-}
-
-/* ── refreshCascadeStatus_: หลังวาง link ใหม่ → re-render business plan
-   เพื่อให้แสดง link เป็นจุดคลิกได้ (ระบบยังไม่ดึงค่าจาก Google Sheet API อัตโนมัติ
-   แต่ผู้ใช้สามารถคลิก link เพื่อดูข้อมูลต้นทางได้)
-── */
-function refreshCascadeStatus_(keyBase, keywords) {
-  saveCascadeLink_(keyBase);
-  // อ่านค่า link ที่บันทึกแล้ว
-  var lsKey = 'bp_cascade_' + keyBase;
-  var savedLink = '', savedTabRange = '';
-  try {
-    var raw = localStorage.getItem(lsKey);
-    if (raw) {
-      var parsed = JSON.parse(raw);
-      savedLink = parsed.link || '';
-      savedTabRange = parsed.tabRange || '';
-    }
-  } catch(e) {}
-
-  // ถ้ามี link → อัปเดต cell ให้แสดง link เป็นจุดคลิก + แท็บ/ช่วง
-  if (savedLink) {
-    // หา row ที่มี input นี้ → อัปเดต cell
-    var linkEl = document.getElementById('casc_link_' + keyBase);
-    if (linkEl) {
-      var td = linkEl.closest('td');
-      if (td) {
-        var tabInfo = savedTabRange ? '<div style="font-size:10px;color:#64748b;margin-top:2px">' + esc(savedTabRange) + '</div>' : '';
-        td.innerHTML = '<div style="text-align:center;line-height:1.6">' +
-          '<a href="' + esc(savedLink) + '" target="_blank" style="font-size:12px;color:#3b82f6;text-decoration:none;font-weight:600;display:inline-block;padding:4px 10px;border:1px solid #bfdbfe;border-radius:6px;background:#eff6ff">📊 ดูข้อมูลต้นทาง ↗</a>' +
-          tabInfo +
-          '<div style="font-size:10px;color:#94a3b8;margin-top:4px">บันทึกแล้ว — คลิกเพื่อวัดผลจาก Sheet</div>' +
-        '</div>';
-      }
-    }
-  }
-}
-
 function renderBusinessPlan() {
   var html = '';
 
-  // ── CEO KPI actual results — hardcoded ใน client โดยตรง ──
-  //   ข้อมูลจาก CEO KPI Dashboard จริง (สมศักดิ์ ธัมมะปาละ)
-  if (typeof CEO_KPI_ACTUALS === 'undefined' || CEO_KPI_ACTUALS.length === 0) {
-    CEO_KPI_ACTUALS = [
-      { krText: 'บรรลุรายได้ CBNP PMSG 38.5 ล้านบาท และ CBNP PMS 29 ล้านบาท (ปี 69) — สรุปเป้า PMSgr', currentValue: '23.48 ลบ.', targetValue: '38.50 ลบ.', status: 'at-risk', progressPct: 61, source: 'CEO KPI Dashboard', sourceDetail: 'สรุปเป้า PMSgr · 23.48/38.50 ลบ · 61% · เสี่ยง' },
-      { krText: 'GM > 9.5 ลบ/เดือน — GM Dashboard', currentValue: '10.3 ลบ.', targetValue: '10 ลบ.', status: 'on-track', progressPct: 103, source: 'CEO KPI Dashboard', sourceDetail: 'GM Dashboard · 10.3/10 ลบ · 103% · ทะลุเป้า' },
-      { krText: 'เคลือบแก้ว 30 คันต่อเดือน — War Room', currentValue: '58 คัน/เดือน', targetValue: '50 คัน/เดือน', status: 'on-track', progressPct: 116, source: 'CEO KPI Dashboard', sourceDetail: 'เคลือบแก้ว · 58/50 คัน · 116% · เกินเป้า' },
-      { krText: 'บริหารจัดการยอดรถเข้าศูนย์สี 3,400 คัน/ปี — War Room', currentValue: '1,619 คัน', targetValue: '3,400 คัน', status: 'behind', progressPct: 48, source: 'CEO KPI Dashboard', sourceDetail: 'ศูนย์สี · 1,619/3,400 คัน · 48% · ล้าหลัง' },
-      { krText: 'Productivity ค่าแรง+อะไหล่/คัน — War Room', currentValue: '20,132 บาท', targetValue: '23,145 บาท', status: 'behind', progressPct: 87, source: 'CEO KPI Dashboard', sourceDetail: 'Productivity · 20,132/23,145 · 87% · ลดลง' },
-      { krText: 'เชียร์เคลม 240,000 บาท — SC Dashboard', currentValue: '234,349 บาท', targetValue: '240,000 บาท', status: 'at-risk', progressPct: 98, source: 'CEO KPI Dashboard', sourceDetail: 'เชียร์เคลม · 234,349/240,000 · 98% · ใกล้เป้า' },
-      { krText: 'QC ตรวจสอบคุณภาพ ประจำปี', currentValue: '4,206', targetValue: '4,632', status: 'on-track', progressPct: 91, source: 'CEO KPI Dashboard', sourceDetail: 'QC · 4,206/4,632 · 91% · ผ่าน' },
-      { krText: 'สร้าง GM จากผลิตภัณฑ์เสริมเฉลี่ย 280,000 บาท/เดือน', currentValue: '281,552 บาท', targetValue: '280,000 บาท', status: 'on-track', progressPct: 101, source: 'CEO KPI Dashboard', sourceDetail: 'GM ผลิตภัณฑ์เสริม · 281,552/280,000 · 101% · ทะลุเป้า' },
-      { krText: 'ผลักดัน GM อะไหล่ทางเลือก PMGI 300,000 บาท/เดือน', currentValue: '226,549 บาท', targetValue: '300,000 บาท', status: 'at-risk', progressPct: 76, source: 'CEO KPI Dashboard', sourceDetail: 'GM PMGI · 226,549/300,000 · 76% · ใกล้เป้า' }
-    ];
+  // ── โหลด CEO KPI actual results แบบ async ──
+  if (typeof CEO_KPI_ACTUALS === 'undefined') {
+    CEO_KPI_ACTUALS = [];
+    // โหลด KPI items ที่มีข้อมูลจริงจาก CEO 3 คนหลัก (รวมในคำขอเดียว)
+    try {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result && result.items) {
+            CEO_KPI_ACTUALS = result.items;
+          }
+          // Re-render business plan section
+          var bpSection = document.querySelector('[data-tab="businessplan"]');
+          if (bpSection) {
+            bpSection.dataset.rendered = '';
+            renderBusinessPlan();
+          }
+        })
+        .withFailureHandler(function() {
+          // ไม่สำเร็จ — แสดงผลลัพธ์ว่าง แต่ยังแสดงเป้าหมายได้
+        })
+        .gsGetCEOActuals();
+    } catch(e) {}
   }
 
   // ── Hero ──
@@ -1735,40 +1558,6 @@ function renderBusinessPlan() {
         esc(personName)+' · '+esc(deptName)+'</span>';
     }
 
-    // Helper: แสดงรายชื่อ CEO ที่รับผิดชอบแบบ compact list (กระชับ ไม่ใช้ badges เยอะๆ)
-    //   owners = array ของ { personName, deptName } → "สมศักดิ์ · PMG/PMGI, กาญจนา · PMS ขาย"
-    //   มี dedup ภายใน + เรียงลำดับตามลำดับ CEO มาตรฐาน (สมศักดิ์ → กาญจนา → ณัฐภัทร → ชุติมา)
-    function ceoOwnerList(owners) {
-      if (!owners || owners.length === 0) return '';
-      // dedup ตาม personName|deptName
-      var seen = {};
-      var uniq = [];
-      for (var i = 0; i < owners.length; i++) {
-        var key = (owners[i].personName || '') + '|' + (owners[i].deptName || '');
-        if (!seen[key]) { seen[key] = true; uniq.push(owners[i]); }
-      }
-      // เรียงลำดับตาม CEO มาตรฐาน
-      var ceoOrder = ['สมศักดิ์', 'สมศักด์', 'กาญจนา', 'ณัฐภัทร', 'กุลภัทร', 'ชุติมา'];
-      uniq.sort(function(a, b) {
-        var ai = 99, bi = 99;
-        for (var k = 0; k < ceoOrder.length; k++) {
-          if ((a.personName || '').indexOf(ceoOrder[k]) >= 0) ai = Math.min(ai, k);
-          if ((b.personName || '').indexOf(ceoOrder[k]) >= 0) bi = Math.min(bi, k);
-        }
-        return ai - bi;
-      });
-      // สร้าง compact list: "สมศักดิ์ · PMG/PMGI, กาญจนา · PMS ขาย"
-      var parts = uniq.map(function(o) {
-        // ใช้ชื่อย่อ (ชื่อตัว) แทนชื่อเต็มเพื่อกระชับ
-        var name = o.personName || '';
-        var dept = o.deptName || '';
-        return '<span style="color:#334155;font-weight:600">'+esc(name)+'</span>'+
-          '<span style="color:#94a3b8"> · </span>'+
-          '<span style="color:#64748b">'+esc(dept)+'</span>';
-      });
-      return parts.join('<span style="color:#cbd5e1;margin:0 4px">,</span>');
-    }
-
     // Helper: สร้าง KR row แบบมีเป้าหมายจาก CEO + ผลลัพธ์ + ผู้รับผิดชอบ + ปุ่มแก้ไข
     //   owners = array ของ { personName, deptName } — CEO ที่มี KR เกี่ยวข้อง (แสดงเป็น badges)
     function krResultRow(num, color, text, target, actual, statusStr, ceoSource, sObjIndex, krIndex, owners) {
@@ -1800,19 +1589,29 @@ function renderBusinessPlan() {
         '<div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap">'+
           '<strong style="color:'+color+';flex-shrink:0">KR-'+num+':</strong>'+
           '<span style="flex:1;min-width:200px;color:#475569">'+esc(text)+'</span>'+
-          (isEdited ? '<span style="font-size:9px;color:#f59e0b;font-weight:700;flex-shrink:0" title="แก้ไขแล้ว">●</span>' : '')+
+          (isEdited ? '<span style="font-size:9px;color:#f59e0b;font-weight:700;flex-shrink:0" title="แก้ไขแล้ว">●edited</span>' : '')+
           editBtn+
         '</div>';
 
-      // แสดงผลลัพธ์ + progress bar + % (ถ้ามีข้อมูลจริง)
+      // แสดงเป้าหมายจาก CEO
+      if (target) {
+        html_ += '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">'+
+          '<span style="font-size:10px;color:#64748b">🎯 เป้า (CEO):</span>'+
+          '<span style="font-size:11px;font-weight:700;color:'+color+';background:'+color+'15;padding:2px 8px;border-radius:6px">'+esc(target)+'</span>';
+        if (ceoSource) {
+          html_ += '<span style="font-size:9px;color:#94a3b8">← '+esc(ceoSource)+'</span>';
+        }
+        html_ += '</div>';
+      }
+
+      // แสดงผลลัพธ์ + progress bar
       if (actual && pct > 0) {
-        html_ += '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">'+
-          '<span style="font-size:11px;font-weight:700;color:'+barColor+';min-width:80px">📊 '+esc(actual)+'</span>'+
-          '<span style="font-size:10px;color:#94a3b8">/ '+esc(target)+'</span>'+
-          '<div style="flex:1;min-width:100px;height:10px;background:#e2e8f0;border-radius:9999px;overflow:hidden">'+
+        html_ += '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">'+
+          '<span style="font-size:10px;color:#64748b;min-width:70px">📊 ทำได้: '+esc(actual)+'</span>'+
+          '<div style="flex:1;min-width:100px;height:8px;background:#e2e8f0;border-radius:9999px;overflow:hidden">'+
             '<div style="width:'+Math.min(pct,100)+'%;height:100%;background:'+barColor+';border-radius:9999px;transition:width .3s"></div>'+
           '</div>'+
-          '<span style="font-size:12px;font-weight:700;color:'+barColor+';min-width:48px;text-align:right">'+pct+'%'+statusBadge+'</span>'+
+          '<span style="font-size:11px;font-weight:700;color:'+barColor+';min-width:42px;text-align:right">'+pct+'%'+statusBadge+'</span>'+
         '</div>';
       } else if (statusStr) {
         html_ += '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">'+
@@ -1821,40 +1620,21 @@ function renderBusinessPlan() {
         '</div>';
       }
 
-      // แสดงผู้รับผิดชอบ KR นี้แบบ compact list
+      // แสดงผู้รับผิดชอบ KR นี้ (badges) — แสดงใครดูแล KR นี้บ้าง
       if (owners && owners.length > 0) {
-        var ownerListHtml = ceoOwnerList(owners);
-        if (ownerListHtml) {
-          html_ += '<div style="margin-top:4px;font-size:11px;line-height:1.5">'+
-            '<span style="color:#64748b;font-size:10px">👤 </span>'+
-            ownerListHtml+'</div>';
+        // deduplicate owners
+        var seen = {};
+        var uniqOwners = [];
+        for (var oi = 0; oi < owners.length; oi++) {
+          var key = owners[oi].personName + '|' + owners[oi].deptName;
+          if (!seen[key]) { seen[key] = true; uniqOwners.push(owners[oi]); }
         }
-      }
-
-      // ── ลิงก์ต้นทาง (Visual Control) ──
-      // KR ที่มีผลลัพธ์แล้ว: เมนูแก้ไขลิงก์เล็กๆ (ไม่แสดงช่องว่าง)
-      // KR ที่ยังไม่มีผลลัพธ์: แสดงช่องวางลิงก์
-      if (typeof sObjIndex === 'number' && typeof krIndex === 'number') {
-        var srcKey = 'bp_src_sobj_' + sObjIndex + '_' + krIndex;
-        var srcData = loadSrcData(srcKey);
-        var hasActual = (actual && pct > 0);
-
-        if (hasActual) {
-          // มีผลลัพธ์ — เมนูแก้ไขลิงก์เล็กๆ
-          if (srcData.link) {
-            html_ += '<div style="margin-top:4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+
-              '<a href="'+esc(srcData.link)+'" target="_blank" style="color:#3b82f6;text-decoration:none;font-size:10px;font-weight:600">'+esc(srcData.link.substring(0,35))+(srcData.link.length>35?'...':'')+' ↗</a>'+
-              (srcData.tabRange ? '<span style="color:#94a3b8;font-size:10px">· '+esc(srcData.tabRange)+'</span>' : '')+
-              '<button onclick="toggleSrcEdit(\''+srcKey+'\')" style="background:none;border:none;color:#94a3b8;font-size:10px;cursor:pointer;padding:1px 4px;border-radius:4px" title="แก้ไขลิงก์">✏️</button>'+
-            '</div>';
-          } else {
-            html_ += '<button onclick="toggleSrcEdit(\''+srcKey+'\')" style="margin-top:4px;background:none;border:1px dashed #cbd5e1;color:#94a3b8;font-size:10px;cursor:pointer;padding:2px 8px;border-radius:6px">📎 เพิ่มลิงก์</button>';
-          }
-          html_ += '<div id="srcEdit_'+srcKey+'" style="display:none;margin-top:4px">'+buildSrcInputs(srcKey, { showLabel: false, label: '' })+'</div>';
-        } else {
-          // ยังไม่มีผลลัพธ์ — แสดงช่องวางลิงก์
-          html_ += buildSrcInputs(srcKey, { showLabel: true, label: '📎 วางลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล' });
+        html_ += '<div style="display:flex;align-items:center;gap:4px;margin-top:6px;flex-wrap:wrap">'+
+          '<span style="font-size:10px;color:#64748b">👤 ดูแล:</span>';
+        for (var oi2 = 0; oi2 < uniqOwners.length; oi2++) {
+          html_ += ceoBadge(uniqOwners[oi2].personName, uniqOwners[oi2].deptName);
         }
+        html_ += '</div>';
       }
 
       html_ += '</li>';
@@ -1949,7 +1729,7 @@ function renderBusinessPlan() {
             '<div style="font-size:11px;font-weight:700;color:'+s.text+';margin-bottom:4px">📊 ผลลัพธ์รวม (จาก CEO):</div>';
       if (overallHasData) {
         html += '<div style="font-size:11px;color:#475569;line-height:1.5">'+esc(overallTarget)+'</div>';
-        // แสดง CEO ที่รับผิดชอบเป้าหมายรวมเป็น compact list (ไม่ใช้ badges เยอะๆ)
+        // แสดง CEO ที่รับผิดชอบเป้าหมายรวมเป็น badges (ไม่แสดง KR text ซ้ำ)
         if (overallData.allKrs && overallData.allKrs.length > 0) {
           var overallOwners = [];
           var seenOverall = {};
@@ -1957,12 +1737,12 @@ function renderBusinessPlan() {
             var key2 = ckr.personName + '|' + ckr.deptName;
             if (!seenOverall[key2]) { seenOverall[key2] = true; overallOwners.push({ personName: ckr.personName, deptName: ckr.deptName }); }
           });
-          var overallOwnerListHtml = ceoOwnerList(overallOwners);
-          if (overallOwnerListHtml) {
-            html += '<div style="margin-top:6px;font-size:11px;line-height:1.5">'+
-              '<span style="font-size:10px;color:#64748b">👤 ดูแล: </span>'+
-              overallOwnerListHtml+'</div>';
-          }
+          html += '<div style="display:flex;align-items:center;gap:4px;margin-top:6px;flex-wrap:wrap">'+
+            '<span style="font-size:10px;color:#64748b">👤 ดูแล:</span>';
+          overallOwners.forEach(function(o2) {
+            html += ceoBadge(o2.personName, o2.deptName);
+          });
+          html += '</div>';
         }
       } else {
         html += '<div style="font-size:11px;color:#f59e0b;font-weight:600">⏳ รอข้อมูล CEO</div>';
@@ -1974,45 +1754,20 @@ function renderBusinessPlan() {
       // เก็บ CEO ทั้งหมดที่มี KR ใน S-Objective นี้ (สำหรับส่วน ผู้รับผิดชอบรวม)
       var allCeoOwners = [];
 
-      // ── Dedup KR ที่อาจซ้ำกันใน S-Objective (เช่น CBNP 39 ลบ ปรากฏหลาย KR) ──
-      //   รวม KR ที่มี keyword ซ้ำหรือ text ใกล้เคียงเป็น KR เดียว + รวม owners ของ KR ที่ซ้ำ
-      var seenKrKw = {};  // dedup ตาม keyword signature
-      var dedupedKrs = [];
       s.krs.forEach(function(kr, i) {
-        // สร้าง signature จาก keyword ที่ sort แล้ว (ไม่สนใจลำดับ)
-        var sig = kr.kw.slice().sort().join('|').toLowerCase();
-        if (seenKrKw[sig]) {
-          // KR ซ้ำ → รวม owners ของ KR เดิม (จะถูกประมวลผอีกครั้งด้านล่าง)
-          // ไม่เพิ่มเป็น KR ใหม่
-        } else {
-          seenKrKw[sig] = true;
-          dedupedKrs.push({ kr: kr, origIndex: i });
-        }
-      });
-
-      dedupedKrs.forEach(function(item, di) {
-        var kr = item.kr;
-        var i = item.origIndex;
-        // โหลด KR จาก localStorage ถ้ามี (แก้ไขแล้ว) — ใช้ origIndex เพื่อความเข้ากันได้กับข้อมูลเดิม
+        // โหลด KR จาก localStorage ถ้ามี (แก้ไขแล้ว)
         var lsKey = 'bp_sobj_' + sIdx + '_' + i;
         var krText = kr.text;
         try {
           var saved = localStorage.getItem(lsKey);
           if (saved) krText = saved;
         } catch(e) {}
-        // ดึง KR จาก CEO ทุกคนที่ match — ใช้เฉพาะ owners (compact list) ไม่แสดง KR text ซ้ำ
+        // ดึง KR จาก CEO ทุกคนที่ match — แต่ใช้เฉพาะ owners (badges) ไม่แสดง KR text ซ้ำ
         var allCeoKrs = ceoAllKrData(kr.kw);
         // ใช้ target แรกเป็นตัวแทน (ถ้ามี)
         var firstCeo = allCeoKrs.length > 0 ? allCeoKrs[0] : null;
         var target = firstCeo ? firstCeo.target : (kr.pdfTarget || null);
-        // ceoSource แสดงเป็น compact list ของ CEO ทั้งหมดที่ match (ไม่ใช่แค่คนแรก)
-        var ceoSource = null;
-        if (allCeoKrs.length > 0) {
-          var srcOwners = allCeoKrs.map(function(ckr) {
-            return { personName: ckr.personName, deptName: ckr.deptName };
-          });
-          ceoSource = ceoOwnerList(srcOwners);
-        }
+        var ceoSource = firstCeo ? firstCeo.source : null;
         // ดึงผลลัพธ์ปัจจุบันจาก CEO_KPI_ACTUALS (ถ้าโหลดแล้ว)
         var actual = kr.pdfActual || null;
         var statusStr = kr.pdfStatus || null;
@@ -2040,8 +1795,8 @@ function renderBusinessPlan() {
             target = bestMatch.targetValue != null ? String(bestMatch.targetValue) : target;
             actualPct = bestMatch.progressPct || 0;
             if (actualPct > 0) {
-              statusStr = actualPct >= 100 ? '✅ บรรลุเป้า ' + actualPct + '%' :
-                         actualPct >= 80 ? '⚠️ ใกล้เป้า ' + actualPct + '%' :
+              statusStr = actualPct >= 100 ? '✅ บรรลุเป้า ' + actualPct + '%' : 
+                         actualPct >= 80 ? '⚠️ ใกล้เป้า ' + actualPct + '%' : 
                          '🔴 ต่ำกว่าเป้า ' + actualPct + '%';
             }
           }
@@ -2057,9 +1812,8 @@ function renderBusinessPlan() {
             allCeoOwners.push({ key: key, personName: ckr.personName, deptName: ckr.deptName });
           }
         });
-        // เรนเดอร์ KR row เดียว — ส่ง owners ไปแสดงเป็น compact list (ไม่มี sub-rows ยาวๆ แล้ว)
-        //   ใช้ di+1 เป็นเลข KR ต่อเนื่อง (หลัง dedup)
-        html += krResultRow(di+1, s.color, krText, target, actual, statusStr, ceoSource, sIdx, i, krOwners);
+        // เรนเดอร์ KR row เดียว — ส่ง owners ไปแสดงเป็น badges (ไม่มี sub-rows ยาวๆ แล้ว)
+        html += krResultRow(i+1, s.color, krText, target, actual, statusStr, ceoSource, sIdx, i, krOwners);
       });
 
       html += '</ul>'+
@@ -2067,10 +1821,10 @@ function renderBusinessPlan() {
         '<div style="margin-top:12px;padding:10px 12px;background:#ffffff80;border-radius:8px">'+
           '<div style="font-size:11px;font-weight:700;color:'+s.text+';margin-bottom:6px">👥 ผู้รับผิดชอบ (CEO):</div>';
       if (allCeoOwners.length > 0) {
-        html += '<div style="font-size:11px;line-height:1.6">'+ceoOwnerList(allCeoOwners)+'</div>';
+        html += '<div>'+allCeoOwners.map(function(o) { return ceoBadge(o.personName, o.deptName); }).join('')+'</div>';
       } else {
         // fallback: แสดงกลุ่มงานจาก s.teams ถ้าไม่มี CEO match
-        html += '<div style="font-size:11px;color:#64748b">'+s.teams.map(esc).join(' · ')+'</div>';
+        html += '<div>'+s.teams.map(teamBadge).join('')+'</div>';
       }
       html += '</div>'+
         // CEO/KPI linkage
@@ -2248,18 +2002,16 @@ function renderBusinessPlan() {
 
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">';
 
-  ACTION_CATEGORIES.forEach(function(cat, catIdx) {
+  ACTION_CATEGORIES.forEach(function(cat) {
     html += '<div style="background:'+cat.bg+';border-left:4px solid '+cat.color+';border-radius:8px;padding:12px">'+
       '<div style="font-size:12px;font-weight:700;color:'+cat.color+';margin-bottom:8px;display:flex;align-items:center;gap:6px">'+cat.icon+' '+esc(cat.name)+' <span style="font-size:10px;font-weight:600;opacity:.7">('+cat.items.length+')</span></div>'+
       '<table style="width:100%;font-size:11px;border-collapse:collapse">'+
         '<tbody>'+
-          cat.items.map(function(it, itemIdx) {
-            var catSrcKey = 'bp_src_action_' + catIdx + '_' + itemIdx;
+          cat.items.map(function(it) {
             return '<tr>'+
               '<td style="padding:5px 6px;border-bottom:1px solid #e2e8f0;color:#475569">'+esc(it.plan)+'</td>'+
               '<td style="padding:5px 6px;border-bottom:1px solid #e2e8f0;color:'+cat.color+';font-weight:600;text-align:right;white-space:nowrap">'+esc(it.owner)+'</td>'+
-            '</tr>'+
-            '<tr><td colspan="2" style="padding:2px 6px 4px;border-bottom:1px solid #e2e8f0">'+buildSrcInputs(catSrcKey, { showLabel: false })+'</td></tr>';
+            '</tr>';
           }).join('')+
         '</tbody>'+
       '</table>'+
@@ -2270,15 +2022,13 @@ function renderBusinessPlan() {
 
     // ── ระยะกลาง: แผนกลยุทธ์ ──
     '<div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:12px;border-left:4px solid #10b981">'+
-      '<div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;display:flex;align-items:center;gap:6px">📈 ระยะกลาง (1-3 ปี) — แผนกลยุทธ์ (7 รายการ) · พร้อมช่องลิงก์ต้นทาง</div>'+
+      '<div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;display:flex;align-items:center;gap:6px">📈 ระยะกลาง (1-3 ปี) — แผนกลยุทธ์ (7 รายการ)</div>'+
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">'+
-        MID_TERM_PLANS.map(function(p, idx) {
+        MID_TERM_PLANS.map(function(p) {
           var ownerBadge = p.owner ? '<span style="font-size:10px;font-weight:700;color:#1e40af;background:#dbeafe;padding:2px 6px;border-radius:9999px;margin-left:6px">👤 '+esc(p.owner)+'</span>' : '';
-          var midSrcKey = 'bp_src_mid_' + idx;
           return '<div style="background:#ffffff80;border:1px solid #86efac;border-radius:8px;padding:10px">'+
             '<div style="font-size:12px;color:#1e293b;line-height:1.5;margin-bottom:4px">'+esc(p.plan)+ownerBadge+'</div>'+
             '<span style="font-size:10px;font-weight:700;color:#166534;background:#dcfce7;padding:2px 8px;border-radius:9999px">🎯 '+esc(p.focus)+'</span>'+
-            buildSrcInputs(midSrcKey, { showLabel: true, label: '📎 ลิงก์ต้นทาง + แท็บ/ช่วง' })+
           '</div>';
         }).join('')+
       '</div>'+
@@ -2286,14 +2036,12 @@ function renderBusinessPlan() {
 
     // ── ระยะยาว: แผนกลยุทธ์องค์กรอนาคต ──
     '<div style="background:#fffbeb;border-radius:10px;padding:14px;margin-bottom:12px;border-left:4px solid #f59e0b">'+
-      '<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px;display:flex;align-items:center;gap:6px">🔭 ระยะยาว (3-5 ปี) — แผนกลยุทธ์องค์กรอนาคต (6 รายการ) · พร้อมช่องลิงก์ต้นทาง</div>'+
+      '<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px;display:flex;align-items:center;gap:6px">🔭 ระยะยาว (3-5 ปี) — แผนกลยุทธ์องค์กรอนาคต (6 รายการ)</div>'+
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">'+
-        LONG_TERM_PLANS.map(function(p, idx) {
-          var longSrcKey = 'bp_src_long_' + idx;
+        LONG_TERM_PLANS.map(function(p) {
           return '<div style="background:#ffffff80;border:1px solid #fcd34d;border-radius:8px;padding:10px">'+
             '<div style="font-size:12px;color:#1e293b;line-height:1.5;margin-bottom:4px">'+esc(p.plan)+'</div>'+
             '<span style="font-size:10px;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 8px;border-radius:9999px">🎯 '+esc(p.focus)+'</span>'+
-            buildSrcInputs(longSrcKey, { showLabel: true, label: '📎 ลิงก์ต้นทาง + แท็บ/ช่วง' })+
           '</div>';
         }).join('')+
       '</div>'+
@@ -2301,20 +2049,17 @@ function renderBusinessPlan() {
 
     // ── ตารางผู้รับผิดชอบ (รวมทั้งหมด) ──
     '<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">'+
-      '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🎯 ตารางแผนงาน (ผู้รับผิดชอบ) — รวมทุกรายการ · พร้อมช่องลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล</div>'+
+      '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🎯 ตารางแผนงาน (ผู้รับผิดชอบ) — รวมทุกรายการ</div>'+
       '<table style="width:100%;font-size:12px;border-collapse:collapse">'+
-        '<thead><tr style="background:#e2e8f0"><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">แผนงาน</th><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">ผู้รับผิดชอบ</th><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">ลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล</th></tr></thead>'+
+        '<thead><tr style="background:#e2e8f0"><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">แผนงาน</th><th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">ผู้รับผิดชอบ</th></tr></thead>'+
         '<tbody>';
 
   // Render all items from all categories into one consolidated table
-  ACTION_CATEGORIES.forEach(function(cat, catIdx) {
+  ACTION_CATEGORIES.forEach(function(cat) {
     cat.items.forEach(function(it, idx) {
       var last = idx === cat.items.length - 1;
       var border = last ? '' : 'border-bottom:1px solid #e2e8f0';
-      var srcKey = 'bp_src_action_' + catIdx + '_' + idx;
-      html += '<tr><td style="padding:6px 8px;'+border+'">'+esc(it.plan)+'</td>'+
-        '<td style="padding:6px 8px;'+border+';color:'+cat.color+';font-weight:600">'+esc(it.owner)+'</td>'+
-        '<td style="padding:6px 8px;'+border+'">'+buildSrcInputs(srcKey, { showLabel: false })+'</td></tr>';
+      html += '<tr><td style="padding:6px 8px;'+border+'">'+esc(it.plan)+'</td><td style="padding:6px 8px;'+border+';color:'+cat.color+';font-weight:600">'+esc(it.owner)+'</td></tr>';
     });
   });
   html += '</tbody></table></div>'+
@@ -2452,26 +2197,25 @@ function renderBusinessPlan() {
       '</div>'+
     '</div>'+
 
-    // Cascade alignment table — สถานะดึงจากข้อมูลจริง (CEO_KPI_ACTUALS) หรือช่องวาง link ต้นทาง
+    // Cascade alignment table
     '<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-top:10px">'+
       '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔗 ความเชื่อมโยงแผนธุรกิจ ↔ OKR Dashboard:</div>'+
       '<table style="width:100%;font-size:12px;border-collapse:collapse">'+
         '<thead><tr style="background:#e2e8f0">'+
           '<th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">แผนธุรกิจ</th>'+
           '<th style="padding:8px;text-align:left;border-bottom:2px solid #cbd5e1">OKR Dashboard</th>'+
-          '<th style="padding:8px;text-align:center;border-bottom:2px solid #cbd5e1;min-width:240px">สถานะ</th>'+
+          '<th style="padding:8px;text-align:center;border-bottom:2px solid #cbd5e1">สถานะ</th>'+
         '</tr></thead>'+
         '<tbody>'+
-          buildCascadeRow_('Vision:GM 70:30','GM Dashboard',['gm','gross margin','หลังการขาย','บริการ 70']) +
-          buildCascadeRow_('AOE:วิจัยลูกค้า','OKR Business Growth',['aoe','วิจัย','ลูกค้า','growth','ซื้อ']) +
-          buildCascadeRow_('IC:BCT','BCT+War Room',['bct','war room','ความครอบคลุม']) +
-          buildCascadeRow_('DINC:AI+Data','CEO KPI+AI Course',['ai','data','qc','ตรวจสอบคุณภาพ','ดิจิทัล']) +
-          buildCascadeRow_('HC:3 ผ่าน','OKR Team Growth+Eval360',['eval360','3 ผ่าน','พัฒนา','อบรม','mentor']) +
-          buildCascadeRow_('Action:GM 600 บาท','PR Dashboard',['pr','600','parts','อะไหล่','ความพร้อม']) +
-          buildCascadeRow_('OC:วัฒนธรรม','OKR Community+Mentor',['วัฒนธรรม','community','mentor','ค่านิยม']) +
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">Vision:GM 70:30</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">GM Dashboard</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">AOE:วิจัยลูกค้า</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">OKR Business Growth</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">IC:BCT</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">BCT+War Room</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">DINC:AI+Data</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">CEO KPI+AI Course</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">HC:3 ผ่าน</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">OKR Team Growth+Eval360</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
+          '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">Action:GM 600 บาท</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">PR Dashboard</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center">✅</td></tr>'+
+          '<tr><td style="padding:6px 8px">OC:วัฒนธรรม</td><td style="padding:6px 8px">OKR Community+Mentor</td><td style="padding:6px 8px;text-align:center">✅</td></tr>'+
         '</tbody>'+
       '</table>'+
-      '<div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6">💡 ถ้ายังไม่มีสถานะจริง → วาง link Google Sheet ของแหล่งข้อมูลต้นทางในช่องด้านบน + ระบุ "แท็บ/ช่วงข้อมูล" (เช่น <em>แท็บ: KPI สรุป, ช่วง: ม.ค.-มิ.ย.</em>) — ระบบจะบันทึกไว้ใช้ครั้งต่อไป</div>'+
     '</div>'+
   '</div>';
 
@@ -2577,118 +2321,6 @@ function esc(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-}
-
-/* ═══════════════════════════════════════════════════
-   Source Link Helpers — ช่องวางลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล
-   - ใช้ในทุกการวัดผล (S-Objectives KR, Action Plan, KPI table)
-   - localStorage key format: bp_src_<section>_<index>
-   - บันทึกเป็น JSON { link, tabRange }
-   ═══════════════════════════════════════════════════ */
-
-/* saveSrcLink(keyBase, linkInputId, tabInputId)
-   - บันทึก link + tabRange ลง localStorage (JSON)
-   - keyBase = full localStorage key เช่น 'bp_src_sobj_0_1'
-*/
-function saveSrcLink(keyBase, linkInputId, tabInputId) {
-  var lsKey = keyBase;
-  var linkEl = document.getElementById(linkInputId);
-  var tabEl = document.getElementById(tabInputId);
-  var data = { link: '', tabRange: '' };
-  // อ่านค่าเดิมก่อน (กรณีมี note หรือฟิลด์อื่น)
-  try {
-    var raw = localStorage.getItem(lsKey);
-    if (raw) {
-      var parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') data = parsed;
-    }
-  } catch(e) {}
-  if (linkEl) data.link = linkEl.value.trim();
-  if (tabEl) data.tabRange = tabEl.value.trim();
-  try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
-  // flash border เป็นสีเขียวเพื่อยืนยันว่าบันทึกแล้ว
-  if (linkEl) {
-    var orig = linkEl.style.borderColor;
-    linkEl.style.borderColor = '#10b981';
-    setTimeout(function() { if (linkEl) linkEl.style.borderColor = orig; }, 800);
-  }
-  if (tabEl) {
-    var orig2 = tabEl.style.borderColor;
-    tabEl.style.borderColor = '#10b981';
-    setTimeout(function() { if (tabEl) tabEl.style.borderColor = orig2; }, 800);
-  }
-}
-
-/* saveSrcTab(keyBase, tabInputId)
-   - บันทึกเฉพาะ tabRange (ใช้เมื่อมีแค่ช่องแท็บ)
-*/
-function saveSrcTab(keyBase, tabInputId) {
-  var lsKey = keyBase;
-  var tabEl = document.getElementById(tabInputId);
-  var data = { link: '', tabRange: '' };
-  try {
-    var raw = localStorage.getItem(lsKey);
-    if (raw) {
-      var parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') data = parsed;
-    }
-  } catch(e) {}
-  if (tabEl) data.tabRange = tabEl.value.trim();
-  try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
-  if (tabEl) {
-    var orig = tabEl.style.borderColor;
-    tabEl.style.borderColor = '#10b981';
-    setTimeout(function() { if (tabEl) tabEl.style.borderColor = orig; }, 800);
-  }
-}
-
-/* loadSrcData(keyBase) — โหลด { link, tabRange } จาก localStorage
-   - คืน { link: '', tabRange: '' } ถ้าไม่มีข้อมูล
-*/
-function loadSrcData(keyBase) {
-  try {
-    var raw = localStorage.getItem(keyBase);
-    if (raw) {
-      var parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
-        return { link: parsed.link || '', tabRange: parsed.tabRange || '' };
-      }
-    }
-  } catch(e) {}
-  return { link: '', tabRange: '' };
-}
-
-/* buildSrcInputs(keyBase, opts) — สร้าง HTML ช่องวางลิงก์ + แท็บ/ช่วง
-   - opts: { showLabel (bool), label (string), compact (bool) }
-   - คืน HTML string พร้อม value จาก localStorage
-*/
-function buildSrcInputs(keyBase, opts) {
-  opts = opts || {};
-  var data = loadSrcData(keyBase);
-  var linkId = keyBase + '_link';
-  var tabId = keyBase + '_tab';
-  var labelHtml = opts.showLabel ? '<div style="font-size:9px;font-weight:700;color:#64748b;margin-bottom:2px">' + esc(opts.label || '📎 ลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล') + '</div>' : '';
-  return labelHtml +
-    '<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;align-items:center">' +
-      '<input type="text" id="' + linkId + '" placeholder="วางลิงก์ Google Sheet" ' +
-        'style="flex:1;min-width:150px;padding:3px 6px;font-size:10px;border:1px solid #cbd5e1;border-radius:4px" ' +
-        'value="' + esc(data.link) + '" ' +
-        'onchange="saveSrcLink(\'' + keyBase + '\',\'' + linkId + '\',\'' + tabId + '\')" />' +
-      '<input type="text" id="' + tabId + '" placeholder="แท็บ / ช่วงข้อมูล" ' +
-        'style="width:120px;padding:3px 6px;font-size:10px;border:1px solid #cbd5e1;border-radius:4px" ' +
-        'value="' + esc(data.tabRange) + '" ' +
-        'onchange="saveSrcLink(\'' + keyBase + '\',\'' + linkId + '\',\'' + tabId + '\')" />' +
-    '</div>';
-}
-
-/* toggleSrcEdit(key) — เปิด/ปิดช่องแก้ไขลิงก์ต้นทาง (Visual Control toggle)
-   - ใช้กับ KR ที่มีข้อมูลจริงแล้ว เพื่อซ่อนช่องวางลิงก์จนกว่าจะคลิก ✏️
-*/
-function toggleSrcEdit(key) {
-  var el = document.getElementById('srcEdit_' + key);
-  if (el) {
-    el.style.display = el.style.display === 'none' ? 'block' : 'none';
-  }
 }
 
 function getDeptColor(name) {
@@ -3089,75 +2721,6 @@ function normKR(text) {
 
   // A15. GM ของสาขา — fix double-งาน typo "จากงานงานบริการ" → "จากงานบริการ"
   cleaned = cleaned.replace(/จากงานงานบริการ/gi, 'จากงานบริการ');
-
-  // ── ADDITIONAL DEEP SEMANTIC MERGES (batch 3) ──
-
-  // B1. GM รวม — merge "GM รวมเฉลี่ย", "GM รวมของสาขา", "GM รวมไม่ต่ำกว่า" → "สร้างกำไร รวม"
-  cleaned = cleaned.replace(/^GM\s*รวมเฉลี่ย.*/gi, 'สร้างกำไร รวม');
-  cleaned = cleaned.replace(/^GM\s*รวมของสาขา.*/gi, 'สร้างกำไร รวม');
-  cleaned = cleaned.replace(/^GM\s*รวมไม่ต่ำกว่า.*/gi, 'สร้างกำไร รวม');
-  cleaned = cleaned.replace(/^GM\s*รวม.*/gi, 'สร้างกำไร รวม');
-  // "กำไรขั้นต้น GM รวม" → same
-  cleaned = cleaned.replace(/^กำไรขั้นต้น\s*GM\s*รวม/gi, 'สร้างกำไร รวม');
-
-  // B2. GM รถ — merge "GM รถเข้าใช้บริการ", "GM จากรถเข้า", "GM รถ" → "สร้างกำไร รถเข้าบริการ"
-  cleaned = cleaned.replace(/^GM\s*รถเข้าใช้บริการ.*/gi, 'สร้างกำไร รถเข้าบริการ');
-  cleaned = cleaned.replace(/^GM\s*จากรถเข้า.*/gi, 'สร้างกำไร รถเข้าบริการ');
-  cleaned = cleaned.replace(/^กำไรขั้นต้น\s*\(GM\)\s*จากรถเข้า.*/gi, 'สร้างกำไร รถเข้าบริการ');
-
-  // B3. ส่งมอบ — merge "ส่งมอบรถ", "ปิดงานส่งมอบ", "ส่งมอบงาน" → "ส่งมอบรถ"
-  cleaned = cleaned.replace(/ปิดงานส่งมอบรถ/gi, 'ส่งมอบรถ');
-  cleaned = cleaned.replace(/ส่งมอบงานรถ/gi, 'ส่งมอบรถ');
-  cleaned = cleaned.replace(/ส่งมอบรถเข้าศูนย์บริการ.*/gi, 'ส่งมอบรถ');
-  cleaned = cleaned.replace(/ส่งมอบรถใหม่.*/gi, 'ส่งมอบรถ');
-  cleaned = cleaned.replace(/^ปิดงาน\s*รถ.*/gi, 'ส่งมอบรถ');
-
-  // B4. ค่าแรง — merge remaining variants
-  // "ผลงานค่าแรง", "รายได้ค่าแรง" already handled above; add more
-  cleaned = cleaned.replace(/^ผลงานค่าแรง\s*/gi, 'บรรลุค่าแรงต่อเดือน ');
-  cleaned = cleaned.replace(/^รายได้ค่าแรงรวม.*/gi, 'บรรลุค่าแรงต่อเดือน');
-  cleaned = cleaned.replace(/^บรรลุเป้าค่าแรง.*/gi, 'บรรลุค่าแรงต่อเดือน');
-  cleaned = cleaned.replace(/^ค่าแรง\s*ไม่ต่ำกว่า.*/gi, 'บรรลุค่าแรงต่อเดือน');
-
-  // B5. รายได้ — merge "รายได้รวม", "บรรลุรายได้", "สร้างรายได้" about same source
-  // Already have CBNP PMSG/PMS merge above; add general ones
-  cleaned = cleaned.replace(/^รายได้รวม\s*/gi, 'บรรลุรายได้ ');
-  cleaned = cleaned.replace(/^สร้างรายได้\s+จาก.*/gi, 'บรรลุรายได้');
-  // "รายได้จากการขาย" → "บรรลุรายได้ การขาย"
-  cleaned = cleaned.replace(/^รายได้จากการขาย.*/gi, 'บรรลุรายได้ การขาย');
-
-  // B6. อบรม/เรียนรู้/พัฒนา/training — merge if same topic
-  // "อบรมพนักงานใหม่" / "เรียนรู้พนักงานใหม่" / "พัฒนาพนักงานใหม่" → "พัฒนาพนักงานใหม่"
-  cleaned = cleaned.replace(/^(อบรม|เรียนรู้|training)\s*(พนักงานใหม่).*/gi, 'พัฒนา$2');
-  cleaned = cleaned.replace(/^(อบรม|เรียนรู้|training)\s*(พนักงาน).*/gi, 'พัฒนา$2');
-  // "อบรม 4C" / "เรียนรู้ 4C" / "พัฒนา 4C" → "พัฒนา 4C"
-  cleaned = cleaned.replace(/^(อบรม|เรียนรู้|training)\s*(4C).*/gi, 'พัฒนา$2');
-  // "อบรม PMSG" / "เรียนรู้ PMSG" / "พัฒนา PMSG" → "พัฒนา PMSG"
-  cleaned = cleaned.replace(/^(อบรม|เรียนรู้|training)\s*(PMSG).*/gi, 'พัฒนา$2');
-  // "อบรม AI" / "เรียนรู้ AI" / "พัฒนา AI" → "พัฒนา AI"
-  cleaned = cleaned.replace(/^(อบรม|เรียนรู้|training)\s*(AI).*/gi, 'พัฒนา$2');
-
-  // B7. บุคลากร/ทีม — merge team building, hiring, retention variants
-  // "สร้างทีมงาน" / "สร้างทีม" / "บริหารทีม" → "สร้างทีม"
-  cleaned = cleaned.replace(/^บริหารทีมงาน.*/gi, 'สร้างทีม');
-  cleaned = cleaned.replace(/^บริหารทีม.*/gi, 'สร้างทีม');
-  // "รับสมัครพนักงาน" / "จ้างพนักงาน" / "คัดเลือกพนักงาน" → "รับสมัครพนักงาน"
-  cleaned = cleaned.replace(/^(จ้าง|คัดเลือก)\s*(พนักงาน).*/gi, 'รับสมัคร$2');
-  // "รักษาพนักงาน" / "รักษาบุคลากร" / "ลดอัตราลาออก" → "รักษาบุคลากร"
-  cleaned = cleaned.replace(/^รักษาพนักงาน.*/gi, 'รักษาบุคลากร');
-  cleaned = cleaned.replace(/^ลดอัตราลาออก.*/gi, 'รักษาบุคลากร');
-  cleaned = cleaned.replace(/^ลดคนลาออก.*/gi, 'รักษาบุคลากร');
-
-  // B8. CSI/SSI — additional variants
-  // "ความพึงพอใจ CSI" / "ความพึงพอใจ SSI" → "คะแนน csi/ssi"
-  cleaned = cleaned.replace(/^ความพึงพอใจ\s*(CSI|SSI).*/gi, 'คะแนน csi/ssi');
-  // "CSI ภายนอกไม่ต่ำกว่า #%" → "csi ภายนอก #"
-  cleaned = cleaned.replace(/^csi\s*ภายนอกไม่ต่ำกว่า.*/gi, 'csi ภายนอก #');
-  // "SSI ภายนอก" → "csi/ssi ภายนอก"
-  cleaned = cleaned.replace(/^ssi\s*ภายนอก/gi, 'csi/ssi ภายนอก');
-  // "คะแนน CSI" → "คะแนน csi/ssi"
-  cleaned = cleaned.replace(/^คะแนน\s*csi\s*$/gi, 'คะแนน csi/ssi');
-  cleaned = cleaned.replace(/^คะแนน\s*ssi\s*$/gi, 'คะแนน csi/ssi');
 
   // ── STRUCTURAL NORMALIZATION ──
   // Replace all numbers with #
@@ -3593,8 +3156,6 @@ function renderDeptContent(idx) {
       if (!noWeight) {
         html += '<div style="margin-top:4px;font-size:0.68rem;color:var(--text3)">⚖️ ' + Math.round(totalW * 100) + '%</div>';
       }
-      // ── Source link block: ช่องวาง link ต้นทางสำหรับแต่ละคน ──
-      html += buildPersonSourceLink_(p, dept, meta);
       html += '</div>';
     });
     html += '</div>';
@@ -3832,11 +3393,10 @@ function renderKpiStatus(res) {
   html += '<th style="text-align:center">ความคืบหน้า</th>';
   html += '<th style="text-align:center">สถานะ</th>';
   html += '<th style="text-align:left">แหล่งข้อมูล</th>';
-  html += '<th style="text-align:left">ลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล</th>';
   html += '</tr></thead>';
   html += '<tbody>';
 
-  items.forEach(function(item, krIdx) {
+  items.forEach(function(item) {
     var krShort = item.krText || '';
     // Shorten KR text if too long (show first ~80 chars + ...)
     if (krShort.length > 80) krShort = krShort.substring(0, 77) + '...';
@@ -3858,20 +3418,6 @@ function renderKpiStatus(res) {
     }
     var detailHtml = item.sourceDetail ? '<div class="kpi-source-detail">' + esc(item.sourceDetail) + '</div>' : '';
 
-    // ── ช่องลิงก์ต้นทาง + แท็บ/ช่วงข้อมูล (ทุกแถว KPI) ──
-    //   localStorage key: bp_src_kpi_<personName>_<krIdx>
-    //   ถ้ามี sourceUrl จากระบบ → แสดง link เดิม + ช่องแก้ไข
-    //   ถ้าไม่มี → ช่อง input ให้วาง link + กรอกแท็บ/ช่วง
-    var kpiSrcKey = 'bp_src_kpi_' + (personModalPersonName || 'unknown').replace(/[^a-zA-Z0-9ก-๛]/g, '_').substring(0, 30) + '_' + krIdx;
-    var kpiSrcHtml = '';
-    if (item.sourceUrl) {
-      // มี sourceUrl จากระบบอยู่แล้ว → แสดง link เดิม + ช่องแก้ไขเพิ่มเติม
-      kpiSrcHtml = '<div style="font-size:10px;color:#64748b;margin-bottom:2px"><a href="' + esc(item.sourceUrl) + '" target="_blank" style="color:#3b82f6;text-decoration:none">ลิงก์ระบบ ↗</a></div>' + buildSrcInputs(kpiSrcKey, { showLabel: false });
-    } else {
-      // ไม่มี sourceUrl → ช่อง input ให้วาง link + กรอกแท็บ/ช่วง
-      kpiSrcHtml = buildSrcInputs(kpiSrcKey, { showLabel: false });
-    }
-
     html += '<tr class="kpi-row kpi-row-' + status + '">';
     html += '<td style="text-align:left" title="' + esc(item.krText || '') + '">' + esc(krShort) + '</td>';
     html += '<td style="text-align:right;font-variant-numeric:tabular-nums">' + currentVal + '</td>';
@@ -3885,11 +3431,10 @@ function renderKpiStatus(res) {
     html += '</td>';
     html += '<td style="text-align:center"><span class="kpi-status-badge ' + statusClass + '">' + statusLabel + '</span></td>';
     html += '<td style="text-align:left">' + sourceHtml + '</td>';
-    html += '<td style="text-align:left">' + kpiSrcHtml + '</td>';
     html += '</tr>';
     // Detail row (expandable)
     if (detailHtml) {
-      html += '<tr class="kpi-detail-row"><td colspan="7">' + detailHtml + '</td></tr>';
+      html += '<tr class="kpi-detail-row"><td colspan="6">' + detailHtml + '</td></tr>';
     }
   });
 
@@ -4259,56 +3804,7 @@ function renderKPITable(deptIdx) {
   mergedArr.forEach(function(m) { totalOwners += m.owners.length; m.owners.forEach(function(o) { ownerSet[o.person + '|' + o.dept] = true; }); });
   var totalUniqueOwners = Object.keys(ownerSet).length;
 
-  // ── Per-group counts (before & after merge) ──
-  var groupOrder = ['Business Growth', 'Team Growth', 'Personal Growth', 'Community'];
-  var groupBeforeMerge = {};  // count from allKRs (before merge)
-  var groupAfterMerge = {};   // count from mergedArr (after merge)
-  groupOrder.forEach(function(t) { groupBeforeMerge[t] = 0; groupAfterMerge[t] = 0; });
-  allKRs.forEach(function(k) {
-    var t = k.type || 'Other';
-    groupBeforeMerge[t] = (groupBeforeMerge[t] || 0) + 1;
-  });
-  mergedArr.forEach(function(m) {
-    var t = m.type || 'Other';
-    groupAfterMerge[t] = (groupAfterMerge[t] || 0) + 1;
-  });
-  var totalBeforeMerge = allKRs.length;
-  var totalAfterMerge = mergedArr.length;
-  var totalMerged = totalBeforeMerge - totalAfterMerge;
-
   var html = '';
-  // ── Per-group summary card (count per group after merge) ──
-  html += '<div class="card" style="margin-bottom:12px;padding:14px 18px">';
-  html += '<div style="font-weight:700;font-size:0.85rem;color:var(--text);margin-bottom:10px">📊 สรุปจำนวนตัววัดผลแยกตามกลุ่ม (หลังรวมข้อมูลซ้ำ)</div>';
-  html += '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">';
-  var groupIcons = { 'Business Growth': '💰', 'Team Growth': '👥', 'Personal Growth': '🎓', 'Community': '🤝', 'Other': '📋' };
-  var groupColors = { 'Business Growth': '#10b981', 'Team Growth': '#3b82f6', 'Personal Growth': '#f59e0b', 'Community': '#ec4899', 'Other': '#64748b' };
-  groupOrder.concat('Other').forEach(function(t) {
-    var after = groupAfterMerge[t] || 0;
-    if (after === 0 && !(groupBeforeMerge[t] > 0)) return;
-    var before = groupBeforeMerge[t] || 0;
-    var mergedCount = before - after;
-    var icon = groupIcons[t] || '📋';
-    var color = groupColors[t] || '#64748b';
-    html += '<div style="display:flex;align-items:center;gap:6px">';
-    html += '<span style="font-size:0.95rem">' + icon + '</span>';
-    html += '<div>';
-    html += '<div style="font-size:0.78rem;color:var(--text2)">' + esc(t) + '</div>';
-    html += '<div style="font-size:1.1rem;font-weight:700;color:' + color + '">' + after + ' ตัววัดผล' + (mergedCount > 0 ? ' <span style="font-size:0.72rem;color:var(--text3);font-weight:400">(จาก ' + before + ')</span>' : '') + '</div>';
-    html += '</div>';
-    html += '</div>';
-  });
-  html += '</div>';
-  // Total row
-  html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:24px;flex-wrap:wrap;align-items:center">';
-  html += '<div style="text-align:center"><span style="font-size:1.3rem;font-weight:800;color:var(--accent)">' + totalAfterMerge + '</span> <span style="font-size:0.78rem;color:var(--text2)">ตัววัดผลไม่ซ้ำ (หลังรวม)</span></div>';
-  html += '<div style="text-align:center"><span style="font-size:1.3rem;font-weight:800;color:var(--text2)">' + totalBeforeMerge + '</span> <span style="font-size:0.78rem;color:var(--text2)">ตัววัดผลก่อนรวม</span></div>';
-  if (totalMerged > 0) {
-    html += '<div style="text-align:center"><span style="font-size:1.3rem;font-weight:800;color:var(--green)">-' + totalMerged + '</span> <span style="font-size:0.78rem;color:var(--text2)">รวมข้อมูลซ้ำแล้ว</span></div>';
-  }
-  html += '</div>';
-  html += '</div>';
-
   html += '<div class="card" style="margin-bottom:16px;display:flex;gap:24px;flex-wrap:wrap;align-items:center">';
   html += '<div style="text-align:center"><div style="font-size:1.6rem;font-weight:800;color:var(--accent)">' + totalUnique + '</div><div style="font-size:0.78rem;color:var(--text2)">ตัววัดผลไม่ซ้ำ</div></div>';
   html += '<div style="width:1px;height:36px;background:var(--border)"></div>';
@@ -4346,7 +3842,7 @@ function renderKPITable(deptIdx) {
     html += '<div style="font-weight:700;font-size:0.9rem;color:' + color + ';margin-bottom:12px;display:flex;align-items:center;gap:8px">';
     html += '<span>' + icon + '</span>';
     html += '<span>' + esc(label) + '</span>';
-    html += '<span style="font-size:0.78rem;color:var(--text3);font-weight:400">— ' + krs.length + ' ตัววัดผล' + ((groupBeforeMerge[type] || 0) > krs.length ? ' (รวมจาก ' + (groupBeforeMerge[type] || 0) + ' ตัววัดผลเดิม)' : '') + '</span>';
+    html += '<span style="font-size:0.78rem;color:var(--text3);font-weight:400">— ' + krs.length + ' ตัววัดผล</span>';
     html += '</div>';
 
     krs.forEach(function(m, idx) {
@@ -4405,7 +3901,7 @@ function renderKPITable(deptIdx) {
     if (typeOrder.indexOf(type) !== -1) return;
     var krs = types[type];
     html += '<div class="card" style="margin-bottom:16px;border-left:4px solid #64748b">';
-    html += '<div style="font-weight:700;font-size:0.9rem;color:#64748b;margin-bottom:12px">📋 ' + esc(type) + ' — ' + krs.length + ' ตัววัดผล' + ((groupBeforeMerge[type] || 0) > krs.length ? ' (รวมจาก ' + (groupBeforeMerge[type] || 0) + ' ตัววัดผลเดิม)' : '') + '</div>';
+    html += '<div style="font-weight:700;font-size:0.9rem;color:#64748b;margin-bottom:12px">📋 ' + esc(type) + ' — ' + krs.length + ' ตัววัดผล</div>';
     krs.forEach(function(m, idx) {
       var ks2 = m.kpiScore;
       html += '<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:' + (idx < krs.length - 1 ? '1px solid var(--border)' : 'none') + '">';
@@ -5666,215 +5162,6 @@ var DEPT_SHEET_LINKS = {
   'PMS ศูนย์บริการ': 'https://docs.google.com/spreadsheets/d/15zM39IFLOpczwP_ZnBG3ScRKPl4lgSCi66HQAgwoXoQ/edit',
   'PMS/PMG Backoffice': 'https://docs.google.com/spreadsheets/d/1f9DtFbss0jDW5Of6pw5yEDh5mciIk4oVvwrAgPPpKJE/edit'
 };
-
-/* ═══════════════════════════════════════════════════
-   Person Source Link — ช่องวาง link ต้นทางสำหรับแต่ละคน
-   - ใช้ DEPT_SHEET_LINKS เป็น default
-   - บันทึก link ที่ผู้ใช้วางลง localStorage (key: psrc_<dept>_<person>)
-   - ค้นหาสถานะ KPI จาก Google Apps Script (gsGetPersonKpiStatus)
-   - แสดง "📊 ผลลัพธ์ปัจจุบัน & สถานะ" คล้ายของสมศักดิ์ หรือแสดง link เป็นจุดคลิก
-   ═══════════════════════════════════════════════════ */
-
-/* ── buildPersonSourceLink_: สร้าง HTML สำหรับช่องวาง link + แสดงสถานะ ── */
-function buildPersonSourceLink_(p, dept, meta) {
-  if (!p || !p.name) return '';
-  var deptName = dept ? dept.name : '';
-  var personName = p.name;
-
-  // Sanitize key สำหรับ localStorage + DOM id
-  var keyBase = (deptName + '_' + personName).replace(/[^a-zA-Z0-9ก-๛]/g, '_').substring(0, 50);
-  var lsKey = 'psrc_' + keyBase;
-
-  // Default link จาก DEPT_SHEET_LINKS
-  var defaultLink = (typeof DEPT_SHEET_LINKS !== 'undefined' && DEPT_SHEET_LINKS[deptName]) ? DEPT_SHEET_LINKS[deptName] : '';
-
-  // อ่านค่าที่เคยบันทึก
-  var savedLink = '', savedTabRange = '', savedNote = '';
-  try {
-    var raw = localStorage.getItem(lsKey);
-    if (raw) {
-      var parsed = JSON.parse(raw);
-      savedLink = parsed.link || '';
-      savedTabRange = parsed.tabRange || '';
-      savedNote = parsed.note || '';
-    }
-  } catch(e) {}
-
-  // Link ที่จะใช้: savedLink > defaultLink
-  var activeLink = savedLink || defaultLink;
-
-  // DOM ids
-  var linkId = 'psrc_link_' + keyBase;
-  var tabId = 'psrc_tab_' + keyBase;
-  var statusId = 'psrc_status_' + keyBase;
-
-  var html = '<div onclick="event.stopPropagation()" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);font-size:11px">' +
-    '<div style="font-weight:700;color:' + (meta ? meta.text : '#334155') + ';margin-bottom:4px;font-size:10px">📊 แหล่งข้อมูลต้นทาง</div>' +
-    '<input type="text" id="' + linkId + '" placeholder="วาง link Google Sheet..." value="' + esc(savedLink || '') + '" ' +
-      'onchange="savePersonSourceLink_(\'' + keyBase + '\')" ' +
-      'style="font-size:10px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;width:100%;box-sizing:border-box;margin-bottom:3px" />' +
-    '<input type="text" id="' + tabId + '" placeholder="แท็บ: ___ ช่วง: ___ (เช่น แท็บ: KPI สรุป, ช่วง: ม.ค.-มิ.ย.)" value="' + esc(savedTabRange || '') + '" ' +
-      'onchange="savePersonSourceLink_(\'' + keyBase + '\')" ' +
-      'style="font-size:10px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;width:100%;box-sizing:border-box;color:#64748b;margin-bottom:4px" />' +
-    '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
-      '<button onclick="event.stopPropagation();loadPersonSourceStatus_(\'' + keyBase + '\',\'' + personName.replace(/'/g, "\\'") + '\',\'' + deptName.replace(/'/g, "\\'") + '\')" ' +
-        'style="font-size:10px;padding:3px 8px;border:1px solid ' + (meta ? meta.color : '#3b82f6') + ';border-radius:4px;background:' + (meta ? meta.bg : '#eff6ff') + ';color:' + (meta ? meta.text : '#1e40af') + ';cursor:pointer">🔄 ดึงสถานะ</button>' +
-      (activeLink ? '<a href="' + esc(activeLink) + '" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;padding:3px 8px;border:1px solid #bfdbfe;border-radius:4px;background:#eff6ff;color:#1e40af;text-decoration:none;display:inline-block">📊 เปิด Sheet ↗</a>' : '') +
-    '</div>' +
-    '<div id="' + statusId + '" style="margin-top:6px"></div>' +
-  '</div>';
-
-  // โหลดสถานะแบบ async หลัง render (ใช้ setTimeout เพื่อให้ DOM พร้อม)
-  setTimeout(function() {
-    loadPersonSourceStatus_(keyBase, personName, deptName);
-  }, 100);
-
-  return html;
-}
-
-/* ── savePersonSourceLink_: บันทึก link + แท็บ/ช่วง ลง localStorage ── */
-function savePersonSourceLink_(keyBase) {
-  var lsKey = 'psrc_' + keyBase;
-  var linkEl = document.getElementById('psrc_link_' + keyBase);
-  var tabEl = document.getElementById('psrc_tab_' + keyBase);
-  if (!linkEl && !tabEl) return;
-  var data = {
-    link: linkEl ? linkEl.value.trim() : '',
-    tabRange: tabEl ? tabEl.value.trim() : ''
-  };
-  try { localStorage.setItem(lsKey, JSON.stringify(data)); } catch(e) {}
-  if (linkEl) {
-    var orig = linkEl.style.borderColor;
-    linkEl.style.borderColor = '#10b981';
-    setTimeout(function() { linkEl.style.borderColor = orig; }, 800);
-  }
-}
-
-/* ── loadPersonSourceStatus_: ดึงสถานะ KPI ของบุคคลนั้น
-   - เรียก gsGetPersonKpiStatus (Google Apps Script) — ใช้ matchKR_ ฝั่ง server
-   - ถ้าได้ข้อมูล → แสดงตารางสถานะ KPI คล้ายสมศักดิ์
-   - ถ้าไม่ได้ → แสดง link ต้นทางเป็นจุดคลิก + แท็บ/ช่วง
-   - ใช้ google.script.run (Apps Script environment) หรือ fallback เป็น static display
-── */
-function loadPersonSourceStatus_(keyBase, personName, deptName) {
-  var container = document.getElementById('psrc_status_' + keyBase);
-  if (!container) return;
-
-  // อ่าน link ที่บันทึกไว้
-  var lsKey = 'psrc_' + keyBase;
-  var savedLink = '', savedTabRange = '';
-  try {
-    var raw = localStorage.getItem(lsKey);
-    if (raw) {
-      var parsed = JSON.parse(raw);
-      savedLink = parsed.link || '';
-      savedTabRange = parsed.tabRange || '';
-    }
-  } catch(e) {}
-
-  // Default link
-  var defaultLink = (typeof DEPT_SHEET_LINKS !== 'undefined' && DEPT_SHEET_LINKS[deptName]) ? DEPT_SHEET_LINKS[deptName] : '';
-  var activeLink = savedLink || defaultLink;
-
-  // แสดง loading
-  container.innerHTML = '<div style="font-size:10px;color:#94a3b8;padding:4px 0"><span style="display:inline-block;width:10px;height:10px;border:2px solid #cbd5e1;border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:4px"></span>กำลังดึงสถานะ...</div>';
-
-  // พยายามเรียก google.script.run (Apps Script environment)
-  if (typeof google !== 'undefined' && google.script && google.script.run) {
-    try {
-      google.script.run
-        .withSuccessHandler(function(res) {
-          renderPersonSourceStatus_(container, res, activeLink, savedTabRange, personName, deptName);
-        })
-        .withFailureHandler(function(err) {
-          renderPersonSourceStatusFallback_(container, activeLink, savedTabRange, personName, deptName, err);
-        })
-        .gsGetPersonKpiStatus(personName, deptName);
-      return;
-    } catch(e) {
-      // ผ่านต่อไป fallback
-    }
-  }
-
-  // Fallback: ไม่มี google.script.run → แสดง link เป็นจุดคลิก
-  renderPersonSourceStatusFallback_(container, activeLink, savedTabRange, personName, deptName, null);
-}
-
-/* ── renderPersonSourceStatus_: แสดงสถานะ KPI เมื่อได้ข้อมูลจาก server ── */
-function renderPersonSourceStatus_(container, res, activeLink, tabRange, personName, deptName) {
-  if (!container) return;
-  if (!res || !res.items || res.items.length === 0) {
-    renderPersonSourceStatusFallback_(container, activeLink, tabRange, personName, deptName, null);
-    return;
-  }
-
-  // กรองเฉพาะ items ที่มีข้อมูลจริง
-  var realItems = [];
-  for (var i = 0; i < res.items.length; i++) {
-    var it = res.items[i];
-    if (it.status !== 'no-data' && it.status !== 'skip' && it.currentValue !== null && it.currentValue !== undefined) {
-      realItems.push(it);
-    }
-  }
-
-  if (realItems.length === 0) {
-    renderPersonSourceStatusFallback_(container, activeLink, tabRange, personName, deptName, null);
-    return;
-  }
-
-  // สร้างตารางสถานะ KPI แบบ compact
-  var html = '<div style="margin-top:6px;padding:8px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0">' +
-    '<div style="font-size:10px;font-weight:700;color:#334155;margin-bottom:6px">📊 ผลลัพธ์ปัจจุบัน & สถานะ (' + esc(personName) + ')</div>' +
-    '<table style="width:100%;font-size:10px;border-collapse:collapse">';
-
-  realItems.forEach(function(item) {
-    var krShort = item.krText || '';
-    if (krShort.length > 60) krShort = krShort.substring(0, 57) + '...';
-    var cur = formatKpiValue_(item.currentValue);
-    var tgt = formatKpiValue_(item.targetValue);
-    var pct = item.progressPct || 0;
-    var badge = pct >= 100 ? '✅' : (pct >= 80 ? '⚠️' : '🔴');
-    var statusColor = pct >= 100 ? '#10b981' : (pct >= 80 ? '#f59e0b' : '#ef4444');
-
-    html += '<tr style="border-bottom:1px solid #f1f5f9">' +
-      '<td style="padding:3px 4px;vertical-align:top" title="' + esc(item.krText || '') + '">' + esc(krShort) + '</td>' +
-      '<td style="padding:3px 4px;text-align:right;white-space:nowrap;color:#475569">' + esc(cur) + '</td>' +
-      '<td style="padding:3px 4px;text-align:center;white-space:nowrap;color:' + statusColor + ';font-weight:700">' + badge + ' ' + pct + '%</td>' +
-    '</tr>';
-  });
-
-  html += '</table>';
-
-  // แสดงแหล่งข้อมูล
-  if (activeLink) {
-    html += '<div style="margin-top:6px;font-size:9px;color:#94a3b8">แหล่งข้อมูล: <a href="' + esc(activeLink) + '" target="_blank" style="color:#3b82f6;text-decoration:none">' + esc(activeLink.substring(0, 40)) + '...</a></div>';
-  }
-  if (tabRange) {
-    html += '<div style="font-size:9px;color:#64748b;margin-top:2px">' + esc(tabRange) + '</div>';
-  }
-
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-/* ── renderPersonSourceStatusFallback_: แสดง link เป็นจุดคลิกเมื่อไม่มีข้อมูลจริง ── */
-function renderPersonSourceStatusFallback_(container, activeLink, tabRange, personName, deptName, err) {
-  if (!container) return;
-  var html = '';
-  if (activeLink) {
-    html = '<div style="margin-top:6px;padding:6px 8px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0">' +
-      '<div style="font-size:10px;color:#64748b;margin-bottom:3px">📊 คลิกดูข้อมูลต้นทาง:</div>' +
-      '<a href="' + esc(activeLink) + '" target="_blank" style="font-size:10px;color:#3b82f6;text-decoration:none;font-weight:600;display:inline-block;padding:3px 8px;border:1px solid #bfdbfe;border-radius:4px;background:#eff6ff">📊 เปิด Google Sheet ↗</a>';
-    if (tabRange) {
-      html += '<div style="font-size:9px;color:#94a3b8;margin-top:4px">' + esc(tabRange) + '</div>';
-    }
-    html += '<div style="font-size:9px;color:#94a3b8;margin-top:3px">💡 วาง link + ระบุแท็บ/ช่วง แล้วกด "🔄 ดึงสถานะ" เพื่อวัดผล</div>';
-    html += '</div>';
-  } else {
-    html = '<div style="margin-top:6px;font-size:10px;color:#94a3b8">ยังไม่มี link ต้นทาง — วาง link Google Sheet ด้านบนเพื่อวัดผล</div>';
-  }
-  container.innerHTML = html;
-}
 
 /* ── Start ── */
 init();

@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PMG Financial Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f0f4f8; --card: #fff; --accent: #2563eb; --accent2: #7c3aed;
+      --green: #059669; --red: #dc2626; --orange: #ea580c; --yellow: #d97706;
+      --purple: #7c3aed; --pink: #db2777; --cyan: #0891b2; --teal: #0d9488;
+      --text: #1e293b; --text2: #475569; --text3: #94a3b8;
+      --border: #e2e8f0; --radius: 14px;
+      --shadow: 0 2px 8px rgba(0,0,0,.06);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; }
+
+    /* Confidentiality */
+    .conf-bar { position:fixed; bottom:0; left:0; right:0; background:linear-gradient(90deg,#dc2626,#b91c1c); color:#fff; text-align:center; font-size:.7rem; padding:4px 0; font-weight:700; letter-spacing:1px; z-index:9999; }
+    .conf-badge { position:fixed; top:8px; right:16px; background:#dc2626; color:#fff; font-size:.65rem; padding:3px 8px; border-radius:10px; font-weight:700; z-index:9999; box-shadow:0 2px 8px rgba(220,38,38,.3); }
+
+    /* Header */
+    .header { background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#2563eb 100%); padding:14px 20px; position:sticky; top:0; z-index:100; box-shadow:0 4px 16px rgba(0,0,0,.2); }
+    .header h1 { font-size:20px; color:#fff; display:flex; align-items:center; gap:10px; }
+    .header .subtitle { font-size:12px; color:rgba(255,255,255,.7); margin-top:2px; }
+    .header .ver { font-size:10px; color:rgba(255,255,255,.6); background:rgba(255,255,255,.15); padding:2px 8px; border-radius:4px; margin-left:8px; }
+
+    /* Filters */
+    .filters { background:#fff; border-bottom:1px solid var(--border); padding:10px 20px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; position:sticky; top:52px; z-index:90; box-shadow:0 1px 4px rgba(0,0,0,.05); }
+    .filter-group { display:flex; gap:3px; align-items:center; }
+    .filter-group label { font-size:11px; color:var(--text3); margin-right:4px; font-weight:600; }
+    .fbtn { padding:5px 12px; border:1px solid var(--border); border-radius:6px; background:#fff; font-size:12px; cursor:pointer; transition:.2s; color:var(--text2); }
+    .fbtn:hover:not(.active) { background:#eef2ff; }
+    .fbtn.active { background:var(--accent2); color:#fff; border-color:var(--accent2); }
+
+    /* Year checkboxes */
+    .year-checks { display:flex; gap:4px; align-items:center; flex-wrap:wrap; }
+    .year-checks label { font-size:12px; color:var(--text2); display:flex; align-items:center; gap:2px; cursor:pointer; }
+    .year-checks input[type=checkbox] { accent-color:var(--accent); width:14px; height:14px; }
+    .month-sel { padding:4px 8px; border:1px solid var(--border); border-radius:6px; font-size:12px; background:#fff; color:var(--text); margin-left:8px; }
+
+    /* Content */
+    .content { padding:16px 20px 60px; max-width:1400px; margin:0 auto; }
+
+    /* KPI Cards */
+    .kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-bottom:16px; }
+    .kpi-card { background:var(--card); border-radius:var(--radius); padding:14px; text-align:center; box-shadow:var(--shadow); border:1px solid var(--border); position:relative; overflow:hidden; }
+    .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+    .kpi-card.rev::before { background:var(--accent); }
+    .kpi-card.exp::before { background:var(--orange); }
+    .kpi-card.profit::before { background:var(--green); }
+    .kpi-card.gm::before { background:linear-gradient(90deg,var(--accent),var(--teal)); }
+    .kpi-card.ebitda::before { background:var(--purple); }
+    .kpi-card.cbnp::before { background:var(--pink); }
+    .kpi-card .icon { font-size:20px; margin-bottom:2px; }
+    .kpi-card .label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; }
+    .kpi-card .value { font-size:18px; font-weight:700; margin:2px 0; }
+    .kpi-card .sub { font-size:10px; color:var(--text3); }
+    .kpi-card .trend { font-size:11px; font-weight:600; margin-top:2px; }
+    .trend.up { color:var(--green); }
+    .trend.down { color:var(--red); }
+
+    /* Section */
+    .section { background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:16px; box-shadow:var(--shadow); border:1px solid var(--border); }
+    .section h3 { font-size:15px; font-weight:600; color:var(--accent2); margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+
+    /* Chart */
+    .chart-box { position:relative; max-width:100%; }
+    .chart-box canvas { width:100%!important; max-height:300px; }
+    .chart-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:900px) { .chart-row { grid-template-columns:1fr; } }
+
+    /* Table */
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    th { background:#f8fafc; padding:8px 6px; text-align:right; font-weight:600; color:var(--text2); border-bottom:2px solid var(--border); white-space:nowrap; position:sticky; top:0; }
+    th:first-child, th:nth-child(2) { text-align:left; }
+    td { padding:6px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    td:first-child, td:nth-child(2) { text-align:left; }
+    td.num { text-align:right; font-variant-numeric:tabular-nums; }
+    tr:hover { background:#f8fafc; }
+    .positive { color:var(--green); }
+    .negative { color:var(--red); }
+    .zero { color:var(--text3); }
+
+    /* YoY Selector */
+    .yoy-selector { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+    .yoy-btn { padding:6px 14px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:12px; cursor:pointer; transition:.2s; color:var(--text2); font-weight:600; }
+    .yoy-btn:hover:not(.active) { background:#eef2ff; }
+    .yoy-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+    /* Account rows */
+    .acct-row { cursor:pointer; transition:background .15s; }
+    .acct-row:hover { background:#eef2ff!important; }
+    .acct-row.expanded { background:#eef2ff!important; font-weight:600; }
+    .pl-detail { display:none; background:#fffbeb; }
+    .pl-detail.show { display:table-row; }
+
+    /* Loading */
+    .loading { text-align:center; padding:40px; color:var(--text3); }
+    .loading:after { content:''; display:inline-block; width:24px; height:24px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; vertical-align:middle; margin-left:8px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Warning card */
+    .warn-card { background:#fffbeb; border:1px solid #f6e05e; border-radius:8px; padding:10px 14px; margin-bottom:10px; color:#975a16; font-size:12px; }
+
+    @media(max-width:600px) {
+      .kpi-row { grid-template-columns:repeat(2,1fr); }
+      .content { padding:12px; }
+      .filters { padding:8px 12px; }
+    }
+  </style>
+</head>
+<body>
+<div class="conf-badge">🔒 PDPA ข้อมูลลับ</div>
+
+<div class="header">
+  <h1>📊 Financial Dashboard <span class="ver">v2.0</span></h1>
+  <div class="subtitle">วิเคราะห์เปรียบเทียบงบการเงิน — PMG Group</div>
+</div>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>บริษัท:</label>
+    <span id="tabBtns"></span>
+  </div>
+  <div class="filter-group">
+    <label>ปี:</label>
+    <div class="year-checks" id="yearChecks"></div>
+  </div>
+  <div class="filter-group">
+    <label>มุมมอง:</label>
+    <button class="fbtn active" data-view="overview" onclick="setView('overview')">ภาพรวม</button>
+    <button class="fbtn" data-view="yoy" onclick="setView('yoy')">YoY เปรียบเทียบ</button>
+    <button class="fbtn" data-view="monthly" onclick="setView('monthly')">รายเดือน</button>
+    <button class="fbtn" data-view="lines" onclick="setView('lines')">รายบรรทัด</button>
+  </div>
+</div>
+
+<div class="content" id="mainContent">
+  <div class="loading">กำลังโหลดข้อมูล</div>
+</div>
+
+<div class="conf-bar">⛔ ข้อมูลลับ — ห้ามเผยแพร่โดยไม่ได้รับอนุญาต (PDPA)</div>
+
+<script>
+var ALL_DATA = FINANCE_DATA_PLACEHOLDER;
+var ERRORS = FINANCE_ERRORS_PLACEHOLDER;
+var INITIAL_TAB = FINANCE_TAB_PLACEHOLDER;
+var YEARS = ['2565','2566','2567','2568','2569'];
+var TABS = ['PMGgr','PMG','PMGI'];
+var TAB_LABELS = {'PMGgr':'PMG Group','PMG':'PMG (เดี่ยว)','PMGI':'PMGI'};
+var MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+var D = ALL_DATA;
+var currentTab = INITIAL_TAB;
+var currentView = 'overview';
+var currentMonth = 0;
+var yoyMetric = 'grossMargin';
+var charts = {};
+
+/* ── Format helpers ── */
+function fmt(n) {
+  if (n===null||n===undefined||isNaN(n)) return '-';
+  if (Math.abs(n)>=1e6) return (n/1e6).toFixed(2)+'M';
+  if (Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+'K';
+  return n.toFixed(0);
+}
+function fmtFull(n) {
+  if (n===null||n===undefined||isNaN(n)) return '-';
+  return Math.round(n).toLocaleString('th-TH');
+}
+function fmtPct(n) { return n===null||n===undefined?'-':n.toFixed(1)+'%'; }
+function cls(n) { return n===null||n===undefined?'zero':n>=0?'positive':'negative'; }
+function yoyPct(cur,prev) { return (!prev||prev===0)?null:((cur-prev)/Math.abs(prev)*100); }
+function avg(arr) {
+  if(!arr||!arr.length) return null;
+  var s=0,c=0;
+  for(var i=0;i<arr.length;i++) if(arr[i]!==null&&arr[i]!==undefined&&!isNaN(arr[i])){s+=arr[i];c++;}
+  return c>0?s/c:null;
+}
+function isIncompleteMonth(year, monthIdx) {
+  var now = new Date();
+  var currentThaiYear = now.getFullYear() + 543;
+  if (parseInt(year) !== currentThaiYear) return false;
+  return monthIdx === now.getMonth();
+}
+function avgCompleteMonths(arr, year) {
+  if(!arr||!arr.length) return null;
+  var s=0,c=0;
+  for(var i=0;i<arr.length;i++){
+    if(arr[i]!==null&&arr[i]!==undefined&&!isNaN(arr[i])&&!isIncompleteMonth(year,i)){s+=arr[i];c++;}
+  }
+  return c>0?s/c:null;
+}
+function getActiveYears(D) {
+  if(!D) return [];
+  return Object.keys(D).filter(function(y){return D[y]&&!D[y].error;}).sort();
+}
+
+/* ── Init ── */
+function init() {
+  renderTabButtons();
+  renderYearChecks();
+  render();
+}
+
+function renderTabButtons() {
+  var h = '';
+  for(var i=0;i<TABS.length;i++){
+    h += '<button class="fbtn'+(TABS[i]===currentTab?' active':'')+'" onclick="switchTab(\''+TABS[i]+'\')">'+TAB_LABELS[TABS[i]]+'</button>';
+  }
+  document.getElementById('tabBtns').innerHTML = h;
+}
+
+function renderYearChecks() {
+  var Dtab = D[currentTab]||{};
+  var h = '';
+  for(var i=0;i<YEARS.length;i++){
+    var yd = Dtab[YEARS[i]];
+    var hasData = yd && !yd.error;
+    var checked = hasData?'checked':'';
+    var disabled = (yd && yd.error)?'disabled':'';
+    h += '<label title="'+((yd&&yd.error)?yd.error:'')+'"><input type="checkbox" id="y'+YEARS[i]+'" '+checked+' '+disabled+' onchange="reload()"> พ.ศ.'+YEARS[i]+'</label>';
+  }
+  document.getElementById('yearChecks').innerHTML = h;
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  renderTabButtons();
+  renderYearChecks();
+  render();
+}
+
+function reload() {
+  var years = [];
+  for(var i=0;i<YEARS.length;i++){
+    var cb = document.getElementById('y'+YEARS[i]);
+    if(cb && cb.checked) years.push(YEARS[i]);
+  }
+  if(!years.length){alert('กรุณาเลือกอย่างน้อย 1 ปี');return;}
+  location.href = location.pathname + '?finance=1&tab='+currentTab+'&years='+years.join(',');
+}
+
+function getYears() {
+  var Dtab = D[currentTab]||{};
+  var active = getActiveYears(Dtab);
+  // Only return years that are checked
+  var result = [];
+  for(var i=0;i<active.length;i++){
+    var cb = document.getElementById('y'+active[i]);
+    if(cb && cb.checked) result.push(active[i]);
+  }
+  return result.length?result:active;
+}
+
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('[data-view]').forEach(function(b){b.classList.toggle('active',b.dataset.view===v);});
+  render();
+}
+
+/* ── Main Render ── */
+function render() {
+  Object.keys(charts).forEach(function(k){charts[k].destroy();delete charts[k];});
+  var yk = getYears();
+  var Dtab = D[currentTab]||{};
+  if(!yk.length){
+    document.getElementById('mainContent').innerHTML='<div style="color:var(--text3);text-align:center;padding:40px">ไม่มีข้อมูล</div>';
+    return;
+  }
+  switch(currentView){
+    case 'overview': renderOverview(Dtab, yk); break;
+    case 'yoy': renderYoY(Dtab, yk); break;
+    case 'monthly': renderMonthly(Dtab, yk); break;
+    case 'lines': renderLines(Dtab, yk); break;
+  }
+}
+
+/* ══════════════════════════
+   OVERVIEW — KPI + Charts
+   ══════════════════════════ */
+function renderOverview(Dtab, yk) {
+  var last = Dtab[yk[yk.length-1]];
+  if(!last||last.error){document.getElementById('mainContent').innerHTML='<div class="loading" style="color:#dc2626">❌ ข้อมูลไม่พร้อม</div>';return;}
+
+  var prev = yk.length>=2?Dtab[yk[0]]:null;
+  var yl = yk[yk.length-1];
+
+  // KPI Cards
+  var h = '<div class="kpi-row">';
+  h += kpiCard('💰 รายได้รวม','rev',last.totalRevenue,prev?prev.totalRevenue:null,' บาท');
+  h += kpiCard('📉 ค่าใช้จ่ายรวม','exp',last.totalExpenses,prev?prev.totalExpenses:null,' บาท');
+  h += kpiCard('📈 กำไรสุทธิ','profit',last.netProfit,prev?prev.netProfit:null,' บาท');
+  h += kpiCard('📐 กำไรขั้นต้น (GM)','gm',last.grossMargin,prev?prev.grossMargin:null,' บาท');
+  h += kpiCard('📊 EBITDA','ebitda',last.ebitda,prev?prev.ebitda:null,' บาท');
+  h += kpiCard('💵 CBNP (กำไรเงินสด)','cbnp',last.netProfitCash,prev?prev.netProfitCash:null,' บาท');
+  h += kpiCard('🏭 ต้นทุน','exp',last.costOfSales,prev?prev.costOfSales:null,' บาท');
+  h += kpiCard('🏢 บริหาร','exp',last.adminExpenses,prev?prev.adminExpenses:null,' บาท');
+  h += '</div>';
+
+  // Warning messages
+  for(var y in Dtab){
+    if(Dtab[y]&&Dtab[y].error) h+='<div class="warn-card">⚠ พ.ศ.'+y+': '+Dtab[y].error+'</div>';
+  }
+
+  // Charts
+  h += '<div class="chart-row">';
+  h += '<div class="section"><h3>📈 รายได้ vs ค่าใช้จ่าย vs กำไร</h3><div class="chart-box"><canvas id="revExpChart"></canvas></div></div>';
+  h += '<div class="section"><h3>📊 GM / EBITDA / CBNP เปรียบเทียบ</h3><div class="chart-box"><canvas id="combinedChart"></canvas></div></div>';
+  h += '</div>';
+
+  h += '<div class="chart-row">';
+  h += '<div class="section"><h3>📈 กำไรขั้นต้น (GM) รายเดือน</h3><div class="chart-box"><canvas id="gmChart"></canvas></div></div>';
+  h += '<div class="section"><h3>📈 EBITDA รายเดือน</h3><div class="chart-box"><canvas id="ebitdaChart"></canvas></div></div>';
+  h += '</div>';
+
+  h += '<div class="chart-row">';
+  h += '<div class="section"><h3>📊 สัดส่วนค่าใช้จ่าย</h3><div class="chart-box"><canvas id="expenseChart"></canvas></div></div>';
+  h += '<div class="section"><h3>📊 Ratio Analysis</h3><div class="chart-box"><canvas id="ratioChart"></canvas></div></div>';
+  h += '</div>';
+
+  // Averages table
+  h += renderAveragesSection(Dtab, yk);
+
+  document.getElementById('mainContent').innerHTML = h;
+
+  // Render charts
+  setTimeout(function(){
+    renderRevExpChart(Dtab, yk);
+    renderCombinedChart(Dtab, yk);
+    renderMonthlyKPIChart('gmChart','grossMargin',Dtab,yk);
+    renderMonthlyKPIChart('ebitdaChart','ebitda',Dtab,yk);
+    renderExpenseChart(Dtab, yk);
+    renderRatioChart(Dtab, yk);
+  },100);
+}
+
+function kpiCard(label,type,val,prevVal,unit) {
+  var yoy = prevVal?yoyPct(val,prevVal):null;
+  var trendCls = yoy!==null?(yoy>=0?'up':'down'):'';
+  var mAvg = null; // We could compute but keep simple
+  return '<div class="kpi-card '+type+'">'+
+    '<div class="label">'+label+'</div>'+
+    '<div class="value">'+fmtFull(val)+'</div>'+
+    '<div class="sub">'+fmt(val)+unit+'</div>'+
+    (yoy!==null?'<div class="trend '+trendCls+'">'+(yoy>=0?'▲':'▼')+' '+Math.abs(yoy).toFixed(1)+'% YoY</div>':'')+
+    '</div>';
+}
+
+/* ══════════════════════════
+   YoY COMPARISON VIEW
+   ══════════════════════════ */
+function renderYoY(Dtab, yk) {
+  if(yk.length<2){
+    document.getElementById('mainContent').innerHTML='<div style="color:var(--text3);text-align:center;padding:40px">เลือกอย่างน้อย 2 ปีเพื่อเปรียบเทียบ YoY</div>';
+    return;
+  }
+
+  // Metric selector
+  var metrics = [
+    {key:'grossMargin',label:'กำไรขั้นต้น (GM)',icon:'📐'},
+    {key:'ebitda',label:'EBITDA',icon:'📊'},
+    {key:'netProfitCash',label:'CBNP (กำไรเงินสด)',icon:'💵'},
+    {key:'netProfit',label:'กำไรสุทธิ',icon:'📈'},
+    {key:'totalRevenue',label:'รายได้รวม',icon:'💰'},
+    {key:'totalExpenses',label:'ค่าใช้จ่ายรวม (S&A)',icon:'📉'},
+    {key:'costOfSales',label:'ต้นทุน',icon:'🏭'},
+    {key:'adminExpenses',label:'บริหาร',icon:'🏢'}
+  ];
+
+  var h = '<div class="section"><h3>🔄 เปรียบเทียบ YoY — เลือกตัวชี้วัด</h3>';
+  h += '<div class="yoy-selector">';
+  for(var i=0;i<metrics.length;i++){
+    h += '<button class="yoy-btn'+(yoyMetric===metrics[i].key?' active':'')+'" onclick="setYoyMetric(\''+metrics[i].key+'\')">'+metrics[i].icon+' '+metrics[i].label+'</button>';
+  }
+  h += '</div></div>';
+
+  // YoY Summary Table
+  h += '<div class="section"><h3>📋 สรุป YoY — '+metrics.find(function(m){return m.key===yoyMetric;}).label+'</h3>';
+  h += '<div class="table-wrap"><table><thead><tr><th>ปี</th><th>ยอดรวม</th><th>เฉลี่ย/เดือน</th><th>YoY %</th><th>ต่าง (บาท)</th></tr></thead><tbody>';
+
+  var prevVal = null;
+  for(var i=0;i<yk.length;i++){
+    var yd = Dtab[yk[i]];
+    var val = yd&&!yd.error?yd[yoyMetric]:null;
+    var mArr = yd&&!yd.error?yd[yoyMetric+'M']:[];
+    var mAvg = yd&&!yd.error?avgCompleteMonths(mArr, parseInt(yk[i])):null;
+    var mCount = 0;
+    if(mArr) { for(var mi=0;mi<mArr.length;mi++) { if(mArr[mi]!==null&&mArr[mi]!==undefined&&!isNaN(mArr[mi])&&!isIncompleteMonth(parseInt(yk[i]),mi)) mCount++; } }
+    var yoy = prevVal&&val?yoyPct(val,prevVal):null;
+    var diff = prevVal&&val?val-prevVal:null;
+    var curThaiYear = new Date().getFullYear()+543;
+    var avgNote = (parseInt(yk[i])===curThaiYear && isIncompleteMonth(curThaiYear, new Date().getMonth())) ? ' <span style="font-size:9px;color:var(--orange)">('+mCount+'เดือน⁂)</span>' : '';
+
+    h += '<tr>';
+    h += '<td style="font-weight:600">'+yk[i]+'</td>';
+    h += '<td class="num">'+fmtFull(val)+'</td>';
+    h += '<td class="num">'+fmtFull(mAvg)+avgNote+'</td>';
+    h += '<td class="num '+cls(yoy)+'">'+fmtPct(yoy)+'</td>';
+    h += '<td class="num '+cls(diff)+'">'+fmtFull(diff)+'</td>';
+    h += '</tr>';
+    prevVal = val;
+  }
+  h += '</tbody></table></div></div>';
+
+  // Monthly YoY comparison chart
+  h += '<div class="chart-row">';
+  h += '<div class="section"><h3>📊 รายเดือนเปรียบเทียบ — '+metrics.find(function(m){return m.key===yoyMetric;}).label+'</h3><div class="chart-box"><canvas id="yoyMonthlyChart"></canvas></div></div>';
+  h += '<div class="section"><h3>📈 YoY % รายเดือน</h3><div class="chart-box"><canvas id="yoyPctChart"></canvas></div></div>';
+  h += '</div>';
+
+  // Monthly YoY detail table
+  var lastY = yk[yk.length-1];
+  var prevY = yk.length>=2?yk[yk.length-2]:yk[0];
+  var lastD = Dtab[lastY];
+  var prevD = Dtab[prevY];
+  if(lastD&&prevD&&!lastD.error&&!prevD.error){
+    h += '<div class="section"><h3>📋 YoY รายเดือน — ปี '+prevY+' vs '+lastY+'</h3>';
+    h += '<div class="table-wrap"><table><thead><tr><th>เดือน</th><th>พ.ศ.'+prevY+'</th><th>พ.ศ.'+lastY+'</th><th>ต่าง</th><th>YoY %</th></tr></thead><tbody>';
+    for(var m=0;m<12;m++){
+      var pv = (prevD[yoyMetric+'M']&&m<prevD[yoyMetric+'M'].length)?prevD[yoyMetric+'M'][m]:null;
+      var cv = (lastD[yoyMetric+'M']&&m<lastD[yoyMetric+'M'].length)?lastD[yoyMetric+'M'][m]:null;
+      var diff = cv!==null&&pv!==null?cv-pv:null;
+      var yoy = pv&&pv!==0?yoyPct(cv,pv):null;
+      h += '<tr><td>'+MONTHS_TH[m]+'</td><td class="num">'+fmtFull(pv)+'</td><td class="num">'+fmtFull(cv)+'</td>';
+      h += '<td class="num '+cls(diff)+'">'+fmtFull(diff)+'</td>';
+      h += '<td class="num '+cls(yoy)+'">'+fmtPct(yoy)+'</td></tr>';
+    }
+    h += '</tbody></table></div></div>';
+  }
+
+  document.getElementById('mainContent').innerHTML = h;
+
+  setTimeout(function(){
+    renderMonthlyKPIChart('yoyMonthlyChart',yoyMetric,Dtab,yk);
+    renderYoyPctChart(Dtab,yk);
+  },100);
+}
+
+function setYoyMetric(m) {
+  yoyMetric = m;
+  document.querySelectorAll('.yoy-btn').forEach(function(b){b.classList.toggle('active',b.textContent.indexOf(m.split(/(?=[A-Z])/)[0])>-1);});
+  render();
+}
+
+/* ══════════════════════════
+   MONTHLY VIEW
+   ══════════════════════════ */
+function renderMonthly(Dtab, yk) {
+  var h = '<div class="section"><h3>📅 ข้อมูลรายเดือน</h3>';
+  h += '<div class="yoy-selector"><label>เดือน:</label>';
+  h += '<select class="month-sel" onchange="currentMonth=parseInt(this.value);render()">';
+  h += '<option value="0">ยอดรวม (YTD)</option>';
+  for(var m=1;m<=12;m++) h+='<option value="'+m+'"'+(currentMonth===m?' selected':'')+'>'+MONTHS_TH[m-1]+'</option>';
+  h += '</select></div></div>';
+
+  var isMonthly = currentMonth > 0;
+  var monthLabel = isMonthly?MONTHS_TH[currentMonth-1]:'YTD';
+
+  // KPI cards for selected month or YTD
+  var last = Dtab[yk[yk.length-1]];
+  if(!last||last.error){h+='<div class="warn-card">ไม่มีข้อมูล</div>';document.getElementById('mainContent').innerHTML=h;return;}
+
+  var kpis = [
+    {l:'💰 รายได้รวม',k:'totalRevenue'},
+    {l:'📉 ค่าใช้จ่ายรวม',k:'totalExpenses'},
+    {l:'📈 กำไรสุทธิ',k:'netProfit'},
+    {l:'📐 กำไรขั้นต้น',k:'grossMargin'},
+    {l:'📊 EBITDA',k:'ebitda'},
+    {l:'💵 CBNP',k:'netProfitCash'},
+    {l:'🏭 ต้นทุน',k:'costOfSales'},
+    {l:'🏢 บริหาร',k:'adminExpenses'}
+  ];
+
+  h += '<div class="kpi-row">';
+  for(var i=0;i<kpis.length;i++){
+    var val = isMonthly?(last[kpis[i].k+'M']&&currentMonth<=last[kpis[i].k+'M'].length?last[kpis[i].k+'M'][currentMonth-1]:null):last[kpis[i].k];
+    var prevVal = null;
+    if(yk.length>=2){
+      var prev = Dtab[yk[yk.length-2]];
+      if(prev&&!prev.error) prevVal = isMonthly?(prev[kpis[i].k+'M']&&currentMonth<=prev[kpis[i].k+'M'].length?prev[kpis[i].k+'M'][currentMonth-1]:null):prev[kpis[i].k];
+    }
+    var yoy = val!==null&&prevVal!==null?yoyPct(val,prevVal):null;
+    var tCls = yoy!==null?(yoy>=0?'up':'down'):'';
+    h += '<div class="kpi-card '+(kpis[i].k.indexOf('Expense')>=0||kpis[i].k.indexOf('cost')>=0||kpis[i].k.indexOf('admin')>=0?'exp':'profit')+'">';
+    h += '<div class="label">'+kpis[i].l+' ('+monthLabel+')</div>';
+    h += '<div class="value">'+fmtFull(val)+'</div>';
+    h += '<div class="sub">'+fmt(val)+' บาท</div>';
+    if(yoy!==null) h+='<div class="trend '+tCls+'">'+(yoy>=0?'▲':'▼')+' '+Math.abs(yoy).toFixed(1)+'%</div>';
+    h += '</div>';
+  }
+  h += '</div>';
+
+  // Charts for all selected metrics monthly
+  h += '<div class="chart-row">';
+  h += '<div class="section"><h3>📈 GM / EBITDA / CBNP รายเดือน</h3><div class="chart-box"><canvas id="monthlyCombinedChart"></canvas></div></div>';
+  h += '<div class="section"><h3>📊 รายได้ vs ค่าใช้จ่าย รายเดือน</h3><div class="chart-box"><canvas id="monthlyRevExpChart"></canvas></div></div>';
+  h += '</div>';
+
+  document.getElementById('mainContent').innerHTML = h;
+
+  setTimeout(function(){
+    renderMonthlyCombinedChart(Dtab, yk);
+    renderMonthlyRevExpChart2(Dtab, yk);
+  },100);
+}
+
+/* ══════════════════════════
+   LINE-BY-LINE VIEW
+   ══════════════════════════ */
+function renderLines(Dtab, yk) {
+  var last = Dtab[yk[yk.length-1]];
+  if(!last||!last.accounts){document.getElementById('mainContent').innerHTML='<div class="loading" style="color:#dc2626">❌ ไม่มีข้อมูลรายบรรทัด</div>';return;}
+
+  var isMonthly = currentMonth > 0;
+  var monthLabel = isMonthly?MONTHS_TH[currentMonth-1]:'YTD';
+
+  var h = '<div class="section"><h3>📋 เปรียบเทียบรายบรรทัด</h3>';
+  h += '<div class="yoy-selector"><label>เดือน:</label>';
+  h += '<select class="month-sel" onchange="currentMonth=parseInt(this.value);render()">';
+  h += '<option value="0">ยอดรวม (YTD)</option>';
+  for(var m=1;m<=12;m++) h+='<option value="'+m+'"'+(currentMonth===m?' selected':'')+'>'+MONTHS_TH[m-1]+'</option>';
+  h += '</select></div>';
+
+  h += '<div class="table-wrap"><table><thead><tr><th>รหัส</th><th>รายการ</th>';
+  for(var i=0;i<yk.length;i++) h+='<th>พ.ศ.'+yk[i]+' '+monthLabel+'</th>';
+  if(yk.length>=2) h+='<th>YoY %</th>';
+  h += '</tr></thead><tbody>';
+
+  var shown = 0;
+  for(var i=0;i<last.accounts.length&&shown<80;i++){
+    var ac = last.accounts[i];
+    var hasVal = false;
+    for(var y=0;y<yk.length;y++){
+      if(Dtab[yk[y]]&&Dtab[yk[y]].accounts){
+        for(var j=0;j<Dtab[yk[y]].accounts.length;j++){
+          var v = isMonthly?Dtab[yk[y]].accounts[j].monthly[currentMonth-1]:Dtab[yk[y]].accounts[j].ytd;
+          if(Dtab[yk[y]].accounts[j].code===ac.code&&v){hasVal=true;break;}
+        }
+      }
+      if(hasVal)break;
+    }
+    if(!hasVal&&!(isMonthly?ac.monthly&&ac.monthly[currentMonth-1]:ac.ytd)) continue;
+    shown++;
+
+    h += '<tr class="acct-row" onclick="togglePLDetail(\'pld_'+ac.code+'\')">';
+    h += '<td>'+ac.code+'</td><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+ac.desc+' 📋</td>';
+
+    var firstVal=null,lastVal=null;
+    for(var y=0;y<yk.length;y++){
+      var found=null;
+      if(Dtab[yk[y]]&&Dtab[yk[y]].accounts){
+        for(var j=0;j<Dtab[yk[y]].accounts.length;j++){
+          if(Dtab[yk[y]].accounts[j].code===ac.code){found=Dtab[yk[y]].accounts[j];break;}
+        }
+      }
+      var v=found?(isMonthly?found.monthly[currentMonth-1]:found.ytd):null;
+      if(y===0)firstVal=v;
+      if(y===yk.length-1)lastVal=v;
+      h += '<td class="num '+cls(v)+'">'+fmtFull(v)+'</td>';
+    }
+    if(yk.length>=2&&firstVal&&lastVal){
+      var yoy=yoyPct(lastVal,firstVal);
+      h+='<td class="num '+cls(yoy)+'">'+fmtPct(yoy)+'</td>';
+    } else if(yk.length>=2){
+      h+='<td class="num">-</td>';
+    }
+    h += '</tr>';
+
+    // PL detail row
+    var colSpan = yk.length+2+(yk.length>=2?1:0);
+    h += '<tr class="pl-detail" id="pld_'+ac.code+'"><td colspan="'+colSpan+'" style="padding:4px 12px;background:#fffbeb">'+buildPLDetail(ac.desc,Dtab,yk,isMonthly,currentMonth)+'</td></tr>';
+  }
+  h += '</tbody></table></div></div>';
+
+  // Top accounts
+  h += renderTopAccounts(Dtab, yk);
+
+  document.getElementById('mainContent').innerHTML = h;
+}
+
+function togglePLDetail(id) {
+  var el = document.getElementById(id);
+  if(!el) return;
+  if(el.classList.contains('show')){
+    el.classList.remove('show');
+    var prev = el.previousElementSibling;
+    if(prev) prev.classList.remove('expanded');
+  } else {
+    document.querySelectorAll('.pl-detail.show').forEach(function(e){
+      e.classList.remove('show');
+      var p=e.previousElementSibling;if(p)p.classList.remove('expanded');
+    });
+    el.classList.add('show');
+    var prev = el.previousElementSibling;
+    if(prev) prev.classList.add('expanded');
+    el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+}
+
+function buildPLDetail(desc, Dtab, yk, isMonthly, month) {
+  var monthLabel = isMonthly?MONTHS_TH[month-1]:'YTD';
+  var latest = Dtab[yk[yk.length-1]];
+  if(!latest||!latest.plNotes||latest.plNotes.length===0) return '<div style="color:var(--text3);font-size:11px;padding:4px">— ไม่มีหมายเหตุ PL —</div>';
+
+  var h = '<div style="padding:8px;background:#fffbeb;border-radius:6px;border:1px solid #f6e05e">';
+  h += '<div style="font-weight:600;color:#975a16;margin-bottom:6px">📋 หมายเหตุ PL — '+desc+'</div>';
+  h += '<table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr><th style="background:#fefcbf;text-align:left;padding:4px 8px">รายการ</th>';
+  for(var y=0;y<yk.length;y++) h+='<th style="background:#fefcbf;text-align:right;padding:4px 8px">พ.ศ.'+yk[y]+'</th>';
+  if(yk.length>=2) h+='<th style="background:#fefcbf;text-align:right;padding:4px 8px">YoY %</th>';
+  h += '</tr></thead><tbody>';
+
+  for(var i=0;i<latest.plNotes.length;i++){
+    var n = latest.plNotes[i];
+    var isTotal = n.desc.indexOf('รวม')>=0;
+    h += '<tr'+(isTotal?' style="font-weight:700;background:#fefcbf"':'')+'>';
+    h += '<td style="padding:2px 8px;border-bottom:1px solid #e2e8f0">'+n.desc+'</td>';
+    var firstV=null,lastV=null;
+    for(var y=0;y<yk.length;y++){
+      var yd=Dtab[yk[y]];
+      var found=null;
+      if(yd&&!yd.error&&yd.plNotes){
+        for(var j=0;j<yd.plNotes.length;j++){
+          if(yd.plNotes[j].desc===n.desc){found=yd.plNotes[j];break;}
+        }
+      }
+      var v=found?(isMonthly?found.monthly[month-1]:found.ytd):null;
+      if(y===0)firstV=v;
+      if(y===yk.length-1)lastV=v;
+      h+='<td class="num '+cls(v)+'">'+fmtFull(v)+'</td>';
+    }
+    if(yk.length>=2&&firstV&&lastV){
+      var yoy=yoyPct(lastV,firstV);
+      h+='<td class="num '+cls(yoy)+'">'+fmtPct(yoy)+'</td>';
+    } else if(yk.length>=2){
+      h+='<td class="num">-</td>';
+    }
+    h += '</tr>';
+  }
+  h += '</tbody></table></div>';
+  return h;
+}
+
+function renderTopAccounts(Dtab, yk) {
+  var last = Dtab[yk[yk.length-1]];
+  if(!last||!last.accounts||!last.accounts.length) return '';
+  var sorted = last.accounts.slice().sort(function(a,b){return Math.abs(b.ytd||0)-Math.abs(a.ytd||0);}).slice(0,25);
+
+  var h = '<div class="section"><h3>🔝 Top 25 รายการ (by YTD)</h3>';
+  h += '<div class="table-wrap"><table><thead><tr><th>รหัส</th><th>รายการ</th>';
+  for(var i=0;i<yk.length;i++) h+='<th>พ.ศ.'+yk[i]+'</th>';
+  if(yk.length>=2) h+='<th>YoY %</th>';
+  h += '</tr></thead><tbody>';
+  for(var i=0;i<sorted.length;i++){
+    var ac = sorted[i];
+    var firstVal=null,lastVal=null;
+    h += '<tr><td>'+ac.code+'</td><td>'+ac.desc+'</td>';
+    for(var y=0;y<yk.length;y++){
+      var found=null;
+      if(Dtab[yk[y]]&&Dtab[yk[y]].accounts){
+        for(var j=0;j<Dtab[yk[y]].accounts.length;j++){
+          if(Dtab[yk[y]].accounts[j].code===ac.code){found=Dtab[yk[y]].accounts[j];break;}
+        }
+      }
+      var v=found?found.ytd:null;
+      if(y===0)firstVal=v;
+      if(y===yk.length-1)lastVal=v;
+      h+='<td class="num '+cls(v)+'">'+fmtFull(v)+'</td>';
+    }
+    if(yk.length>=2&&firstVal&&lastVal){
+      var yoy=yoyPct(lastVal,firstVal);
+      h+='<td class="num '+cls(yoy)+'">'+fmtPct(yoy)+'</td>';
+    } else if(yk.length>=2){
+      h+='<td class="num">-</td>';
+    }
+    h += '</tr>';
+  }
+  h += '</tbody></table></div></div>';
+  return h;
+}
+
+/* ── Averages Section ── */
+function renderAveragesSection(Dtab, yk) {
+  var kpis = [
+    {l:'กำไรขั้นต้น (GM)',k:'grossMargin'},
+    {l:'EBITDA',k:'ebitda'},
+    {l:'CBNP (กำไรเงินสด)',k:'netProfitCash'},
+    {l:'ค่าใช้จ่ายรวม',k:'totalExpenses'},
+    {l:'ค่าใช้จ่ายต้นทุน',k:'costOfSales'},
+    {l:'ค่าใช้จ่ายบริหาร',k:'adminExpenses'}
+  ];
+
+  var h = '<div class="section"><h3>📊 สรุปรายปี + เฉลี่ย/เดือน</h3>';
+  h += '<div class="table-wrap"><table><thead><tr><th>รายการ</th>';
+  for(var i=0;i<yk.length;i++) h+='<th>พ.ศ.'+yk[i]+'</th>';
+  h += '<th>เฉลี่ย/เดือน</th>';
+  if(yk.length>=2) h+='<th>YoY %</th>';
+  h += '</tr></thead><tbody>';
+
+  for(var s=0;s<kpis.length;s++){
+    h += '<tr'+(s<3?' style="font-weight:600;background:#eef2ff"':'')+'>';
+    h += '<td>'+kpis[s].l+'</td>';
+    var firstV=null,lastV=null;
+    for(var i=0;i<yk.length;i++){
+      var yd = Dtab[yk[i]];
+      var v = yd&&!yd.error?yd[kpis[s].k]:null;
+      if(i===0)firstV=v;
+      if(i===yk.length-1)lastV=v;
+      h += '<td class="num '+cls(v)+'">'+fmtFull(v)+'</td>';
+    }
+    var latest = Dtab[yk[yk.length-1]];
+    var latestYear = parseInt(yk[yk.length-1]);
+    var mAvg = latest&&!latest.error?avgCompleteMonths(latest[kpis[s].k+'M'], latestYear):null;
+    var mArr = latest&&!latest.error?latest[kpis[s].k+'M']:[];
+    var mCount = 0;
+    if(mArr) { for(var mi=0;mi<mArr.length;mi++) { if(mArr[mi]!==null&&mArr[mi]!==undefined&&!isNaN(mArr[mi])&&!isIncompleteMonth(latestYear,mi)) mCount++; } }
+    var curThaiYear = new Date().getFullYear()+543;
+    var avgNote = (latestYear===curThaiYear && isIncompleteMonth(curThaiYear, new Date().getMonth())) ? ' <span style="font-size:9px;color:var(--orange)">('+mCount+'เดือน⁂)</span>' : '';
+    h += '<td class="num" style="font-weight:600">'+fmtFull(mAvg)+avgNote+'</td>';
+    if(yk.length>=2&&firstV&&lastV){
+      var yoy=yoyPct(lastV,firstV);
+      h+='<td class="num '+cls(yoy)+'">'+fmtPct(yoy)+'</td>';
+    } else if(yk.length>=2){
+      h+='<td class="num">-</td>';
+    }
+    h += '</tr>';
+  }
+  h += '</tbody></table></div></div>';
+  return h;
+}
+
+/* ══════════════════════════
+   CHART RENDERERS
+   ══════════════════════════ */
+function chartOpts(yFmt) {
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},
+    scales:{
+      x:{ticks:{font:{size:10}}},
+      y:{ticks:{callback:yFmt||function(v){return fmt(v);},font:{size:10}}}
+    }
+  };
+}
+
+function renderRevExpChart(Dtab, yk) {
+  var labels=yk.map(function(y){return 'พ.ศ.'+y;});
+  var revD=[],expD=[],profitD=[];
+  for(var i=0;i<yk.length;i++){
+    var d=Dtab[yk[i]];
+    revD.push(d&&!d.error?(d.totalRevenue||0):0);
+    expD.push(d&&!d.error?(d.totalExpenses||0):0);
+    profitD.push(d&&!d.error?(d.netProfit||0):0);
+  }
+  charts.revExp = new Chart(document.getElementById('revExpChart'),{
+    type:'bar',
+    data:{labels:labels,datasets:[
+      {label:'รายได้',data:revD,backgroundColor:'#60a5fa',borderRadius:4},
+      {label:'ค่าใช้จ่าย',data:expD,backgroundColor:'#f87171',borderRadius:4},
+      {label:'กำไรสุทธิ',data:profitD,backgroundColor:'#34d399',borderRadius:4}
+    ]},
+    options:chartOpts()
+  });
+}
+
+function renderCombinedChart(Dtab, yk) {
+  var labels=yk.map(function(y){return 'พ.ศ.'+y;});
+  var gmD=[],ebD=[],cbD=[],gmAvgD=[],ebAvgD=[],cbAvgD=[];
+  for(var i=0;i<yk.length;i++){
+    var d=Dtab[yk[i]];
+    if(!d||d.error){gmD.push(null);ebD.push(null);cbD.push(null);gmAvgD.push(null);ebAvgD.push(null);cbAvgD.push(null);continue;}
+    gmD.push(d.grossMargin);ebD.push(d.ebitda);cbD.push(d.netProfitCash);
+    gmAvgD.push(avgCompleteMonths(d.grossMarginM, parseInt(yk[i])));ebAvgD.push(avgCompleteMonths(d.ebitdaM, parseInt(yk[i])));cbAvgD.push(avgCompleteMonths(d.netProfitCashM, parseInt(yk[i])));
+  }
+  charts.combined = new Chart(document.getElementById('combinedChart'),{
+    type:'bar',
+    data:{labels:labels,datasets:[
+      {label:'GM',data:gmD,backgroundColor:'#60a5fa',borderRadius:4},
+      {label:'EBITDA',data:ebD,backgroundColor:'#34d399',borderRadius:4},
+      {label:'CBNP',data:cbD,backgroundColor:'#fbbf24',borderRadius:4},
+      {label:'GM เฉลี่ย/เดือน',data:gmAvgD,type:'line',borderColor:'#2563eb',fill:false,pointRadius:4,borderWidth:2},
+      {label:'EBITDA เฉลี่ย/เดือน',data:ebAvgD,type:'line',borderColor:'#059669',fill:false,pointRadius:4,borderWidth:2},
+      {label:'CBNP เฉลี่ย/เดือน',data:cbAvgD,type:'line',borderColor:'#d97706',fill:false,pointRadius:4,borderWidth:2}
+    ]},
+    options:chartOpts()
+  });
+}
+
+function renderMonthlyKPIChart(canvasId, key, Dtab, yk) {
+  var colors = ['#60a5fa','#34d399','#fbbf24','#f87171','#a78bfa'];
+  var datasets = [];
+  for(var i=0;i<yk.length;i++){
+    var d = Dtab[yk[i]];
+    var data = [];
+    if(d&&!d.error&&d[key+'M']){
+      for(var m=0;m<12;m++) data.push(d[key+'M'][m]||null);
+    }
+    datasets.push({label:'พ.ศ.'+yk[i],data:data,borderColor:colors[i%colors.length],backgroundColor:colors[i%colors.length]+'22',fill:false,tension:.3,pointRadius:3});
+  }
+  charts[canvasId] = new Chart(document.getElementById(canvasId),{
+    type:'line',
+    data:{labels:MONTHS_TH,datasets:datasets},
+    options:chartOpts()
+  });
+}
+
+function renderExpenseChart(Dtab, yk) {
+  var d = Dtab[yk[yk.length-1]];
+  if(!d||d.error) return;
+  charts.expense = new Chart(document.getElementById('expenseChart'),{
+    type:'doughnut',
+    data:{labels:['ต้นทุน','บริหาร','อื่นๆ'],datasets:[{data:[d.costOfSales||0,d.adminExpenses||0,Math.max(0,(d.totalExpenses||0)-(d.costOfSales||0)-(d.adminExpenses||0))],backgroundColor:['#f87171','#fbbf24','#60a5fa']}]},
+    options:{responsive:true,plugins:{legend:{labels:{font:{size:11}}}}}
+  });
+}
+
+function renderRatioChart(Dtab, yk) {
+  var labels=yk.map(function(y){return 'พ.ศ.'+y;});
+  var nmD=[],erD=[],gmD=[];
+  for(var i=0;i<yk.length;i++){
+    var d=Dtab[yk[i]];
+    if(!d||d.error){nmD.push(0);erD.push(0);gmD.push(0);continue;}
+    var rev=d.totalRevenue||1;
+    nmD.push(d.netProfit/rev*100);
+    erD.push(d.totalExpenses/rev*100);
+    gmD.push(d.grossMargin/rev*100);
+  }
+  charts.ratio = new Chart(document.getElementById('ratioChart'),{
+    type:'bar',
+    data:{labels:labels,datasets:[
+      {label:'Gross Margin %',data:gmD,backgroundColor:'#60a5fa',borderRadius:4},
+      {label:'Expense Ratio %',data:erD,backgroundColor:'#f87171',borderRadius:4},
+      {label:'Net Margin %',data:nmD,backgroundColor:'#34d399',borderRadius:4}
+    ]},
+    options:chartOpts(function(v){return v.toFixed(1)+'%';})
+  });
+}
+
+function renderYoyPctChart(Dtab, yk) {
+  if(yk.length<2) return;
+  var colors = ['#60a5fa','#34d399','#fbbf24'];
+  var datasets = [];
+  // Compare each year vs previous
+  for(var i=1;i<yk.length;i++){
+    var curD = Dtab[yk[i]];
+    var prevD = Dtab[yk[i-1]];
+    if(!curD||!prevD||curD.error||prevD.error) continue;
+    var data = [];
+    for(var m=0;m<12;m++){
+      var cv = curD[yoyMetric+'M']?curD[yoyMetric+'M'][m]:null;
+      var pv = prevD[yoyMetric+'M']?prevD[yoyMetric+'M'][m]:null;
+      if(cv!==null&&pv&&pv!==0) data.push((cv-pv)/Math.abs(pv)*100);
+      else data.push(null);
+    }
+    datasets.push({label:yk[i-1]+' → '+yk[i],data:data,borderColor:colors[(i-1)%colors.length],fill:false,tension:.3,pointRadius:4});
+  }
+  charts.yoyPct = new Chart(document.getElementById('yoyPctChart'),{
+    type:'line',
+    data:{labels:MONTHS_TH,datasets:datasets},
+    options:chartOpts(function(v){return v.toFixed(1)+'%';})
+  });
+}
+
+function renderMonthlyCombinedChart(Dtab, yk) {
+  var d = Dtab[yk[yk.length-1]];
+  if(!d||d.error) return;
+  var datasets = [
+    {label:'GM',data:d.grossMarginM||[],borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.1)',fill:true,tension:.3},
+    {label:'EBITDA',data:d.ebitdaM||[],borderColor:'#059669',backgroundColor:'rgba(5,150,105,.1)',fill:true,tension:.3},
+    {label:'CBNP',data:d.netProfitCashM||[],borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.1)',fill:true,tension:.3}
+  ];
+  charts.monthlyCombined = new Chart(document.getElementById('monthlyCombinedChart'),{
+    type:'line',data:{labels:MONTHS_TH,datasets:datasets},options:chartOpts()
+  });
+}
+
+function renderMonthlyRevExpChart2(Dtab, yk) {
+  var d = Dtab[yk[yk.length-1]];
+  if(!d||d.error) return;
+  var datasets = [
+    {label:'รายได้',data:d.totalRevenueM||[],borderColor:'#2563eb',fill:false,tension:.3},
+    {label:'ค่าใช้จ่าย',data:d.totalExpensesM||[],borderColor:'#dc2626',fill:false,tension:.3}
+  ];
+  charts.monthlyRevExp = new Chart(document.getElementById('monthlyRevExpChart'),{
+    type:'line',data:{labels:MONTHS_TH,datasets:datasets},options:chartOpts()
+  });
+}
+
+/* ── Start ── */
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

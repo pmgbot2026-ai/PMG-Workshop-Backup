@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PMSG Dashboard — Offline Learning Pack</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun','Segoe UI',system-ui,-apple-system,sans-serif;background:#f1f5f9;color:#1e293b;padding:20px}
+.header{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#2563eb 100%);color:#fff;border-radius:16px;padding:28px 24px;margin-bottom:20px;box-shadow:0 8px 30px rgba(15,23,42,.12)}
+.header h1{font-size:24px;font-weight:700}
+.header p{font-size:14px;opacity:.85;margin-top:6px}
+.header .badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:4px 12px;font-size:12px;margin-top:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px;box-shadow:0 2px 10px rgba(15,23,42,.06);transition:transform .2s,box-shadow .2s;text-decoration:none;color:inherit}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 25px rgba(15,23,42,.12)}
+.card .icon{font-size:32px;margin-bottom:8px}
+.card .title{font-size:16px;font-weight:700;color:#1e3a5f}
+.card .desc{font-size:13px;color:#64748b;margin-top:4px;line-height:1.5}
+.card .meta{margin-top:10px;font-size:11px;color:#94a3b8}
+.card .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;margin-right:4px}
+.tag-course{background:#dbeafe;color:#2563eb}
+.tag-dashboard{background:#dcfce7;color:#16a34a}
+.tag-tool{background:#fef3c7;color:#d97706}
+.tag-doc{background:#f3e8ff;color:#7c3aed}
+.footer{text-align:center;margin-top:24px;font-size:12px;color:#94a3b8}
+.note{background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:13px;color:#991b1b}
+.note b{color:#dc2626}
+@media(max-width:600px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="header">
+<h1>📚 PMSG Dashboard — Offline Learning Pack</h1>
+<p>แพ็คเกจเรียนรู้แบบ Offline — เปิดได้ทุกที่ ไม่ต้องเชื่อมต่ออินเทอร์เน็ต</p>
+<span class="badge">v2026.07 · 15 ไฟล์ · ครบ 16 โมดูล</span>
+</div>
+
+<div class="note">
+<b>📌 วิธีใช้:</b> ดาวน์โหลดโฟลเดอร์ทั้งหมด → เปิดไฟล์ <code>index.html</code> นี้ด้วยเบราว์เซอร์ → คลิกการ์ดเพื่อเปิดแต่ละบทเรียน/แดชบอร์ด<br>
+<b>ไม่ต้อง login</b> — ข้อมูลเป็น snapshot สำหรับเรียนรู้เท่านั้น ไม่เชื่อมต่อ Google Sheets
+</div>
+
+<div class="grid">
+
+<!-- Course -->
+<a class="card" href="Course_Offline.html">
+<div class="icon">🎓</div>
+<div class="title">AI for Dashboard Creation</div>
+<div class="desc">หลักสูตร 16 โมดูล — สอนสร้างแดชบอร์ดด้วย AI ตั้งแต่เริ่มต้นจะใช้งานได้จริง</div>
+<div class="meta"><span class="tag tag-course">คอร์ส</span> 447KB · 16 โมดูล · M1-M16</div>
+</a>
+
+<!-- Workshop Dashboard -->
+<a class="card" href="Workshop_Dash.html">
+<div class="icon">🔧</div>
+<div class="title">Workshop Dashboard</div>
+<div class="desc">แดชบอร์ดบริหารงานซ่อม — สถานี 16 ขั้นตอน · รถในระบบ · สถานะรายคัน</div>
+<div class="meta"><span class="tag tag-dashboard">แดชบอร์ด</span> 109KB · แยก CNB/CSK</div>
+</a>
+
+<!-- CEO KPI -->
+<a class="card" href="CEO_KPI.html">
+<div class="icon">📊</div>
+<div class="title">CEO KPI Dashboard</div>
+<div class="desc">Health Score 78/100 · Smart Insights · QC 4,632 inspections (91% pass) · สรุปสำหรับ CEO</div>
+<div class="meta"><span class="tag tag-dashboard">แดชบอร์ด</span> 45KB · 4 CEO</div>
+</a>
+
+<!-- OKR -->
+<a class="card" href="OKR_Dash.html">
+<div class="icon">🎯</div>
+<div class="title">OKR Dashboard</div>
+<div class="desc">5 กลุ่มงาน · 147 คน · ~480 KRs · แท็บแผนธุรกิจ (S-Objectives + Action Plan + RMM)</div>
+<div class="meta"><span class="tag tag-dashboard">แดชบอร์ด</span> 307KB · 6 แท็บ</div>
+</a>
+
+<!-- GM Dashboard -->
+<a class="card" href="GM_Dash.html">
+<div class="icon">💰</div>
+<div class="title">GM Dashboard (กำไรขั้นต้น)</div>
+<div class="desc">GM 10.3M/เดือน · YoY 2569 vs 2568 · 9 chart boxes · donut Service Mix · 4 สาขา</div>
+<div class="meta"><span class="tag tag-dashboard">แดชบอร์ด</span> 67KB</div>
+</a>
+
+<!-- GM Supplement -->
+<a class="card" href="Supplement_Dash.html">
+<div class="icon">🚗</div>
+<div class="title">GM Supplement Dashboard</div>
+<div class="desc">เคลือบแก้ว 58 คัน (116%) · 12 SA · Top 10 · YoY +17% · 4 แท็บ</div>
+<div class="meta"><span class="tag tag-dashboard">แดชบอร์ด</span> 27KB</div>
+</a>
+
+<!-- Standard Time -->
+<a class="card" href="StdTime.html">
+<div class="icon">⏱️</div>
+<div class="title">Standard Time (มาตรฐานเวลางานซ่อม)</div>
+<div class="desc">16 สถานี · Gantt timeline · ตารางเวลาตามค่าแรง · ใบสั่งงาน · ISO 9001 SOP/WI</div>
+<div class="meta"><span class="tag tag-tool">เครื่องมือ</span> 132KB · 4 แท็บ</div>
+</a>
+
+<!-- ENVR -->
+<a class="card" href="ENVR_Dash.html">
+<div class="icon">🛢️</div>
+<div class="title">ENVR น้ำมัน</div>
+<div class="desc">4 น้ำมัน · 15 ไส้กรอง · 17 KPI · Review 90/100 · 15 filter buttons</div>
+<div class="meta"><span class="tag tag-dashboard">แดชบอร์ด</span> 79KB</div>
+</a>
+
+<!-- Parts Checker -->
+<a class="card" href="Parts_Checker.html">
+<div class="icon">🔍</div>
+<div class="title">Parts Checker (เช็คอะไหล่)</div>
+<div class="desc">3 แท็บ · 22+ filters · 1,245 รายการ · side-by-side comparison</div>
+<div class="meta"><span class="tag tag-tool">เครื่องมือ</span> 22KB</div>
+</a>
+
+<!-- PMGI Parts -->
+<a class="card" href="PMGI_Parts.html">
+<div class="icon">⚙️</div>
+<div class="title">PMGI อู่อิสระ</div>
+<div class="desc">5 แท็บ · margin 226,549 · 1,245 รายการ · Top 10 · card-head/body layout</div>
+<div class="meta"><span class="tag tag-dashboard">แดชบอร์ด</span> 59KB</div>
+</a>
+
+<!-- BCT -->
+<a class="card" href="BCT_Dash.html">
+<div class="icon">📅</div>
+<div class="title">BCT Calendar & QC</div>
+<div class="desc">Calendar grid · Form→LINE Notify · QC pass rate 90.8% (4,206/4,632)</div>
+<div class="meta"><span class="tag tag-dashboard">แดชบอร์ด</span> 112KB</div>
+</a>
+
+<!-- Repair Flow -->
+<a class="card" href="Repair_Flow.html">
+<div class="icon">🚙</div>
+<div class="title">Repair Flow (การซ่อมรถ)</div>
+<div class="desc">4 views · 103 คันในระบบ (CNB 31+CSK 72) · 1,447 ส่งมอบ · risk indicators</div>
+<div class="meta"><span class="tag tag-dashboard">แดชบอร์ด</span> 40KB</div>
+</a>
+
+<!-- Finance -->
+<a class="card" href="Finance_Dash.html">
+<div class="icon">📈</div>
+<div class="title">Finance Dashboard</div>
+<div class="desc">5-year P&L (2565-2569) · 3 units (PMGgr/PMG/PMGI) · chart-row side-by-side</div>
+<div class="meta"><span class="tag tag-dashboard">แดชบอร์ด</span> 42KB</div>
+</a>
+
+<!-- Eval360 -->
+<a class="card" href="Eval360_Dash.html">
+<div class="icon">🔄</div>
+<div class="title">360° Evaluation Dashboard</div>
+<div class="desc">ประเมิน 360 องศา · สถิติ · รายบุคคล · สรุป · staged loading</div>
+<div class="meta"><span class="tag tag-dashboard">แดชบอร์ด</span> 85KB</div>
+</a>
+
+<!-- PR Dashboard -->
+<a class="card" href="PR_Dash.html">
+<div class="icon">📝</div>
+<div class="title">PR Dashboard (ใบสั่งซื้อ)</div>
+<div class="desc">ใบสั่งซื้อ · สถานะ · ดึงข้อมูลจาก Google Sheets</div>
+<div class="meta"><span class="tag tag-dashboard">แดชบอร์ด</span> 65KB</div>
+</a>
+
+<!-- PM/WI -->
+<a class="card" href="PM_WI.html">
+<div class="icon">📋</div>
+<div class="title">PM/WI (Procedure Manual / Work Instruction)</div>
+<div class="desc">กระบวนการทำงาน PMG Workshop · ISO 9001 · SOP/WI</div>
+<div class="meta"><span class="tag tag-doc">เอกสาร</span> 95KB</div>
+</a>
+
+</div>
+
+<div class="footer">
+PMSG · 2026 · Offline Learning Pack v2026.07 · สร้างโดย AI (Hermes Agent)
+</div>
+
+</body>
+</html>

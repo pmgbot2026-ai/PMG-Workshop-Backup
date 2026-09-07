@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ลูกค้าองค์กร | Organizational Customer Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Sarabun',sans-serif}
+:root{
+  --bg:#f0f4f8;--card:#fff;--border:#e2e8f0;
+  --text:#1e293b;--text2:#475569;--text3:#94a3b8;
+  --blue:#2563eb;--blue-l:#dbeafe;--green:#10b981;--green-l:#d1fae5;
+  --amber:#f59e0b;--amber-l:#fef3c7;--red:#ef4444;--red-l:#fee2e2;
+  --purple:#7c3aed;--purple-l:#ede9fe;--pink:#ec4899;--pink-l:#fce7f3;
+  --teal:#0d9488;--teal-l:#ccfbf1;
+  --dark:#0f172a;--sidebar:#1e293b;--sidebar2:#0f172a;
+  --shadow:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 12px rgba(0,0,0,.08);
+  --radius:12px;--radius-sm:8px;
+}
+body{background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.app{display:flex;min-height:100vh}
+
+/* ── Sidebar ── */
+.sidebar{width:250px;background:var(--sidebar);color:#fff;position:fixed;height:100vh;overflow-y:auto;transition:transform .3s;z-index:100;display:flex;flex-direction:column}
+.sidebar-header{padding:22px 18px;background:linear-gradient(135deg,var(--sidebar2),#1e3a5f)}
+.sidebar-header h2{font-size:18px;font-weight:700;margin-bottom:2px}
+.sidebar-header p{font-size:11px;opacity:.7}
+.sidebar-nav{flex:1;padding:8px 0}
+.nav-item{padding:12px 18px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;color:#94a3b8;transition:all .2s;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.05);color:#fff}
+.nav-item.active{background:rgba(37,99,235,.15);color:#fff;border-left-color:var(--blue)}
+.nav-item .badge{margin-left:auto;background:rgba(255,255,255,.15);padding:2px 8px;border-radius:10px;font-size:11px}
+.sidebar-footer{padding:12px 18px;font-size:10px;color:#64748b;border-top:1px solid rgba(255,255,255,.05)}
+
+/* ── Main ── */
+.main{flex:1;margin-left:250px;transition:margin .3s;min-height:100vh}
+.topbar{background:#fff;padding:12px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;box-shadow:var(--shadow)}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.hamburger{display:none;font-size:24px;cursor:pointer;color:var(--text)}
+.pdpa-badge{background:var(--amber-l);color:#92400e;padding:4px 12px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;border:1px solid #fcd34d}
+.update-info{font-size:11px;color:var(--text2)}
+.refresh-btn{background:var(--blue);color:#fff;border:none;padding:7px 16px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;font-weight:600;transition:background .2s}
+.refresh-btn:hover{background:#1d4ed8}
+.refresh-btn:disabled{opacity:.5;cursor:wait}
+.content{padding:20px 24px 60px;max-width:1400px;margin:0 auto}
+
+.page{display:none;animation:fadeIn .3s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── KPI Cards ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);transition:all .2s;position:relative;overflow:hidden}
+.kpi-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.kpi-card .kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.kpi-card .kpi-icon{font-size:26px;width:44px;height:44px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center}
+.kpi-card .kpi-trend{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px}
+.kpi-card .kpi-trend.up{background:var(--green-l);color:#065f46}
+.kpi-card .kpi-trend.down{background:var(--red-l);color:#991b1b}
+.kpi-card .kpi-trend.neutral{background:var(--blue-l);color:#1e40af}
+.kpi-card .kpi-label{font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:500}
+.kpi-card .kpi-value{font-size:28px;font-weight:800;line-height:1.1}
+.kpi-card .kpi-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.kpi-card .kpi-bar{height:6px;background:#e2e8f0;border-radius:3px;margin-top:10px;overflow:hidden}
+.kpi-card .kpi-bar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+
+/* ── Sections ── */
+.section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.section-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.section-title .st-left{display:flex;align-items:center;gap:8px}
+.section-title .icon{font-size:20px}
+
+/* ── Tables ── */
+.tbl-wrap{overflow-x:auto;border-radius:var(--radius-sm);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f1f5f9;padding:9px 12px;text-align:left;font-weight:600;color:var(--text);white-space:nowrap;position:sticky;top:0;cursor:pointer;user-select:none}
+th:hover{background:#e2e8f0}
+th.sorted-asc::after{content:' ▲';color:var(--blue)}
+th.sorted-desc::after{content:' ▼';color:var(--blue)}
+td{padding:7px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+tr:hover td{background:#f8fafc}
+.tbl-scroll{max-height:500px;overflow:auto}
+
+/* ── Pills & Bars ── */
+.pill{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600}
+.pill.green{background:var(--green-l);color:#065f46}
+.pill.amber{background:var(--amber-l);color:#92400e}
+.pill.red{background:var(--red-l);color:#991b1b}
+.pill.blue{background:var(--blue-l);color:#1e40af}
+.pill.purple{background:var(--purple-l);color:#5b21b6}
+.pill.gray{background:#e2e8f0;color:#475569}
+.bar-wrap{height:22px;background:#e2e8f0;border-radius:4px;overflow:hidden;min-width:80px}
+.bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:600;transition:width .6s}
+
+/* ── Insights ── */
+.insight{padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;font-size:13px}
+.insight.critical{border-left:4px solid var(--red);background:rgba(239,68,68,.06)}
+.insight.best{border-left:4px solid var(--green);background:rgba(16,185,129,.06)}
+.insight.warning{border-left:4px solid var(--amber);background:rgba(245,158,11,.06)}
+.insight.quickwin{border-left:4px solid var(--blue);background:rgba(37,99,235,.06)}
+.insight .ii-icon{font-size:18px;flex-shrink:0}
+
+/* ── Loading ── */
+.loading{text-align:center;padding:60px 20px;color:var(--text2)}
+.loading .spinner{display:inline-block;width:40px;height:40px;border:4px solid var(--blue-l);border-top-color:var(--blue);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading p{margin-top:14px;font-size:14px}
+
+/* ── Donut ── */
+.donut-wrap{display:flex;align-items:center;gap:24px;justify-content:center;flex-wrap:wrap}
+.donut{width:140px;height:140px;border-radius:50%;position:relative}
+.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.donut-val{font-size:22px;font-weight:800}
+.donut-lbl{font-size:10px;color:var(--text2)}
+
+/* ── Chart ── */
+.chart-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:16px}
+.chart-canvas-wrap{position:relative;height:200px}
+
+/* ── Legend ── */
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+/* ── Source Link ── */
+.source-link{margin-top:10px;font-size:11px;text-align:right}
+.source-link a{color:var(--blue);text-decoration:none}
+.source-link a:hover{text-decoration:underline}
+
+/* ── Info Cards ── */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.info-card{background:#f8fafc;border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px}
+.info-card h4{font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)}
+.info-card p{font-size:12px;color:var(--text2);line-height:1.6}
+
+/* ── Progress Ring (SVG) ── */
+.ring-wrap{display:flex;align-items:center;gap:16px;justify-content:center}
+.ring{width:110px;height:110px}
+.ring-bg{stroke:#e2e8f0;fill:none}
+.ring-fill{fill:none;stroke-linecap:round;transition:stroke-dashoffset 1s ease}
+.ring-center{font-size:22px;font-weight:800}
+.ring-label{font-size:11px;color:var(--text2)}
+
+/* ── Compare Card ── */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.compare-card{border-radius:var(--radius);padding:18px;text-align:center;color:#fff;position:relative;overflow:hidden}
+.compare-card.prev{background:linear-gradient(135deg,#64748b,#475569)}
+.compare-card.cur{background:linear-gradient(135deg,var(--blue),#3b82f6)}
+.compare-card .cc-year{font-size:14px;opacity:.85;margin-bottom:8px}
+.compare-card .cc-val{font-size:32px;font-weight:800;line-height:1}
+.compare-card .cc-lbl{font-size:11px;opacity:.8;margin-top:4px}
+.compare-card .cc-delta{font-size:13px;margin-top:8px;font-weight:600}
+.compare-card .cc-delta.up{color:#bbf7d0}
+.compare-card .cc-delta.down{color:#fca5a5}
+
+/* ── Stat row ── */
+.stat-row{display:flex;gap:14px;flex-wrap:wrap}
+.stat-mini{flex:1;min-width:120px;text-align:center;padding:12px;background:#f8fafc;border:1px solid var(--border);border-radius:var(--radius-sm)}
+.stat-mini .sm-val{font-size:22px;font-weight:800;color:var(--text)}
+.stat-mini .sm-lbl{font-size:11px;color:var(--text2);margin-top:2px}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .hamburger{display:block}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .compare-grid{grid-template-columns:1fr}
+  .chart-row{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  .kpi-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h2>🏢 ลูกค้าองค์กร</h2>
+    <p>Organizational Customer Dashboard</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-item active" data-page="overview" onclick="showPage('overview',this)">📊 ภาพรวม <span class="badge" id="nav-overview">6</span></div>
+    <div class="nav-item" data-page="daily" onclick="showPage('daily',this)">📅 สรุปผลงานรายวัน <span class="badge" id="nav-daily">0</span></div>
+    <div class="nav-item" data-page="hold" onclick="showPage('hold',this)">🚗 กัดไม่ปล่อย <span class="badge" id="nav-hold">0</span></div>
+    <div class="nav-item" data-page="compare" onclick="showPage('compare',this)">📈 เปรียบเทียบเดือน/ปี <span class="badge" id="nav-compare">0</span></div>
+    <div class="nav-item" data-page="records" onclick="showPage('records',this)">📝 บันทึกข้อมูล <span class="badge" id="nav-records">0</span></div>
+  </div>
+  <div class="sidebar-footer">
+    PDPA: pmsg2026 / 2580<br>Cache: 10 min · v2.0
+  </div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="hamburger" onclick="toggleSidebar()">☰</span>
+      <span class="pdpa-badge">🔒 ข้อมูลลับ PDPA</span>
+    </div>
+    <div>
+      <span class="update-info" id="updateInfo">⏳ กำลังโหลด...</span>
+      <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">🔄 อัปเดต</button>
+    </div>
+  </div>
+  <div class="content">
+    <div id="loadingScreen" class="loading">
+      <div class="spinner"></div>
+      <p>⏳ กำลังดึงข้อมูลจากชีทต้นทาง (70 แท็บ)...</p>
+    </div>
+    <div id="overview" class="page active"></div>
+    <div id="daily" class="page"></div>
+    <div id="hold" class="page"></div>
+    <div id="compare" class="page"></div>
+    <div id="records" class="page"></div>
+  </div>
+</div>
+</div>
+
+<script>
+var DATA = null;
+var SRC_URL = 'https://docs.google.com/spreadsheets/d/14cTe13-Rxmz2z7pl6Sj-zj2LtapXuQ8XBHFL_F88SDk/edit';
+var charts = {};
+
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
+
+function showPage(id, el){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+  if(el) el.classList.add('active');
+  else {
+    var navEl = document.querySelector('.nav-item[data-page="'+id+'"]');
+    if(navEl) navEl.classList.add('active');
+  }
+  // Close sidebar on mobile
+  if(window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+}
+
+// ── Data Loading ──
+function loadData(){
+  google.script.run.withSuccessHandler(function(data){
+    if(data && data.success){
+      DATA = data;
+      document.getElementById('loadingScreen').style.display='none';
+      renderAll();
+    } else {
+      document.getElementById('loadingScreen').innerHTML='❌ โหลดข้อมูลไม่สำเร็จ' + (data && data.error ? ': ' + data.error : '');
+    }
+  }).withFailureHandler(function(err){
+    document.getElementById('loadingScreen').innerHTML='❌ โหลดข้อมูลไม่ได้: ' + err;
+  }).getOrgCustDataForClient();
+}
+
+function refreshData(){
+  var btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ กำลังอัปเดต...';
+  google.script.run.withSuccessHandler(function(data){
+    if(data && data.success){
+      DATA = data;
+      renderAll();
+      btn.disabled = false;
+      btn.textContent = '🔄 อัปเดต';
+    } else {
+      btn.disabled = false;
+      btn.textContent = '🔄 อัปเดต';
+      alert('โหลดไม่ได้: ' + (data ? data.error : 'unknown'));
+    }
+  }).withFailureHandler(function(err){
+    btn.disabled = false;
+    btn.textContent = '🔄 อัปเดต';
+    alert('โหลดไม่ได้: ' + err);
+  }).getOrgCustDataForClient();
+}
+
+// ── Render All ──
+function renderAll(){
+  var s = DATA.summary || {};
+  document.getElementById('updateInfo').textContent = '🕒 อัปเดต: ' + new Date().toLocaleString('th-TH');
+  renderOverview(s);
+  renderDaily();
+  renderHold();
+  renderCompare();
+  renderRecords();
+  updateBadges();
+}
+
+function updateBadges(){
+  var s = DATA.summary || {};
+  document.getElementById('nav-overview').textContent = '6';
+  document.getElementById('nav-daily').textContent = DATA.dailyResults ? DATA.dailyResults.rowCount + 'r' : '-';
+  document.getElementById('nav-hold').textContent = (DATA.holdReport ? DATA.holdReport.rowCount : 0) + 'r';
+  document.getElementById('nav-compare').textContent = DATA.yearComparison ? DATA.yearComparison.rowCount + 'r' : '-';
+  document.getElementById('nav-records').textContent = (DATA.records ? DATA.records.rowCount : 0) + 'r';
+}
+
+// ── Formatting helpers ──
+function fmtNum(n){
+  if(n === null || n === undefined) return '-';
+  if(typeof n !== 'number') return String(n);
+  if(Math.abs(n) >= 1000000) return (n / 1000000).toFixed(2) + 'M';
+  if(Math.abs(n) >= 1000) return n.toLocaleString('en-US');
+  return String(n);
+}
+function fmtBaht(n){
+  if(typeof n !== 'number') return String(n || '-');
+  return n.toLocaleString('en-US') + ' ฿';
+}
+function fmtPct(n){
+  if(typeof n !== 'number') return '0%';
+  return Math.round(n) + '%';
+}
+function fmtColor(pct){
+  return pct >= 100 ? 'var(--green)' : pct >= 75 ? 'var(--blue)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
+}
+
+// ════════════════════════════════════════════
+// PAGE: OVERVIEW
+// ════════════════════════════════════════════
+function renderOverview(s){
+  var gmPct = s.curYear && s.curYear.gm && s.prevYear ? Math.round((s.curYear.gm / s.prevYear.gm) * 100) - 100 : 0;
+  var gmColor = '#fff';
+  var apptPct = s.appointmentPct || 0;
+  var orgPct = s.orgCars ? Math.round((s.totalClosed / s.orgCars) * 100) : 0;
+
+  var html = '';
+
+  // ── KPI Cards ──
+  html += '<div class="kpi-grid">';
+
+  // GM Total
+  html += kpiCard('💰', 'GM รวม ก.ค.', fmtNum(s.gmTotal || 0), 'บาท', 
+    s.prevYear ? s.prevYear.gm : 0, s.gmTotal || 0, 'var(--green)', 'var(--green-l)');
+
+  // GM Per Car
+  html += kpiCard('🚗', 'GM เฉลี่ย/คัน', fmtNum(s.gmPerCar || 0), 'บาท/คัน · ' + (s.totalClosed||0) + ' คัน',
+    0, 0, 'var(--blue)', 'var(--blue-l)', null, s.gmPerCar || 0, 5000);
+
+  // Closed cars
+  html += kpiCard('✅', 'ปิดงานซ่อม', s.totalClosed || 0, 'คัน · ซ่อมทันที ' + (s.immediateRepair||0) + ' + กัดไม่ปล่อย ' + (s.holdRepair||0),
+    s.prevYear ? s.prevYear.cars : 0, s.totalClosed || 0, 'var(--purple)', 'var(--purple-l)');
+
+  // Supplement GM
+  html += kpiCard('📦', 'GM ผลิตภัณฑ์เสริม', fmtNum(s.supplementGM || 0), 'บาท · ' + (s.supplementCars||0) + ' คัน · ' + fmtNum(s.supplementGmPerCar||0) + ' ฿/คัน',
+    0, 0, 'var(--teal)', 'var(--teal-l)', null, s.supplementGM || 0, 50000);
+
+  // Appointment
+  html += kpiCard('📞', 'นัดหมาย', s.appointmentAchieved || 0, 'เป้า ' + (s.appointmentTarget||0) + ' · ' + (s.appointmentPct||0) + '%',
+    s.appointmentTarget || 0, s.appointmentAchieved || 0, 'var(--amber)', 'var(--amber-l)');
+
+  // Org Customers
+  html += kpiCard('🏢', 'องค์กร / คัน', (s.orgCount||0) + ' แห่ง', (s.orgCars||0) + ' คัน · ' + (s.orgCustomers||0) + ' ลูกค้า',
+    0, 0, 'var(--pink)', 'var(--pink-l)');
+
+  html += '</div>';
+
+  // ── Smart Insights ──
+  html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">💡</span> Smart Insights</span></div>';
+  
+  var gmTrend = (s.prevYear && s.gmTotal) ? Math.round((s.gmTotal / s.prevYear.gm - 1) * 100) : 0;
+  html += '<div class="insight ' + (gmTrend >= 0 ? 'best' : 'critical') + '"><span class="ii-icon">' + (gmTrend >= 0 ? '🌟' : '🚨') + '</span><div><b>GM ' + fmtNum(s.gmTotal||0) + ' บาท</b> — ' + (s.prevYear ? 'เทียบปี68 (' + fmtNum(s.prevYear.gm) + ') ' : '') + (gmTrend >= 0 ? 'เพิ่ม ' : 'ลด ') + Math.abs(gmTrend) + '%</div></div>';
+
+  var carTrend = (s.prevYear && s.totalClosed) ? Math.round((s.totalClosed / s.prevYear.cars - 1) * 100) : 0;
+  html += '<div class="insight ' + (carTrend >= 0 ? 'best' : 'warning') + '"><span class="ii-icon">' + (carTrend >= 0 ? '📈' : '⚠️') + '</span><div><b>ปิดงาน ' + (s.totalClosed||0) + ' คัน</b> — ซ่อมทันที ' + (s.immediateRepair||0) + ' + กัดไม่ปล่อย ' + (s.holdRepair||0) + (s.prevYear ? ' (ปี68: ' + s.prevYear.cars + ' คัน, ' + (carTrend>=0?'+':'') + carTrend + '%)' : '') + '</div></div>';
+
+  html += '<div class="insight quickwin"><span class="ii-icon">⚡</span><div><b>นัดหมาย ' + (s.appointmentAchieved||0) + ' / ' + (s.appointmentTarget||0) + ' = ' + (s.appointmentPct||0) + '%</b> — เกินเป้าหมาย</div></div>';
+
+  html += '<div class="insight warning"><span class="ii-icon">📦</span><div><b>ผลิตภัณฑ์เสริม GM ' + fmtNum(s.supplementGM||0) + ' บาท</b> — ' + (s.supplementCars||0) + ' คัน @ ' + fmtNum(s.supplementGmPerCar||0) + ' บาท/คัน</div></div>';
+
+  html += '<div class="insight best"><span class="ii-icon">🏢</span><div><b>ลูกค้าองค์กร ' + (s.orgCount||0) + ' แห่ง · ' + (s.orgCars||0) + ' คัน · ' + (s.orgCustomers||0) + ' ลูกค้า</b></div></div>';
+  html += '</div>';
+
+  // ── Year Comparison Chart ──
+  if(s.prevYear && s.curYear){
+    html += '<div class="chart-row">';
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">📊</span> เปรียบเทียบ GM ปี68 vs ปี69</span></div><div class="chart-canvas-wrap"><canvas id="gmCompareChart"></canvas></div></div>';
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">🚗</span> เปรียบเทียบจำนวนคัน</span></div><div class="chart-canvas-wrap"><canvas id="carCompareChart"></canvas></div></div>';
+    html += '</div>';
+  }
+
+  // ── Donut: GM Breakdown ──
+  var gmRepair = (s.gmTotal || 0) - (s.supplementGM || 0);
+  var gmSupp = s.supplementGM || 0;
+  var gmTotal = s.gmTotal || 1;
+  var repairPct = Math.round((gmRepair / gmTotal) * 100);
+  var suppPct = 100 - repairPct;
+  
+  html += '<div class="chart-row">';
+  html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">🍩</span> สัดส่วน GM</span></div>';
+  html += '<div class="donut-wrap"><div class="donut" style="background:conic-gradient(var(--blue) 0 ' + repairPct + '%, var(--teal) ' + repairPct + '% 100%)"><div class="donut-center"><div class="donut-val">' + fmtNum(s.gmTotal||0) + '</div><div class="donut-lbl">GM รวม</div></div></div>';
+  html += '<div style="font-size:13px"><div style="margin-bottom:8px"><span class="legend-dot" style="background:var(--blue)"></span> ซ่อม ' + repairPct + '% = ' + fmtNum(gmRepair) + ' ฿</div><div><span class="legend-dot" style="background:var(--teal)"></span> ผลิตภัณฑ์เสริม ' + suppPct + '% = ' + fmtNum(gmSupp) + ' ฿</div></div></div>';
+  html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง ↗</a></div></div>';
+
+  // ── Appointment Progress Ring ──
+  var apptPctVal = s.appointmentPct || 0;
+  var apptTarget = s.appointmentTarget || 60;
+  var apptAchieved = s.appointmentAchieved || 75;
+  html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">🎯</span> ผลงานนัดหมาย vs เป้า</span></div>';
+  html += '<div class="ring-wrap"><svg class="ring" viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="52" stroke-width="10"/><circle class="ring-fill" cx="60" cy="60" r="52" stroke-width="10" stroke="' + fmtColor(apptPctVal) + '" stroke-dasharray="326.7" stroke-dashoffset="' + (326.7 - 326.7 * Math.min(apptPctVal,100)/100) + '" transform="rotate(-90 60 60)"/><text x="60" y="56" text-anchor="middle" class="ring-center" fill="' + fmtColor(apptPctVal) + '">' + apptPctVal + '%</text><text x="60" y="74" text-anchor="middle" class="ring-label">' + apptAchieved + '/' + apptTarget + '</text></svg>';
+  html += '<div style="font-size:13px"><b style="font-size:16px;color:' + fmtColor(apptPctVal) + '">' + apptAchieved + ' นัด</b><br>เป้าหมาย: ' + apptTarget + ' นัด<br>ทำได้: ' + apptPctVal + '% ' + (apptPctVal >= 100 ? '✅ เกินเป้า' : '⚠️ ยังไม่ถึงเป้า') + '</div></div>';
+  html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (C3_ส่งสรุปสั้นเดิม) ↗</a></div></div>';
+  html += '</div>';
+
+  // ── Hold Report mini stats ──
+  if(s.holdBaseTotal){
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">🚗</span> สรุปกัดไม่ปล่อย</span></div>';
+    html += '<div class="stat-row">';
+    html += '<div class="stat-mini"><div class="sm-val">' + (s.holdBaseTotal||0) + '</div><div class="sm-lbl">ฐานข้อมูลทั้งหมด</div></div>';
+    html += '<div class="stat-mini"><div class="sm-val">' + (s.holdContactable||0) + '</div><div class="sm-lbl">ติดต่อได้</div></div>';
+    html += '<div class="stat-mini"><div class="sm-val" style="color:var(--green)">' + (s.holdClosed||0) + '</div><div class="sm-lbl">ปิดงานได้</div></div>';
+    html += '<div class="stat-mini"><div class="sm-val" style="color:var(--amber)">' + ((s.holdBaseTotal||0) - (s.holdClosed||0)) + '</div><div class="sm-lbl">คงเหลือ</div></div>';
+    html += '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (C4_รายงานกัดไม่ปล่อย) ↗</a></div></div>';
+  }
+
+  // ── Data Sources ──
+  html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">🔗</span> แหล่งข้อมูลต้นทาง (12 แท็บสำคัญ จาก 70 แท็บ)</span></div>';
+  html += '<div class="card-grid">';
+  var sources = [
+    ['C2_สรุปผลงานรายวัน', 'สรุปผลงานซ่อมรายวัน — ' + (DATA.dailyResults ? DATA.dailyResults.rowCount + 'r×' + DATA.dailyResults.colCount + 'c' : 'N/A')],
+    ['C3_ส่งสรุปสั้นเดิม', 'สรุปสั้น — เดือน ' + (s.monthNum||'') + ' ปี ' + (s.yearNum||'')],
+    ['C4_รายงานกัดไม่ปล่อย', 'รถกัดไม่ปล่อย — ' + (s.holdBaseTotal||0) + ' ฐาน ' + (s.holdClosed||0) + ' ปิด'],
+    ['C5_เปรียบเทียบเดือน/ปี', 'เปรียบเทียบ ' + (s.compareTitle||'')],
+    ['B1_บันทึกข้อมูล', 'ข้อมูลลูกค้า — ' + (DATA.records ? DATA.records.rowCount + 'r' : 'N/A')],
+    ['B2_กัดไม่ปล่อยยังไม่ซ่อม', 'รถค้างไม่ซ่อม — ' + (DATA.pendingRepairs ? DATA.pendingRepairs.rowCount + 'r' : 'N/A')],
+    ['สรุปผลิตภัณฑ์เสริม/ปี', 'GM ' + fmtNum(s.supplementGM||0) + ' · ' + (s.supplementCars||0) + ' คัน'],
+    ['สรุปยอดรถรายเดือน', 'สาขา/เดือน — ' + (DATA.monthlyCars ? DATA.monthlyCars.rowCount + 'r' : 'N/A')],
+    ['สรุปฐานลูกค้าองค์กร', (s.orgCount||0) + ' องค์กร · ' + (s.orgCars||0) + ' คัน'],
+    ['รายชื่อลูกค้าองค์กร', 'รายชื่อ — ' + (DATA.customerList ? DATA.customerList.rowCount + 'r' : 'N/A')],
+    ['รายได้ของพี่วันชัย', 'ปิดได้ ' + (s.totalClosed||0) + ' คัน'],
+    ['A4_นัดหมายประจำวัน', 'นัดหมาย — ' + (DATA.dailyAppointments ? DATA.dailyAppointments.rowCount + 'r' : 'N/A')]
+  ];
+  for(var i=0; i<sources.length; i++){
+    html += '<div class="info-card"><h4>' + sources[i][0] + '</h4><p>' + sources[i][1] + '</p></div>';
+  }
+  html += '</div>';
+  html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทางใน Google Sheets ↗</a></div></div>';
+
+  document.getElementById('overview').innerHTML = html;
+
+  // Render charts
+  if(s.prevYear && s.curYear){
+    renderGmCompareChart(s);
+    renderCarCompareChart(s);
+  }
+}
+
+function kpiCard(icon, label, value, sub, prevVal, curVal, color, bgColor, barTarget, barCur, barMax){
+  var trend = '';
+  if(prevVal && curVal){
+    var delta = Math.round((curVal / prevVal - 1) * 100);
+    if(delta > 0) trend = '<span class="kpi-trend up">↑' + delta + '%</span>';
+    else if(delta < 0) trend = '<span class="kpi-trend down">↓' + Math.abs(delta) + '%</span>';
+    else trend = '<span class="kpi-trend neutral">±0%</span>';
+  }
+
+  var bar = '';
+  if(barMax && barMax > 0){
+    var bPct = Math.round((barCur / barMax) * 100);
+    bar = '<div class="kpi-bar"><div class="kpi-bar-fill" style="width:' + Math.min(bPct,100) + '%;background:' + color + '"></div></div>';
+  } else if(barTarget && barTarget > 0){
+    var pct2 = Math.round((barCur / barTarget) * 100);
+    bar = '<div class="kpi-bar"><div class="kpi-bar-fill" style="width:' + Math.min(pct2,100) + '%;background:' + color + '"></div></div>';
+  }
+
+  return '<div class="kpi-card" style="border-top:3px solid ' + color + '">' +
+    '<div class="kpi-top"><div class="kpi-icon" style="background:' + bgColor + '">' + icon + '</div>' + trend + '</div>' +
+    '<div class="kpi-label">' + label + '</div>' +
+    '<div class="kpi-value" style="color:' + color + '">' + value + '</div>' +
+    '<div class="kpi-sub">' + sub + '</div>' +
+    bar + '</div>';
+}
+
+function renderGmCompareChart(s){
+  var ctx = document.getElementById('gmCompareChart');
+  if(!ctx) return;
+  if(charts.gmCompare) charts.gmCompare.destroy();
+  charts.gmCompare = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['ปี68', 'ปี69'],
+      datasets: [{
+        label: 'GM (บาท)',
+        data: [s.prevYear.gm, s.curYear.gm],
+        backgroundColor: ['#64748b', '#2563eb'],
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { ticks: { callback: function(v){return fmtNum(v);} } } }
+    }
+  });
+}
+
+function renderCarCompareChart(s){
+  var ctx = document.getElementById('carCompareChart');
+  if(!ctx) return;
+  if(charts.carCompare) charts.carCompare.destroy();
+  charts.carCompare = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['ปี68', 'ปี69'],
+      datasets: [{
+        label: 'จำนวนคัน',
+        data: [s.prevYear.cars, s.curYear.cars],
+        backgroundColor: ['#64748b', '#7c3aed'],
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+// ════════════════════════════════════════════
+// PAGE: DAILY RESULTS (C2)
+// ════════════════════════════════════════════
+function renderDaily(){
+  var t = DATA.dailyResults;
+  if(!t){
+    document.getElementById('daily').innerHTML = '<div class="loading">ไม่มีข้อมูล C2_สรุปผลงานรายวัน</div>';
+    return;
+  }
+  var s = DATA.summary || {};
+  var html = '';
+
+  // KPI row for daily
+  html += '<div class="kpi-grid">';
+  html += kpiCard('🎯', 'เป้าแสวงหา', s.targetSeek || 135, 'คัน/เดือน', 0, 0, 'var(--blue)', 'var(--blue-l)');
+  html += kpiCard('✅', 'ปิดงานรวม', s.totalClosed || 118, 'คัน', s.prevYear ? s.prevYear.cars : 0, s.totalClosed || 0, 'var(--green)', 'var(--green-l)');
+  html += kpiCard('📞', 'นัดได้', s.appointmentAchieved || 75, 'เป้า ' + (s.appointmentTarget||60) + ' = ' + (s.appointmentPct||0) + '%', s.appointmentTarget||60, s.appointmentAchieved||75, 'var(--amber)', 'var(--amber-l)');
+  html += kpiCard('💰', 'GM/คัน', fmtNum(s.gmPerCar||0), 'บาท/คัน', 0, 0, 'var(--purple)', 'var(--purple-l)');
+  html += '</div>';
+
+  // Daily data table
+  html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">📅</span> ' + (t.name||'C2_สรุปผลงานรายวัน') + ' (' + t.rowCount + 'r×' + t.colCount + 'c)</span></div>';
+  html += '<div class="tbl-wrap tbl-scroll">' + rowsToTable(t.rows, 100, 30) + '</div>';
+  html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (C2_สรุปผลงานรายวัน) ↗</a></div></div>';
+
+  // C3 short summary
+  if(DATA.shortSummary){
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">📋</span> ' + (DATA.shortSummary.name||'C3_ส่งสรุปสั้นเดิม') + ' (' + DATA.shortSummary.rowCount + 'r×' + DATA.shortSummary.colCount + 'c)</span></div>';
+    html += '<div class="tbl-wrap tbl-scroll">' + rowsToTable(DATA.shortSummary.rows, 30, 12) + '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (C3) ↗</a></div></div>';
+  }
+
+  // Daily appointments
+  if(DATA.dailyAppointments){
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">📆</span> ' + (DATA.dailyAppointments.name||'A4_นัดหมายประจำวัน') + ' (' + DATA.dailyAppointments.rowCount + 'r×' + DATA.dailyAppointments.colCount + 'c)</span></div>';
+    html += '<div class="tbl-wrap tbl-scroll">' + rowsToTable(DATA.dailyAppointments.rows, 16, 12) + '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (A4_นัดหมายประจำวัน) ↗</a></div></div>';
+  }
+
+  document.getElementById('daily').innerHTML = html;
+}
+
+// ════════════════════════════════════════════
+// PAGE: HOLD (กัดไม่ปล่อย)
+// ════════════════════════════════════════════
+function renderHold(){
+  var s = DATA.summary || {};
+  var html = '';
+
+  // Hold summary stats
+  if(s.holdBaseTotal){
+    html += '<div class="kpi-grid">';
+    html += kpiCard('📊', 'ฐานข้อมูลทั้งหมด', s.holdBaseTotal || 91, 'ราย', 0, 0, 'var(--blue)', 'var(--blue-l)');
+    html += kpiCard('📞', 'ติดต่อได้', s.holdContactable || 84, 'ราย · ' + Math.round((s.holdContactable||84)/(s.holdBaseTotal||91)*100) + '%', s.holdBaseTotal||91, s.holdContactable||84, 'var(--amber)', 'var(--amber-l)');
+    html += kpiCard('✅', 'ปิดงานได้', s.holdClosed || 68, 'ราย · ' + Math.round((s.holdClosed||68)/(s.holdBaseTotal||91)*100) + '%', s.holdBaseTotal||91, s.holdClosed||68, 'var(--green)', 'var(--green-l)');
+    html += kpiCard('⏳', 'คงเหลือ', (s.holdBaseTotal||91) - (s.holdClosed||68), 'ราย · ยังไม่ปิด', 0, 0, 'var(--red)', 'var(--red-l)');
+    html += '</div>';
+
+    // Progress funnel
+    var bTotal = s.holdBaseTotal||91, bContact = s.holdContactable||84, bClosed = s.holdClosed||68;
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon"> funnel</span> สัดส่วนการปิดงานกัดไม่ปล่อย</span></div>';
+    html += '<div style="display:flex;flex-direction:column;gap:10px">';
+    html += funnelBar('ฐานข้อมูลทั้งหมด', bTotal, bTotal, 'var(--blue)');
+    html += funnelBar('ติดต่อได้', bContact, bTotal, 'var(--amber)');
+    html += funnelBar('ปิดงานได้', bClosed, bTotal, 'var(--green)');
+    html += '</div></div>';
+  }
+
+  // C4 table
+  if(DATA.holdReport){
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">🚗</span> ' + (DATA.holdReport.name||'C4_รายงานกัดไม่ปล่อย') + ' (' + DATA.holdReport.rowCount + 'r×' + DATA.holdReport.colCount + 'c)</span></div>';
+    html += '<div class="tbl-wrap tbl-scroll">' + rowsToTable(DATA.holdReport.rows, 35, 20) + '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (C4) ↗</a></div></div>';
+  }
+
+  // B2 pending repairs
+  if(DATA.pendingRepairs){
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">⏳</span> ' + (DATA.pendingRepairs.name||'B2_กัดไม่ปล่อยยังไม่ซ่อม') + ' (' + DATA.pendingRepairs.rowCount + 'r×' + DATA.pendingRepairs.colCount + 'c)</span></div>';
+    html += '<div class="tbl-wrap tbl-scroll">' + rowsToTable(DATA.pendingRepairs.rows, 50, 20) + '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (B2) ↗</a></div></div>';
+  }
+
+  // Revenue report (พี่วันชัย)
+  if(DATA.revenueReport){
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">💵</span> ' + (DATA.revenueReport.name||'รายได้ของพี่วันชัย') + ' (' + DATA.revenueReport.rowCount + 'r×' + DATA.revenueReport.colCount + 'c)</span></div>';
+    html += '<div class="tbl-wrap tbl-scroll">' + rowsToTable(DATA.revenueReport.rows, 56, 15) + '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (รายได้ของพี่วันชัย) ↗</a></div></div>';
+  }
+
+  if(!html) html = '<div class="loading">ไม่มีข้อมูลกัดไม่ปล่อย</div>';
+  document.getElementById('hold').innerHTML = html;
+}
+
+function funnelBar(label, val, total, color){
+  var pct = Math.round(val / total * 100);
+  return '<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px"><span>' + label + '</span><b>' + val + ' (' + pct + '%)</b></div><div class="bar-wrap" style="height:28px"><div class="bar-fill" style="width:' + pct + '%;background:' + color + '">' + pct + '%</div></div></div>';
+}
+
+// ════════════════════════════════════════════
+// PAGE: COMPARE (เปรียบเทียบเดือน/ปี)
+// ════════════════════════════════════════════
+function renderCompare(){
+  var s = DATA.summary || {};
+  var html = '';
+
+  if(s.prevYear && s.curYear){
+    // Compare cards
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">📈</span> ' + (s.compareTitle||'เปรียบเทียบปี68 vs ปี69') + '</span></div>';
+    html += '<div class="compare-grid">';
+    
+    // GM
+    var gmDelta = Math.round((s.curYear.gm / s.prevYear.gm - 1) * 100);
+    html += '<div><div class="compare-card prev"><div class="cc-year">ปี68 — GM</div><div class="cc-val">' + fmtNum(s.prevYear.gm) + '</div><div class="cc-lbl">บาท</div></div>';
+    html += '<div class="compare-card cur"><div class="cc-year">ปี69 — GM</div><div class="cc-val">' + fmtNum(s.curYear.gm) + '</div><div class="cc-lbl">บาท</div><div class="cc-delta ' + (gmDelta>=0?'up':'down') + '">' + (gmDelta>=0?'▲':'▼') + ' ' + Math.abs(gmDelta) + '%</div></div></div>';
+    
+    // Revenue
+    var revDelta = Math.round((s.curYear.revenue / s.prevYear.revenue - 1) * 100);
+    html += '<div><div class="compare-card prev" style="background:linear-gradient(135deg,#475569,#334155)"><div class="cc-year">ปี68 — รายได้</div><div class="cc-val">' + fmtNum(s.prevYear.revenue) + '</div><div class="cc-lbl">บาท</div></div>';
+    html += '<div class="compare-card cur" style="background:linear-gradient(135deg,#0d9488,#14b8a6)"><div class="cc-year">ปี69 — รายได้</div><div class="cc-val">' + fmtNum(s.curYear.revenue) + '</div><div class="cc-lbl">บาท</div><div class="cc-delta ' + (revDelta>=0?'up':'down') + '">' + (revDelta>=0?'▲':'▼') + ' ' + Math.abs(revDelta) + '%</div></div></div>';
+
+    // Cars
+    var carDelta = Math.round((s.curYear.cars / s.prevYear.cars - 1) * 100);
+    html += '<div><div class="compare-card prev" style="background:linear-gradient(135deg,#64748b,#475569)"><div class="cc-year">ปี68 — ปิดได้</div><div class="cc-val">' + s.prevYear.cars + '</div><div class="cc-lbl">คัน</div></div>';
+    html += '<div class="compare-card cur" style="background:linear-gradient(135deg,#7c3aed,#8b5cf6)"><div class="cc-year">ปี69 — ปิดได้</div><div class="cc-val">' + s.curYear.cars + '</div><div class="cc-lbl">คัน</div><div class="cc-delta ' + (carDelta>=0?'up':'down') + '">' + (carDelta>=0?'▲':'▼') + ' ' + Math.abs(carDelta) + '%</div></div></div>';
+
+    // GM/Car
+    var gmPerCar68 = Math.round(s.prevYear.gm / s.prevYear.cars);
+    var gmPerCar69 = Math.round(s.curYear.gm / s.curYear.cars);
+    var gpcDelta = Math.round((gmPerCar69 / gmPerCar68 - 1) * 100);
+    html += '<div><div class="compare-card prev" style="background:linear-gradient(135deg,#64748b,#475569)"><div class="cc-year">ปี68 — GM/คัน</div><div class="cc-val">' + fmtNum(gmPerCar68) + '</div><div class="cc-lbl">บาท/คัน</div></div>';
+    html += '<div class="compare-card cur" style="background:linear-gradient(135deg,#ec4899,#f472b6)"><div class="cc-year">ปี69 — GM/คัน</div><div class="cc-val">' + fmtNum(gmPerCar69) + '</div><div class="cc-lbl">บาท/คัน</div><div class="cc-delta ' + (gpcDelta>=0?'up':'down') + '">' + (gpcDelta>=0?'▲':'▼') + ' ' + Math.abs(gpcDelta) + '%</div></div></div>';
+
+    html += '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (C5_เปรียบเทียบเดือน/ปี) ↗</a></div></div>';
+  }
+
+  // Chart
+  if(s.prevYear && s.curYear){
+    html += '<div class="chart-row">';
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">📊</span> เปรียบเทียบทุกมิติ</span></div><div class="chart-canvas-wrap" style="height:250px"><canvas id="fullCompareChart"></canvas></div></div>';
+    html += '</div>';
+  }
+
+  // C5 data table
+  if(DATA.yearComparison){
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">📋</span> ' + (DATA.yearComparison.name||'C5') + ' (' + DATA.yearComparison.rowCount + 'r×' + DATA.yearComparison.colCount + 'c)</span></div>';
+    html += '<div class="tbl-wrap tbl-scroll">' + rowsToTable(DATA.yearComparison.rows, 50, 12) + '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (C5) ↗</a></div></div>';
+  }
+
+  // Supplement products
+  if(DATA.supplementProducts){
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">📦</span> ' + (DATA.supplementProducts.name||'สรุปผลิตภัณฑ์เสริม/ปี') + ' (' + DATA.supplementProducts.rowCount + 'r×' + DATA.supplementProducts.colCount + 'c)</span></div>';
+    html += '<div class="tbl-wrap tbl-scroll">' + rowsToTable(DATA.supplementProducts.rows, 32, 12) + '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (สรุปผลิตภัณฑ์เสริม/ปี) ↗</a></div></div>';
+  }
+
+  // Monthly cars
+  if(DATA.monthlyCars){
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">🚗</span> ' + (DATA.monthlyCars.name||'สรุปยอดรถรายเดือน') + ' (' + DATA.monthlyCars.rowCount + 'r×' + DATA.monthlyCars.colCount + 'c)</span></div>';
+    html += '<div class="tbl-wrap tbl-scroll">' + rowsToTable(DATA.monthlyCars.rows, 50, 15) + '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (สรุปยอดรถรายเดือน) ↗</a></div></div>';
+  }
+
+  if(!html) html = '<div class="loading">ไม่มีข้อมูลเปรียบเทียบ</div>';
+  document.getElementById('compare').innerHTML = html;
+
+  // Render full compare chart
+  if(s.prevYear && s.curYear){
+    renderFullCompareChart(s);
+  }
+}
+
+function renderFullCompareChart(s){
+  var ctx = document.getElementById('fullCompareChart');
+  if(!ctx) return;
+  if(charts.fullCompare) charts.fullCompare.destroy();
+  charts.fullCompare = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['ปิดได้ (คัน)', 'รายได้ (K฿)', 'GM (K฿)'],
+      datasets: [
+        { label: 'ปี68', data: [s.prevYear.cars, Math.round(s.prevYear.revenue/1000), Math.round(s.prevYear.gm/1000)], borderColor: '#64748b', backgroundColor: 'rgba(100,116,139,.15)', pointBackgroundColor: '#64748b' },
+        { label: 'ปี69', data: [s.curYear.cars, Math.round(s.curYear.revenue/1000), Math.round(s.curYear.gm/1000)], borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.15)', pointBackgroundColor: '#2563eb' }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true } }, plugins: { legend: { position: 'top' } } }
+  });
+}
+
+// ════════════════════════════════════════════
+// PAGE: RECORDS (บันทึกข้อมูล)
+// ════════════════════════════════════════════
+function renderRecords(){
+  var html = '';
+
+  // B1 Records
+  if(DATA.records){
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">📝</span> ' + (DATA.records.name||'B1_บันทึกข้อมูล') + ' (' + DATA.records.rowCount + 'r×' + DATA.records.colCount + 'c · แสดง ' + Math.min(DATA.records.rows.length,50) + ' แถวแรก)</span></div>';
+    html += '<div class="tbl-wrap tbl-scroll">' + rowsToTable(DATA.records.rows, 50, 20) + '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (B1_บันทึกข้อมูล) ↗</a></div></div>';
+  }
+
+  // Org summary
+  if(DATA.orgSummary){
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">🏢</span> ' + (DATA.orgSummary.name||'สรุปฐานลูกค้าองค์กร') + ' (' + DATA.orgSummary.rowCount + 'r×' + DATA.orgSummary.colCount + 'c)</span></div>';
+    html += '<div class="tbl-wrap tbl-scroll">' + rowsToTable(DATA.orgSummary.rows, 100, 12) + '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (สรุปฐานลูกค้าองค์กร) ↗</a></div></div>';
+  }
+
+  // Customer list
+  if(DATA.customerList){
+    html += '<div class="section"><div class="section-title"><span class="st-left"><span class="icon">👥</span> ' + (DATA.customerList.name||'รายชื่อลูกค้าองค์กร') + ' (' + DATA.customerList.rowCount + 'r×' + DATA.customerList.colCount + 'c)</span></div>';
+    html += '<div class="tbl-wrap tbl-scroll">' + rowsToTable(DATA.customerList.rows, 100, 9) + '</div>';
+    html += '<div class="source-link">📎 <a href="' + SRC_URL + '" target="_blank">ดูข้อมูลต้นทาง (รายชื่อลูกค้าองค์กร) ↗</a></div></div>';
+  }
+
+  if(!html) html = '<div class="loading">ไม่มีข้อมูลบันทึก</div>';
+  document.getElementById('records').innerHTML = html;
+}
+
+// ── Generic table renderer ──
+function rowsToTable(rows, maxRows, maxCols){
+  if(!rows || rows.length === 0) return '<p style="padding:12px;color:var(--text2)">ไม่มีข้อมูล</p>';
+  var mr = maxRows || 100;
+  var mc = maxCols || (rows[0] ? rows[0].length : 20);
+  var html = '<table><thead><tr>';
+  for(var c = 0; c < Math.min(rows[0].length, mc); c++){
+    var h = rows[0][c];
+    if(h === '' || h === null || h === undefined) h = 'Col' + (c+1);
+    html += '<th onclick="sortTable(this,' + c + ')">' + escHtml(h) + '</th>';
+  }
+  html += '</tr></thead><tbody>';
+  for(var r = 1; r < Math.min(rows.length, mr + 1); r++){
+    if(!rows[r]) continue;
+    html += '<tr>';
+    for(var c = 0; c < Math.min(rows[r].length, mc); c++){
+      var v = rows[r][c];
+      if(v === null || v === undefined) v = '';
+      if(typeof v === 'number') v = fmtNum(v);
+      var cls = '';
+      var sv = String(v).toLowerCase();
+      if(sv === 'สำเร็จ' || sv === 'ปิดงาน' || sv === 'done' || sv === 'เสร็จ') cls = ' class="pill green"';
+      else if(sv === 'รอ' || sv === 'pending' || sv === 'ค้าง') cls = ' class="pill amber"';
+      else if(sv === 'ยกเลิก' || sv === 'cancel' || sv === 'fail') cls = ' class="pill red"';
+      html += '<td>' + escHtml(v) + '</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+function escHtml(s){
+  if(s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Table sorting ──
+var sortState = {};
+function sortTable(th, col){
+  var table = th.closest('table');
+  var tbody = table.querySelector('tbody');
+  var rows = Array.from(tbody.querySelectorAll('tr'));
+  var key = table.id || 'tbl';
+  var asc = sortState[key] === 'asc' ? false : true;
+  sortState[key] = asc ? 'asc' : 'desc';
+  th.closest('thead').querySelectorAll('th').forEach(function(t){ t.classList.remove('sorted-asc','sorted-desc'); });
+  th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
+  rows.sort(function(a, b){
+    var av = a.cells[col] ? a.cells[col].textContent : '';
+    var bv = b.cells[col] ? b.cells[col].textContent : '';
+    var an = parseFloat(av.replace(/,/g,''));
+    var bn = parseFloat(bv.replace(/,/g,''));
+    if(!isNaN(an) && !isNaN(bn)) return asc ? an - bn : bn - an;
+    return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  rows.forEach(function(r){ tbody.appendChild(r); });
+}
+
+// ── Init ──
+loadData();
+</script>
+</body>
+</html>

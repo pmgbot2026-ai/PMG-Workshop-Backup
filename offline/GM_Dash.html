@@ -151,7 +151,6 @@
     <button class="fbtn" data-view="products" onclick="setView('products')">รายผลิตภัณฑ์</button>
     <button class="fbtn" data-view="trend" onclick="setView('trend')">แนวโน้ม</button>
     <button class="fbtn" data-view="monthly" onclick="setView('monthly')">รายเดือน</button>
-    <button class="fbtn" data-view="race" onclick="setView('race')">🏆 Race</button>
   </div>
   <div class="filter-group" id="yearFilter" style="display:none">
     <label>ปี:</label>
@@ -172,6 +171,56 @@
 <div class="conf-bar">⛔ ข้อมูลลับ — ห้ามเผยแพร่ หรือ ส่งออกโดยไม่ได้รับอนุญาต (PDPA)</div>
 
 <script>
+// ── OFFLINE MODE STUB ──────────────────────────────────────
+// Mock google.script.run + fetch for standalone HTML (no server)
+if (typeof window !== 'undefined') {
+  if (typeof window.google === 'undefined') {
+    window.google = { script: { run: {} } };
+  }
+  var _gsrTarget = window.google.script.run;
+  _gsrTarget._success = null;
+  _gsrTarget._failure = null;
+  _gsrTarget.withSuccessHandler = function(fn){ this._success = fn; return _proxyRef; };
+  _gsrTarget.withFailureHandler  = function(fn){ this._failure = fn; return _proxyRef; };
+  _gsrTarget.withUserObject      = function(o){ return _proxyRef; };
+  var _proxyRef = new Proxy(_gsrTarget, {
+    get: function(target, prop, receiver) {
+      if (prop === '_success' || prop === '_failure') return target[prop];
+      if (typeof target[prop] === 'function') return target[prop];
+      // Unknown property = a server function name → return stub function
+      return function() {
+        console.log('[Offline] google.script.run.' + String(prop) + ' called (stubbed)', arguments);
+        var self = target;
+        setTimeout(function(){
+          if (typeof self._success === 'function') {
+            try { self._success([]); } catch(e){ console.warn('[Offline] success handler error:', e); }
+          }
+        }, 50);
+        return _proxyRef;
+      };
+    }
+  });
+  window.google.script.run = _proxyRef;
+  // Mock fetch() to return empty data (avoids CORS/network errors offline)
+  if (typeof window.fetch === 'function' && !window._fetchStubbed) {
+    window._origFetch = window.fetch;
+    window.fetch = function(url, opts) {
+      console.log('[Offline] fetch() stubbed:', url);
+      return Promise.resolve({
+        ok: true, status: 200, redirected: false,
+        text:  function(){ return Promise.resolve(''); },
+        json:  function(){ return Promise.resolve({}); },
+        blob:  function(){ return Promise.resolve(new Blob([''])); },
+        clone: function(){ return this; },
+        headers: { get: function(){ return null; } }
+      });
+    };
+    window._fetchStubbed = true;
+  }
+}
+// ── END OFFLINE MODE STUB ──────────────────────────────────
+
+
 var SCRIPT_URL = '';
 var D = null;
 var currentView = 'overview';
@@ -374,7 +423,6 @@ function setView(v) {
     case 'products': renderProducts(); break;
     case 'trend': renderTrend(); break;
     case 'monthly': renderMonthly(); break;
-    case 'race': renderRace(); break;
   }
 }
 
@@ -1300,205 +1348,6 @@ function showMonthlySection(key, btn) {
 /* ── Start ── */
 var GM_RAW_DATA = null; // Data loaded via fetch
 document.addEventListener('DOMContentLoaded', init);
-
-/* ════════════════════════════════════
-   BAR CHART RACE — GM รายผลิตภัณฑ์แบบเคลื่อนไหว
-   ════════════════════════════════════ */
-var raceTimer = null;
-var raceCanvas = null;
-var raceCtx = null;
-var raceYears = [];
-var raceData = {};
-var raceCurrentYearIdx = 0;
-var raceCurrentMonth = 0;
-var raceMode = 'yearly';
-var raceChart = 'products';
-var raceIsPlaying = false;
-var raceSpeed = 1500;
-var RACE_COLORS = ['#2563eb','#059669','#7c3aed','#ea580c','#d97706','#0891b2','#db2777','#65a30d','#dc2626','#9333ea','#0d9488','#4f46e5'];
-
-function renderRace() {
-  var h = '<div class="section">';
-  h += '<h3>🏆 Bar Chart Race — GM รายผลิตภัณฑ์แบบเคลื่อนไหว</h3>';
-  h += '<p style="font-size:12px;color:var(--text3);margin-bottom:12px">แสดงการเปลี่ยนแปลง GM รายผลิตภัณฑ์ตามเวลา — ดูว่าผลิตภัณฑ์ไหนเติบโตหรือลดลง</p>';
-  h += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">';
-  h += '<button class="fbtn" id="racePlayBtn" onclick="raceToggle()" style="background:#2563eb;color:#fff;border-color:#2563eb;font-weight:600">▶️ เริ่ม</button>';
-  h += '<button class="fbtn" onclick="raceReset()">⏹️ รีเซ็ต</button>';
-  h += '<div class="filter-group"><label>โหมด:</label>';
-  h += '<button class="fbtn active" data-race-mode="yearly" onclick="raceSetMode(\'yearly\')">รายปี</button>';
-  h += '<button class="fbtn" data-race-mode="monthly" onclick="raceSetMode(\'monthly\')">รายเดือน</button></div>';
-  h += '<div class="filter-group"><label>ความเร็ว:</label>';
-  h += '<select class="fsel" id="raceSpeed" onchange="raceSetSpeed(this.value)">';
-  h += '<option value="2500">ช้า</option><option value="1500" selected>ปกติ</option>';
-  h += '<option value="800">เร็ว</option><option value="400">เร็วมาก</option></select></div>';
-  h += '</div>';
-  h += '<div class="filter-group" style="margin-left:8px"><label>กราฟ:</label>';
-  h += '<button class="fbtn active" data-race-chart="products" onclick="raceSetChart(\'products\')">📦 รายผลิตภัณฑ์</button>';
-  h += '<button class="fbtn" data-race-chart="split" onclick="raceSetChart(\'split\')">🚗 ขาย vs 🔧 หลังการขาย</button></div>';
-  h += '</div>';
-  h += '<div class="chart-box" style="background:#0f172a;border-radius:12px;padding:16px;margin-bottom:12px">';
-  h += '<canvas id="raceCanvas" width="900" height="500" style="width:100%;max-height:500px;border-radius:8px"></canvas>';
-  h += '</div>';
-  h += '<div id="raceLegend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:11px"></div>';
-  h += '<div id="raceSplitInfo" style="display:none;margin-top:16px;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--border)"></div>';
-  h += '</div>';
-  document.getElementById('mainContent').innerHTML = h;
-  raceBuildData();
-  raceCurrentYearIdx = 0; raceCurrentMonth = 0;
-  raceDrawFrame();
-  var legendEl = document.getElementById('raceLegend');
-  if (legendEl) {
-    var lh = '';
-    D.products.forEach(function(p, i) {
-      var ps = PRODUCT_SECTIONS[String(p.no)];
-      if (!ps) return;
-      var c = RACE_COLORS[i % RACE_COLORS.length];
-      lh += '<div style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:' + c + ';border-radius:2px;display:inline-block"></span><span style="color:var(--text2)">' + ps.icon + ' ' + ps.label + '</span></div>';
-    });
-    legendEl.innerHTML = lh;
-  }
-}
-
-function raceBuildData() {
-  raceData = {}; raceYears = [];
-  if (D.summary) {
-    D.summary.forEach(function(s) { if (s.year && s.year >= 2551 && s.year <= 2569) raceYears.push(s.year); });
-    raceYears.sort(function(a, b) { return a - b; });
-  }
-  raceYears.forEach(function(year) {
-    raceData[year] = { yearly: [], monthly: {} };
-    D.products.forEach(function(p, i) {
-      var ps = PRODUCT_SECTIONS[String(p.no)];
-      if (!ps) return;
-      var data = getProductData(p.no);
-      var c = RACE_COLORS[i % RACE_COLORS.length];
-      var yd = data.yearly.find(function(y) { return y.year === year; });
-      var yv = yd ? (yd.totalComplete || yd.total || 0) : 0;
-      raceData[year].yearly.push({ no: p.no, name: ps.label, icon: ps.icon, value: yv, color: c });
-      var ma = data.monthly[year] || [0,0,0,0,0,0,0,0,0,0,0,0];
-      var cu = 0;
-      raceData[year].monthly[p.no] = [];
-      for (var m = 0; m < 12; m++) { cu += (ma[m]||0); raceData[year].monthly[p.no].push({ no: p.no, name: ps.label, icon: ps.icon, value: cu, color: c }); }
-    });
-  });
-}
-
-function raceDrawFrame() {
-  if (raceChart === 'split') { raceDrawSplitFrame(); return; }
-  raceCanvas = document.getElementById('raceCanvas');
-  if (!raceCanvas) return;
-  raceCtx = raceCanvas.getContext('2d');
-  var W = raceCanvas.width, H = raceCanvas.height;
-  raceCtx.clearRect(0, 0, W, H);
-  var year = raceYears[raceCurrentYearIdx];
-  if (!year) return;
-  var fd = [];
-  if (raceMode === 'yearly') { fd = raceData[year].yearly.slice(); }
-  else { var mi = raceCurrentMonth; D.products.forEach(function(p) { var md = raceData[year].monthly[p.no]; if (md && md[mi]) fd.push(md[mi]); }); }
-  fd.sort(function(a, b) { return b.value - a.value; });
-  var tt = raceMode === 'yearly' ? 'ปี ' + year + ' — GM รวมรายผลิตภัณฑ์' : 'ปี ' + year + ' ' + MONTHS_TH[raceCurrentMonth] + ' — GM สะสม';
-  raceCtx.fillStyle = '#fff'; raceCtx.font = 'bold 20px Segoe UI, sans-serif'; raceCtx.textAlign = 'center'; raceCtx.fillText(tt, W/2, 35);
-  var mv = Math.max.apply(null, fd.map(function(d) { return d.value; }).concat([1]));
-  var bh = 28, bg = 6, sy = 60, lm = 200, rm = 80, bw = W - lm - rm;
-  fd.forEach(function(d, idx) {
-    var y = sy + idx * (bh + bg);
-    var w = (d.value / mv) * bw;
-    raceCtx.fillStyle = 'rgba(255,255,255,0.05)'; raceCtx.fillRect(lm, y, bw, bh);
-    raceCtx.fillStyle = d.color; raceCtx.fillRect(lm, y, Math.max(w, 2), bh);
-    raceCtx.fillStyle = '#94a3b8'; raceCtx.font = 'bold 14px Segoe UI, sans-serif'; raceCtx.textAlign = 'right'; raceCtx.fillText((idx+1)+'.', lm-10, y+bh-8);
-    raceCtx.fillStyle = '#fff'; raceCtx.font = '13px Segoe UI, sans-serif'; raceCtx.textAlign = 'left'; raceCtx.fillText(d.icon+' '+d.name, lm+8, y+bh-8);
-    raceCtx.fillStyle = '#fff'; raceCtx.font = 'bold 13px Segoe UI, sans-serif'; raceCtx.textAlign = 'right';
-    var vt = d.value >= 1000000 ? (d.value/1000000).toFixed(2)+'M' : d.value >= 1000 ? (d.value/1000).toFixed(0)+'K' : d.value.toFixed(0);
-    raceCtx.fillText(vt, lm+w+8, y+bh-8);
-  });
-  var pb = document.getElementById('racePlayBtn');
-  if (pb) pb.innerHTML = raceIsPlaying ? '⏸️ หยุด' : '▶️ เล่น';
-}
-
-function raceToggle() {
-  raceIsPlaying = !raceIsPlaying;
-  if (raceIsPlaying) racePlay(); else { if (raceTimer) { clearTimeout(raceTimer); raceTimer = null; } raceDrawFrame(); }
-}
-function racePlay() {
-  if (!raceIsPlaying) return;
-  if (raceMode === 'yearly') { raceCurrentYearIdx++; if (raceCurrentYearIdx >= raceYears.length) raceCurrentYearIdx = 0; }
-  else { raceCurrentMonth++; if (raceCurrentMonth >= 12) { raceCurrentMonth = 0; raceCurrentYearIdx++; if (raceCurrentYearIdx >= raceYears.length) raceCurrentYearIdx = 0; } }
-  raceDrawFrame();
-  raceTimer = setTimeout(racePlay, raceSpeed);
-}
-function raceReset() { raceIsPlaying = false; if (raceTimer) { clearTimeout(raceTimer); raceTimer = null; } raceCurrentYearIdx = 0; raceCurrentMonth = 0; raceDrawFrame(); }
-function raceSetMode(mode) { raceMode = mode; document.querySelectorAll('[data-race-mode]').forEach(function(b) { b.classList.toggle('active', b.dataset.raceMode === mode); }); raceReset(); }
-function raceSetSpeed(speed) { raceSpeed = parseInt(speed); }
-function raceSetChart(chart) {
-  raceChart = chart;
-  document.querySelectorAll('[data-race-chart]').forEach(function(b) { b.classList.toggle('active', b.dataset.raceChart === chart); });
-  var leg = document.getElementById('raceLegend');
-  var si = document.getElementById('raceSplitInfo');
-  if (chart === 'split') { if (leg) leg.style.display = 'none'; if (si) si.style.display = 'block'; }
-  else { if (leg) leg.style.display = 'flex'; if (si) si.style.display = 'none'; }
-  raceReset();
-}
-
-function raceDrawSplitFrame() {
-  raceCanvas = document.getElementById('raceCanvas');
-  if (!raceCanvas) return;
-  raceCtx = raceCanvas.getContext('2d');
-  var W = raceCanvas.width, H = raceCanvas.height;
-  raceCtx.clearRect(0, 0, W, H);
-  var year = raceYears[raceCurrentYearIdx];
-  if (!year) return;
-  var salesAvg = 0, asAvg = 0, salesCount = 0, asCount = 0;
-  var cur = D.summary.find(function(s) { return s.year === year; });
-  if (cur) {
-    var sa = calcMonthlyAvg('gmSalesMonthly', year);
-    var aa = calcMonthlyAvg('afterSalesTotal', year);
-    salesAvg = sa.avg; asAvg = aa.avg; salesCount = sa.count; asCount = aa.count;
-  }
-  var total = salesAvg + asAvg;
-  var salesPct = total > 0 ? (salesAvg / total * 100) : 0;
-  var asPct = total > 0 ? (asAvg / total * 100) : 0;
-  var tt = 'ปี ' + year + ' — GM เฉลี่ย/เดือน: ขาย vs หลังการขาย';
-  raceCtx.fillStyle = '#fff'; raceCtx.font = 'bold 20px Segoe UI, sans-serif'; raceCtx.textAlign = 'center'; raceCtx.fillText(tt, W/2, 35);
-  var bh = 60, sy = 80, lm = 200, rm = 80, bw = W - lm - rm;
-  var mv = Math.max(salesAvg, asAvg, 1);
-  var salesW = (salesAvg / mv) * bw;
-  var asW = (asAvg / mv) * bw;
-  raceCtx.fillStyle = '#2563eb'; raceCtx.fillRect(lm, sy, Math.max(salesW, 2), bh);
-  raceCtx.fillStyle = '#10b981'; raceCtx.fillRect(lm, sy + bh + 10, Math.max(asW, 2), bh);
-  raceCtx.fillStyle = '#fff'; raceCtx.font = 'bold 16px Segoe UI, sans-serif'; raceCtx.textAlign = 'right';
-  raceCtx.fillText('🚗 ขาย', lm - 10, sy + bh - 20);
-  raceCtx.fillStyle = '#94a3b8'; raceCtx.font = '12px Segoe UI, sans-serif';
-  raceCtx.fillText(salesCount + ' เดือน', lm - 10, sy + bh - 4);
-  raceCtx.fillStyle = '#fff'; raceCtx.font = 'bold 16px Segoe UI, sans-serif';
-  raceCtx.fillText('🔧 หลังการขาย', lm - 10, sy + bh + 10 + bh - 20);
-  raceCtx.fillStyle = '#94a3b8'; raceCtx.font = '12px Segoe UI, sans-serif';
-  raceCtx.fillText(asCount + ' เดือน', lm - 10, sy + bh + 10 + bh - 4);
-  raceCtx.fillStyle = '#fff'; raceCtx.font = 'bold 20px Segoe UI, sans-serif'; raceCtx.textAlign = 'left';
-  raceCtx.fillText(fmtFull(salesAvg) + ' ฿', lm + Math.max(salesW, 2) + 10, sy + bh / 2 + 7);
-  raceCtx.fillText(fmtFull(asAvg) + ' ฿', lm + Math.max(asW, 2) + 10, sy + bh + 10 + bh / 2 + 7);
-  raceCtx.fillStyle = '#fff'; raceCtx.font = 'bold 14px Segoe UI, sans-serif'; raceCtx.textAlign = 'center';
-  raceCtx.fillText('รวม: ' + fmtFull(total) + ' ฿/เดือน', W/2, H - 50);
-  raceCtx.fillStyle = '#2563eb'; raceCtx.font = '12px Segoe UI, sans-serif';
-  raceCtx.fillText('ขาย ' + salesPct.toFixed(1) + '%', W/2 - 100, H - 25);
-  raceCtx.fillStyle = '#10b981';
-  raceCtx.fillText('หลังการขาย ' + asPct.toFixed(1) + '%', W/2 + 100, H - 25);
-  var pb = document.getElementById('racePlayBtn');
-  if (pb) pb.innerHTML = raceIsPlaying ? '⏸️ หยุด' : '▶️ เล่น';
-  var si = document.getElementById('raceSplitInfo');
-  if (si) {
-    var prev = prevYear(year);
-    var prevSales = 0, prevAS = 0;
-    if (prev) { var psa = calcMonthlyAvg('gmSalesMonthly', prev.year); var paa = calcMonthlyAvg('afterSalesTotal', prev.year); prevSales = psa.avg; prevAS = paa.avg; }
-    var yoyS = prevSales > 0 ? ((salesAvg - prevSales) / prevSales * 100).toFixed(1) : null;
-    var yoyA = prevAS > 0 ? ((asAvg - prevAS) / prevAS * 100).toFixed(1) : null;
-    var yoyT = (prevSales + prevAS) > 0 ? ((total - (prevSales + prevAS)) / (prevSales + prevAS) * 100).toFixed(1) : null;
-    si.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">' +
-      '<div style="text-align:center;padding:12px;background:#dbeafe;border-radius:8px"><div style="font-size:11px;color:#1e40af">🚗 ขาย/เดือน</div><div style="font-size:18px;font-weight:700;color:#2563eb">' + fmtFull(salesAvg) + '</div>' + (yoyS ? '<div style="font-size:11px;color:' + (parseFloat(yoyS) >= 0 ? '#10b981' : '#ef4444') + '">' + (parseFloat(yoyS) >= 0 ? '↑' : '↓') + ' ' + Math.abs(yoyS) + '% YoY</div>' : '') + '</div>' +
-      '<div style="text-align:center;padding:12px;background:#d1fae5;border-radius:8px"><div style="font-size:11px;color:#065f46">🔧 หลังการขาย/เดือน</div><div style="font-size:18px;font-weight:700;color:#10b981">' + fmtFull(asAvg) + '</div>' + (yoyA ? '<div style="font-size:11px;color:' + (parseFloat(yoyA) >= 0 ? '#10b981' : '#ef4444') + '">' + (parseFloat(yoyA) >= 0 ? '↑' : '↓') + ' ' + Math.abs(yoyA) + '% YoY</div>' : '') + '</div>' +
-      '<div style="text-align:center;padding:12px;background:#fef3c7;border-radius:8px"><div style="font-size:11px;color:#92400e">📊 รวม/เดือน</div><div style="font-size:18px;font-weight:700;color:#f59e0b">' + fmtFull(total) + '</div>' + (yoyT ? '<div style="font-size:11px;color:' + (parseFloat(yoyT) >= 0 ? '#10b981' : '#ef4444') + '">' + (parseFloat(yoyT) >= 0 ? '↑' : '↓') + ' ' + Math.abs(yoyT) + '% YoY</div>' : '') + '</div>' +
-    '</div>';
-  }
-}
 </script>
 </body>
 </html>
