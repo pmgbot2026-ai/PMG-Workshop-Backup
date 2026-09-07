@@ -8,11 +8,30 @@
 
 var GM_SS_ID = '18CPvbyFzV5TQNKw_N9MxPEYeG0OsP5yigsWcp7Q0EbE';
 
+/* ═══════════════════════════════════════════════════
+   PDPA Password Protection
+   Password: pmsg2026  |  2FA OTP: 2580
+   API endpoints (view=data) bypass password check.
+   ═══════════════════════════════════════════════════ */
+var PDPA_PASSWORD = 'pmsg2026';
+var PDPA_OTP = '2580';
+
 function doGet(e) {
   var p = e.parameter || {};
   var view = p.view || 'gm';
+
+  // API / data endpoints bypass password protection
   if (view === 'data') return serveGmData_(p);
+
+  // PDPA authentication check
+  if (!isPdpaAuthed_(p)) return serveLogin_();
+
   return serveGmDashboard_(p);
+}
+
+/* Check whether the request carries valid PDPA credentials */
+function isPdpaAuthed_(p) {
+  return (p.pass === PDPA_PASSWORD && p.otp === PDPA_OTP);
 }
 
 /* ── Serve data as JSON ── */
@@ -200,4 +219,56 @@ function pv_(v) {
   if (s.charAt(0) === '(' && s.charAt(s.length-1) === ')') s = '-' + s.substring(1, s.length-1);
   var n = parseFloat(s);
   return isNaN(n) ? null : n;
+}
+
+/* ═══════════════════════════════════════════════════
+   PDPA Login Page
+   Form uses GET method + target=_top so that the
+   credentials are passed as URL parameters and the
+   top-level frame is replaced (works inside Google
+   Sites embeds / iframes).
+   ═══════════════════════════════════════════════════ */
+function serveLogin_() {
+  var html = ''
+    + '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8">'
+    + '<meta name="viewport" content="width=device-width, initial-scale=1">'
+    + '<title>PMG Finance — PDPA Login</title>'
+    + '<style>'
+    + '  *{box-sizing:border-box;font-family:-apple-system,Segoe UI,Roboto,sans-serif}'
+    + '  body{margin:0;padding:0;min-height:100vh;display:flex;align-items:center;'
+    + '       justify-content:center;background:linear-gradient(135deg,#1e3c72,#2a5298);'
+    + '       color:#fff}'
+    + '  .card{background:#fff;color:#222;padding:36px 32px;border-radius:14px;'
+    + '        width:340px;max-width:92vw;box-shadow:0 14px 40px rgba(0,0,0,.35)}'
+    + '  h1{margin:0 0 6px;font-size:22px;color:#1e3c72;text-align:center}'
+    + '  .sub{color:#666;font-size:13px;text-align:center;margin:0 0 22px}'
+    + '  label{display:block;font-size:13px;color:#444;margin:12px 0 4px;font-weight:600}'
+    + '  input{width:100%;padding:11px 12px;border:1px solid #ccc;border-radius:8px;'
+    + '        font-size:15px;outline:none;transition:border .2s}'
+    + '  input:focus{border-color:#2a5298}'
+    + '  button{width:100%;margin-top:18px;padding:12px;border:0;border-radius:8px;'
+    + '         background:#1e3c72;color:#fff;font-size:15px;font-weight:600;cursor:pointer}'
+    + '  button:hover{background:#2a5298}'
+    + '  .err{color:#c0392b;font-size:13px;text-align:center;margin-top:14px;min-height:18px}'
+    + '  .lock{text-align:center;font-size:38px;margin-bottom:8px}'
+    + '  .pdpa{font-size:11px;color:#999;text-align:center;margin-top:18px}'
+    + '</style></head><body>'
+    + '<div class="card">'
+    + '<div class="lock">&#128274;</div>'
+    + '<h1>PMG Finance Dashboard</h1>'
+    + '<p class="sub">เข้าสู่ระบบ (PDPA Protected)</p>'
+    + '<form method="GET" target="_top" action="">'
+    + '  <label for="pass">รหัสผ่าน (Password)</label>'
+    + '  <input id="pass" name="pass" type="password" placeholder="รหัสผ่าน" required autofocus>'
+    + '  <label for="otp">รหัสยืนยัน 2FA (OTP)</label>'
+    + '  <input id="otp" name="otp" type="password" placeholder="OTP 2FA" required>'
+    + '  <button type="submit">เข้าสู่ระบบ</button>'
+    + '</form>'
+    + '<div class="err" id="err"></div>'
+    + '<div class="pdpa">ข้อมูลส่วนบุคคลเข้าถึงได้ตาม PDPA เท่านั้น</div>'
+    + '</div></body></html>';
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('PMG Finance — Login')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
