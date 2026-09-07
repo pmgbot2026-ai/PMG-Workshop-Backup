@@ -14,7 +14,7 @@ import urllib.request
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-API_URL = "https://script.google.com/macros/s/AKfycbxt_PxWtxdWkd3Exufy070oJkyAgegfpAeD296hEkytdBNPo_yA0Dc0HEDcKkNpiAgC/exec?api=1"
+API_URL = "https://script.google.com/macros/s/AKfycbxt_PxWtxdWkd3Exufy070oJkyAgegfpAeD296hEkytdBNPo_yA0Dc0HEDcKkNpiAgC/exec?api=1&pw=pmsg2026&fa=2580"
 TARGET = 15  # cars/day target
 
 THAI_DAYS = {
@@ -32,8 +32,23 @@ SHORT_MODE = "--short" in sys.argv
 
 def fetch_data():
     req = urllib.request.Request(API_URL)
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read().decode())
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.loads(resp.read().decode())
+            # Cache for fallback on future runs
+            try:
+                with open("/tmp/pmg_data.json", "w") as f:
+                    json.dump(data, f, ensure_ascii=False)
+            except Exception:
+                pass
+            return data
+    except Exception as e:
+        # Fall back to last cached data if the live fetch fails
+        try:
+            with open("/tmp/pmg_data.json") as f:
+                return json.load(f)
+        except Exception:
+            raise RuntimeError(f"fetch failed and no cached data: {e}")
 
 def thai_date_short(dt):
     """Format date as: วันศุกร์ (09/05/2569)"""
