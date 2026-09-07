@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PMG War Room v13.62</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7"></script>
+<title>PMG War Room v13.65</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC" crossorigin="anonymous"></script>
 <script>if(typeof Chart==="undefined"){var _s=document.createElement('script');_s.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.7/chart.umd.min.js";document.head.appendChild(_s);}</script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <script>if(typeof ChartDataLabels==="undefined"){var _s2=document.createElement('script');_s2.src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js";document.head.appendChild(_s2);}</script>
@@ -48,6 +48,25 @@ select{padding:4px 8px;border-radius:6px;border:1px solid #d1d5db;font-family:'S
 .up{color:var(--green)}.dn{color:var(--red)}
 .loading{text-align:center;padding:40px;color:var(--dim);font-size:16px}
 .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.7rem;font-weight:600;color:#fff;vertical-align:middle;margin-left:6px}
+/* ═══ Ranking medal styles ═══ */
+tr.rank-1 td{background:linear-gradient(90deg,rgba(255,215,0,.18),rgba(255,215,0,.05))!important;font-weight:700}
+tr.rank-1 td:first-child::before{content:'🥇 ';font-size:1.1em}
+tr.rank-2 td{background:linear-gradient(90deg,rgba(192,192,192,.18),rgba(192,192,192,.05))!important;font-weight:600}
+tr.rank-2 td:first-child::before{content:'🥈 ';font-size:1.1em}
+tr.rank-3 td{background:linear-gradient(90deg,rgba(205,127,50,.18),rgba(205,127,50,.05))!important;font-weight:600}
+tr.rank-3 td:first-child::before{content:'🥉 ';font-size:1.1em}
+.rank-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-weight:700;font-size:.8rem;color:#fff}
+.rank-badge.r1{background:#ffd700;color:#7a5a00}
+.rank-badge.r2{background:#c0c0c0;color:#555}
+.rank-badge.r3{background:#cd7f32;color:#fff}
+.rank-badge.rN{background:#e2e8f0;color:#64748b}
+.crosstab-th{position:sticky;left:0;z-index:2;background:#f0f4ff;font-weight:600}
+.crosstab-num{text-align:right;font-variant-numeric:tabular-nums}
+.crosstab-zero{color:#cbd5e1}
+.trend-up{color:var(--green);font-weight:600}
+.trend-dn{color:var(--red);font-weight:600}
+.trend-flat{color:var(--dim)}
+.prod-top{background:linear-gradient(90deg,rgba(59,130,246,.12),rgba(59,130,246,.02))!important;font-weight:700}
 .badge-blue{background:var(--accent)}.badge-green{background:var(--green)}.badge-orange{background:var(--orange)}
 @media(max-width:768px){.kpi-row{grid-template-columns:1fr 1fr}.chart-box{height:220px}}
 /* Summary tab */
@@ -144,6 +163,23 @@ select{padding:4px 8px;border-radius:6px;border:1px solid #d1d5db;font-family:'S
 <div class="err" id="errPanel"></div>
 
 <script>
+/* ═══════════ XSS Defense: escape dynamic data from Google Sheets ═══════════
+   escapeHtml(s) — escapes &, <, >, ", ' so any HTML/JS typed into a sheet
+   cell renders as visible text instead of executing in every viewer's browser.
+   Use ONLY on dynamic data values (names, month labels, error messages, etc.)
+   — never on static HTML markup that the app itself generates. */
+function escapeHtml(s){
+  if(s===null||s===undefined)return '';
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+/* Alias for the pre-existing escHtml() calls in renderSummary/renderBrief. */
+function escHtml(s){return escapeHtml(s);}
+
 /* ═══════════ Global Error Catcher ═══════════ */
 window.onerror=function(msg,url,line,col,err){
   var p=document.getElementById('errPanel');
@@ -245,11 +281,11 @@ var FALLBACK_YEARS=[67,68,69];
 function getYearLabels(){
   var yoy=D.yoy;
   if(!yoy||!yoy.yearHeaders||!yoy.yearHeaders.length){
-    return FALLBACK_YEARS.map(function(t){return{christian:t-543+2000,thai:t,label:'ปี '+t};});
+    return FALLBACK_YEARS.map(function(t){return{christian:t+1957,thai:t,label:'ปี '+t};});
   }
   return yoy.yearHeaders.map(function(y){return{christian:y,thai:(y+543)%100,label:'ปี '+(y+543)%100};});
 }
-function getYearFromThai(thai){var yoy=D.yoy;var headers=(yoy&&yoy.yearHeaders&&yoy.yearHeaders.length)?yoy.yearHeaders:FALLBACK_YEARS.map(function(t){return t-543+2000;});var m=headers.filter(function(y){return(y+543)%100===thai;});return m.length?m[0]:(thai-543+2000);}
+function getYearFromThai(thai){var yoy=D.yoy;var headers=(yoy&&yoy.yearHeaders&&yoy.yearHeaders.length)?yoy.yearHeaders:FALLBACK_YEARS.map(function(t){return t+1957;});var m=headers.filter(function(y){return(y+543)%100===thai;});return m.length?m[0]:(thai+1957);}
 
 /* ═══════════ Load Data — via google.script.run ═══════════ */
 function loadData(){
@@ -313,6 +349,7 @@ function allLoaded(){
   try{renderBrief();}catch(e){showErr('สรุปสั้น: '+e.message);}
   var dateStr=(D.okr&&D.okr.date)?D.okr.date:'โหลดเสร็จ';
   document.getElementById('hdrDate').textContent=dateStr;
+  try{computeAllHighlights();}catch(e){}
   console.log('v13.64 all rendering done');
 }
 
@@ -332,7 +369,7 @@ function renderDash(){
   // Build month options from BCT data (current year)
   var monthOpts='<option value="-1">-- เลือกเดือน --</option>';
   for(var i=0;i<bctList.length;i++){
-    monthOpts+='<option value="'+i+'">'+bctList[i].m+'</option>';
+    monthOpts+='<option value="'+i+'">'+escapeHtml(bctList[i].m)+'</option>';
   }
 
   // Find last month with data
@@ -344,7 +381,7 @@ function renderDash(){
   // ─── Card 1: Month-overview with month selector (defaults to latest month) ───
   var h='<div class="card"><h2>📊 ภาพรวม PMG War Room — ปี '+lastYear+'</h2>';
   h+='<div class="sel-group">';
-  h+='<label>📂 เลือกเดือน: <select id="selDashMonth" onchange="renderDashMonth()">'+monthOpts+'</select></label>';
+  h+='<label>📂 เลือกเดือน: <select id="selDashMonth" onchange="renderDashMonth();try{computeAllHighlights();}catch(e){}">'+monthOpts+'</select></label>';
   h+='</div>';
   h+='<div id="dashOverview"></div></div>';
 
@@ -437,7 +474,7 @@ function renderDashMonth(){
   var f=idx<finList.length?finList[idx]:null;
 
   // ─── Card 1 top: selected month KPIs always visible ───
-  var monthName=b.m;
+  var monthName=escapeHtml(b.m);
   var bPct=b.tc?(b.ac/b.tc*1000)/10:0;
   var dPct=b.td?(b.ad/b.td*1000)/10:0;
   var otherVehicles=(b.opk||0)+(b.sdn||0);
@@ -503,7 +540,10 @@ function renderDashComp(){
   function getHistBct(monthIdx,thaiYear){
     var christianYear=getYearFromThai(thaiYear);
     var histYear=hist[christianYear];
-    if(!histYear||!histYear.bct)return null;
+    if(!histYear||!histYear.bct){
+      console.warn('getHistBct: no hist for year',thaiYear,'(christian',christianYear+') hist keys:',Object.keys(hist));
+      return null;
+    }
     var mName=getMonthName(monthIdx);
     for(var i=0;i<histYear.bct.length;i++){
       var b=histYear.bct[i];
@@ -558,6 +598,9 @@ function renderDashComp(){
     }else{
       bctData=getHistBct(monthIdx,year);
       finData=getHistFin(monthIdx,year);
+      if(!bctData&&!finData){
+        console.warn('addItem: no hist data for month',monthIdx,'year',year,'hist keys:',Object.keys(hist));
+      }
     }
     // If no hist BCT, fallback to YoY delivery
     var yoyDelivery=null;
@@ -586,7 +629,7 @@ function renderDashComp(){
   // Build column headers with year
   var h='<div style="overflow-x:auto"><table><tr><th>ตัวชี้วัด</th>';
   items.forEach(function(it){
-    var label=it.m+' <span class="badge badge-'+(it.year===69?'green':it.year===68?'blue':'orange')+'">ปี '+it.year+'</span>';
+    var label=escapeHtml(it.m)+' <span class="badge badge-'+(it.year===69?'green':it.year===68?'blue':'orange')+'">ปี '+it.year+'</span>';
     h+='<th>'+label+'</th>';
   });
   if(items.length===2){
@@ -620,7 +663,7 @@ function renderDashComp(){
     items.forEach(function(it){
       var v=mt.getV(it);
       vals.push(v);
-      if(v===null){h+='<td style="color:#aaa">—</td>';}
+      if(v===null){h+='<td style="color:#aaa" title="ไม่มีข้อมูลสำหรับปี '+it.year+'">— ไม่มี</td>';}
       else{h+='<td>'+fmt(v)+'</td>';}
     });
     if(items.length===2&&vals[0]!==null&&vals[1]!==null){
@@ -648,7 +691,7 @@ function renderDashComp(){
     items.forEach(function(it){
       var v=mt.getV(it);
       vals.push(v);
-      if(v===null){h+='<td style="color:#aaa">—</td>';}
+      if(v===null){h+='<td style="color:#aaa" title="ไม่มีข้อมูลสำหรับปี '+it.year+'">— ไม่มี</td>';}
       else{h+='<td>'+(mt.fmtV?mt.fmtV(v):fmt(v))+'</td>';}
     });
     if(items.length===2&&vals[0]!==null&&vals[1]!==null){
@@ -671,10 +714,14 @@ function renderDashComp(){
   }
 
   h+='</table></div>';
+  // Show warning for missing hist data
+  var noDataItems=items.filter(function(it){return !it.bct&&!it.fin&&it.yoyDelivery===null;});
+  if(noDataItems.length>0){
+    var warnMsg=noDataItems.map(function(it){return 'ปี '+it.year+' '+escapeHtml(it.m);}).join(', ');
+    h+='<div style="margin-top:8px;padding:8px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;font-size:11px;color:#92400e">⚠️ ไม่พบข้อมูลสำหรับ: '+warnMsg+' — อาจเป็นเพราะไม่มี Sheet ย้อนหลัง หรือกำลังโหลดข้อมูล</div>';
+  }
   el.innerHTML=h;
 }
-
-/* ═══════════ 1. OKR/KPI ═══════════ */
 function renderOKR(){
   var d=D.okr;var f=D.fin;if(!d){document.getElementById('p-okr').innerHTML='<div class="card"><h2>⚠️ ไม่มีข้อมูล OKR/KPI</h2><p>กรุณารอสักครู่ หรือรีเฟรชหน้าใหม่</p></div>';return;}
   var hist=D.hist||{};
@@ -690,7 +737,7 @@ function renderOKR(){
   var months=d.months||[];
   var selOKRMonth='<select id="selOKRMonth" onchange="renderOKRDetail()" style="margin:0 8px;padding:4px 8px;border-radius:6px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.6);color:#e2e8f0;font-size:14px;">';
   for(var mi=0;mi<months.length;mi++){
-    selOKRMonth+='<option value="'+mi+'"'+(mi===months.length-1?' selected':'')+'>'+months[mi].m+'</option>';
+    selOKRMonth+='<option value="'+mi+'"'+(mi===months.length-1?' selected':'')+'>'+escapeHtml(months[mi].m)+'</option>';
   }
   selOKRMonth+='</select>';
 
@@ -707,7 +754,7 @@ function renderOKR(){
     h+='<div class="card"><h2>📋 รายละเอียดการเงิน รายเดือน</h2><div style="overflow-x:auto"><table><tr><th>เดือน</th><th>เป้ารายได้</th><th>รายได้จริง</th><th>%</th><th>ค่าแรง</th><th>ค่าอะไหล่</th><th>กำไรขั้นต้น</th><th>ค่าแรง/คัน</th><th>ค่าอะไหล่/คัน</th></tr>';
     f.fin.forEach(function(r){
       var p=r.rT?(r.rA/r.rT*100).toFixed(1):'-';
-      h+='<tr><td>'+r.m+'</td><td>'+fmtB(r.rT)+'</td><td>'+fmtB(r.rA)+'</td><td class="'+pctC(+p)+'">'+p+'%</td><td>'+fmtB(r.sal)+'</td><td>'+fmtB(r.pts)+'</td><td>'+fmtB(r.gm)+'</td><td>'+fmtB(r.rpC)+'</td><td>'+fmtB(r.spC)+'</td></tr>';
+      h+='<tr><td>'+escapeHtml(r.m)+'</td><td>'+fmtB(r.rT)+'</td><td>'+fmtB(r.rA)+'</td><td class="'+pctC(+p)+'">'+p+'%</td><td>'+fmtB(r.sal)+'</td><td>'+fmtB(r.pts)+'</td><td>'+fmtB(r.gm)+'</td><td>'+fmtB(r.rpC)+'</td><td>'+fmtB(r.spC)+'</td></tr>';
     });
     h+='</table></div></div>';
   }
@@ -718,7 +765,7 @@ function renderOKR(){
     h+='<div class="card"><h2>🔧 ประเภทงานซ่อม (เบา/กลาง/หนัก)</h2><div class="chart-box lg"><canvas id="cRepairType"></canvas></div>';
     h+='<div style="overflow-x:auto;margin-top:8px"><table><tr><th>เดือน</th><th>เบา(คัน)</th><th>กลาง(คัน)</th><th>หนัก(คัน)</th><th>รวม(คัน)</th><th>ค่าแรงเบา</th><th>ค่าแรงกลาง</th><th>ค่าแรงหนัก</th><th>ค่าอะไหล่เบา</th><th>ค่าอะไหล่กลาง</th><th>ค่าอะไหล่หนัก</th></tr>';
     rt.monthly.forEach(function(r){
-      h+='<tr><td>'+r.m+'</td><td>'+fmt(r.lq)+'</td><td>'+fmt(r.mq)+'</td><td>'+fmt(r.hq)+'</td><td><b>'+fmt(r.tq)+'</b></td><td>'+fmtB(r.ls)+'</td><td>'+fmtB(r.ms)+'</td><td>'+fmtB(r.hs)+'</td><td>'+fmtB(r.lp)+'</td><td>'+fmtB(r.mp)+'</td><td>'+fmtB(r.hp)+'</td></tr>';
+      h+='<tr><td>'+escapeHtml(r.m)+'</td><td>'+fmt(r.lq)+'</td><td>'+fmt(r.mq)+'</td><td>'+fmt(r.hq)+'</td><td><b>'+fmt(r.tq)+'</b></td><td>'+fmtB(r.ls)+'</td><td>'+fmtB(r.ms)+'</td><td>'+fmtB(r.hs)+'</td><td>'+fmtB(r.lp)+'</td><td>'+fmtB(r.mp)+'</td><td>'+fmtB(r.hp)+'</td></tr>';
     });
     h+='</table></div></div>';
   }
@@ -813,8 +860,8 @@ function renderOKR(){
 
   // ─── Chart: Service Mix percentages ───
   if(sm&&sm.categories&&sm.categories.length&&document.getElementById('cServiceMix')){
-    var pctCats=sm.categories.filter(function(c){return c.label.indexOf('(คัน)')<0;});
-    var cntCats=sm.categories.filter(function(c){return c.label.indexOf('(คัน)')>=0;});
+    var pctCats=sm.categories.filter(function(c){return c.label.indexOf('(คัน)')<0 && (c.y2024>0||c.y2025>0||c.y2026>0);});
+    var cntCats=sm.categories.filter(function(c){return c.label.indexOf('(คัน)')>=0 && (c.y2024>0||c.y2025>0||c.y2026>0);});
 
     mkC('cServiceMix',{type:'bar',data:{
       labels:pctCats.map(function(c){return c.label;}),
@@ -831,7 +878,7 @@ function renderOKR(){
 
   // ─── Chart: Service Mix counts (คัน) ───
   if(sm&&sm.categories&&sm.categories.length&&document.getElementById('cServiceMixCnt')){
-    var cntCats2=sm.categories.filter(function(c){return c.label.indexOf('(คัน)')>=0;});
+    var cntCats2=sm.categories.filter(function(c){return c.label.indexOf('(คัน)')>=0 && (c.y2024>0||c.y2025>0||c.y2026>0);});
     mkC('cServiceMixCnt',{type:'bar',data:{
       labels:cntCats2.map(function(c){return c.label.replace('(คัน)','');}),
       datasets:[
@@ -1149,7 +1196,7 @@ function renderOKRDetail(){
 
   // KPI cards
   var kh='<div class="kpi-row">';
-  kh+='<div class="kpi"><div class="lbl">📌 '+m.m+' — เป้า/ทำได้ (รถ)</div><div class="val">'+fmt(carTgt)+'/'+fmt(carAct)+'</div>'+pctS(carPct,'ทำได้ '+carPct.toFixed(1)+'%')+'</div>';
+  kh+='<div class="kpi"><div class="lbl">📌 '+escapeHtml(m.m)+' — เป้า/ทำได้ (รถ)</div><div class="val">'+fmt(carTgt)+'/'+fmt(carAct)+'</div>'+pctS(carPct,'ทำได้ '+carPct.toFixed(1)+'%')+'</div>';
   kh+='<div class="kpi"><div class="lbl">ส่งมอบ เป้า/ทำได้</div><div class="val">'+fmt(delTgt)+'/'+fmt(delAct)+'</div>'+pctS(delPct,'ทำได้ '+delPct.toFixed(1)+'%')+'</div>';
   kh+='<div class="kpi"><div class="lbl">เป้ารายได้ / รายได้จริง</div><div class="val">'+fmtB(revTgt)+'/'+fmtB(revAct)+'</div>'+pctS(revPct,'ทำได้ '+revPct.toFixed(1)+'%')+'</div>';
   kh+='</div><div class="kpi-row">';
@@ -1179,13 +1226,15 @@ function renderOKRDetail(){
   var histFin68=hist68.fin?hist68.fin[idx]:null;
   var detH='<div class="kpi-row" style="margin-top:6px">';
   if(histBct68){
-    detH+='<div class="kpi" style="border-color:rgba(251,191,36,.3)"><div class="lbl">📊 ปี68 '+m.m+' ส่งมอบ</div><div class="val" style="color:#fbbf24">'+fmt(histBct68.ad)+'</div></div>';
+    detH+='<div class="kpi" style="border-color:rgba(251,191,36,.3)"><div class="lbl">📊 ปี68 '+escapeHtml(m.m)+' ส่งมอบ</div><div class="val" style="color:#fbbf24">'+fmt(histBct68.ad)+'</div></div>';
   }
   if(histFin68){
-    detH+='<div class="kpi" style="border-color:rgba(251,191,36,.3)"><div class="lbl">📊 ปี68 '+m.m+' รายได้</div><div class="val" style="color:#fbbf24">'+fmtB(histFin68.rA)+'</div></div>';
+    detH+='<div class="kpi" style="border-color:rgba(251,191,36,.3)"><div class="lbl">📊 ปี68 '+escapeHtml(m.m)+' รายได้</div><div class="val" style="color:#fbbf24">'+fmtB(histFin68.rA)+'</div></div>';
   }
   detH+='</div>';
   el.innerHTML=detH;
+  try{hlOKR_();}catch(e){}
+
 }
 
 /* ═══════════ 2. BCT ═══════════ */
@@ -1202,7 +1251,7 @@ function renderBCT(){
   h+='<div class="card"><h2>📈 ปิดได้ vs เป้าหมาย</h2><div class="chart-box lg"><canvas id="cBC1"></canvas></div></div>';
   h+='<div class="card"><h2>📈 ส่งมอบ vs เป้าหมาย</h2><div class="chart-box lg"><canvas id="cBC2"></canvas></div></div>';
   h+='<div class="card"><h2>📋 รายเดือน</h2><div style="overflow-x:auto"><table><tr><th>เดือน</th><th>เป้าปิดได้</th><th>ปิดได้</th><th>%</th><th>เป้าส่งมอบ</th><th>ส่งมอบ</th><th>%</th><th>รถใหญ่</th><th>เงินสด(เป้า)</th><th>เงินสด(ทำได้)</th></tr>';
-  d.bct.forEach(function(r){var pC=r.tc?(r.ac/r.tc*100).toFixed(1):'-';var pD=r.td?(r.ad/r.td*100).toFixed(1):'-';h+='<tr><td>'+r.m+'</td><td>'+fmt(r.tc)+'</td><td>'+fmt(r.ac)+'</td><td class="'+pctC(+pC)+'">'+pC+'%</td><td>'+fmt(r.td)+'</td><td>'+fmt(r.ad)+'</td><td class="'+pctC(+pD)+'">'+pD+'%</td><td>'+fmt(r.big)+'</td><td>'+fmt(r.cashT)+'</td><td>'+fmt(r.cashA)+'</td></tr>';});
+  d.bct.forEach(function(r){var pC=r.tc?(r.ac/r.tc*100).toFixed(1):'-';var pD=r.td?(r.ad/r.td*100).toFixed(1):'-';h+='<tr><td>'+escapeHtml(r.m)+'</td><td>'+fmt(r.tc)+'</td><td>'+fmt(r.ac)+'</td><td class="'+pctC(+pC)+'">'+pC+'%</td><td>'+fmt(r.td)+'</td><td>'+fmt(r.ad)+'</td><td class="'+pctC(+pD)+'">'+pD+'%</td><td>'+fmt(r.big)+'</td><td>'+fmt(r.cashT)+'</td><td>'+fmt(r.cashA)+'</td></tr>';});
   h+='</table></div></div>';
   document.getElementById('p-bct').innerHTML=h;
   var labels=d.bct.map(function(r){return r.m;});
@@ -1228,7 +1277,7 @@ function renderFin(){
   h+='<div class="card"><h2>📈 ค่าแรง/คัน เปรียบเทียบ ปี68 vs ปี69</h2><div class="chart-box lg"><canvas id="cF3"></canvas></div></div>';
   h+='<div class="card"><h2>📈 ค่าอะไหล่/คัน เปรียบเทียบ ปี68 vs ปี69</h2><div class="chart-box lg"><canvas id="cF4"></canvas></div></div>';
   h+='<div class="card"><h2>📋 รายเดือน</h2><div style="overflow-x:auto"><table><tr><th>เดือน</th><th>เป้ารายได้</th><th>รายได้จริง</th><th>%</th><th>ค่าแรง</th><th>ค่าอะไหล่</th><th>กำไร</th><th>ค่าแรง/คัน</th><th>ค่าอะไหล่/คัน</th></tr>';
-  d.fin.forEach(function(r){var p=r.rT?(r.rA/r.rT*100).toFixed(1):'-';h+='<tr><td>'+r.m+'</td><td>'+fmtB(r.rT)+'</td><td>'+fmtB(r.rA)+'</td><td class="'+pctC(+p)+'">'+p+'%</td><td>'+fmtB(r.sal)+'</td><td>'+fmtB(r.pts)+'</td><td>'+fmtB(r.gm)+'</td><td>'+fmtB(r.rpC)+'</td><td>'+fmtB(r.spC)+'</td></tr>';});
+  d.fin.forEach(function(r){var p=r.rT?(r.rA/r.rT*100).toFixed(1):'-';h+='<tr><td>'+escapeHtml(r.m)+'</td><td>'+fmtB(r.rT)+'</td><td>'+fmtB(r.rA)+'</td><td class="'+pctC(+p)+'">'+p+'%</td><td>'+fmtB(r.sal)+'</td><td>'+fmtB(r.pts)+'</td><td>'+fmtB(r.gm)+'</td><td>'+fmtB(r.rpC)+'</td><td>'+fmtB(r.spC)+'</td></tr>';});
   h+='</table></div></div>';
 
   // Map hist68 fin by month for lookup
@@ -1286,14 +1335,14 @@ function renderIns(){
   yearLabels.forEach(function(yl){yearOpts+='<option value="'+yl.thai+'"'+(yl.thai===lastYear?' selected':'')+'>'+yl.label+'</option>';});
   var h='<div class="card"><h2>🚨 ประกันภัย</h2><div class="sel-group" style="flex-wrap:wrap;gap:8px">';
   h+='<label>เลือกบริษัทประกัน: <select id="selIns" onchange="renderInsChart()"><option value="all">ทุกบริษัท</option>';
-  sorted.forEach(function(c){h+='<option value="'+c.name+'">'+c.name+' ('+fmt(c.total)+')</option>';});h+='</select></label>';
+  sorted.forEach(function(c){h+='<option value="'+escapeHtml(c.name)+'">'+escapeHtml(c.name)+' ('+fmt(c.total)+')</option>';});h+='</select></label>';
   h+='<label>📅 ปี: <select id="selInsYear" onchange="renderInsChart()" style="max-width:85px;font-weight:600;color:#0f3460">'+yearOpts+'</select></label>';
   h+='</div>';
   h+='<div class="chart-box lg"><canvas id="cIns"></canvas></div></div>';
   h+='<div class="card"><h2>📋 รายบริษัท</h2><div style="overflow-x:auto"><table><tr><th>บริษัท</th><th>ส่งมอบ</th><th>สัดส่วน</th>';
-  (d.monthLabels||[]).forEach(function(m){h+='<th>'+m+'</th>';});
+  (d.monthLabels||[]).forEach(function(m){h+='<th>'+escapeHtml(m)+'</th>';});
   h+='</tr>';
-  sorted.forEach(function(c){h+='<tr><td>'+c.name+'</td><td>'+fmt(c.total)+'</td><td>'+(c.pct?c.pct.toFixed(1)+'%':'-')+'</td>';c.monthly.forEach(function(v){h+='<td>'+(v?fmt(v):'-')+'</td>';});h+='</tr>';});
+  sorted.forEach(function(c){h+='<tr><td>'+escapeHtml(c.name)+'</td><td>'+fmt(c.total)+'</td><td>'+(c.pct?c.pct.toFixed(1)+'%':'-')+'</td>';c.monthly.forEach(function(v){h+='<td>'+(v?fmt(v):'-')+'</td>';});h+='</tr>';});
   h+='</table></div></div>';
   document.getElementById('p-ins').innerHTML=h;
   renderInsChart();
@@ -1346,7 +1395,7 @@ function renderCh(){
 
   var h='<div class="card"><h2>📍 ช่องทาง</h2><div class="sel-group" style="flex-wrap:wrap;gap:8px">';
   h+='<label>เลือกช่องทาง: <select id="selCh" onchange="renderChChart()"><option value="all">ทุกช่องทาง</option>';
-  d.names.forEach(function(n,i){h+='<option value="'+n+'">'+(i+1)+'. '+n+'</option>';});h+='</select></label>';
+  d.names.forEach(function(n,i){h+='<option value="'+escapeHtml(n)+'">'+(i+1)+'. '+escapeHtml(n)+'</option>';});h+='</select></label>';
   h+='<label>📅 ปี: <select id="selChYear" onchange="renderChChart()" style="max-width:85px;font-weight:600;color:#0f3460">'+yearOpts+'</select></label>';
   h+='</div>';
   h+='<div class="chart-box lg"><canvas id="cCh"></canvas></div></div>';
@@ -1361,9 +1410,9 @@ function renderCh(){
     if(histData&&histData.ch) chDataForYear=histData.ch; else chDataForYear={ch:d.ch,monthLabels:d.monthLabels,names:d.names};
   }
   h+='<div class="card"><h2>📋 รายช่องทาง — ปี '+selYearThai+'</h2><div style="overflow-x:auto"><table><tr><th>ช่องทาง</th>';
-  (chDataForYear.monthLabels||d.monthLabels||[]).forEach(function(m){h+='<th>'+m+'</th>';});
+  (chDataForYear.monthLabels||d.monthLabels||[]).forEach(function(m){h+='<th>'+escapeHtml(m)+'</th>';});
   h+='<th>รวม</th></tr>';
-  (chDataForYear.ch||[]).forEach(function(c,idx){h+='<tr><td>'+(idx+1)+'. '+c.name+'</td>';c.monthly.forEach(function(v){h+='<td>'+(v?fmt(v):'-')+'</td>';});var total=c.monthly.reduce(function(s,v){return s+v;},0);h+='<td><b>'+fmt(total)+'</b></td></tr>';});
+  (chDataForYear.ch||[]).forEach(function(c,idx){h+='<tr><td>'+(idx+1)+'. '+escapeHtml(c.name)+'</td>';c.monthly.forEach(function(v){h+='<td>'+(v?fmt(v):'-')+'</td>';});var total=c.monthly.reduce(function(s,v){return s+v;},0);h+='<td><b>'+fmt(total)+'</b></td></tr>';});
   h+='</table></div></div>';
   document.getElementById('p-ch').innerHTML=h;
   renderChChart();
@@ -1445,7 +1494,7 @@ function renderSA(){
   var h='<div class="card"><h2>🚗📊 SA เปรียบเทียบ รับรถ VS ส่งมอบ รายเดือน</h2>';
   h+='<div class="sel-group" style="flex-wrap:wrap;gap:6px">';
   h+='<label>📅 เดือน: <select id="selSAMonthTop" onchange="renderSACompare()">';
-  monthly.forEach(function(m,i){h+='<option value="'+i+'"'+(i===lastMIdx?' selected':'')+'>'+(m.label||'M'+(i+1))+'</option>';});
+  monthly.forEach(function(m,i){h+='<option value="'+i+'"'+(i===lastMIdx?' selected':'')+'>'+escapeHtml(m.label||'M'+(i+1))+'</option>';});
   h+='</select></label>';
   h+='</div>';
   h+='<div id="saCompKpi"></div>';
@@ -1457,14 +1506,14 @@ function renderSA(){
   h+='<div class="card"><h2>📋 SA เปรียบเทียบรายเดือน — ค่าแรง / ค่าอะไหล่</h2>';
   h+='<div class="sel-group" style="flex-wrap:wrap;gap:6px">';
   h+='<label>📅 เดือน: <select id="selSAMonth" onchange="renderSADetail()"><option value="-1">รวมทุกเดือน</option>';
-  monthly.forEach(function(m,i){h+='<option value="'+i+'"'+(i===lastMIdx?' selected':'')+'>'+(m.label||'M'+(i+1))+'</option>';});
+  monthly.forEach(function(m,i){h+='<option value="'+i+'"'+(i===lastMIdx?' selected':'')+'>'+escapeHtml(m.label||'M'+(i+1))+'</option>';});
   h+='</select></label>';
   h+='<label>หมวดหมู่: <select id="selSACat" onchange="renderSAChart()">';
-  catOrder.forEach(function(ci){h+='<option value="'+ci+'">'+catLabels[ci]+'</option>';});
+  catOrder.forEach(function(ci){h+='<option value="'+ci+'">'+escapeHtml(catLabels[ci])+'</option>';});
   h+='</select></label>';
   h+='<label>เลือก SA: <select id="selSAPerson" onchange="renderSAChart()">';
   h+='<option value="all">ทุกคน</option>';
-  persons.forEach(function(p){h+='<option value="'+p+'">'+maskIfSA(p)+'</option>';});
+  persons.forEach(function(p){h+='<option value="'+escapeHtml(p)+'">'+escapeHtml(maskIfSA(p))+'</option>';});
   h+='</select></label>';
   h+='</div>';
   h+='<div id="saMonthKpi"></div>';
@@ -1501,7 +1550,7 @@ function renderSACompare(){
   var kpiEl=document.getElementById('saCompKpi');
   if(kpiEl){
     var pct=totalR>0?Math.round(totalD/totalR*1000)/10:0;
-    kpiEl.innerHTML='<div class="kpi-row"><div class="kpi"><div class="lbl">📌 ข้อมูลเดือน</div><div class="val" style="color:var(--accent)">'+label+'</div></div><div class="kpi"><div class="lbl">🚗 รับรถ</div><div class="val">'+fmt(totalR)+'</div><div class="lbl">คัน</div></div><div class="kpi"><div class="lbl">🚛 ส่งมอบ</div><div class="val">'+fmt(totalD)+'</div><div class="lbl">คัน</div></div><div class="kpi"><div class="lbl">📊 ส่งมอบ/รับรถ</div><div class="val">'+pct.toFixed(1)+'%</div>'+pctS(pct,pct.toFixed(1)+'%')+'</div></div>';
+    kpiEl.innerHTML='<div class="kpi-row"><div class="kpi"><div class="lbl">📌 ข้อมูลเดือน</div><div class="val" style="color:var(--accent)">'+escapeHtml(label)+'</div></div><div class="kpi"><div class="lbl">🚗 รับรถ</div><div class="val">'+fmt(totalR)+'</div><div class="lbl">คัน</div></div><div class="kpi"><div class="lbl">🚛 ส่งมอบ</div><div class="val">'+fmt(totalD)+'</div><div class="lbl">คัน</div></div><div class="kpi"><div class="lbl">📊 ส่งมอบ/รับรถ</div><div class="val">'+pct.toFixed(1)+'%</div>'+pctS(pct,pct.toFixed(1)+'%')+'</div></div>';
   }
 
   // Grouped bar chart: รับรถ vs ส่งมอบ per person
@@ -1523,7 +1572,7 @@ function renderSACompare(){
     var dl=(mData[catDeliver]&&mData[catDeliver][p])||0;
     var pp=r>0?Math.round(dl/r*1000)/10:0;
     var diff=dl-r;
-    th+='<tr><td><b>'+maskIfSA(p)+'</b></td><td>'+fmt(r)+'</td><td>'+fmt(dl)+'</td><td class="'+pctC(pp)+'">'+pp.toFixed(1)+'%</td><td style="color:'+(diff>=0?'#10b981':'#ef4444')+'">'+(diff>0?'+':'')+diff+'</td></tr>';
+    th+='<tr><td><b>'+escapeHtml(maskIfSA(p))+'</b></td><td>'+fmt(r)+'</td><td>'+fmt(dl)+'</td><td class="'+pctC(pp)+'">'+pp.toFixed(1)+'%</td><td style="color:'+(diff>=0?'#10b981':'#ef4444')+'">'+(diff>0?'+':'')+diff+'</td></tr>';
   });
   th+='<tr style="border-top:2px solid #334155"><td><b>รวม</b></td><td><b>'+fmt(totalR)+'</b></td><td><b>'+fmt(totalD)+'</b></td><td class="'+pctC(pct)+'"><b>'+pct.toFixed(1)+'%</b></td><td style="color:'+(totalD-totalR>=0?'#10b981':'#ef4444')+'"><b>'+(totalD-totalR>0?'+':'')+( totalD-totalR)+'</b></td></tr>';
   th+='</table>';
@@ -1567,7 +1616,7 @@ function renderSADetail(){
   var avgPPC=(catSums[c1]>0)?(catSums[c4]/catSums[c1]):0; // เฉลี่ยถ่วงน้ำหนัก ค่าอะไหล่/คัน
 
   var h='<div class="kpi-row">';
-  h+='<div class="kpi"><div class="lbl">📌 ข้อมูลเดือน</div><div class="val" style="color:var(--accent)">'+label+'</div></div>';
+  h+='<div class="kpi"><div class="lbl">📌 ข้อมูลเดือน</div><div class="val" style="color:var(--accent)">'+escapeHtml(label)+'</div></div>';
   if(catSums[c0]!==undefined) h+='<div class="kpi"><div class="lbl">🚗 รับรถ</div><div class="val">'+fmt(catSums[c0])+'</div><div class="lbl">คัน</div></div>';
   if(catSums[c1]!==undefined) h+='<div class="kpi"><div class="lbl">🚛 ส่งมอบ</div><div class="val">'+fmt(catSums[c1])+'</div><div class="lbl">คัน</div></div>';
   if(catSums[c3]!==undefined) h+='<div class="kpi"><div class="lbl">🔧 ค่าแรง</div><div class="val">'+fmtB(catSums[c3])+'</div><div class="lbl">บาท</div></div>';
@@ -1617,11 +1666,11 @@ function renderSAChart(){
   // Update detail table
   var el=document.getElementById('saDetailTbl');
   if(!el)return;
-  var th='<h2>📋 '+catLabel+' รายเดือน</h2><div style="overflow-x:auto"><table><tr><th>เดือน</th>';
-  persons.forEach(function(p){th+='<th>'+maskIfSA(p)+'</th>';});
+  var th='<h2>📋 '+escapeHtml(catLabel)+' รายเดือน</h2><div style="overflow-x:auto"><table><tr><th>เดือน</th>';
+  persons.forEach(function(p){th+='<th>'+escapeHtml(maskIfSA(p))+'</th>';});
   th+='<th>รวม</th></tr>';
   monthly.forEach(function(m,i){
-    th+='<tr><td>'+monthLabels[i]+'</td>';
+    th+='<tr><td>'+escapeHtml(monthLabels[i])+'</td>';
     var total=0;
     persons.forEach(function(pname){
       var v=(m.data[catName]&&m.data[catName][pname])||0;
@@ -1651,14 +1700,14 @@ function renderSAChart(){
   el.innerHTML=th;
 }
 function renderSC(){
-  var d=D.sc;if(!d||d.error){document.getElementById('p-sc').innerHTML='<div class="card"><h2>📢 เชียร์เคลมเพิ่ม</h2><p style="color:#ef4444">ไม่สามารถโหลดข้อมูลได้: '+(d?d.error:'No data')+'</p></div>';return;}
+  var d=D.sc;if(!d||d.error){document.getElementById('p-sc').innerHTML='<div class="card"><h2>📢 เชียร์เคลมเพิ่ม</h2><p style="color:#ef4444">ไม่สามารถโหลดข้อมูลได้: '+escapeHtml(d?d.error:'No data')+'</p></div>';return;}
   var MN=d.monthLabels||[];
   var h='<div class="card"><h2>📢 เชียร์เคลมเพิ่ม — SA รับลูกค้าออนไลน์</h2>';
   h+='<p style="color:#64748b;font-size:12px">ข้อมูลจากแท็บ สรุป_เชียร์เคลมเพิ่ม (A17:AS62) — แสดงรายได้ ค่าแรง และค่าอะไหล่</p>';
   // ─── Section 1: รายได้ GM รวม ───
   h+='<h3 style="margin-top:16px">💰 รายได้ GM รวม รายเดือน</h3>';
   h+='<div class="sel-group"><label>เดือน:</label><select id="selSCSum" onchange="renderSCTables()"><option value="all">ทุกเดือน (รวม)</option>';
-  MN.forEach(function(m,i){h+='<option value="'+i+'">'+m+'</option>';});
+  MN.forEach(function(m,i){h+='<option value="'+i+'">'+escapeHtml(m)+'</option>';});
   h+='</select></div>';
   // KPI cards
   var totAll=0;for(var m=0;m<12;m++)totAll+=(d.sumTotalMonthly[m]||0);
@@ -1675,13 +1724,13 @@ function renderSC(){
   // ─── Section 2: รับรถ เชียร์เคลมเพิ่ม รายบุคคล ───
   h+='<div class="card"><h3>🚗 รับรถ — เชียร์เคลมเพิ่ม รายบุคคล</h3>';
   h+='<div class="sel-group"><label>เดือน:</label><select id="selSCRecv" onchange="renderSCTables()"><option value="all">ทุกเดือน (รวม)</option>';
-  MN.forEach(function(m,i){h+='<option value="'+i+'">'+m+'</option>';});
+  MN.forEach(function(m,i){h+='<option value="'+i+'">'+escapeHtml(m)+'</option>';});
   h+='</select></div>';
   h+='<div class="card" id="scRecvTbl"></div></div>';
   // ─── Section 3: ส่งมอบ เชียร์เคลมเพิ่ม รายบุคคล ───
   h+='<div class="card"><h3>🏁 ส่งมอบ — เชียร์เคลมเพิ่ม รายบุคคล</h3>';
   h+='<div class="sel-group"><label>เดือน:</label><select id="selSCDelv" onchange="renderSCTables()"><option value="all">ทุกเดือน (รวม)</option>';
-  MN.forEach(function(m,i){h+='<option value="'+i+'">'+m+'</option>';});
+  MN.forEach(function(m,i){h+='<option value="'+i+'">'+escapeHtml(m)+'</option>';});
   h+='</select></div>';
   h+='<div class="card" id="scDelvTbl"></div></div>';
   document.getElementById('p-sc').innerHTML=h;
@@ -1701,12 +1750,12 @@ function renderSCTables(){
 
   // ─── Section 1: GM Summary Table + Chart ───
   var h1='<h3>📋 รายได้ GM รวม รายบุคคล</h3><div style="overflow-x:auto"><table><tr><th>ชื่อ</th>';
-  if(vSum==='all') MN.forEach(function(m){h1+='<th>'+m+'</th>';});
-  else h1+='<th>'+MN[Number(vSum)]+'</th>';
+  if(vSum==='all') MN.forEach(function(m){h1+='<th>'+escapeHtml(m)+'</th>';});
+  else h1+='<th>'+escapeHtml(MN[Number(vSum)])+'</th>';
   if(vSum==='all') h1+='<th>รวม</th>';
   h1+='</tr>';
   (d.saNames||[]).forEach(function(name,nidx){
-    h1+='<tr><td>'+maskIfSA(name)+'</td>';
+    h1+='<tr><td>'+escapeHtml(maskIfSA(name))+'</td>';
     if(vSum==='all'){
       for(var m=0;m<12;m++) h1+='<td>'+(d.saMonthly[nidx][m]?fmt(d.saMonthly[nidx][m]):'-')+'</td>';
       h1+='<td>'+fmt(d.saTotals[nidx])+'</td>';
@@ -1726,12 +1775,55 @@ function renderSCTables(){
     h1+='<td>'+fmt(d.sumTotalMonthly[mi])+'</td>';
   }
   h1+='</tr>';
-  // ยอดรถส่งมอบ row
-  h1+='<tr><td>รถส่งมอบ (คัน)</td>';
+  // GM ค่าแรงรวม row — ดึงจาก B25:N25 ของแท็บ สรุป_เชียร์เคลมเพิ่ม (vehCountMonthly ใน API)
+  var laborMonthly=(d.vehCountMonthly||[]).map(function(v){return Math.round(Number(v)||0);});
+  // หาเดือนสุดท้ายที่มีข้อมูล
+  var lastDataMonth=-1;
+  for(var m=11;m>=0;m--){ if(laborMonthly[m]>0){lastDataMonth=m;break;} }
+  // เดือนปัจจุบัน = เดือนถัดไปจากที่มีข้อมูลล่าสุด (ถ้า ก.ค. มีข้อมูล = เดือนปัจจุบันคือ ก.ค.)
+  // ค่าเฉลี่ยใช้ ม.ค. ถึง เดือนก่อนหน้า = lastDataMonth-1 (ถ้า lastData=6(ก.ค.) ก็ใช้ 0-5(ม.ค.-มิ.ย.))
+  var avgEndMonth=lastDataMonth-1; // เดือนสุดท้ายที่ใช้คำนวณค่าเฉลี่ย (0-based)
+  if(avgEndMonth<0)avgEndMonth=0;
+  var laborTotalSum=0;
+  for(var m=0;m<12;m++) laborTotalSum+=laborMonthly[m];
+  // ค่าเฉลี่ย GM ค่าแรงรวม ตั้งแต่ ม.ค. ถึงเดือนก่อนหน้า
+  var avgBefore=0;
+  var avgCnt=avgEndMonth+1; // จำนวนเดือนที่ใช้
+  if(avgCnt>0){
+    var as=0; for(var aj=0;aj<=avgEndMonth;aj++) as+=laborMonthly[aj];
+    avgBefore=Math.round(as/avgCnt);
+  }
+  h1+='<tr><td>GM ค่าแรงรวม (บาท)</td>';
   if(vSum==='all'){
-    for(var m=0;m<12;m++) h1+='<td>'+fmt(d.vehCountMonthly[m])+'</td>';
+    for(var m=0;m<12;m++) h1+='<td>'+(laborMonthly[m]?fmt(laborMonthly[m]):'-')+'</td>';
+    h1+='<td>'+fmt(laborTotalSum)+'</td>';
   } else {
-    h1+='<td>'+fmt(d.vehCountMonthly[Number(vSum)])+'</td>';
+    h1+='<td>'+fmt(laborMonthly[Number(vSum)])+'</td>';
+  }
+  h1+='</tr>';
+  // เฉลี่ย GM ค่าแรงรวม row
+  var avgLabel=avgEndMonth>=0?(MN[avgEndMonth]||'มิ.ย.'):'-';
+  h1+='<tr class="sub" style="background:#f0fdf4"><td>เฉลี่ย GM ค่าแรงรวม<br><span style="font-size:10px;color:#64748b">ม.ค.-'+avgLabel+'</span></td>';
+  if(vSum==='all'){
+    for(var m=0;m<12;m++){
+      if(m<=avgEndMonth){
+        var cumSum=0,cumCnt=0;
+        for(var m2=0;m2<=m;m2++){if(laborMonthly[m2]>0){cumSum+=laborMonthly[m2];cumCnt++;}}
+        h1+='<td>'+(cumCnt>0?fmt(Math.round(cumSum/cumCnt)):'-')+'</td>';
+      } else {
+        h1+='<td>-</td>';
+      }
+    }
+    h1+='<td>'+fmt(avgBefore)+'</td>';
+  } else {
+    var mi=Number(vSum);
+    if(mi<=avgEndMonth){
+      var cumSum=0,cumCnt=0;
+      for(var m2=0;m2<=mi;m2++){if(laborMonthly[m2]>0){cumSum+=laborMonthly[m2];cumCnt++;}}
+      h1+='<td>'+(cumCnt>0?fmt(Math.round(cumSum/cumCnt)):'-')+'</td>';
+    } else {
+      h1+='<td>-</td>';
+    }
   }
   h1+='</tr></table></div>';
   var el1=document.getElementById('scSumTbl');if(el1)el1.innerHTML=h1;
@@ -1750,7 +1842,7 @@ function renderSCTables(){
   // ─── Helper: render per-SA detail table ───
   function renderDetailTable(saData, tblId, selVal){
     var h2='<div style="overflow-x:auto"><table><tr><th>เดือน</th>';
-    saOrder.forEach(function(n){h2+='<th colspan="7" style="text-align:center;background:#f1f5f9">'+maskIfSA(n)+'</th>';});
+    saOrder.forEach(function(n){h2+='<th colspan="7" style="text-align:center;background:#f1f5f9">'+escapeHtml(maskIfSA(n))+'</th>';});
     h2+='</tr><tr><th></th>';
     saOrder.forEach(function(){
       h2+='<th>คัน</th><th>ค่าแรง</th><th>GMแรง/คัน</th><th>เฉลี่ยแรง/คัน</th><th>ค่าอะไหล่</th><th>GMอะไหล่/คัน</th><th>เฉลี่ยอะไหล่/คัน</th>';
@@ -1758,7 +1850,7 @@ function renderSCTables(){
     h2+='</tr>';
     for(var m=0;m<12;m++){
       if(selVal!=='all'&&m!==Number(selVal)) continue;
-      h2+='<tr><td>'+MN[m]+'</td>';
+      h2+='<tr><td>'+escapeHtml(MN[m])+'</td>';
       saOrder.forEach(function(n){
         var md=saData[n].monthly[m];
         h2+='<td>'+md.cars+'</td>';
@@ -1814,7 +1906,7 @@ function renderYoY(){
   h+='<div class="card"><h2>📊 เปรียบเทียบรายเดือน 3 ปี</h2><div class="chart-box lg"><canvas id="cYoY"></canvas></div></div>';
   h+='<div class="card"><h2>📋 รายเดือน</h2><div style="overflow-x:auto"><table><tr><th>เดือน</th>';
   years.forEach(function(y){h+='<th>ปี '+((y+543)%100)+'</th>';});h+='</tr>';
-  d.months.forEach(function(m){h+='<tr><td>'+m.month+'</td>';years.forEach(function(y){h+='<td>'+fmt(m.years[y]||0)+'</td>';});h+='</tr>';});
+  d.months.forEach(function(m){h+='<tr><td>'+escapeHtml(m.month)+'</td>';years.forEach(function(y){h+='<td>'+fmt(m.years[y]||0)+'</td>';});h+='</tr>';});
   h+='<tr class="sub"><td>รวม</td>';years.forEach(function(y){h+='<td>'+fmt(totals[y]||0)+'</td>';});h+='</tr></table></div></div>';
   document.getElementById('p-yoy').innerHTML=h;
   if(document.getElementById('cYoY')){
@@ -1831,11 +1923,11 @@ function renderYoY(){
 function renderDTA(){
   var d=D.dta;if(!d){document.getElementById('p-dta').innerHTML='<div class="card"><h2>⚠️ ไม่มีข้อมูล DTA</h2></div>';return;};
   var h='<div class="card"><h2>🚙 DTA — ยี่ห้อรถ</h2><div class="sel-group"><select id="selDTA" onchange="renderDTAChart()"><option value="all">ทุกยี่ห้อ</option>';
-  d.brands.forEach(function(b){h+='<option value="'+b+'">'+b+'</option>';});h+='</select></div>';
+  d.brands.forEach(function(b){h+='<option value="'+escapeHtml(b)+'">'+escapeHtml(b)+'</option>';});h+='</select></div>';
   h+='<div class="chart-box lg"><canvas id="cDTA"></canvas></div></div>';
   h+='<div class="card"><h2>📋 รายเดือนตามยี่ห้อ</h2><div style="overflow-x:auto"><table><tr><th>เดือน</th>';
-  d.brands.forEach(function(b){h+='<th>'+b+'</th>';});h+='</tr>';
-  d.months.forEach(function(m){h+='<tr><td>'+m.month+'</td>';d.brands.forEach(function(b){h+='<td>'+(m.brands[b]?fmt(m.brands[b]):'-')+'</td>';});h+='</tr>';});
+  d.brands.forEach(function(b){h+='<th>'+escapeHtml(b)+'</th>';});h+='</tr>';
+  d.months.forEach(function(m){h+='<tr><td>'+escapeHtml(m.month)+'</td>';d.brands.forEach(function(b){h+='<td>'+(m.brands[b]?fmt(m.brands[b]):'-')+'</td>';});h+='</tr>';});
   h+='<tr class="sub"><td>รวม</td>';d.brands.forEach(function(b){h+='<td>'+fmt(d.cumBrands[b]||0)+'</td>';});h+='</tr></table></div></div>';
   document.getElementById('p-dta').innerHTML=h;
   renderDTAChart();
@@ -1855,7 +1947,7 @@ function renderDTAChart(){
 function renderGlass(){
   var d=D.glass;
   if(!d||d.error){
-    document.getElementById('p-glass').innerHTML='<div class="card"><h2>⚠️ ไม่มีข้อมูล เคลือบแก้ว</h2><p>'+(d&&d.error?d.error:'')+'</p></div>';
+    document.getElementById('p-glass').innerHTML='<div class="card"><h2>⚠️ ไม่มีข้อมูล เคลือบแก้ว</h2><p>'+escapeHtml(d&&d.error?d.error:'')+'</p></div>';
     return;
   }
   var rows=d.rows;
@@ -1976,7 +2068,7 @@ function renderGlass(){
   h+='<tr class="sub"><td><b>รวมปี</b></td><td><b>'+fmt(yrTotal.qty)+'</b></td><td><b>'+fmt(yrTotal.target)+'</b></td><td><b>'+fmt(yrTotal.closed)+'</b></td><td><b>'+fmt(yrTotal.remaining)+'</b></td></tr>';
   months.forEach(function(m){
     if(m.qty===0&&m.target===0)return;
-    h+='<tr><td>'+m.name+'</td><td>'+fmt(m.qty)+'</td><td>'+fmt(m.target)+'</td><td>'+fmt(m.closed)+'</td><td>'+fmt(m.remaining)+'</td></tr>';
+    h+='<tr><td>'+escapeHtml(m.name)+'</td><td>'+fmt(m.qty)+'</td><td>'+fmt(m.target)+'</td><td>'+fmt(m.closed)+'</td><td>'+fmt(m.remaining)+'</td></tr>';
   });
   h+='</table></div></div>';
   // Table 2: รายได้/ต้นทุน/กำไร
@@ -1985,7 +2077,7 @@ function renderGlass(){
   months.forEach(function(m){
     if(m.qty===0&&m.target===0)return;
     var gmM=m.gmPct?(m.gmPct*100).toFixed(1):'0.0';
-    h+='<tr><td>'+m.name+'</td><td>'+fmt(m.newCar)+'</td><td>'+fmt(m.newCarPMS)+'</td><td>'+fmt(m.usedCar)+'</td><td>'+fmtB(m.revenue)+'</td><td>'+fmtB(m.profit)+'</td><td>'+gmM+'%</td></tr>';
+    h+='<tr><td>'+escapeHtml(m.name)+'</td><td>'+fmt(m.newCar)+'</td><td>'+fmt(m.newCarPMS)+'</td><td>'+fmt(m.usedCar)+'</td><td>'+fmtB(m.revenue)+'</td><td>'+fmtB(m.profit)+'</td><td>'+gmM+'%</td></tr>';
   });
   h+='</table></div></div>';
   h+='</div>';
@@ -2149,8 +2241,8 @@ function renderSummary(){
       techNames.forEach(function(tech){
         var plates=groups[tech];
         h+='<div class="summary-row">';
-        h+='<div class="tech">'+escHtml(tech)+'</div>';
-        h+='<div class="plates">'+plates.map(function(p){return escHtml(p);}).join(', ')+'</div>';
+        h+='<div class="tech">'+escapeHtml(tech)+'</div>';
+        h+='<div class="plates">'+plates.map(function(p){return escapeHtml(p);}).join(', ')+'</div>';
         h+='<div class="num">'+plates.length+'</div>';
         h+='</div>';
       });
@@ -2189,7 +2281,7 @@ function renderSummary(){
 
     h+='<div class="summary-row">';
     h+='<div class="tech">'+def.icon+'</div>';
-    h+='<div class="plates" style="font-weight:600">'+def.shortLabel+' <b>'+mTotal+'</b> คัน ('+numDays+' วัน, เฉลี่ย '+avg+'/วัน) <small style="color:#94a3b8">['+techParts.join(', ')+']</small></div>';
+    h+='<div class="plates" style="font-weight:600">'+def.shortLabel+' <b>'+mTotal+'</b> คัน ('+numDays+' วัน, เฉลี่ย '+avg+'/วัน) <small style="color:#94a3b8">['+techParts.map(function(tp){return escapeHtml(tp);}).join(', ')+']</small></div>';
     h+='</div>';
   });
 
@@ -2204,6 +2296,240 @@ function renderSummary(){
   document.getElementById('p-summary').innerHTML=h;
 }
 
+/* ═══════════ 💡 Highlights Module (added — non-invasive) ═══════════ */
+function _hlLastActiveMonth(months){
+  // "เดือนล่าสุด" = เดือนสมบูรณ์ล่าสุด (ก่อนเดือนปัจจุบันจริง)
+  var now=new Date();
+  var prevM=(now.getMonth()-1+12)%12; // 0-based: ก.ย.(8) → ส.ค.(7)
+  var TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  for(var i=0;i<months.length;i++){
+    var label=String(months[i].m||'').trim();
+    for(var k=0;k<12;k++){
+      if(label.indexOf(TH[k])===0&&k===prevM)return {m:months[i],i:i};
+    }
+  }
+  // fallback: last month with actual>0
+  for(var j=months.length-1;j>=0;j--){
+    if((months[j].actual||0)>0)return {m:months[j],i:j};
+  }
+  return {m:months[0],i:0};
+}
+function _hlPct(a,t){return t?(a/t*100):0;}
+function _hlCard(panelId,items,opts){
+  var el=document.getElementById('p-'+panelId);
+  if(!el||!items||!items.length)return;
+  if(!opts||!opts.replace){
+    if(document.getElementById('hlcard-'+panelId))return;
+  }
+  var oldEl=document.getElementById('hlcard-'+panelId);
+  if(oldEl&&opts&&opts.replace)oldEl.remove();
+  var anchor=el.firstChild;
+  var typeOrder={bad:0,warn:1,good:2,info:3};
+  items.sort(function(a,b){return (typeOrder[a.t]||9)-(typeOrder[b.t]||9);});
+  var h='<div class="card" id="hlcard-'+panelId+'" style="border:2px solid #fbbf24;background:linear-gradient(135deg,#fffbeb,#fef3c7)">';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:1.2rem">💡</span><b style="color:#92400e;font-size:1.02rem">Highlights — ประเด็นสำคัญ</b></div>';
+  h+='<div style="display:flex;flex-direction:column;gap:6px">';
+  items.forEach(function(it){
+    var col=it.t==='good'?'#059669':it.t==='bad'?'#dc2626':it.t==='warn'?'#d97706':'#334155';
+    var bg=it.t==='good'?'#ecfdf5':it.t==='bad'?'#fef2f2':it.t==='warn'?'#fffbeb':'#f8fafc';
+    h+='<div style="background:'+bg+';border-left:4px solid '+col+';border-radius:6px;padding:7px 10px;font-size:.88rem;line-height:1.5"><span style="margin-right:6px">'+(it.s||'•')+'</span><span style="color:#1e293b">'+it.x+'</span></div>';
+  });
+  h+='</div></div>';
+  if(anchor&&anchor.parentNode===el&&opts&&opts.replace){el.insertBefore(el.ownerDocument.createRange().createContextualFragment(h),anchor);}else{el.insertAdjacentHTML('afterbegin',h);}
+}
+function computeAllHighlights(){
+  try{ /* dash */
+    var items=[];var okr=D.okr,bct=D.bct,fin=D.fin;
+    if(okr&&okr.months&&okr.months.length&&fin&&fin.fin){
+      var m=_hlLastActiveMonth(okr.months).m;
+      var cf=fin.cumFin;
+      if(cf&&cf.rT){var p=_hlPct(cf.rA,cf.rT);items.push({t:p>=100?'good':'warn',s:p>=100?'✅':'⚠️',x:'รายได้สะสมปี 69: '+fmtB(cf.rA)+' จากเป้า '+fmtB(cf.rT)+' ('+p.toFixed(1)+'%)'+(p>=100?' — บรรลุแล้ว':' — ยังต้องเร่ง')});}
+      var bctArr=D.bct&&D.bct.bct?D.bct.bct:[];
+      if(bctArr.length){
+        var tc=0,ac=0,td=0,ad=0,ct=0,ca=0;
+        bctArr.forEach(function(r){tc+=r.tc||0;ac+=r.ac||0;td+=r.td||0;ad+=r.ad||0;ct+=r.cashT||0;ca+=r.cashA||0;});
+        var pb=_hlPct(ac,tc),pd=_hlPct(ad,td),pc=_hlPct(ca,ct);
+        items.push({t:pd>=100?'good':pd>=80?'warn':'bad',s:pd>=80?'🚗':'⚠️',x:'ส่งมอบสะสม: '+fmt(ad)+'/'+fmt(td)+' คัน ('+pd.toFixed(1)+'%)'});
+        if(pb<90)items.push({t:'warn',s:'📉',x:'ปิดได้สะสม: '+fmt(ac)+'/'+fmt(tc)+' คัน ('+pb.toFixed(1)+'%) — ต่ำกว่า 90%'});
+        items.push({t:pc>=100?'good':pc>=80?'warn':'bad',s:'💵',x:'เงินสดสะสม: '+fmt(ca)+'/'+fmt(ct)+' คัน ('+pc.toFixed(1)+'%)'});
+      }
+      if(cf&&cf.rpC)items.push({t:cf.rpC>=19000?'good':'info',s:'🔧',x:'ค่าแรงเฉลี่ย '+fmtB(cf.rpC)+' บาท/คัน · ค่าอะไหล่เฉลี่ย '+fmtB(cf.spC)+' บาท/คัน'});
+      if(cf&&cf.gm)items.push({t:'good',s:'💰',x:'กำไรขั้นต้นสะสม: '+fmtB(cf.gm)});
+      var lm=null;
+      var selD=document.getElementById('selDashMonth');
+      var selIdxD=selD?parseInt(selD.value):-1;
+      if(!isNaN(selIdxD)&&selIdxD>=0&&selIdxD<okr.months.length){lm=okr.months[selIdxD];}
+      else{lm=_hlLastActiveMonth(okr.months).m;}
+      if(lm){var lp=_hlPct(lm.actual,lm.target);items.push({t:lp>=100?'good':lp>=80?'warn':'bad',s:'📅',x:'เดือนล่าสุด ('+lm.m+'): '+fmt(lm.actual)+'/'+fmt(lm.target)+' คัน ('+lp.toFixed(1)+'%)'});}
+    }
+    _hlCard('dash',items,{replace:true});
+  }catch(e){}
+  function hlOKR_(){
+  try{
+    var items2=[];var d2=D.okr,f2=D.fin;
+    if(d2&&d2.months&&f2&&f2.fin){
+      var sel=document.getElementById('selOKRMonth');
+      var idx=sel?parseInt(sel.value):_hlLastActiveMonth(d2.months).i;
+      if(isNaN(idx))idx=_hlLastActiveMonth(d2.months).i;
+      if(idx<0||idx>=d2.months.length)idx=_hlLastActiveMonth(d2.months).i;
+      var mm=d2.months[idx];var fm=(f2.fin&&f2.fin[idx])||null;
+      var rp=_hlPct(mm.actual,mm.target);
+      items2.push({t:rp>=100?'good':rp>=80?'warn':'bad',s:'📌',x:mm.m+': รถเข้า '+fmt(mm.actual)+'/'+fmt(mm.target)+' คัน ('+rp.toFixed(1)+'%)'+(rp<100?' — ขาด '+fmt(Math.max(0,mm.target-mm.actual))+' คัน':'')});
+      if(fm){var rv=_hlPct(fm.rA,fm.rT);items2.push({t:rv>=100?'good':rv>=80?'warn':'bad',s:'💰',x:mm.m+': รายได้ '+fmtB(fm.rA)+'/'+fmtB(fm.rT)+' ('+rv.toFixed(1)+'%)'});}
+      var best=null;var bestP=-1;
+      d2.months.forEach(function(mo,i){var p=mo.target?mo.actual/mo.target*100:0;if(p>bestP){bestP=p;best=mo;}});
+      if(best&&bestP>0)items2.push({t:'good',s:'🏆',x:'เดือนที่ทำได้ดีสุด: '+best.m+' ('+bestP.toFixed(1)+'%)'});
+    }
+    _hlCard('okr',items2,{replace:true});
+  }catch(e){}
+}
+  try{ /* bct */
+    var items3=[];var d3=D.bct;
+    if(d3&&d3.cum){
+      var c3=d3.cum;
+      var p3b=_hlPct(c3.ac,c3.tc),p3d=_hlPct(c3.ad,c3.td),p3c=_hlPct(c3.cashA,c3.cashT);
+      items3.push({t:p3b>=100?'good':p3b>=80?'warn':'bad',s:'🎯',x:'ปิดได้สะสม '+fmt(c3.ac)+'/'+fmt(c3.tc)+' คัน ('+p3b.toFixed(1)+'%)'});
+      items3.push({t:p3d>=100?'good':p3d>=80?'warn':'bad',s:'🚙',x:'ส่งมอบสะสม '+fmt(c3.ad)+'/'+fmt(c3.td)+' คัน ('+p3d.toFixed(1)+'%)'});
+      items3.push({t:p3c>=100?'good':p3c>=80?'warn':'bad',s:'💵',x:'เงินสดสะสม '+fmt(c3.cashA)+'/'+fmt(c3.cashT)+' คัน ('+p3c.toFixed(1)+'%)'});
+      if(c3.big)items3.push({t:'info',s:'🚛',x:'รถใหญ่สะสม '+fmt(c3.big)+' คัน'});
+    }
+    _hlCard('bct',items3);
+  }catch(e){}
+  try{ /* fin */
+    var items4=[];var f4=D.fin;
+    if(f4&&f4.cumFin&&f4.fin){
+      var cf4=f4.cumFin;
+      var p4=_hlPct(cf4.rA,cf4.rT);
+      items4.push({t:p4>=100?'good':p4>=80?'warn':'bad',s:'💰',x:'รายได้สะสม '+fmtB(cf4.rA)+' จากเป้า '+fmtB(cf4.rT)+' ('+p4.toFixed(1)+'%)'});
+      if(cf4.gm)items4.push({t:'good',s:'📈',x:'กำไรขั้นต้นสะสม '+fmtB(cf4.gm)});
+      var bestF=null,bestFP=-1;
+      f4.fin.forEach(function(r){var p=r.rT?r.rA/r.rT*100:0;if(p>bestFP){bestFP=p;bestF=r;}});
+      if(bestF&&bestFP>=0)items4.push({t:bestFP>=100?'good':'info',s:'🏆',x:'เดือนรายได้ดีสุด: '+bestF.m+' ('+bestFP.toFixed(1)+'%)'});
+      var lastF=f4.fin[f4.fin.length-1];
+      if(lastF&&lastF.rpC)items4.push({t:'info',s:'🔧',x:lastF.m+': ค่าแรง/คัน '+fmtB(lastF.rpC)+' · ค่าอะไหล่/คัน '+fmtB(lastF.spC)});
+    }
+    _hlCard('fin',items4);
+  }catch(e){}
+  try{ /* ins */
+    var items5=[];var i5=D.ins;
+    if(i5&&i5.ins&&i5.ins.length){
+      var s5=i5.ins.slice().sort(function(a,b){return b.total-a.total;});
+      var tot5=0;s5.forEach(function(c){tot5+=c.total||0;});
+      if(s5[0])items5.push({t:'info',s:'🥇',x:'บริษัทประกันอันดับ 1: '+s5[0].name+' '+fmt(s5[0].total)+' คัน'+(tot5?' ('+(s5[0].total/tot5*100).toFixed(1)+'%)':'')});
+      if(s5[1])items5.push({t:'info',s:'🥈',x:'อันดับ 2: '+s5[1].name+' '+fmt(s5[1].total)+' คัน'+(tot5?' ('+(s5[1].total/tot5*100).toFixed(1)+'%)':'')});
+      var t3=0;s5.slice(0,3).forEach(function(c){t3+=c.total||0;});
+      if(tot5)items5.push({t:t3/tot5>0.6?'warn':'info',s:'⚖️',x:'Top 3 ครองส่วนแบ่ง '+(t3/tot5*100).toFixed(1)+'% จาก '+s5.length+' บริษัท'+(t3/tot5>0.6?' — พึ่งพาบริษัทหลักสูง':'')});
+    }
+    _hlCard('ins',items5);
+  }catch(e){}
+  try{ /* ch */
+    var items6=[];var c6=D.ch;
+    if(c6&&c6.ch&&c6.ch.length){
+      var t6=c6.ch.map(function(c,idx){return{name:c.name,total:(c.monthly||[]).reduce(function(s,v){return s+(v||0);},0)};}).sort(function(a,b){return b.total-a.total;});
+      var sum6=0;t6.forEach(function(c){sum6+=c.total;});
+      if(t6[0])items6.push({t:'info',s:'🥇',x:'ช่องทางอันดับ 1: '+t6[0].name+' '+fmt(t6[0].total)+' คัน'+(sum6?' ('+(t6[0].total/sum6*100).toFixed(1)+'%)':'')});
+      if(t6[1])items6.push({t:'info',s:'🥈',x:'อันดับ 2: '+t6[1].name+' '+fmt(t6[1].total)+' คัน'+(sum6?' ('+(t6[1].total/sum6*100).toFixed(1)+'%)':'')});
+      if(t6[2])items6.push({t:'info',s:'🥉',x:'อันดับ 3: '+t6[2].name+' '+fmt(t6[2].total)+' คัน'+(sum6?' ('+(t6[2].total/sum6*100).toFixed(1)+'%)':'')});
+      if(t6[0]&&sum6&&t6[0].total/sum6>0.35)items6.push({t:'warn',s:'⚠️',x:'ช่องทาง "'+t6[0].name+'" ครองส่วนแบ่ง '+((t6[0].total/sum6)*100).toFixed(1)+'% — พึ่งพาช่องทางเดียวสูง'});
+    }
+    _hlCard('ch',items6);
+  }catch(e){}
+  try{ /* sa */
+    var items7=[];var s7=D.sa;
+    if(s7&&s7.detail&&s7.detail.monthly&&s7.detail.persons){
+      var cats7=s7.detail.categories;var persons7=s7.detail.persons;
+      var monthly7=s7.detail.monthly;
+      if(cats7.length>=2){
+        var cR=cats7[0],cD=cats7[1];
+        var tot7={};
+        persons7.forEach(function(p){var r=0,d=0;monthly7.forEach(function(mo){r+=((mo.data[cR]||{})[p]||0);d+=((mo.data[cD]||0)[p]||0);});tot7[p]={r:r,d:d};});
+        var arr7=persons7.map(function(p){return{p:p,r:tot7[p].r,d:tot7[p].d};}).sort(function(a,b){return b.r-a.r;});
+        if(arr7[0])items7.push({t:'info',s:'🏆',x:'SA รับรถสูงสุด: '+arr7[0].p+' '+fmt(arr7[0].r)+' คัน'});
+        var arr7d=persons7.map(function(p){return{p:p,d:tot7[p].d};}).sort(function(a,b){return b.d-a.d;});
+        if(arr7d[0])items7.push({t:'info',s:'🚗',x:'SA ส่งมอบสูงสุด: '+arr7d[0].p+' '+fmt(arr7d[0].d)+' คัน'});
+      }
+    }
+    _hlCard('sa',items7);
+  }catch(e){}
+  try{ /* sc */
+    var items8=[];var s8=D.sc;
+    if(s8&&!s8.error&&s8.sumTotalMonthly){
+      var t8=0,v8=0;
+      for(var m8=0;m8<12;m8++){t8+=(s8.sumTotalMonthly[m8]||0);v8+=(s8.vehCountMonthly[m8]||0);}
+      if(t8>0){
+        items8.push({t:'good',s:'💰',x:'GM เชียร์เคลมรวม '+fmt(t8)+' บาท · ส่งมอบ '+fmt(v8)+' คัน · เฉลี่ย '+fmt(Math.round(t8/v8))+' บาท/คัน'});
+        var bestM8=0,bestV8=0;
+        for(var m9=0;m9<12;m9++){if((s8.sumTotalMonthly[m9]||0)>bestV8){bestV8=s8.sumTotalMonthly[m9];bestM8=m9;}}
+        var MN8=(s8.monthLabels||[]);
+        if(bestV8>0&&MN8[bestM8])items8.push({t:'info',s:'📈',x:'เดือน GM สูงสุด: '+MN8[bestM8]+' '+fmt(bestV8)+' บาท'});
+      }
+    }
+    _hlCard('sc',items8);
+  }catch(e){}
+  try{ /* yoy */
+    var items10=[];var y10=D.yoy;
+    if(y10&&y10.totals){
+      var y69=y10.totals[2026]||0,y68=y10.totals[2025]||0;
+      var diff10=y69-y68;
+      var pd10=y68?(diff10/y68*100):0;
+      items10.push({t:diff10>=0?'good':'bad',s:diff10>=0?'📈':'📉',x:'ส่งมอบปี 69 '+fmt(y69)+' คัน vs ปี 68 '+fmt(y68)+' คัน — '+(diff10>=0?'+':'')+fmt(diff10)+' คัน ('+(pd10>=0?'+':'')+pd10.toFixed(1)+'%)'});
+      if(y10.months&&y10.months.length){
+        var bestM10=null,bestPct10=-999;
+        y10.months.forEach(function(mo){
+          var v69=mo.years[2026]||0,v68b=mo.years[2025]||0;
+          if(v68b>0&&v69>0){var p=(v69-v68b)/v68b*100;if(p>bestPct10){bestPct10=p;bestM10=mo;}}
+        });
+        if(bestM10&&bestPct10>0)items10.push({t:'good',s:'🚀',x:bestM10.month+' โตแรงสุด '+(bestPct10>=0?'+':'')+bestPct10.toFixed(1)+'% YoY'});
+      }
+    }
+    _hlCard('yoy',items10);
+  }catch(e){}
+  try{ /* dta */
+    var items11=[];var d11=D.dta;
+    if(d11&&d11.cumBrands){
+      var arr11=d11.brands.map(function(b){return{b:b,v:d11.cumBrands[b]||0};}).sort(function(a,b){return b.v-a.v;});
+      var sum11=0;arr11.forEach(function(x){sum11+=x.v;});
+      if(arr11[0]&&sum11)items11.push({t:'info',s:'🥇',x:'ยี่ห้อส่งมอบสูงสุด: '+arr11[0].b+' '+fmt(arr11[0].v)+' คัน ('+(arr11[0].v/sum11*100).toFixed(1)+'%)'});
+      if(arr11[1]&&sum11)items11.push({t:'info',s:'🥈',x:'รองลงมา: '+arr11[1].b+' '+fmt(arr11[1].v)+' คัน ('+(arr11[1].v/sum11*100).toFixed(1)+'%)'});
+    }
+    _hlCard('dta',items11);
+  }catch(e){}
+  try{ /* supp */
+    var items12=[];var s11=D.supp;
+    if(s11&&s11.saNames&&s11.saMonthly){
+      var tot11={};
+      s11.saNames.forEach(function(n){var t=0;s11.saMonthly.forEach(function(mo){t+=((mo.data&&mo.data[n])||0);});tot11[n]=t;});
+      var arr12=s11.saNames.map(function(n){return{n:n,v:tot11[n]};}).sort(function(a,b){return b.v-a.v;});
+      if(arr12[0]&&arr12[0].v>0)items12.push({t:'good',s:'🏆',x:'GM ผลิตภัณฑ์เสริมสูงสุด: '+arr12[0].n+' '+fmtB(arr12[0].v)+' บาท'});
+      var s12=0;arr12.forEach(function(x){s12+=x.v;});
+      if(s12>0)items12.push({t:'info',s:'💰',x:'GM ผลิตภัณฑ์เสริมรวมทุก SA: '+fmtB(s12)+' บาท'});
+    }
+    if(s11&&s11.prodNames&&s11.prodGMMonthly){
+      var pr=[];s11.prodNames.forEach(function(pn,pi){var t=0;(s11.prodGMMonthly[pi]||[]).forEach(function(v){t+=(v||0);});pr.push({n:pn,v:t});});
+      pr.sort(function(a,b){return b.v-a.v;});
+      if(pr[0]&&pr[0].v>0)items12.push({t:'info',s:'💎',x:'สินค้าทำรายได้สูงสุด: '+pr[0].n+' '+fmtB(pr[0].v)+' บาท'});
+    }
+    _hlCard('supp',items12);
+  }catch(e){}
+  try{ /* glass */
+    var items13=[];var g13=D.glass;
+    if(g13&&!g13.error&&g13.rows){
+      var yr13={qty:0,target:0,closed:0,remaining:0,revenue:0,profit:0,gmPct:0};
+      for(var i13=6;i13<18;i13++){
+        var r13=g13.rows[i13];if(!r13)continue;
+        function pv13(v){if(v===null||v===undefined||v==='')return 0;var s=String(v).replace(/[,฿%]/g,'');var n=parseFloat(s);return isNaN(n)?0:n;}
+        yr13.qty+=pv13(r13[2]);yr13.target+=pv13(r13[3]);yr13.closed+=pv13(r13[4]);yr13.remaining+=pv13(r13[5]);yr13.revenue+=pv13(r13[13]||r13[12]||0);
+      }
+      var pg=_hlPct(yr13.qty,yr13.target);
+      items13.push({t:pg>=100?'good':pg>=80?'warn':'bad',s:'🪟',x:'จำนวนเคลือบแก้ว '+fmt(yr13.qty)+'/'+fmt(yr13.target)+' คัน ('+pg.toFixed(1)+'%)'});
+      if(yr13.closed)items13.push({t:'good',s:'✅',x:'ปิดได้แล้ว '+fmt(yr13.closed)+' คัน · คงเหลือ '+fmt(yr13.remaining)+' คัน'});
+    }
+    _hlCard('glass',items13);
+  }catch(e){}
+  try{hlOKR_();}catch(e){}
+}
+/* end Highlights Module */
+
 /* ═══════════ Tab Handler ═══════════ */
 document.getElementById('tabs').addEventListener('click',function(e){
   var tab=e.target.closest('.tab');if(!tab)return;
@@ -2215,6 +2541,9 @@ document.getElementById('tabs').addEventListener('click',function(e){
   // Render summary when tab is activated
   if(tab.getAttribute('data-p')==='summary'&&D&&D.cal){
     renderSummary();
+  }
+  if(tab.getAttribute('data-p')!=='dash'&&tab.getAttribute('data-p')!=='summary'&&tab.getAttribute('data-p')!=='brief'){
+    try{computeAllHighlights();}catch(e){}
   }
   // Render brief when tab is activated
   if(tab.getAttribute('data-p')==='brief'&&D&&D.bct){
@@ -2266,13 +2595,15 @@ function renderSupplement(){
 
   // Month selector
   h+='<div class="sel-group"><label>📅 เดือน: <select id="selSuppMonth" onchange="renderSuppPerson()">';
-  saMonthly.forEach(function(m,i){var sel=i===saMonthly.length-1?' selected':'';h+='<option value="'+i+'"'+sel+'>'+m.month+'</option>';});
+  saMonthly.forEach(function(m,i){var sel=i===saMonthly.length-1?' selected':'';h+='<option value="'+i+'"'+sel+'>'+escapeHtml(m.month)+'</option>';});
   h+='</select></label></div>';
 
   // Person chart + table
   h+='<div id="suppPersonKpi"></div>';
   h+='<div class="chart-box lg"><canvas id="cSuppPerson"></canvas></div>';
   h+='<div id="suppPersonTbl" style="overflow-x:auto;margin-top:10px"></div>';
+  h+='<div id="suppPersonRank" style="overflow-x:auto;margin-top:10px"></div>';
+  h+='<div id="suppCrossTab" style="overflow-x:auto;margin-top:10px"></div>';
   h+='</div>';
 
   /* ── Section 2: GM รายผลิตภัณฑ์ ── */
@@ -2286,12 +2617,12 @@ function renderSupplement(){
   h+='</select></label>';
   h+='<label>📅 เดือน: <select id="selSuppProdMonth" onchange="renderSuppProduct()">';
   h+='<option value="-1">รวมทุกเดือน</option>';
-  prodGMMonthly.forEach(function(m,i){h+='<option value="'+i+'">'+m.month+'</option>';});
-  h+='</select></label></div>';
+  prodGMMonthly.forEach(function(m,i){h+='<option value="'+i+'">'+escapeHtml(m.month)+'</option>';});h+='</select></label></div>';
 
   h+='<div id="suppProductKpi"></div>';
   h+='<div class="chart-box lg"><canvas id="cSuppProduct"></canvas></div>';
   h+='<div id="suppProductTbl" style="overflow-x:auto;margin-top:10px"></div>';
+  h+='<div id="suppProductRank" style="overflow-x:auto;margin-top:10px"></div>';
   h+='</div>';
 
   document.getElementById('p-supp').innerHTML=h;
@@ -2311,7 +2642,7 @@ function renderSuppPerson(){
   if(kpiEl){
     var mPct=m.target>0?(m.achieved/m.target*100):0;
     var kpiH='<div class="kpi-row">';
-    kpiH+='<div class="kpi"><div class="lbl">📌 เดือน</div><div class="val" style="color:var(--accent)">'+m.month+'</div></div>';
+    kpiH+='<div class="kpi"><div class="lbl">📌 เดือน</div><div class="val" style="color:var(--accent)">'+escapeHtml(m.month)+'</div></div>';
     kpiH+='<div class="kpi"><div class="lbl">🎯 เป้า GM</div><div class="val">'+fmtB(m.target)+'</div></div>';
     kpiH+='<div class="kpi"><div class="lbl">✅ ทำได้</div><div class="val">'+fmtB(m.achieved)+'</div></div>';
     kpiH+='<div class="kpi"><div class="lbl">📊 คิดเป็น</div><div class="val">'+mPct.toFixed(1)+'%</div>'+pctS(mPct,mPct.toFixed(1)+'%')+'</div>';
@@ -2331,11 +2662,11 @@ function renderSuppPerson(){
   var tblEl=document.getElementById('suppPersonTbl');
   if(!tblEl)return;
   var th='<h2>📋 GM รายบุคคล รายเดือน</h2><div style="overflow-x:auto"><table><tr><th>เดือน</th><th>เป้า GM</th><th>ทำได้</th><th>คิดเป็น</th><th>差</th>';
-  saNames.forEach(function(n){th+='<th>'+maskIfSA(n)+'</th>';});
+  saNames.forEach(function(n){th+='<th>'+escapeHtml(maskIfSA(n))+'</th>';});
   th+='</tr>';
   saMonthly.forEach(function(mo,i){
     var pCls=mo.target>0?(mo.achieved/mo.target*100)>=80?'g':'r':'';
-    th+='<tr><td><b>'+mo.month+'</b></td>';
+    th+='<tr><td><b>'+escapeHtml(mo.month)+'</b></td>';
     th+='<td>'+fmtB(mo.target)+'</td><td>'+fmtB(mo.achieved)+'</td><td class="'+pCls+'">'+(mo.target>0?(mo.achieved/mo.target*100).toFixed(1)+'%':'-')+'</td>';
     th+='<td style="color:'+(mo.diff>=0?'var(--green)':'var(--red)')+'">'+fmtB(mo.diff)+'</td>';
     saNames.forEach(function(n){th+='<td>'+(mo.persons[n]?fmtB(mo.persons[n]):'-')+'</td>';});
@@ -2349,6 +2680,163 @@ function renderSuppPerson(){
   saNames.forEach(function(n,i){th+='<td><b>'+fmtB(d.personTotals[i]||0)+'</b></td>';});
   th+='</tr></table></div>';
   tblEl.innerHTML=th;
+
+  /* ═══ Ranking table: SA persons ranked by GM for selected month ═══ */
+  var rankEl=document.getElementById('suppPersonRank');
+  if(rankEl){
+    // Build ranking data from selected month
+    var rankData=saNames.map(function(n){
+      var gm=m.persons[n]||0;
+      // Per-person target: distribute monthly target proportionally by personTotals
+      var pTotal=d.personTotals[saNames.indexOf(n)]||0;
+      var pTarget=0;
+      if(d.gmTarget>0&&pTotal>0){pTarget=m.target*(pTotal/(d.gmAchieved||1));}
+      var pct=pTarget>0?(gm/pTarget*100):0;
+      return{name:n,gm:gm,target:pTarget,pct:pct};
+    });
+    // Sort descending by GM
+    rankData.sort(function(a,b){return b.gm-a.gm;});
+
+    // Previous month for trend
+    var prevMonth=selIdx>0?saMonthly[selIdx-1]:null;
+
+    var rh='<h2>🏆 จัดอันดับ SA ตาม GM — '+escapeHtml(m.month)+'</h2>';
+    rh+='<div style="overflow-x:auto"><table><tr><th>อันดับ</th><th>SA</th><th>GM เดือนนี้</th><th>เป้าเดือนนี้</th><th>บรรลุ</th><th>vs เดือนก่อน</th></tr>';
+    rankData.forEach(function(rd,i){
+      var rank=i+1;
+      var rankCls=rank<=3?'rank-'+rank:'';
+      var badgeCls=rank===1?'r1':rank===2?'r2':rank===3?'r3':'rN';
+      var badgeHtml='<span class="rank-badge '+badgeCls+'">'+rank+'</span>';
+      var trendHtml='-';
+      if(prevMonth){
+        var prevGm=prevMonth.persons[rd.name]||0;
+        if(rd.gm>prevGm){trendHtml='<span class="trend-up">▲ '+fmtB(rd.gm-prevGm)+'</span>';}
+        else if(rd.gm<prevGm){trendHtml='<span class="trend-dn">▼ '+fmtB(prevGm-rd.gm)+'</span>';}
+        else{trendHtml='<span class="trend-flat">— ไม่เปลี่ยน</span>';}
+      }
+      var pCls=rd.pct>=100?'g':rd.pct>=80?'y':'r';
+      rh+='<tr class="'+rankCls+'"><td>'+badgeHtml+'</td><td><b>'+escapeHtml(maskIfSA(rd.name))+'</b></td>';
+      rh+='<td><b>'+fmtB(rd.gm)+'</b></td><td>'+fmtB(rd.target)+'</td>';
+      rh+='<td class="'+pCls+'">'+(rd.target>0?rd.pct.toFixed(1)+'%':'-')+'</td><td>'+trendHtml+'</td></tr>';
+    });
+    rh+='</table></div>';
+    rankEl.innerHTML=rh;
+  }
+
+  /* ═══ Person × Product cross-tab ═══ */
+  var ctEl=document.getElementById('suppCrossTab');
+  if(ctEl){
+    var ppMonthly=d.personProductMonthly||[];
+    var prodNames=d.productNames||[];
+    // Find cross-tab data for selected month
+    var ctData=null;
+    for(var cti=0;cti<ppMonthly.length;cti++){
+      if(ppMonthly[cti].month===m.month){ctData=ppMonthly[cti].data;break;}
+    }
+
+    var ctH='<h2>🔍 วิเคราะห์ SA × ผลิตภัณฑ์ — '+escapeHtml(m.month)+'</h2>';
+    if(ctData&&prodNames.length>0){
+      // Build cross-tab: rows=SA, cols=products
+      ctH+='<div style="overflow-x:auto"><table><tr><th>SA</th>';
+      prodNames.forEach(function(p){ctH+='<th>'+escapeHtml(p)+'</th>';});
+      ctH+='<th>รวม</th></tr>';
+
+      // Compute column totals for bottom row
+      var colTotals={};
+      prodNames.forEach(function(p){colTotals[p]=0;});
+      var grandTotal=0;
+
+      saNames.forEach(function(n){
+        var rowTotal=0;
+        var rowData=ctData[n]||{};
+        // Build row: rank this SA by total
+        ctH+='<tr><td class="crosstab-th"><b>'+escapeHtml(maskIfSA(n))+'</b></td>';
+        prodNames.forEach(function(p){
+          var v=rowData[p]||0;
+          colTotals[p]+=v;
+          rowTotal+=v;
+          if(v>0){ctH+='<td class="crosstab-num">'+fmtB(v)+'</td>';}
+          else{ctH+='<td class="crosstab-num crosstab-zero">-</td>';}
+        });
+        grandTotal+=rowTotal;
+        ctH+='<td class="crosstab-num"><b>'+fmtB(rowTotal)+'</b></td></tr>';
+      });
+
+      // Totals row
+      ctH+='<tr class="sub"><td class="crosstab-th"><b>รวม</b></td>';
+      prodNames.forEach(function(p){ctH+='<td class="crosstab-num"><b>'+fmtB(colTotals[p])+'</b></td>';});
+      ctH+='<td class="crosstab-num"><b>'+fmtB(grandTotal)+'</b></td></tr>';
+      ctH+='</table></div>';
+
+      // Add insight: top product per SA
+      ctH+='<div style="margin-top:8px;padding:8px 10px;background:#f0f4ff;border-radius:6px;font-size:.78rem">';
+      ctH+='<b>💡 สรุป:</b> ';
+      var topSAs=saNames.map(function(n){
+        var rowData=ctData[n]||{};
+        var topProd='',topVal=0;
+        prodNames.forEach(function(p){var v=rowData[p]||0;if(v>topVal){topVal=v;topProd=p;}});
+        return{name:n,prod:topProd,val:topVal};
+      }).filter(function(x){return x.val>0;}).sort(function(a,b){return b.val-a.val;});
+      if(topSAs.length>0){
+        ctH+='SA เก่งสุด: <b>'+escapeHtml(maskIfSA(topSAs[0].name))+'</b> ('+escapeHtml(topSAs[0].prod)+' '+fmtB(topSAs[0].val)+' บาท)';
+        if(topSAs.length>1){ctH+=' | รองลงมา: <b>'+escapeHtml(maskIfSA(topSAs[1].name))+'</b> ('+escapeHtml(topSAs[1].prod)+' '+fmtB(topSAs[1].val)+' บาท)';}
+      }else{
+        ctH+='ไม่มีข้อมูลสำหรับเดือนนี้';
+      }
+      ctH+='</div>';
+    }else{
+      // No person×product data available — show estimated cross-tab based on month's product breakdown
+      var pgm=d.prodGMMonthly||[];
+      var moProd=pgm[selIdx]||null;
+      if(moProd&&moProd.byProduct&&prodNames.length>0){
+        ctH+='<div style="padding:6px 10px;background:#fef3c7;border-radius:6px;font-size:.78rem;margin-bottom:8px;color:#92400e">';
+        ctH+='<b>⚠️ หมายเหตุ:</b> ไม่มีข้อมูล SA×ผลิตภัณฑ์ แยกในสเปรดชีต — แสดงเป็นสัดส่วนประมาณการจาก GM รายบุคคล × สัดส่วนผลิตภัณฑ์';
+        ctH+='</div>';
+        // Estimate: each SA's GM × product share for the month
+        var moByProd=moProd.byProduct||{};
+        var moTotalProd=moProd.total||0;
+        // Product shares
+        var prodShares={};
+        prodNames.forEach(function(p){prodShares[p]=moTotalProd>0?((moByProd[p]||0)/moTotalProd):0;});
+
+        ctH+='<div style="overflow-x:auto"><table><tr><th>SA</th>';
+        // Show only products that have data this month
+        var activeProds=prodNames.filter(function(p){return(moByProd[p]||0)>0;});
+        activeProds.forEach(function(p){ctH+='<th>'+escapeHtml(p)+'</th>';});
+        ctH+='<th>รวม</th></tr>';
+
+        var estColTotals={};
+        activeProds.forEach(function(p){estColTotals[p]=0;});
+        var estGrand=0;
+
+        // Rank SAs by GM for display
+        var saRanked=saNames.map(function(n){return{name:n,gm:m.persons[n]||0};}).sort(function(a,b){return b.gm-a.gm;});
+
+        saRanked.forEach(function(rd,i){
+          var rankCls=i<3?'rank-'+(i+1):'';
+          ctH+='<tr class="'+rankCls+'"><td class="crosstab-th"><b>'+escapeHtml(maskIfSA(rd.name))+'</b></td>';
+          var rowTotal=0;
+          activeProds.forEach(function(p){
+            var est=rd.gm*prodShares[p];
+            estColTotals[p]+=est;
+            rowTotal+=est;
+            if(est>0){ctH+='<td class="crosstab-num">'+fmtB(est)+'</td>';}
+            else{ctH+='<td class="crosstab-num crosstab-zero">-</td>';}
+          });
+          estGrand+=rowTotal;
+          ctH+='<td class="crosstab-num"><b>'+fmtB(rowTotal)+'</b></td></tr>';
+        });
+        // Totals row
+        ctH+='<tr class="sub"><td class="crosstab-th"><b>รวม</b></td>';
+        activeProds.forEach(function(p){ctH+='<td class="crosstab-num"><b>'+fmtB(estColTotals[p])+'</b></td>';});
+        ctH+='<td class="crosstab-num"><b>'+fmtB(estGrand)+'</b></td></tr>';
+        ctH+='</table></div>';
+      }else{
+        ctH+='<div style="padding:10px;background:#f1f5f9;border-radius:6px;color:var(--dim)">ไม่มีข้อมูล SA × ผลิตภัณฑ์ สำหรับเดือนนี้</div>';
+      }
+    }
+    ctEl.innerHTML=ctH;
+  }
 }
 
 function renderSuppProduct(){
@@ -2378,7 +2866,7 @@ function renderSuppProduct(){
     var kpiH='<div class="kpi-row">';
     if(selIdx>=0&&selIdx<monthlyData.length){
       var mo=monthlyData[selIdx];
-      kpiH+='<div class="kpi"><div class="lbl">📌 เดือน</div><div class="val" style="color:var(--accent)">'+mo.month+'</div></div>';
+      kpiH+='<div class="kpi"><div class="lbl">📌 เดือน</div><div class="val" style="color:var(--accent)">'+escapeHtml(mo.month)+'</div></div>';
       kpiH+='<div class="kpi"><div class="lbl">📊 รวม '+(isGM?'GM':'คัน')+'</div><div class="val">'+fmtFunc(mo.total||0)+'</div></div>';
     } else {
       kpiH+='<div class="kpi"><div class="lbl">📊 รวม '+(isGM?'GM สะสม':'คัน สะสม')+'</div><div class="val">'+fmtFunc(totalVal)+'</div></div>';
@@ -2414,14 +2902,14 @@ function renderSuppProduct(){
   if(!tblEl)return;
   var title=isGM?'📋 รายได้ GM รายเดือนตามผลิตภัณฑ์':'📋 จำนวนคัน รายเดือนตามผลิตภัณฑ์';
   var th='<h2>'+title+'</h2><div style="overflow-x:auto"><table><tr><th>เดือน</th><th>รวม</th>';
-  sortedProds.forEach(function(p){th+='<th>'+p+'</th>';});
+  sortedProds.forEach(function(p){th+='<th>'+escapeHtml(p)+'</th>';});
   th+='</tr>';
 
   monthlyData.forEach(function(mo,i){
     if(!mo.month||mo.month==='')return;
     var byProd=mo.byProduct||{};
     var displayTotal=isGM?fmtB(mo.total||0):fmt(mo.total||0);
-    th+='<tr><td><b>'+mo.month+'</b></td><td>'+displayTotal+'</td>';
+    th+='<tr><td><b>'+escapeHtml(mo.month)+'</b></td><td>'+displayTotal+'</td>';
     sortedProds.forEach(function(p){
       var v=byProd[p]||0;
       th+='<td>'+(v?fmtFunc(v):'-')+'</td>';
@@ -2434,9 +2922,83 @@ function renderSuppProduct(){
   sortedProds.forEach(function(p){th+='<td><b>'+fmtFunc(totals[p]||0)+'</b></td>';});
   th+='</tr></table></div>';
   tblEl.innerHTML=th;
+
+  /* ═══ Product ranking ═══ */
+  var prdRankEl=document.getElementById('suppProductRank');
+  if(prdRankEl){
+    // Determine which month's data to rank
+    var rankMonth='';
+    var rankByProd={};
+    var rankTotal=0;
+
+    if(selIdx>=0&&selIdx<monthlyData.length){
+      var mo=monthlyData[selIdx];
+      rankMonth=mo.month||'';
+      rankByProd=mo.byProduct||{};
+      rankTotal=mo.total||0;
+    }else{
+      // All months — use totals
+      rankMonth='รวมทุกเดือน';
+      rankByProd=totals;
+      rankTotal=totalVal;
+    }
+
+    // Build ranking data
+    var prodRankData=prodNames.map(function(p){
+      var val=rankByProd[p]||0;
+      var share=rankTotal>0?(val/rankTotal*100):0;
+      return{name:p,val:val,share:share};
+    }).filter(function(x){return x.val>0;}).sort(function(a,b){return b.val-a.val;});
+
+    // Previous period for growth
+    var prevByProd=null;
+    if(selIdx>0&&selIdx<monthlyData.length){
+      prevByProd=monthlyData[selIdx-1].byProduct||{};
+    }
+
+    var prh='<h2>🏆 จัดอันดับผลิตภัณฑ์ — '+escapeHtml(rankMonth)+' ('+unitLabel+')</h2>';
+    if(prodRankData.length===0){
+      prh+='<div style="padding:10px;background:#f1f5f9;border-radius:6px;color:var(--dim)">ไม่มีข้อมูลสำหรับช่วงนี้</div>';
+    }else{
+      prh+='<div style="overflow-x:auto"><table><tr><th>อันดับ</th><th>ผลิตภัณฑ์</th><th>'+(isGM?'GM':'จำนวนคัน')+'</th><th>สัดส่วน</th><th>vs ก่อนหน้า</th></tr>';
+      prodRankData.forEach(function(rd,i){
+        var rank=i+1;
+        var rankCls=rank===1?'rank-'+rank:rank===2?'rank-'+rank:rank===3?'rank-'+rank:'';
+        var topCls=rank===1?'prod-top':'';
+        var badgeCls=rank===1?'r1':rank===2?'r2':rank===3?'r3':'rN';
+        var badgeHtml='<span class="rank-badge '+badgeCls+'">'+rank+'</span>';
+
+        // Growth vs previous
+        var growthHtml='-';
+        if(prevByProd){
+          var prevVal=prevByProd[rd.name]||0;
+          if(rd.val>prevVal){var pctG=prevVal>0?((rd.val-prevVal)/prevVal*100):100;growthHtml='<span class="trend-up">▲ '+fmtFunc(rd.val-prevVal)+' ('+pctG.toFixed(1)+'%)</span>';}
+          else if(rd.val<prevVal){var pctD=prevVal>0?((prevVal-rd.val)/prevVal*100):0;growthHtml='<span class="trend-dn">▼ '+fmtFunc(prevVal-rd.val)+' ('+pctD.toFixed(1)+'%)</span>';}
+          else{growthHtml='<span class="trend-flat">— ไม่เปลี่ยน</span>';}
+        }
+
+        prh+='<tr class="'+rankCls+' '+topCls+'"><td>'+badgeHtml+'</td><td><b>'+escapeHtml(rd.name)+'</b></td>';
+        prh+='<td><b>'+fmtFunc(rd.val)+'</b></td><td>'+rd.share.toFixed(1)+'%</td><td>'+growthHtml+'</td></tr>';
+      });
+      prh+='</table></div>';
+
+      // Top product insight
+      if(prodRankData.length>0){
+        var top=prodRankData[0];
+        prh+='<div style="margin-top:8px;padding:8px 10px;background:#f0f4ff;border-radius:6px;font-size:.78rem">';
+        prh+='<b>💡 สรุป:</b> ผลิตภัณฑ์อันดับ 1: <b>'+escapeHtml(top.name)+'</b> ด้วย '+fmtFunc(top.val)+' '+unitLabel+' ('+top.share.toFixed(1)+'% ของรวม)';
+        if(prodRankData.length>1){
+          var second=prodRankData[1];
+          prh+=' | อันดับ 2: <b>'+escapeHtml(second.name)+'</b> ('+fmtFunc(second.val)+' '+unitLabel+', '+second.share.toFixed(1)+'%)';
+        }
+        prh+='</div>';
+      }
+    }
+    prdRankEl.innerHTML=prh;
+  }
 }
 
-function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+/* escHtml() is defined at the top of this script as an alias of escapeHtml(). */
 
 /* ═══════════ KPI Brief Tab ═══════════ */
 function renderBrief(){
@@ -2483,7 +3045,7 @@ function renderBrief(){
   // ── Header ──
   h+='<div style="text-align:center;margin-bottom:14px">';
   h+='<div style="font-size:1.3rem;font-weight:800;color:#1e293b">📋 สรุปสั้น KPI ประจำเดือน</div>';
-  h+='<div style="font-size:.85rem;color:#64748b;margin-top:2px">'+mLabel+' '+(new Date().getFullYear()+543)+' · ผ่านมา '+wdP+'/'+wdT+' วันทำงาน ('+pctTime+'%)</div>';
+  h+='<div style="font-size:.85rem;color:#64748b;margin-top:2px">'+escapeHtml(mLabel)+' '+(new Date().getFullYear()+543)+' · ผ่านมา '+wdP+'/'+wdT+' วันทำงาน ('+pctTime+'%)</div>';
   h+='</div>';
 
   // ── 🚗 ปิดได้/ส่งมอบ ──
@@ -2574,7 +3136,7 @@ function renderBrief(){
     // Show missing important channels with 0
     for(var mi=0;mi<importantNames.length;mi++){
       if(!shownImp[importantNames[mi]]){
-        h+='<div class="brief-rank"><div class="rank">-</div><div class="name">'+importantNames[mi]+'</div><div class="val">0⭐</div></div>';
+        h+='<div class="brief-rank"><div class="rank">-</div><div class="name">'+escapeHtml(importantNames[mi])+'</div><div class="val">0⭐</div></div>';
       }
     }
     h+='</div>';

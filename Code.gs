@@ -5,7 +5,7 @@
   ═══════════════════════════════════════════ */
 var SS_KEY = '1rqD0cIuCK5dU2uNjafx1qJRpeY7Bc69-jXN2FB1JK2c';
 var SH_NAME = 'D1_DTA1';
-var CACHE_PREFIX = 'wr13.60_';
+var CACHE_PREFIX = 'wr13.66_';
 var CACHE_TTL = 300;
 
 /* ─── PDPA Name Masking ─── */
@@ -48,7 +48,196 @@ function ck(key) { return CacheService.getScriptCache().get(CACHE_PREFIX + key);
 function cs(key, val) { CacheService.getScriptCache().put(CACHE_PREFIX + key, JSON.stringify(val), CACHE_TTL); }
 function cv(key) { var c = ck(key); return c ? JSON.parse(c) : null; }
 
+/* ═══════════════════════════════════════════
+   PDPA Security System — Session Token + 2FA + Intrusion Detection
+   ═══════════════════════════════════════════ */
+var PDPA_CONFIG = {
+  PASSWORD: 'pmsg2026',           // รหัสผ่าน
+  TWO_FA_CODE: '2580',            // รหัส 2FA
+  MAX_ATTEMPTS: 5,                // พยายามผิดได้สูงสุด 5 ครั้ง
+  LOCKOUT_MINUTES: 30,            // ล็อค 30 นาทีหลังพยายามผิดเกินกำหนด
+  SECURITY_LOG_KEY: 'PDPA_SEC_LOG',  // CacheService key สำหรับ log
+  SESSION_TTL: 14400              // session token TTL 8 ชม. (วินาที)
+};
+
+/* ─── escapeHtml — ป้องกัน XSS เมื่อแทรกข้อมูลจาก spreadsheet ลง HTML ─── */
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* ─── ตรวจจับบุกรุก — บันทึกการพยายามเข้าถึง ─── */
+function pdpaLogSecurity(eventType, detail) {
+  var log = [];
+  var cached = CacheService.getScriptCache().get(PDPA_CONFIG.SECURITY_LOG_KEY);
+  if (cached) { try { log = JSON.parse(cached); } catch(e) {} }
+  log.push({
+    type: eventType,
+    detail: detail,
+    timestamp: new Date().toISOString(),
+    timeThai: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss')
+  });
+  // เก็บสูงสุด 100 รายการ
+  if (log.length > 100) log = log.slice(-100);
+  CacheService.getScriptCache().put(PDPA_CONFIG.SECURITY_LOG_KEY, JSON.stringify(log), 21600);
+}
+
+/* ─── ตรวจสอบการล็อค (พยายามผิดเกินกำหนด) ─── */
+function pdpaCheckLockout() {
+  var lockKey = 'PDPA_LOCKOUT';
+  var lockData = CacheService.getScriptCache().get(lockKey);
+  if (lockData) {
+    try {
+      var lock = JSON.parse(lockData);
+      var lockTime = new Date(lock.time).getTime();
+      var now = new Date().getTime();
+      var elapsed = (now - lockTime) / 60000; // นาที
+      if (elapsed < PDPA_CONFIG.LOCKOUT_MINUTES) {
+        var remaining = Math.ceil(PDPA_CONFIG.LOCKOUT_MINUTES - elapsed);
+        return { locked: true, remaining: remaining, attempts: lock.attempts };
+      }
+    } catch(e) {}
+  }
+  return { locked: false };
+}
+
+/* ─── บันทึกการพยายามผิด ─── */
+function pdpaRecordFailedAttempt() {
+  var attemptKey = 'PDPA_ATTEMPTS';
+  var count = parseInt(CacheService.getScriptCache().get(attemptKey) || '0') + 1;
+  CacheService.getScriptCache().put(attemptKey, String(count), 3600); // 1 ชม.
+
+  pdpaLogSecurity('FAILED_ATTEMPT', 'พยายามเข้าถึงผิดรหัสครั้งที่ ' + count);
+
+  if (count >= PDPA_CONFIG.MAX_ATTEMPTS) {
+    // ล็อคระบบ
+    var lockData = JSON.stringify({ time: new Date().toISOString(), attempts: count });
+    CacheService.getScriptCache().put('PDPA_LOCKOUT', lockData, PDPA_CONFIG.LOCKOUT_MINUTES * 60);
+    pdpaLogSecurity('SYSTEM_LOCKED', 'ระบบถูกล็อค — พยายามผิดเกินกำหนด (' + count + ' ครั้ง)');
+    // รีเซ็ตตัวนับ
+    CacheService.getScriptCache().remove(attemptKey);
+  }
+  return count;
+}
+
+/* ─── รีเซ็ตตัวนับเมื่อ login สำเร็จ ─── */
+function pdpaResetAttempts() {
+  CacheService.getScriptCache().remove('PDPA_ATTEMPTS');
+}
+
+/* ─── อ่าน security log ─── */
+function pdpaGetSecurityLog() {
+  var cached = CacheService.getScriptCache().get(PDPA_CONFIG.SECURITY_LOG_KEY);
+  if (!cached) return [];
+  try { return JSON.parse(cached); } catch (e) { return []; }
+}
+
 function doGet(e) {
+  if (!e) e = { parameter: {} };
+  if (!checkRateLimit()) { return ContentService.createTextOutput(JSON.stringify({error:"Rate limit exceeded"})).setMimeType(ContentService.MimeType.JSON); }
+  var p = e.parameter || {};
+  if (p.debugsheets) { return ContentService.createTextOutput(JSON.stringify(listAllSheets())).setMimeType(ContentService.MimeType.JSON); }
+  
+  // ═══ PDPA Access Control — Session Token + 2FA + Intrusion Detection ═══
+  
+  // ── ตรวจสอบ session token (st) ──
+  var hasSession = false;
+  if (p.st) {
+    var sessionData = CacheService.getScriptCache().get('PDPA_SESSION_' + p.st);
+    if (sessionData === 'valid') {
+      hasSession = true;
+    }
+  }
+  
+  // ── ตรวจสอบการล็อคระบบ (lockout) — ถ้าล็อคอยู่และยังไม่มี session ให้แสดงหน้าล็อค ──
+  var lockStatus = pdpaCheckLockout();
+  if (lockStatus.locked && !hasSession) {
+    return serveWarRoomLockout(lockStatus);
+  }
+  
+  // ── GET login (backward compatible) — ถ้าส่ง pwdok=1 + pass + otp มาทาง GET ──
+  // สร้าง session token และ redirect ไป URL ที่มี ?st=<token> แทนการส่ง pass+otp ใน URL
+  if (!hasSession && p.pwdok === '1' && p.pass && p.otp) {
+    if (p.pass === PDPA_CONFIG.PASSWORD && p.otp === PDPA_CONFIG.TWO_FA_CODE) {
+      pdpaResetAttempts();
+      pdpaLogSecurity('LOGIN_SUCCESS', 'เข้าสู่ระบบสำเร็จ (GET backward compat)');
+      // สร้าง session token (valid 8 ชม.)
+      var getToken = Utilities.getUuid() + '_' + new Date().getTime();
+      CacheService.getScriptCache().put('PDPA_SESSION_' + getToken, 'valid', PDPA_CONFIG.SESSION_TTL);
+      // Parse rquery if present แล้ว merge เข้า params (ยกเว้น pass/otp/pwdok/rquery/st)
+      if (p.rquery) {
+        try {
+          var getPairs = p.rquery.split('&');
+          for (var gpi = 0; gpi < getPairs.length; gpi++) {
+            var geq = getPairs[gpi].indexOf('=');
+            if (geq >= 0) {
+              var gK = decodeURIComponent(getPairs[gpi].substring(0, geq));
+              var gV = decodeURIComponent(getPairs[gpi].substring(geq + 1));
+              if (gK !== 'pass' && gK !== 'authed' && gK !== 'otp' && gK !== 'pwdok' && gK !== 'rquery' && gK !== 'st') {
+                p[gK] = gV;
+              }
+            }
+          }
+        } catch(e2) {}
+      }
+      // Build redirect URL: ?st=<token>&<rquery params>
+      var baseUrl = ScriptApp.getService().getUrl();
+      var redirectUrl = baseUrl + '?st=' + getToken;
+      // Append remaining params (excluding pass/otp/pwdok/rquery/st/authed)
+      for (var rk in p) {
+        if (p[rk] && rk !== 'st' && rk !== 'pass' && rk !== 'authed' && rk !== 'otp' && rk !== 'pwdok' && rk !== 'rquery') {
+          redirectUrl += '&' + rk + '=' + encodeURIComponent(p[rk]);
+        }
+      }
+      // Redirect via meta refresh (doGet returns HTML)
+      return HtmlService.createHtmlOutput(
+        '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+        '<meta http-equiv="refresh" content="0;url=' + escapeHtml(redirectUrl) + '">' +
+        '<title>กำลังเข้าสู่ระบบ...</title></head>' +
+        '<body style="font-family:system-ui;text-align:center;padding:40px">' +
+        '<div style="font-size:48px">✅</div>' +
+        '<div style="font-size:18px;font-weight:700;color:#10b981;margin-top:8px">เข้าสู่ระบบสำเร็จ</div>' +
+        '<div style="font-size:13px;color:#64748b;margin-top:4px">กำลังโหลด War Room...</div>' +
+        '</body></html>'
+      ).setTitle('กำลังเข้าสู่ระบบ...').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    } else {
+      // Login ผิด — นับครั้งที่ผิด
+      var getCount = pdpaRecordFailedAttempt();
+      pdpaLogSecurity('LOGIN_FAILED', 'รหัสผ่านหรือ 2FA ไม่ถูกต้อง ครั้งที่ ' + getCount);
+      // ตรวจว่าล็อคแล้วหรือยัง
+      var newLock = pdpaCheckLockout();
+      if (newLock.locked) {
+        return serveWarRoomLockout(newLock);
+      }
+      return serveWarRoomLogin('❌ รหัสผ่านหรือ 2FA ไม่ถูกต้อง (พยายาม ' + getCount + '/' + PDPA_CONFIG.MAX_ATTEMPTS + ')', p.rquery || '');
+    }
+  }
+  
+  // ── API endpoints ที่ไม่ต้อง login (เฉพาะ api และ cal เท่านั้น — debug endpoints ต้องมี session) ──
+  var isApi = p.api || p.cal;
+  var isDebugEndpoint = p.debug1 || p.debug2 || p.debug3 || p.debug4 || p.debug5 || p.debug;
+  
+  // ── debug endpoints ต้องมี session token ถึงจะเข้าได้ (ปิด debug โล่ง) ──
+  if (isDebugEndpoint && !hasSession) {
+    return serveWarRoomLogin('🔒 กรุณา login ก่อนเข้า debug endpoints', '');
+  }
+  
+  // ── ถ้าไม่มี session และไม่ใช่ API — แสดงหน้า login ──
+  if (!hasSession && !isApi) {
+    var backQp = [];
+    for (var bk in p) {
+      if (p[bk] && bk !== 'st' && bk !== 'pass' && bk !== 'authed' && bk !== 'otp' && bk !== 'pwdok' && bk !== 'rquery') {
+        backQp.push(bk + '=' + encodeURIComponent(p[bk]));
+      }
+    }
+    var backQs = backQp.length ? backQp.join('&') : '';
+    return serveWarRoomLogin('', backQs);
+  }
   if (e && e.parameter && e.parameter.debug4) {
     var ss = SpreadsheetApp.openById(SS_KEY);
     var sh = ss.getSheetByName('Monitor');
@@ -83,6 +272,9 @@ function doGet(e) {
     try { out.rtype = getRepairTypeData(); } catch(err) { out.rtype_err = err.message; }
     try { out.smix = getServiceMixData(); } catch(err) { out.smix_err = err.message; }
     try { out.supp = getSupplementData(); } catch(err) { out.supp_err = err.message; }
+    try { out._suppDump = getSupplementRawDump(); } catch(err) { out._suppDumpErr = err.message; }
+    try { out._sheets = listAllSheets(); } catch(err) {}
+    try { out._suppRaw = getSupplementRawData(); } catch(err) {}
     // Read new SC data from supplement spreadsheet
     try {
       var scSS = SpreadsheetApp.openById('1Yr2-vXEI64BRfA_K8muqg4Gij3Un6QXKoi7LWIGt5tg');
@@ -146,7 +338,7 @@ function doGet(e) {
   /* ═══ API endpoint: return ALL data as JSON for fetch() ═══ */
   if (e && e.parameter && e.parameter.api) {
     var maskData = !(e.parameter.maskData === 'false');
-    var out = { version: 'v13.59' };
+    var out = { version: 'v13.65' };
     var allFns = [
       ['okr', getOKRData], ['bct', getBCTData], ['fin', getFinData],
       ['ins', getInsData], ['ch', getChData], ['sa', getSAData],
@@ -163,6 +355,7 @@ function doGet(e) {
         out[allFns[fi][0] + '_err'] = err.message;
       }
     }
+    try { out._suppDump = getSupplementRawDump(); } catch(e) {}
     if (maskData) {
       out = maskApiResponse_(out);
     }
@@ -185,7 +378,7 @@ function doGet(e) {
   html = html.replace(/body\{background:var\(--bg\)/, 'body{background:var(--bg);padding-bottom:28px');
   output.setContent(html);
   return output
-    .setTitle('PMG War Room v13.62')
+    .setTitle('PMG War Room v13.65')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width,initial-scale=1');
 }
@@ -410,26 +603,50 @@ function getSupplementData() {
   var ss = SpreadsheetApp.openById('1Yr2-vXEI64BRfA_K8muqg4Gij3Un6QXKoi7LWIGt5tg');
   var sh = ss.getSheetByName('ตารางวัดผล') || ss.getSheetByName('วัดผล');
   if (!sh) { cs(k, {error:'Sheet not found'}); return cv(k); }
-  var rows = sh.getRange('A90:AB138').getValues();
+  var rows = sh.getRange('A87:AB140').getValues();
 
-  // ── Section 1: GM per person (rows 2-13 = months Jan-Dec) ──
+  // ── Section 1: GM per person — search for SA names row ──
   var saNames = [];
-  for (var c = 6; c <= 14; c++) {
-    var nm = rows[1][c]; // Row 91 = index 1
-    if (nm && String(nm).trim()) saNames.push(String(nm).trim());
+  var saNameRowIdx = -1;
+  for (var ri = 0; ri < Math.min(rows.length, 20); ri++) {
+    var candidates = [];
+    var textCount = 0;
+    for (var ci = 6; ci <= 14; ci++) {
+      var nm = rows[ri][ci];
+      if (nm && String(nm).trim()) {
+        var str = String(nm).trim();
+        // SA name = text (not number)
+        if (isNaN(Number(str)) && str.length > 1) {
+          candidates.push(str);
+          textCount++;
+        } else {
+          candidates.push(null);
+        }
+      } else {
+        candidates.push(null);
+      }
+    }
+    if (textCount >= 2) {
+      saNames = candidates.filter(function(x) { return x; });
+      saNameRowIdx = ri;
+      break;
+    }
   }
-  var gmTarget = Number(rows[2][2]) || 0; // Row 92 total target
-  var gmAchieved = Number(rows[2][3]) || 0; // Row 92 total achieved
+  var gmRowIdx = saNameRowIdx >= 0 ? saNameRowIdx + 1 : 2;
+  var gmTarget = Number(rows[gmRowIdx][2]) || 0;
+  var gmAchieved = Number(rows[gmRowIdx][3]) || 0;
   var gmPct = gmTarget > 0 ? gmAchieved / gmTarget : 0;
 
   var personTotals = [];
   for (var ci = 0; ci < saNames.length; ci++) {
-    personTotals.push(Number(rows[2][6+ci]) || 0);
+    personTotals.push(Number(rows[gmRowIdx][6+ci]) || 0);
   }
 
   var saMonthly = [];
-  for (var mi = 3; mi <= 14; mi++) { // rows 93-104 = Jan-Dec
+  var monthStartRow = saNameRowIdx >= 0 ? saNameRowIdx + 2 : 3;
+  for (var mi = monthStartRow; mi <= monthStartRow + 11 && mi < rows.length; mi++) {
     var month = String(rows[mi][1] || '').trim();
+    if (!month || month === 'เดือน' || month.indexOf('ผลิตภัณฑ์') >= 0 || month.indexOf('รวม') >= 0) continue;
     var mTarget = Number(rows[mi][2]) || 0;
     var mAchieved = Number(rows[mi][3]) || 0;
     var mPct = mTarget > 0 ? mAchieved / mTarget : 0;
@@ -488,6 +705,57 @@ function getSupplementData() {
     carMonthly.push({month: month, total: totalCars, byProduct: byProd});
   }
 
+  // ── Section 4: Person × Product cross-tab (if available in sheet) ──
+  // Try to find a person×product matrix below row 138 or in a separate area
+  var personProductMonthly = [];
+  try {
+    // Read rows 138-200 to search for a person×product header row
+    var searchRange = sh.getRange('A138:AB200').getValues();
+    var ppHeaderRow = -1;
+    for (var si = 0; si < searchRange.length; si++) {
+      var rowLabel = String(searchRange[si][0] || '').trim();
+      // Look for headers like "SA/Product", "SA×Product", "รายบุคคล×ผลิตภัณฑ์", etc.
+      if (rowLabel && (rowLabel.indexOf('SA') >= 0 || rowLabel.indexOf('Product') >= 0 ||
+          rowLabel.indexOf('ผลิตภัณฑ์') >= 0 || rowLabel.indexOf('บุคคล') >= 0) &&
+          String(searchRange[si][1] || '').trim()) {
+        ppHeaderRow = si;
+        break;
+      }
+    }
+
+    if (ppHeaderRow >= 0) {
+      // Read the header to find product names and SA names
+      var ppMonths = [];
+      for (var c = 1; c < 28; c++) {
+        var hdr = String(searchRange[ppHeaderRow][c] || '').trim();
+        if (hdr) ppMonths.push({name: hdr, col: c});
+      }
+
+      // Read data rows: each block = 1 month, SA names in col A, products in header
+      // Try to find monthly blocks
+      var dataStartRow = ppHeaderRow + 1;
+      for (var mi2 = 0; mi2 < 12 && dataStartRow + mi2 * (saNames.length + 1) < searchRange.length; mi2++) {
+        var monthLabel = String(searchRange[dataStartRow + mi2 * (saNames.length + 1)][0] || '').trim();
+        if (!monthLabel) continue;
+        var ppData = {};
+        for (var si2 = 0; si2 < saNames.length; si2++) {
+          var dataRowIdx = dataStartRow + mi2 * (saNames.length + 1) + si2;
+          if (dataRowIdx >= searchRange.length) break;
+          var saName = String(searchRange[dataRowIdx][0] || '').trim();
+          var byProd = {};
+          for (var pi2 = 0; pi2 < ppMonths.length; pi2++) {
+            var v = Number(searchRange[dataRowIdx][ppMonths[pi2].col]) || 0;
+            if (v > 0) byProd[ppMonths[pi2].name] = v;
+          }
+          if (saName) ppData[saName] = byProd;
+        }
+        personProductMonthly.push({month: monthLabel, data: ppData});
+      }
+    }
+  } catch(ppErr) {
+    // If person×product data not available, return empty array
+  }
+
   cs(k, {
     gmTarget: gmTarget,
     gmAchieved: gmAchieved,
@@ -500,7 +768,8 @@ function getSupplementData() {
     prodGMMonthly: prodGMMonthly,
     totalCarsAll: totalCarsAll,
     carTotals: carTotals,
-    carMonthly: carMonthly
+    carMonthly: carMonthly,
+    personProductMonthly: personProductMonthly
   });
   return cv(k);
 }
@@ -648,7 +917,7 @@ function getYoYData() {
 var HIST_SS_KEY = '1c98G2xTADv66xHdXappjUf4ydCeXJ2NTA2EQWfC6UNQ';
 function getHistoricalData() {
   var k = 'hist';
-  var c = cv(k); if (c) return c;
+  // ไม่ใช้ cache สำหรับ hist — ดึงใหม่ทุกครั้งเพื่อให้ข้อมูลปี 67/68 มาเสมอ
   var histSS = SpreadsheetApp.openById(HIST_SS_KEY);
   var result = {};
   var yearSheets = { 2024: '2024', 2025: '2025' };
@@ -744,8 +1013,7 @@ function getHistoricalData() {
       } catch(e2) { /* skip channel hist if error */ }
     }
   }
-  cs(k, result);
-  return cv(k);
+  return result;
 }
 
 /* ─── DTA ─── */
@@ -1137,4 +1405,184 @@ function getCalendarData() {
     cs(k, { error: e.message || String(e) });
     return cv(k);
   }
+}
+
+// ═══ PDPA Lockout Page for War Room (ล็อค 30 นาที หลังพยายามผิด 5 ครั้ง) ═══
+function serveWarRoomLockout(lockStatus) {
+  return HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>🚫 ระบบล็อค — War Room</title>' +
+    '<style>*{margin:0;padding:0;box-sizing:border-box}' +
+    'body{font-family:system-ui,sans-serif;background:linear-gradient(135deg,#7f1d1d,#dc2626);min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff}</style>' +
+    '</head><body><div style="text-align:center;padding:40px;max-width:420px">' +
+    '<div style="font-size:56px;margin-bottom:16px">🚫</div>' +
+    '<div style="font-size:22px;font-weight:800;margin-bottom:8px">ระบบถูกล็อค</div>' +
+    '<div style="font-size:14px;opacity:.9;margin-bottom:16px">ตรวจพบการพยายามเข้าถึงโดยไม่ได้รับอนุญาต ' + escapeHtml(String(lockStatus.attempts || 0)) + ' ครั้ง</div>' +
+    '<div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:16px;margin-bottom:16px">' +
+    '<div style="font-size:13px;font-weight:700;margin-bottom:6px">⚠️ บุกรุก / โจมตี (Intrusion Detected)</div>' +
+    '<div style="font-size:12px;opacity:.85">ระบบล็อคอัตโนมัติเพื่อป้องกันการเข้าถึงข้อมูล PDPA</div>' +
+    '<div style="font-size:12px;opacity:.85;margin-top:8px">กรุณารอ <strong>' + escapeHtml(String(lockStatus.remaining || 0)) + ' นาที</strong> แล้วลองใหม่</div>' +
+    '</div>' +
+    '<div style="font-size:11px;opacity:.6">🔒 PDPA Security System — PMG War Room · 2026</div>' +
+    '</div></body></html>'
+  ).setTitle('🚫 ระบบล็อค — War Room').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// ═══ PDPA Login Page for War Room ═══
+function serveWarRoomLogin(errorMsg, redirectQuery) {
+  var baseUrl = ScriptApp.getService().getUrl();
+  
+  // อ่าน intrusion log (5 รายการล่าสุด — FAILED_ATTEMPT / SYSTEM_LOCKED)
+  var secLog = pdpaGetSecurityLog();
+  var recentAlerts = secLog.filter(function(l) { return l.type === 'FAILED_ATTEMPT' || l.type === 'SYSTEM_LOCKED'; }).slice(-5);
+  var alertHtml = '';
+  if (recentAlerts.length > 0) {
+    var alertItems = recentAlerts.map(function(a) {
+      return '<div style="font-size:10px;color:#dc2626;padding:3px 0;border-bottom:1px solid #fee2e2">' +
+        '<span style="font-weight:600">' + escapeHtml(a.timeThai) + '</span> — ' + escapeHtml(a.detail) + '</div>';
+    }).join('');
+    alertHtml = '<div style="margin-top:16px;padding:10px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px">' +
+      '<div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:6px">🚨 บันทึกการบุกรุกล่าสุด (Recent Intrusions):</div>' +
+      alertItems +
+      '</div>';
+  }
+  
+  var errorHtml = errorMsg ? 
+    '<div style="background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:10px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;text-align:center">'+errorMsg+'</div>' : '';
+  
+  return HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>🔒 PDPA — War Room Login</title>'+
+    '<style>'+
+    '*{margin:0;padding:0;box-sizing:border-box}'+
+    'body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#dc2626 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;color:#1e293b}'+
+    '.login-card{background:#fff;border-radius:16px;padding:36px 32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)}'+
+    '.lock-icon{font-size:44px;text-align:center;margin-bottom:12px}'+
+    '.login-title{font-size:19px;font-weight:800;text-align:center;margin-bottom:4px}'+
+    '.login-sub{font-size:12px;text-align:center;color:#64748b;margin-bottom:20px}'+
+    '.pdpa-badge{display:inline-block;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:14px}'+
+    '.input-group{margin-bottom:16px}'+
+    '.input-label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px}'+
+    '.input-field{width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;font-family:inherit}'+
+    '.input-field:focus{outline:none;border-color:#dc2626}'+
+    '.otp-field{text-align:center;letter-spacing:6px;font-size:20px}'+
+    '.login-btn{width:100%;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;border:none;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer}'+
+    '.login-btn:hover{opacity:.9}'+
+    '.pdpa-notice{margin-top:16px;padding:10px 14px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;font-size:11px;color:#991b1b;line-height:1.6}'+
+    '.pdpa-footer{text-align:center;margin-top:12px;font-size:11px;color:#94a3b8}'+
+    '</style></head><body>'+
+    '<div class="login-card">'+
+      '<div class="lock-icon">🔐</div>'+
+      '<div class="login-title">PMG War Room</div>'+
+      '<div class="login-sub">ระบบจำกัดการเข้าถึง — 2FA (Password + OTP)</div>'+
+      '<div style="text-align:center"><span class="pdpa-badge">⛔ ห้ามเผยแพร่โดยไม่ได้รับอนุญาต</span></div>'+
+      errorHtml+
+      alertHtml+
+      '<form method="get" action="'+baseUrl+'" target="_top">'+
+        '<input type="hidden" name="pwdok" value="1">'+
+        '<input type="hidden" name="rquery" value="'+escapeHtml(redirectQuery||'')+'">'+
+        '<div class="input-group">'+
+          '<label class="input-label">🔑 รหัสผ่าน (Password)</label>'+
+          '<input type="password" name="pass" class="input-field" placeholder="กรุณาใส่รหัสผ่าน" autofocus required>'+
+        '</div>'+
+        '<div class="input-group">'+
+          '<label class="input-label">📱 รหัส 2FA (4 หลัก)</label>'+
+          '<input type="text" name="otp" class="input-field otp-field" placeholder="••••" maxlength="4" pattern="[0-9]{4}" required>'+
+        '</div>'+
+        '<button type="submit" class="login-btn">เข้าสู่ระบบ →</button>'+
+      '</form>'+
+      '<div class="pdpa-notice"><strong>📋 PDPA:</strong> ข้อมูลส่วนบุคคล — ห้ามส่งออก เผยแพร่ หรือเข้าถึงโดยไม่ได้รับอนุญาต</div>'+
+      '<div class="pdpa-footer">PMSG · 2026 · 🔒 2FA + Session Token Enabled</div>'+
+    '</div></body></html>'
+  ).setTitle('🔒 PDPA — War Room Login').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function listAllSheets() {
+  var ss = SpreadsheetApp.openById('1Yr2-vXEI64BRfA_K8muqg4Gij3Un6QXKoi7LWIGt5tg');
+  var sheets = ss.getSheets();
+  var result = [];
+  for (var i = 0; i < sheets.length; i++) {
+    result.push({
+      index: i,
+      name: sheets[i].getName(),
+      gid: sheets[i].getSheetId(),
+      lastRow: sheets[i].getLastRow(),
+      lastCol: sheets[i].getLastColumn()
+    });
+  }
+  return result;
+}
+
+function getSupplementRawData() {
+  var ss = SpreadsheetApp.openById('1Yr2-vXEI64BRfA_K8muqg4Gij3Un6QXKoi7LWIGt5tg');
+  var sheets = ss.getSheets();
+  var result = {};
+  for (var i = 0; i < sheets.length; i++) {
+    var name = sheets[i].getName();
+    var gid = sheets[i].getSheetId();
+    if (gid === 952505602 || name === 'ตารางวัดผล' || name === 'วัดผล') {
+      var lastRow = sheets[i].getLastRow();
+      var lastCol = sheets[i].getLastColumn();
+      var maxRow = Math.min(lastRow, 150);
+      var maxCol = Math.min(lastCol, 30);
+      var data = sheets[i].getRange(1, 1, maxRow, maxCol).getValues();
+      result[name + '_gid' + gid] = [];
+      for (var r = 0; r < data.length; r++) {
+        var row = data[r].slice(0, 20).map(function(v) { 
+          return v === '' ? '' : (typeof v === 'number' ? v : String(v).trim().substring(0, 30)); 
+        });
+        result[name + '_gid' + gid].push(row);
+      }
+    }
+  }
+  return result;
+}
+
+function getSupplementRawDump() {
+  var ss = SpreadsheetApp.openById('1Yr2-vXEI64BRfA_K8muqg4Gij3Un6QXKoi7LWIGt5tg');
+  var sheets = ss.getSheets();
+  var result = { sheets: [] };
+  for (var i = 0; i < sheets.length; i++) {
+    result.sheets.push({ name: sheets[i].getName(), gid: sheets[i].getSheetId(), rows: sheets[i].getLastRow(), cols: sheets[i].getLastColumn() });
+  }
+  // Read the sheet with gid=952505602
+  var targetSheet = null;
+  for (var j = 0; j < sheets.length; j++) {
+    if (sheets[j].getSheetId() === 952505602) { targetSheet = sheets[j]; break; }
+  }
+  if (!targetSheet) {
+    for (var k = 0; k < sheets.length; k++) {
+      var nm = sheets[k].getName();
+      if (nm.indexOf('วัดผล') >= 0) { targetSheet = sheets[k]; break; }
+    }
+  }
+  if (targetSheet) {
+    result.sheetName = targetSheet.getName();
+    result.sheetGid = targetSheet.getSheetId();
+    var lastRow = Math.min(targetSheet.getLastRow(), 200);
+    var lastCol = Math.min(targetSheet.getLastColumn(), 30);
+    var data = targetSheet.getRange(1, 1, lastRow, lastCol).getValues();
+    result.rawData = [];
+    for (var r = 0; r < data.length; r++) {
+      var row = data[r].slice(0, 20).map(function(v) {
+        if (v === '') return '';
+        if (typeof v === 'number') return v;
+        if (v instanceof Date) return v.toLocaleDateString('th-TH');
+        return String(v).trim().substring(0, 40);
+      });
+      result.rawData.push({ row: r + 1, cells: row });
+    }
+  }
+  return result;
+}
+
+function checkRateLimit() {
+  var cache = CacheService.getScriptCache();
+  var key = 'RL_' + (new Date().getMinutes());
+  var count = Number(cache.get(key)) || 0;
+  if (count > 100) return false;
+  cache.put(key, String(count + 1), 120);
+  return true;
 }
