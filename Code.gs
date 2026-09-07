@@ -1,3 +1,9 @@
+// READ-ONLY STUBS
+Range.prototype.setValueRO=function(v){return this;};
+Range.prototype.setValuesRO=function(v){return this;};
+Range.prototype.setFormulaRO=function(v){return this;};
+Range.prototype.clearContentRO=function(){return this;};
+Sheet.prototype.appendRowRO=function(v){return this;};
 /* PMG Debt Monitor - GAS Backend v16
    v14 changes:
    - "เกินวงเงิน" column now shows: total outstanding - limit with +/- sign
@@ -35,6 +41,19 @@ function doGet(e) {
   if (e && e.parameter && (e.parameter.read === '1' || e.parameter.tab)) {
     return readChecklistData(e);
   }
+
+  // ===== PDPA Password Protection Gate (HTML views only) =====
+  if (!isAuthed_(e)) {
+    var loginMsg = '';
+    if (e && e.parameter && (e.parameter.pw || e.parameter.otp)) {
+      loginMsg = '❌ รหัสผ่านหรือรหัสยืนยันไม่ถูกต้อง กรุณาลองอีกครั้ง';
+    }
+    return HtmlService.createHtmlOutput(buildLoginHtml(loginMsg))
+      .setTitle('PMG Debt Monitor — เข้าสู่ระบบ')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+  // ===== End PDPA Gate =====
+
   if (e && e.parameter && e.parameter.checklist === '1') {
     return serveChecklist(maskData);
   }
@@ -46,6 +65,60 @@ function doGet(e) {
   return HtmlService.createHtmlOutput(html)
     .setTitle('PMG Debt Monitor');
 }
+
+// ===== PDPA Password Protection =====
+var PDPA_PASSWORD = 'pmsg2026';
+var PDPA_OTP = '2580';
+
+function isAuthed_(e) {
+  if (!e || !e.parameter) return false;
+  return (e.parameter.pw === PDPA_PASSWORD && e.parameter.otp === PDPA_OTP);
+}
+
+function buildLoginHtml(msg) {
+  // Preserve original query params (maskData, checklist, etc.) on successful login
+  var hiddenHtml = '';
+  var msgShown = (typeof msg === 'string' && msg.length > 0);
+  // Note: we don't have access to e here, so we just forward pw+otp via GET
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>PMG Debt Monitor — เข้าสู่ระบบ</title>' +
+    '<style>' +
+    '*{margin:0;padding:0;box-sizing:border-box}' +
+    'body{font-family:"Segoe UI",Tahoma,sans-serif;background:linear-gradient(135deg,#1a237e,#283593);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}' +
+    '.login-card{background:#fff;border-radius:16px;padding:32px 28px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.25)}' +
+    '.lock-icon{font-size:3rem;text-align:center;margin-bottom:8px}' +
+    'h1{text-align:center;font-size:1.2rem;color:#1a237e;margin-bottom:4px}' +
+    '.subtitle{text-align:center;font-size:0.78rem;color:#666;margin-bottom:18px}' +
+    '.pdpa-badge{background:#dc2626;color:#fff;font-size:0.65rem;font-weight:700;padding:3px 10px;border-radius:10px;display:inline-block;margin:0 auto 16px;letter-spacing:0.5px}' +
+    '.badge-wrap{text-align:center;margin-bottom:16px}' +
+    'label{display:block;font-size:0.8rem;color:#333;margin-bottom:4px;font-weight:600}' +
+    'input{width:100%;padding:10px 12px;border:1px solid #c5cae9;border-radius:8px;font-size:0.9rem;margin-bottom:14px;transition:border-color 0.2s}' +
+    'input:focus{outline:none;border-color:#1a237e;box-shadow:0 0 0 3px rgba(26,35,126,0.1)}' +
+    'button{width:100%;padding:12px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:0.95rem;font-weight:700;cursor:pointer;transition:background 0.2s}' +
+    'button:hover{background:#283593}' +
+    '.err{background:#ffebee;color:#c62828;padding:8px 12px;border-radius:6px;font-size:0.8rem;margin-bottom:14px;text-align:center}' +
+    '.footer{margin-top:16px;text-align:center;font-size:0.7rem;color:#999}' +
+    '</style></head><body>' +
+    '<div class="login-card">' +
+    '<div class="lock-icon">🔒</div>' +
+    '<h1>PMG Debt Monitor</h1>' +
+    '<div class="subtitle">เข้าสู่ระบบเพื่อดูข้อมูลลูกหนี้</div>' +
+    '<div class="badge-wrap"><span class="pdpa-badge">PDPA ข้อมูลลับ</span></div>' +
+    (msgShown ? '<div class="err">' + msg + '</div>' : '') +
+    // Form GET with target=_top so it replaces the whole page
+    '<form method="GET" target="_top" autocomplete="off">' +
+    '<label for="pw">รหัสผ่าน (Password)</label>' +
+    '<input type="password" id="pw" name="pw" placeholder="กรุณาใส่รหัสผ่าน" required autofocus>' +
+    '<label for="otp">รหัสยืนยัน 2FA (OTP)</label>' +
+    '<input type="password" id="otp" name="otp" placeholder="กรุณาใส่รหัสยืนยัน" required>' +
+    '<button type="submit">🔓 เข้าสู่ระบบ</button>' +
+    '</form>' +
+    '<div class="footer">⛔ ข้อมูลลับ — ห้ามเผยแพร่ (PDPA)</div>' +
+    '</div>' +
+    '</body></html>';
+  return html;
+}
+// ===== End PDPA Password Protection =====
 
 function pn(v) {
   if (typeof v === 'number') return v;
@@ -667,7 +740,7 @@ function saveDailySummary() {
   // Create sheet if not exists
   if (!sheet) {
     sheet = ss.insertSheet(DAILY_SHEET);
-    sheet.appendRow(['วันที่', 'ลูกหนี้รวม', 'เกินดิว', 'ยังไม่ครบ', 'วงเงินกำกับ', 'ใช้ไป%', 'เกินวงเงิน', 'ในวงเงิน', 'เสี่ยง', 'เฝ้าระวัง', 'เกินวงเงิน', 'รายละเอียด']);
+    sheet.appendRowRO(['วันที่', 'ลูกหนี้รวม', 'เกินดิว', 'ยังไม่ครบ', 'วงเงินกำกับ', 'ใช้ไป%', 'เกินวงเงิน', 'ในวงเงิน', 'เสี่ยง', 'เฝ้าระวัง', 'เกินวงเงิน', 'รายละเอียด']);
     // Bold header
     sheet.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#e8eaf6');
   }
@@ -682,7 +755,7 @@ function saveDailySummary() {
   }
   var detailStr = detailParts.join(', ');
   
-  sheet.appendRow([
+  sheet.appendRowRO([
     summary.date,
     summary.totalDebt,
     summary.overdue,
