@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PMSG Service Center — 3D Design Presentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0f2a4a; --navy2:#1e40af; --blue:#2563eb; --sky:#3b82f6;
+  --ink:#1e293b; --muted:#64748b; --line:#e2e8f0; --bg:#f1f5f9;
+  --amber:#f59e0b; --green:#10b981; --red:#ef4444;
+  --steel:#94a3b8; --concrete:#e2e8f0;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.65}
+h1,h2,h3,.th{font-family:'Prompt',sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:24px}
+/* top bar */
+.hero{background:linear-gradient(135deg,#0f2a4a 0%,#1e40af 55%,#2563eb 100%);color:#fff;border-radius:16px;padding:34px 38px;margin-bottom:22px;box-shadow:0 10px 30px rgba(30,64,175,.25)}
+.hero h1{font-size:30px;font-weight:800;letter-spacing:.3px}
+.hero p{opacity:.92;font-size:16px;margin-top:8px}
+.hero .chips{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+.chip{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600}
+/* nav */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.tab-btn{padding:11px 22px;border:none;border-radius:10px 10px 0 0;background:#e2e8f0;color:var(--muted);font-family:'Prompt';font-size:15px;font-weight:600;cursor:pointer;transition:.2s}
+.tab-btn.on{background:var(--navy2);color:#fff}
+.tab-btn:hover:not(.on){background:#cbd5e1}
+.panel{display:none;background:#fff;border-radius:0 14px 14px 14px;padding:28px 30px;box-shadow:0 2px 12px rgba(15,42,74,.08)}
+.panel.on{display:block}
+.panel h2{color:var(--navy);font-size:22px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.panel h2 .no{background:var(--navy2);color:#fff;width:34px;height:34px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:16px}
+.panel .sub{color:var(--muted);font-size:14px;margin-bottom:20px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{border:1px solid var(--line);border-radius:12px;padding:18px;background:#fff}
+.card h3{font-size:16px;color:var(--navy);margin-bottom:8px}
+.card .big{font-size:26px;font-weight:800;color:var(--navy2);font-family:'Prompt'}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{background:#eff6ff;color:var(--navy);text-align:left;padding:9px 10px;font-family:'Prompt';font-size:13.5px;border-bottom:2px solid #bfdbfe}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+td:last-child,th:last-child{text-align:right;white-space:nowrap}
+tr.total td{font-weight:800;color:var(--navy);background:#eff6ff;border-top:2px solid var(--navy2)}
+.note{background:#fffbeb;border-left:4px solid var(--amber);padding:12px 16px;border-radius:8px;font-size:13.5px;margin:14px 0}
+.note-blue{background:#eff6ff;border-left-color:var(--blue)}
+.note-green{background:#f0fdf4;border-left-color:var(--green)}
+ul.clean{list-style:none;padding:0}
+ul.clean li{padding:5px 0 5px 24px;position:relative}
+ul.clean li:before{content:"▸";position:absolute;left:6px;color:var(--blue);font-weight:700}
+/* 3D stage */
+.stage{position:relative;background:linear-gradient(180deg,#dbeafe 0%,#eff6ff 55%,#e2e8f0 100%);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.stage svg{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.lg{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;background:#fff;border:1px solid var(--line);padding:5px 11px;border-radius:999px}
+.lg i{width:14px;height:14px;border-radius:4px;display:inline-block}
+.viewbtns{position:absolute;top:12px;right:12px;display:flex;gap:6px}
+.vb{background:rgba(15,42,74,.85);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-family:'Prompt';font-size:12.5px;cursor:pointer;font-weight:600}
+.vb.on{background:var(--amber)}
+.viewlabel{position:absolute;top:14px;left:16px;background:rgba(15,42,74,.85);color:#fff;padding:6px 14px;border-radius:8px;font-family:'Prompt';font-size:13px;font-weight:600}
+/* budget cards */
+.bgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:16px 0}
+.bcard{border-radius:12px;padding:16px 18px;color:#fff}
+.bcard .t{font-size:12.5px;opacity:.85}
+.bcard .v{font-size:22px;font-weight:800;font-family:'Prompt'}
+.footer{text-align:center;color:var(--muted);font-size:12px;padding:26px 0 8px}
+@media(max-width:860px){.grid2,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <h1>🏢 PMSG SERVICE CENTER — ศูนย์บริการออกแบบใหม่ (3D Concept)</h1>
+  <p>ศูนย์ซ่อมตัวถัง + ศูนย์ซ่อมกลึง/ช่างกลึง + ช่างเคลือบแก้ว · ตาม Layout จริงตามแปลนที่ส่ง · พร้อมนำเสนองบประมาณ</p>
+  <div class="chips">
+    <span class="chip">🚗 ลิฟต์ 2 เสา 17 จุด</span>
+    <span class="chip">🎨 ห้องพ่นสี + บด 6 ช่อง</span>
+    <span class="chip">🏢 สำนักงาน + ห้องรับลูกค้า</span>
+    <span class="chip">📦 โกดังอะไหล่ + ตัวถัง</span>
+    <span class="chip">📐 พื้นที่รวม ~2,400 ตร.ม.</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn on" onclick="showTab(0,this)">🏢 ภาพ 3D ภาพรวมศูนย์</button>
+  <button class="tab-btn" onclick="showTab(1,this)">🚗 3D โซนช่างกลึง & ช่างตัวถัง</button>
+  <button class="tab-btn" onclick="showTab(2,this)">🎨 3D ห้องพ่นสี & เคลือบแก้ว</button>
+  <button class="tab-btn" onclick="showTab(3,this)">🪑 3D Office & ห้องพักลูกค้า</button>
+  <button class="tab-btn" onclick="showTab(3,this)">📋 สรุปโซน & ข้อมูลจำเพาะ</button>
+  <button class="tab-btn" onclick="showTab(4,this)">💰 งบประมาณ (ประมาณการ)</button>
+</div>
+
+<!-- TAB 0: overview 3D -->
+<div class="panel on" id="p0">
+  <h2><span class="no">1</span> ภาพ 3D ภาพรวม — มุมมอง Bird-eye</h2>
+  <div class="sub">อิงตำแหน่งจริงจาก layout ที่ส่งมา: โซนบน (สำนักงาน/ห้องพ่นสี), กลาง (โซนซ่อมใหญ่ 3 แถว), ล่าง (โซนตัวถัง/พ่นสี/เคลือบแก้ว), ซ้าย (คอลัมน์ห้องทำงาน) — กดปุ่มเพื่อสลับมุมมอง</div>
+
+  <div class="stage">
+    <div class="viewbtns">
+      <button class="vb on" onclick="setView('iso',this)">มุมโดยรวม</button>
+      <button class="vb" onclick="setView('front',this)">มุมหน้าอาคาร</button>
+      <button class="vb" onclick="setView('top',this)">Top view</button>
+    </div>
+    <div class="viewlabel" id="viewLabel">มุมมอง: ภาพรวม 3/4</div>
+    <svg viewBox="0 0 1200 640" id="scene3d" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="roofG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#cbd5e1"/><stop offset="1" stop-color="#94a3b8"/>
+        </linearGradient>
+        <linearGradient id="wallG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f1f5f9"/><stop offset="1" stop-color="#cbd5e1"/>
+        </linearGradient>
+        <linearGradient id="glz" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#bfdbfe"/><stop offset="1" stop-color="#93c5fd"/>
+        </linearGradient>
+        <filter id="sh" x="-20%" y="-20%" width="140%" height="160%">
+          <feDropShadow dx="0" dy="14" stdDeviation="12" flood-opacity="0.18"/>
+        </filter>
+      </defs>
+      <!-- ground shadow -->
+      <ellipse cx="600" cy="520" rx="560" ry="60" fill="#94a3b8" opacity="0.15"/>
+      <g id="viewIso" filter="url(#sh)">
+
+      <!-- ══ MAIN SERVICE HALL (กลาง — 3 แถว × 7 ช่อง ลิฟต์ 2 เสา) ══ -->
+      <g>
+        <!-- roof -->
+        <polygon points="250,180 950,180 1030,240 330,240" fill="url(#roofG)" stroke="#64748b" stroke-width="2"/>
+        <!-- roof ridges -->
+        <g stroke="#94a3b8" stroke-width="1.5" opacity="0.8">
+          <line x1="270" y1="183" x2="345" y2="237"/><line x1="310" y1="183" x2="385" y2="237"/>
+          <line x1="350" y1="183" x2="425" y2="237"/><line x1="390" y1="183" x2="465" y2="237"/>
+          <line x1="430" y1="183" x2="505" y2="237"/><line x1="470" y1="183" x2="545" y2="237"/>
+          <line x1="510" y1="183" x2="585" y2="237"/><line x1="550" y1="183" x2="625" y2="237"/>
+          <line x1="590" y1="183" x2="665" y2="237"/><line x1="630" y1="183" x2="705" y2="237"/>
+          <line x1="670" y1="183" x2="745" y2="237"/><line x1="710" y1="183" x2="785" y2="237"/>
+          <line x1="750" y1="183" x2="825" y2="237"/><line x1="790" y1="183" x2="865" y2="237"/>
+          <line x1="830" y1="183" x2="905" y2="237"/><line x1="870" y1="183" x2="945" y2="237"/>
+          <line x1="910" y1="183" x2="985" y2="237"/>
+        </g>
+        <!-- walls front (transparent to show bays) -->
+        <polygon points="250,180 250,360 330,420 330,240" fill="#dbeafe" opacity="0.55"/>
+        <polygon points="950,180 950,360 1030,240 1030,240" fill="#dbeafe" opacity="0.55"/>
+        <!-- floor of main hall -->
+        <polygon points="250,360 950,360 1030,430 330,430" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+        <!-- bay grid 3 rows × 7 cols -->
+        <g stroke="#3b82f6" stroke-width="1.2" fill="#eff6ff">
+          <!-- row back -->
+          <g>
+            <polygon points="280,345 350,345 362,353 262,353" fill="#e0f2fe" stroke="#2563eb"/>
+            <polygon points="362,345 432,345 444,353 374,353" fill="#eff6ff" stroke="#2563eb"/>
+            <polygon points="474,345 544,345 556,353 486,353" fill="#eff6ff" stroke="#2563eb"/>
+            <polygon points="586,345 656,345 668,353 598,353" fill="#eff6ff" stroke="#2563eb"/>
+            <polygon points="698,345 768,345 780,353 710,353" fill="#eff6ff" stroke="#2563eb"/>
+            <polygon points="810,345 880,345 792,353 822,353" fill="#eff6ff" stroke="#2563eb"/>
+            <polygon points="922,345 942,345 954,353 934,353" fill="#eff6ff" stroke="#2563eb"/>
+          </g>
+        </g>
+        <!-- 2-post lifts (blue columns) -->
+        <g>
+          <!-- generate lifts -->
+        </g>
+        <!-- signage banners -->
+        <g font-family="Prompt" font-weight="700">
+          <rect x="470" y="150" rx="6" width="130" height="34" fill="#0f2a4a"/>
+          <text x="535" y="173" fill="#fff" font-size="17" text-anchor="middle">งานเรียล</text>
+          <rect x="640" y="138" rx="6" width="150" height="36" fill="#0f2a4a"/>
+          <text x="745" y="161" fill="#fff" font-size="18" text-anchor="middle">งานเรียลตัวถัง</text>
+          <rect x="820" y="120" rx="6" width="160" height="36" fill="#0f2a4a"/>
+          <text x="895" y="144" fill="#fff" font-size="18" text-anchor="middle">งานเชียร์เคลม</text>
+        </g>
+        <!-- labels: bays text on floor -->
+        <g font-family="Sarabun" font-size="11" fill="#475569">
+          <text x="280" y="390">ช่อง 1</text><text x="380" y="400">ช่อง 2</text>
+          <text x="480" y="408">ช่อง 3</text><text x="580" y="400">ช่อง 4</text>
+          <text x="580" y="415">ช่อง 5</text><text x="680" y="415">ช่อง 6</text>
+          <text x="680" y="425">ช่อง 7</text>
+        </g>
+      </g>
+
+      <!-- ══ OFFICE & RECEPTION BLOCK (บนซ้าย) ══ -->
+      <g filter="url(#sh)">
+        <!-- office building 2 floors -->
+        <polygon points="120,150 260,150 290,175 150,175" fill="#93c5fd" stroke="#1e40af" stroke-width="2"/>
+        <polygon points="120,150 120,230 150,255 150,175" fill="#bfdbfe" stroke="#1e40af" stroke-width="2"/>
+        <polygon points="150,175 290,175 290,245 150,245" fill="#dbeafe" stroke="#1e40af" stroke-width="2"/>
+        <!-- windows -->
+        <g fill="#eff6ff" stroke="#1e40af">
+          <rect x="165" y="185" width="26" height="20"/><rect x="205" y="185" width="26" height="20"/>
+          <rect x="245" y="185" width="26" height="20"/>
+          <rect x="165" y="215" width="26" height="20"/><rect x="205" y="215" width="26" height="20"/>
+          <rect x="245" y="215" width="26" height="20"/>
+        </g>
+        <!-- roof detail 2F -->
+        <polygon points="120,150 260,150 275,140 135,140" fill="#60a5fa" stroke="#1e40af" stroke-width="1.5"/>
+        <text x="180" y="248" font-family="Prompt" font-size="14" font-weight="700" fill="#0f2a4a">🏢 OFFICE 2 ชั้น</text>
+        <text x="180" y="264" font-family="Sarabun" font-size="11" fill="#475569">ฝ่ายขาย · การเงิน · ห้องประชุม</text>
+      </g>
+
+      <!-- ══ PAINT BOOTH (ห้องพ่นสี 2 ห้อง — บนกลาง) ══ -->
+      <g filter="url(#sh)">
+        <polygon points="440,90 590,90 610,105 460,105" fill="#fcd34d" stroke="#b45309" stroke-width="2"/>
+        <polygon points="440,90 440,150 460,165 460,105" fill="#fde68a" stroke="#b45309" stroke-width="2"/>
+        <polygon points="460,105 610,105 610,155 460,155" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+        <!-- booth door -->
+        <rect x="530" y="120" width="60" height="35" fill="#f59e0b" stroke="#b45309"/>
+        <text x="470" y="178" font-family="Prompt" font-size="13" font-weight="700" fill="#92400e">🎨 ห้องพ่นสี (Paint Booth) ×2</text>
+        <text x="470" y="192" font-family="Sarabun" font-size="10.5" fill="#a16207">ระบบดูดอากาศ + ไฟ LED 800 lux</text>
+      </g>
+
+      <!-- ══ ตัวถัง + กลึง (ซ้ายบน) ══ -->
+      <g filter="url(#sh)">
+        <polygon points="300,60 430,60 450,75 320,105" fill="#e2e8f0" stroke="#475569" stroke-width="2"/>
+        <polygon points="300,60 300,120 320,135 320,105" fill="#cbd5e1" stroke="#475569" stroke-width="2"/>
+        <polygon points="320,105 470,105 470,150 320,150" fill="#e2e8f0" stroke="#475569" stroke-width="2"/>
+        <text x="325" y="168" font-family="Prompt" font-size="13" font-weight="700" fill="#334155">🔧 โซนตัวถัง & กลึง</text>
+        <text x="325" y="182" font-family="Sarabun" font-size="10.5" fill="#64748b">ยก/ดึงตัวถัง · เชื่อม · ขัด</text>
+      </g>
+
+      <!-- ══ เคลือบแก้ว (ล่างขวา) ══ -->
+      <g filter="url(#sh)">
+        <polygon points="760,470 920,470 940,485 780,485" fill="url(#glz)" stroke="#1d4ed8" stroke-width="2"/>
+        <polygon points="760,470 760,520 780,535 780,485" fill="#bfdbfe" stroke="#1d4ed8" stroke-width="2"/>
+        <polygon points="780,485 940,485 940,535 780,535" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+        <text x="790" y="555" font-family="Prompt" font-size="13" font-weight="700" fill="#1e40af">✨ โซนเคลือบแก้ว 2 ช่อง</text>
+        <text x="790" y="569" font-family="Sarabun" font-size="10.5" fill="#475569">แสง LED 5,500K · ม่านกันฝุ่น</text>
+      </g>
+
+      <!-- ══ ห้องพักลูกค้า (ล่างซ้าย) ══ -->
+      <g filter="url(#sh)">
+        <polygon points="120,380 280,380 310,398 150,398" fill="#a7f3d0" stroke="#059669" stroke-width="2"/>
+        <polygon points="120,380 120,450 150,468 150,398" fill="#a7f3d0" stroke="#059669" stroke-width="2"/>
+        <polygon points="150,398 310,398 310,460 150,460" fill="#d1fae5" stroke="#059669" stroke-width="2"/>
+        <text x="160" y="480" font-family="Prompt" font-size="13" font-weight="700" fill="#065f46">☕ ห้องพักลูกค้า</text>
+        <text x="160" y="494" font-family="Sarabun" font-size="10.5" fill="#047857">เคาน์เตอร์รับรถ · ล็อกเกอร์ · Wi-Fi</text>
+      </g>
+
+      <!-- ══ คลังอะไหล่ & ตัวถัง (ล่างกลาง-ซ้าย) ══ -->
+      <g filter="url(#sh)">
+        <polygon points="480,470 720,470 740,485 500,485" fill="#fecaca" stroke="#b91c1c" stroke-width="2"/>
+        <polygon points="480,470 480,530 500,545 500,485" fill="#fca5a5" stroke="#b91c1c" stroke-width="2"/>
+        <polygon points="500,485 740,485 740,540 500,540" fill="#fee2e2" stroke="#b91c1c" stroke-width="2"/>
+        <text x="510" y="565" font-family="Prompt" font-size="13" font-weight="700" fill="#991b1b">📦 คลังอะไหล่ + ชั้นวางตัวถัง</text>
+        <text x="510" y="579" font-family="Sarabun" font-size="10.5" fill="#b91c1c">ชั้นวางตัวถัง 2 ชั้น · ช่องจอด 5 คัน</text>
+      </g>
+
+      <!-- ══ FLOW ARROWS ══ -->
+      <g stroke="#2563eb" stroke-width="3" fill="none" marker-end="url(#arw)">
+        <path d="M 200 300 Q 340 300 400 340" fill="none" stroke-dasharray="7 5"/>
+        <path d="M 620 340 Q 720 330 800 380" fill="none" stroke="#059669"/>
+        <path d="M 700 480 Q 600 520 520 510" fill="none" stroke="#b91c1c" stroke-dasharray="6 4"/>
+      </g>
+      <defs>
+        <marker id="arw" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/>
+        </marker>
+      </defs>
+      <g font-family="Sarabun" font-size="11" fill="#1e40af" font-weight="600">
+        <text x="205" y="295">1. รับรถ →</text>
+        <text x="810" y="370">→ 3. ส่งมอบ</text>
+        <text x="520" y="545">← 2. เบิกอะไหล่</text>
+      </g>
+
+      <!-- labels zone -->
+      <g font-family="Prompt" font-size="12" font-weight="600" fill="#334155">
+        <text x="1055" y="200">บริเวณด้านหน้า</text>
+        <text x="1055" y="290">อาคารหลัก (โซนซ่อม)</text>
+        <text x="1055" y="470">โซนช่วงท้ายอาคาร</text>
+      </g>
+
+      <!-- scale -->
+      <g font-family="Sarabun" font-size="10.5" fill="#64748b">
+        <line x1="120" y1="620" x2="320" y2="620" stroke="#475569" stroke-width="2"/>
+        <line x1="120" y1="615" x2="120" y2="625" stroke="#475569" stroke-width="2"/>
+        <line x1="320" y1="615" x2="320" y2="625" stroke="#475569" stroke-width="2"/>
+        <text x="200" y="614">~25 m (ประมาณ)</text>
+      </g>
+      </g>
+    </svg>
+  </div>
+  <div class="legend">
+    <span class="lg"><i style="background:#eff6ff"></i> โซนซ่อมกลึง (ช่างกลึง) 17 ลิฟต์</span>
+    <span class="lg"><i style="background:#fef3c7"></i> ห้องพ่นสี 2 ห้อง</span>
+    <span class="lg"><i style="background:#dbeafe"></i> เคลือบแก้ว 2 ช่อง</span>
+    <span class="lg"><i style="background:#fee2e2"></i> คลังอะไหล่/ตัวถัง</span>
+    <span class="lg"><i style="background:#d1fae5"></i> Office + ลูกค้า</span>
+  </div>
+
+  <div class="note note-blue" style="margin-top:16px">
+    <strong>หลักการออกแบบ (อ้างอิงประสบการณ์ออกแบบศูนย์ซ่อม 20+ ปี):</strong>
+    <ul class="clean" style="margin-top:8px">
+      <li><b>Flow ทางเดียว (One-way flow):</b> รับรถ (ซ้ายบน) → เข้าช่องซ่อม (กลาง) → พ่นสี/เคลือบ (บน-ขวา) → ส่งมอบ (ล่างขวา) — ลดการตัดกันของรถ ลดอุบัติเหตุในพื้นที่</li>
+      <li><b>แยกโซนสกปรก-สะอาด:</b> ตัวถัง/กลึง/พ่น (ฝุ่น+ความชื้น) อยู่โซนบน-โซนล่าง · ส่งมอบ+ลูกค้าอยู่โซนล่างขวา แยกออกจากกัน</li>
+      <li><b>ช่องยกลิฟต์ 6.50 ม.</b> ตามแบบ — เหมาะกับลิฟต์ 2 เสา 4 ตัน + รถกระบะ/SUV ตัวสูง</li>
+      <li><b>ทางเข้า-ออกแยก</b> ตามลูกศรในแบบ (เข้าหน้า ออกหลัง) กันจราจรตัน</li>
+    </ul>
+  </div>
+</div>
+
+<!-- TAB 1: service zone 3D -->
+<div class="panel" id="p1">
+  <h2><span class="no">2</span> โซนซ่อมกลึง & ช่างตัวถัง (17 ช่อง ลิฟต์ 2 เสา)</h2>
+  <div class="sub">แถวกลาง layout — 3 แถว × 7 ช่อง ช่องกว้าง 6.50 ม. × ลึก ~7.55 ม. เพื่อรองรับรถทุกขนาด + พื้นที่เดินรอบรถ 1.85 ม.</div>
+  <div class="grid2">
+    <div class="card">
+      <h3>สเปกช่องซ่อม (ต่อช่อง)</h3>
+      <table>
+        <tr><th>รายการ</th><th>ขนาด</th></tr>
+        <tr><td>ความกว้างช่อง (เปิดประตู 2 ข้าง)</td><td>6.50 ม.</td></tr>
+        <tr><td>ความลึกช่อง (รถ + ทำงานท้ายรถ)</td><td>7.55 ม.</td></tr>
+        <tr><td>ทางเดินระหว่างช่อง</td><td>1.85 ม.</td></tr>
+        <tr><td>ลิฟต์ 2 เสา (4 ตัน)</td><td>1 ชุด/ช่อง</td></tr>
+        <tr><td>ไฟ LED แนวขวา (เหนือช่อง)</td><td>2 ชุด × 36W</td></tr>
+        <tr><td>จุดจ่ายไฟ+อัดลมบนเพดาน</td><td>2 จุด/ช่อง</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>มาตรฐานที่แนะนำ (จากประสบการณ์)</h3>
+      <ul class="clean">
+        <li>พื้น Epoxy สีเทาอ่อน 3 มม. + ขีดเหลืองจราจร (ทนสารเคมี ล้างง่าย)</li>
+        <li>ลิฟต์ 2 เสา Electro-hydraulic 4T — ยก SUV/PPV ได้สบาย</li>
+        <li>รางไฟฟ้า overhead + ถังลมกลาง (เลี่ยงท่อลมพันพื้น)</li>
+        <li>ตู้เครื่องมือประจำช่อง (สีน้ำเงิน/แดงตามแบรนด์)</li>
+        <li>ท่อระบายน้ำรางกลาง + บ่อดักน้ำมัน ก่อนระบายออก</li>
+        <li>ป้ายแขวนเพดาน (งานเรียล / เรียลตัวถัง / เชียร์เคลม) ตามภาพอ้างอิง</li>
+        <li>กล้องวงจรปิด + ไฟส่องสว่างรวม ≥300 lux ที่พื้น</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note note-green" style="margin-top:14px">
+    <b>จุดขายงบประมาณ:</b> 17 ช่อง × ลิฟต์ 4T ≈ รับงานได้ ~65-70 คัน/วัน (2 กะ) — เหมาะกับเป้า GM แผนธุรกิจที่วางไว้
+  </div>
+</div>
+
+<!-- TAB 2: paint zone -->
+<div class="panel" id="p2">
+  <h2><span class="no">2</span> ห้องพ่นสี (Paint Booth) & โซนเคลือบแก้ว</h2>
+  <div class="sub">ตาม layout โซนบนขวา — ห้องพ่นสี 2 ห้องติดกัน (ช่อง 7.55 × 3.78 ม. สูง ~4.2 ม.) + prep + เคลือบแก้ว 2 ช่องล่างขวา</div>
+  <div class="grid3">
+    <div class="card">
+      <h3>ห้องพ่นสี (Downdraft)</h3>
+      <ul class="clean">
+        <li>ระบบลมลง (Downdraft) + เตาอบ 60-70°C</li>
+        <li>ไฟ LED 6,000K ใต้เพดาน (สีไม่บิดเบี้ยว)</li>
+        <li>แผ่นกรองฝุ่น F5 พื้น+เพดาน</li>
+        <li>ประตูม้วน PVC + ม่านใน</li>
+        <li>แยกห้อง Mix (ผสมสี) ติดกัน</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>โซนเตรียมงาน (Prep)</h3>
+      <ul class="clean">
+        <li>2 ช่องขัด-ปิดคราบ หน้าห้องพ่น</li>
+        <li>ระบบดูดฝุ่นขัด (Dust extraction)</li>
+        <li>ผนังกันคราบ overspray</li>
+        <li>ตู้เก็บสี+ตู้เป่า ติดผนังห้อง Mix</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>โซนเคลือบแก้ว</h3>
+      <ul class="clean">
+        <li>2 ช่อง ปิดม่านใส กันฝุ่น</li>
+        <li>ไฟ LED 5,500-6,000K ส่องหา scratch</li>
+        <li>พื้น epoxy ขาวเงา ล้างง่าย</li>
+        <li>แอร์ 1 ชุด (ควบคุมฝุ่น+ความชื้น)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note note-blue">💡 จาก layout — ห้องพ่นสีวางโซนบน (พลิกลมดี ปล่องพ้นตัวอาคาร) + เคลือบแก้วอยู่โซนล่างสุดใกล้ส่งมอบ = flow ถูกต้อง ไม่ต้องย้าย</div>
+</div>
+
+<!-- TAB 3: office & lounge -->
+<div class="panel" id="p3">
+  <h2><span class="no">3</span> อาคารสำนักงาน 2 ชั้น & ห้องพักลูกค้า</h2>
+  <div class="sub">ตาม layout คอลัมน์ซ้าย — สำนักงาน 2 ชั้นด้านบน, ห้องพักลูกค้าคู่กับทางเข้าหลักด้านล่าง</div>
+  <div class="grid2">
+    <div class="card">
+      <h3>🏢 อาคารสำนักงาน (2 ชั้น ~150 ตร.ม.)</h3>
+      <ul class="clean">
+        <li><strong>ชั้น 1:</strong> ห้องรับรถ/เซลล์ 4 โต๊ะ · ครัวจัดอะไหล่ (Parts Counter) · ห้องพักผู้จัดการ</li>
+        <li><strong>ชั้น 2:</strong> ห้องประชุม 12 ที่นั่ง · ห้องบัญชี/การเงิน · ห้องผู้จัดการศูนย์</li>
+        <li>หน้าต่างกระจกมองเห็นโซนซ่อม (Supervisor มองเห็นทุกช่อง)</li>
+        <li>ห้องน้ำช่าง 2 จุด + ห้องล็อกเกอร์ช่าง</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>ห้องพักลูกค้า (~60 ตร.ม.)</h3>
+      <ul class="clean">
+        <li>ที่นั่ง 24 ที่นั่ง + มุมเด็ก</li>
+        <li>เคาน์เตอร์กาแฟฟรี (อัตโนมัติ)</li>
+        <li>TV 55" + Wi-Fi 200Mbps</li>
+        <li>กระจกบานเลื่อนมองเห็นลิฟต์ (ความโปร่งใส)</li>
+        <li>ห้องน้ำลูกค้า 2 ห้อง + จุดล้างมือ</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 4: budget -->
+<div class="panel" id="p4">
+  <h2><span class="no">4</span> งบประมาณประมาณการ (ร่างเพื่อนำเสนอ)</h2>
+  <div class="sub">อ้างอิงราคาก่อสร้างอาคารโรงงาน/ศูนย์ซ่อม ปี 2569 — ปรับตามพื้นที่จริงก่อนเสนอขายได้</div>
+
+  <div class="bgrid">
+    <div class="bcard" style="background:linear-gradient(135deg,#1e40af,#2563eb)"><div class="t">อาคารโครงสร้างเหล็ก (Main Hall ~1,200 ตร.ม.)</div><div class="v">≈ 8.5–10.5 ลบ.</div></div>
+    <div class="bcard" style="background:linear-gradient(135deg,#b45309,#f59e0b)"><div class="t">ห้องพ่นสี 2 ห้อง + Prep + ระบบดูดอากาศ</div><div class="v">2.8–3.6 ลบ.</div></div>
+    <div class="bcard" style="background:linear-gradient(135deg,#047857,#10b981)"><div class="t">สำนักงาน 2 ชั้น + ห้องพักลูกค้า (ตกแต่งครบ)</div><div class="v">2.2–2.8 ลบ.</div></div>
+    <div class="bcard" style="background:linear-gradient(135deg,#991b1b,#ef4444)"><div class="t">ระบบ M&E + Epoxy + ป้าย + ไฟ LED ทั้งศูนย์</div><div class="v">1.8–2.4 ลบ.</div></div>
+  </div>
+
+  <table>
+    <tr><th>รายการ</th><th>จำนวน</th><th>ประมาณ (ล้านบาท)</th></tr>
+    <tr><td>1. อาคารโครงเหล็ก (Pre-engineered) ประมาณ 1,200 ตร.ม. — โครงสร้าง หลังคา ผนัง Prefab</td><td>1 หลัง</td><td>6.5 – 8.0</td></tr>
+    <tr><td>2. งานฐานราก+พื้นคอนกรีตหนา 15 ซม. + Epoxy 3 มม. (~2,400 ตร.ม.)</td><td>—</td><td>1.6 – 2.0</td></tr>
+    <tr><td>3. ห้องพ่นสี Downdraft พร้อมเตาอบ (พร้อมติดตั้ง)</td><td>2 ห้อง</td><td>2.8 – 3.6</td></tr>
+    <tr><td>4. ลิฟต์ 2 เสา 4 ตัน + ติดตั้ง</td><td>17 ชุด</td><td>1.7 – 2.2</td></tr>
+    <tr><td>5. อาคารสำนักงาน 2 ชั้น + ตกแต่ง</td><td>~150 ตร.ม.</td><td>2.2 – 2.8</td></tr>
+    <tr><td>6. ห้องพักลูกค้า + เฟอร์นิเจอร์ + เคาน์เตอร์</td><td>~60 ตร.ม.</td><td>0.6 – 0.8</td></tr>
+    <tr><td>7. ระบบไฟฟ้า + แสงสว่าง LED + รางไฟ</td><td>ทั้งศูนย์</td><td>0.9 – 1.2</td></tr>
+    <tr><td>8. ระบบลมอัด (เครื่องอัดลม + ท่อจ่ายทุกช่อง)</td><td>2 เครื่อง</td><td>0.35 – 0.5</td></tr>
+    <tr><td>9. ป้าย signage ภายใน-ภายนอก + สี brand</td><td>—</td><td>0.35 – 0.5</td></tr>
+    <tr><td>10. งานผังจราจร + จอดรถ + ภายนอก</td><td>—</td><td>0.5 – 0.7</td></tr>
+    <tr class="total"><td>รวมโดยประมาณ</td><td>—</td><td>18.1 – 22.2 ลบ.</td></tr>
+  </table>
+
+  <div class="note note-amber" style="margin-top:16px">
+    ⚠️ ตัวเลขข้างต้นเป็น<strong>ประมาณการเบื้องต้น</strong>จากค่าก่อสร้างอาคารเหล็ก+ศูนย์ซ่อมมาตรฐานปี 2568-2569 — <strong>ไม่รวม</strong>ค่าที่ดิน, สิ่งก่อสร้างอื่น, ค่าต่ออายุใบอนุญาต — แนะนำให้ส่งแบบจริงให้ผู้รับเหมา 2-3 รายเสนอราคาจริงก่อนตัดสินใจ
+  </div>
+
+  <div class="note note-blue" style="margin-top:12px">
+    <strong>ข้อเสนอแนะจากประสบการณ์:</strong> ถ้างบจำกัด — แนะนำให้เริ่มจาก (1) อาคารหลัก (2) ลิฟต์ 10 ชุด (3) ห้องพ่นสี 1 ห้อง — ใช้งานได้ทันที แล้วค่อยขยายอีก 7 ช่อง + ห้องพ่นสีที่ 2 ในเฟส 2 (ลด capex ปีแรก ~6 ลบ.)
+  </div>
+</div>
+
+<div class="footer">PMSG Service Center Design Concept · สร้างจาก layout จริงที่ส่งมา · เอกสารนำเสนอภายใน</div>
+</div>
+
+<script>
+function showTab(i, btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('p'+i).classList.add('on');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+}
+function setView(v, btn){
+  document.querySelectorAll('.vb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const lbl = document.getElementById('viewLabel');
+  const svg = document.getElementById('scene3d');
+  if(v==='iso'){ lbl.textContent='มุมมอง: ภาพรวม 3/4'; svg.style.transform='rotateX(0deg)'; svg.style.transform=''; }
+  else if(v==='front'){ lbl.textContent='มุมมอง: ด้านหน้าอาคาร'; svg.style.transform='perspective(900px) rotateX(28deg)'; }
+  else { lbl.textContent='มุมมอง: Top-down'; svg.style.transform='perspective(1600px) rotateX(55deg) scale(1.05)'; }
+}
+</script>
+</body>
+</html>
