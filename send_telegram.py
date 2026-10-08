@@ -15,5 +15,5 @@ else:
 url = f'https://api.telegram.org/bot{token}/sendMessage'
 payload = json.dumps({'chat_id': chat_id, 'text': message, 'parse_mode': 'Markdown'}).encode()
 req = urllib.request.Request(url, data=payload, headers={'Content-Type': 'application/json'})
-resp = urllib.request.urlopen(req)
+resp = urllib.request.urlopen(req, timeout=60)
 print(resp.read().decode())
