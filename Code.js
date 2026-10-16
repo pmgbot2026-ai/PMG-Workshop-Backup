@@ -5,7 +5,7 @@
  ═════════════════════════════ */
 var SS_KEY = '1rqD0cIuCK5dU2uNjafx1qJRpeY7Bc69-jXN2FB1JK2c';
 var SH_NAME = 'D1_DTA1';
-var CACHE_PREFIX = 'wr13.60_';
+var CACHE_PREFIX = 'wr13.88_';
 var CACHE_TTL = 300;
 
 function getSh() {
@@ -99,7 +99,30 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
   /* ═══ API endpoint: return ALL data as JSON for fetch() ═══ */
-  if (e && e.parameter && e.parameter.api) {
+  
+  if (e && e.parameter && e.parameter.suppdebug) {
+    var sss = SpreadsheetApp.openById('1Yr2-vXEI64BRfA_K8muqg4Gij3Un6QXKoi7LWIGt5tg');
+    var shs = sss.getSheetByName('ตารางวัดผล') || sss.getSheetByName('วัดผล');
+    if (!shs) return ContentService.createTextOutput(JSON.stringify({error:'supp sheet not found', names: sss.getSheets().map(function(s){return s.getName();})})).setMimeType(ContentService.MimeType.JSON);
+    var vv = shs.getRange('A85:AB140').getValues();
+    var out = {};
+    for (var ri = 0; ri < vv.length; ri++) {
+      var row = vv[ri];
+      if (row.join('').length > 0) out['r' + (85+ri)] = row.slice(0, 20);
+    }
+    return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (e && e.parameter && e.parameter.smixdebug) {
+    var sh2 = getSh();
+    var vv2 = sh2.getRange('B270:K295').getValues();
+    var out = {};
+    for (var ri2 = 0; ri2 < vv2.length; ri2++) {
+      if (vv2[ri2].join('').length > 0) out['r' + (270+ri2)] = vv2[ri2];
+    }
+    return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+  }
+if (e && e.parameter && e.parameter.api) {
     var out = { version: 'v13.62' };
     var allFns = [
       ['okr', getOKRData], ['bct', getBCTData], ['fin', getFinData],
@@ -351,82 +374,90 @@ function getSupplementData() {
   var ss = SpreadsheetApp.openById('1Yr2-vXEI64BRfA_K8muqg4Gij3Un6QXKoi7LWIGt5tg');
   var sh = ss.getSheetByName('ตารางวัดผล') || ss.getSheetByName('วัดผล');
   if (!sh) { cs(k, {error:'Sheet not found'}); return cv(k); }
-  var rows = sh.getRange('A90:AB138').getValues();
-
-  // ── Section 1: GM per person (rows 2-13 = months Jan-Dec) ──
+  var rows = sh.getRange('A88:AB140').getValues();
+  // rows[0] = แถว 88 (หัวคอลัมน์ SA), rows[1] = 89 (รวม/สะสม), rows[2..13] = 90-101 (ม.ค.-ธ.ค.)
   var saNames = [];
-  for (var c = 6; c <= 14; c++) {
-    var nm = rows[1][c]; // Row 91 = index 1
+  for (var c2 = 6; c2 <= 15; c2++) {   /* F..P = ฉัตร อรนุช กิตติยา สุดฤทัย */
+    var nm = rows[0][c2];
     if (nm && String(nm).trim()) saNames.push(String(nm).trim());
   }
-  var gmTarget = Number(rows[2][2]) || 0; // Row 92 total target
-  var gmAchieved = Number(rows[2][3]) || 0; // Row 92 total achieved
-  var gmPct = gmTarget > 0 ? gmAchieved / gmTarget : 0;
-
+  var gmTarget = Number(rows[1][2]) || 0;      /* รวมเป้า (C89 — ไม่ใช้, เป้าเดือนมาจากแถวรายเดือน) */
   var personTotals = [];
   for (var ci = 0; ci < saNames.length; ci++) {
-    personTotals.push(Number(rows[2][6+ci]) || 0);
+    personTotals.push(Number(rows[1][6+ci]) || 0);   /* แถว 89 = รวมสะสม */
   }
+  var gmAchieved = Number(rows[1][3]) || 0;    /* ทำได้รวม (D89) */
+  var gmPct = gmTarget > 0 ? gmAchieved / gmTarget : 0;
 
   var saMonthly = [];
-  for (var mi = 3; mi <= 14; mi++) { // rows 93-104 = Jan-Dec
-    var month = String(rows[mi][1] || '').trim();
-    var mTarget = Number(rows[mi][2]) || 0;
-    var mAchieved = Number(rows[mi][3]) || 0;
+  for (var mi = 2; mi <= 13; mi++) {           /* แถว 90-101 = ม.ค.-ธ.ค. */
+    var row = rows[mi] || [];
+    var month = String(row[1] || '').trim();
+    var mTarget = Number(row[2]) || 0;
+    var mAchieved = Number(row[3]) || 0;
     var mPct = mTarget > 0 ? mAchieved / mTarget : 0;
-    var mDiff = Number(rows[mi][5]) || 0;
+    var mDiff = Number(row[5]) || 0;
     var mPersons = {};
-    for (var ci = 0; ci < saNames.length; ci++) {
-      mPersons[saNames[ci]] = Number(rows[mi][6+ci]) || 0;
+    for (var ci2 = 0; ci2 < saNames.length; ci2++) {
+      mPersons[saNames[ci2]] = Number(row[6+ci2]) || 0;
     }
     saMonthly.push({month: month, target: mTarget, achieved: mAchieved, pct: mPct, diff: mDiff, persons: mPersons});
   }
 
-  // ── Section 2: GM by product (rows 18-29 = Jan-Dec) ──
+  /* ─── GM ผลิตภัณฑ์ (แถว 104 = หัว, แถว 105 = รวมสะสม, แถว 106-117 = ม.ค.-ธ.ค.) ─── */
   var productNames = [];
-  for (var c = 3; c <= 27; c++) {
-    var nm = rows[17][c]; // Row 107 headers
-    if (nm && String(nm).trim()) productNames.push({name: String(nm).trim(), col: c});
+  for (var pi = 3; pi <= 27; pi++) {           /* D..AB */
+    var nm2 = rows[16][pi];                    /* แถว 104 */
+    if (nm2 && String(nm2).trim() && String(nm2).trim() !== 'ยอดรถ') productNames.push({name: String(nm2).trim(), col: pi});
   }
-
   var prodTotalsGM = {};
-  for (var pi = 0; pi < productNames.length; pi++) {
-    var v = Number(rows[18][productNames[pi].col]) || 0;
-    if (v > 0) prodTotalsGM[productNames[pi].name] = v;
+  for (var pi2 = 0; pi2 < productNames.length; pi2++) {
+    var v2 = Number(rows[17][productNames[pi2].col]) || 0;    /* แถว 105 = รวม */
+    prodTotalsGM[productNames[pi2].name] = v2;
   }
-
+  /* เฉพาะที่มีค่า — เรียงแทรกไว้เองใน frontend */
   var prodGMMonthly = [];
-  for (var mi = 0; mi < 12; mi++) {
-    var r = 19 + mi; // rows 109-120
-    var month = String(rows[r][1] || '').trim();
-    var gmTotal = Number(rows[r][2]) || 0;
+  for (var mi2 = 0; mi2 < 12; mi2++) {
+    var r2 = 18 + mi2;                                        /* แถว 106-117 */
+    var rw = rows[r2] || [];
+    var gmTotal = Number(rw[2]) || 0;
     var byProd = {};
-    for (var pi = 0; pi < productNames.length; pi++) {
-      var v = Number(rows[r][productNames[pi].col]) || 0;
-      if (v > 0) byProd[productNames[pi].name] = v;
+    for (var pi3 = 0; pi3 < productNames.length; pi3++) {
+      var v3 = Number(rw[productNames[pi3].col]) || 0;
+      if (v3 > 0) byProd[productNames[pi3].name] = v3;
     }
-    prodGMMonthly.push({month: month, total: gmTotal, byProduct: byProd});
+    prodGMMonthly.push({month: String(rw[1]||'').trim(), total: gmTotal, byProduct: byProd});
   }
 
-  // ── Section 3: Car count by product (rows 35-46 = Jan-Dec) ──
+  /* ─── จำนวนคัน (แถว 120-133 — หาแถว "ยอดรถ" ถัดไป) ─── */
+  function findRow(startIdx, label) {
+    for (var rr = startIdx; rr < rows.length; rr++) {
+      if (String(rows[rr][0]).indexOf(label) >= 0 || String(rows[rr][1]).indexOf(label) >= 0) return rr;
+    }
+    return -1;
+  }
+  var carHeader = findRow(20, 'เดือน / ผลิตภัณฑ์');
+  var carTotalRow = carHeader >= 0 ? carHeader + 1 : -1;
+  var carStart = carHeader >= 0 ? carHeader + 2 : -1;
   var carTotals = {};
-  for (var pi = 0; pi < productNames.length; pi++) {
-    var v = Number(rows[34][productNames[pi].col]) || 0;
-    if (v > 0) carTotals[productNames[pi].name] = v;
-  }
-  var totalCarsAll = Number(rows[34][2]) || 0;
-
-  var carMonthly = [];
-  for (var mi = 0; mi < 12; mi++) {
-    var r = 35 + mi; // rows 125-136
-    var month = String(rows[r][1] || '').trim();
-    var totalCars = Number(rows[r][2]) || 0;
-    var byProd = {};
-    for (var pi = 0; pi < productNames.length; pi++) {
-      var v = Number(rows[r][productNames[pi].col]) || 0;
-      if (v > 0) byProd[productNames[pi].name] = v;
+  if (carTotalRow >= 0) {
+    for (var pi4 = 0; pi4 < productNames.length; pi4++) {
+      carTotals[productNames[pi4].name] = Number(rows[carTotalRow][productNames[pi4].col]) || 0;
     }
-    carMonthly.push({month: month, total: totalCars, byProduct: byProd});
+  }
+  var totalCarsAll = carTotalRow >= 0 ? (Number(rows[carTotalRow][2]) || 0) : 0;
+  var carMonthly = [];
+  if (carStart >= 0) {
+    for (var mi3 = 0; mi3 < 12; mi3++) {
+      var rw2 = rows[carStart + mi3] || [];
+      if (!rw2 || String(rw2[1]||'').trim() === '') { carMonthly.push({month:'', total:0, byProduct:{}}); continue; }
+      var byProd2 = {};
+      for (var pi5 = 0; pi5 < productNames.length; pi5++) {
+        var v4 = Number(rw2[productNames[pi5].col]) || 0;
+        if (v4 > 0) byProd2[productNames[pi5].name] = v4;
+      }
+      carMonthly.push({month: String(rw2[1]||'').trim(), total: Number(rw2[2]) || 0, byProduct: byProd2});
+    }
   }
 
   cs(k, {
@@ -444,10 +475,7 @@ function getSupplementData() {
     carMonthly: carMonthly
   });
   return cv(k);
-}
-
-/* ─── Share Claim (from supplement spreadsheet) ─── */
-function getShareClaimData() {
+}function getShareClaimData() {
   var k = 'sc';
   var c = cv(k); if (c) return c;
   var SUPP_SS_KEY = '1Yr2-vXEI64BRfA_K8muqg4Gij3Un6QXKoi7LWIGt5tg';
