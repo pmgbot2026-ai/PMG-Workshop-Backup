@@ -1267,6 +1267,20 @@ function renderOKRCards(){
   var curIdx=idx<nReal?idx:nReal-1;
   if(curIdx<0)curIdx=0;
 
+var yrSel=document.getElementById('selOKRYear');
+  var yrVal=(yrSel&&yrSel.value)?yrSel.value:'69';
+  var hbct67=(hist&&hist['2024'])?hist['2024'].bct||[]:[];
+  var bctByYr={'69':bctL,'68':hbct68,'67':hbct67}[yrVal]||bctL;
+  var mrow=bctByYr[curIdx]||{};
+  var mprev=bctByYr[curIdx-1]||{};
+  var msumM={ins:0,isz:0,opk:0,sdn:0,big:0,cashA:0};
+  bctByYr.forEach(function(ri,kk){ if(kk<=curIdx){msumM.ins+=ri.ins||0;msumM.isz+=ri.isz||0;msumM.opk+=ri.opk||0;msumM.sdn+=ri.sdn||0;msumM.big+=ri.big||0;msumM.cashA+=ri.cashA||0;} });
+    var obM=((D.monitor&&D.monitor.delivery&&D.monitor.delivery.otherBrand)||{}).monthly||[];
+  mrow.oth=obM[curIdx]||0;
+  msumM.oth=0; for(var oi=0;oi<=curIdx&&oi<obM.length;oi++)msumM.oth+=obM[oi]||0;
+  var mm2=mrow.m||'—';
+
+
   /* ─── สะสม (ถึงเดือนที่เลือก) ─── */
   var S={ac:0,tc:0,ad:0,td:0,ins:0,cashA:0,cashT:0,isz:0,big:0,opk:0,sdn:0};
   bctL.forEach(function(r,i2){ if(i2<=curIdx){S.ac+=r.ac||0;S.tc+=r.tc||0;S.ad+=r.ad||0;S.td+=r.td||0;S.ins+=r.ins||0;S.cashA+=r.cashA||0;S.cashT+=r.cashT||0;S.isz+=r.isz||0;S.big+=r.big||0;S.opk+=r.opk||0;S.sdn+=r.sdn||0;} });
@@ -1347,8 +1361,6 @@ function renderOKRCards(){
   function g68(l){ return (SMG[l]&&SMG[l].y2025)||0; }
   function g67(l){ return (SMG[l]&&SMG[l].y2024)||0; }
   function pY(l){ var p=SMP[l]; return p&&p.y2026?Math.round(p.y2026*1000)/10:0; }
-  var yrSel=document.getElementById('selOKRYear');
-  var yrVal=(yrSel&&yrSel.value)?yrSel.value:'69';
   var yrKey=({67:'y2024',68:'y2025',69:'y2026'})[yrVal]||'y2026';
   var prevKey={67:null,68:'y2024',69:'y2025'}[yrKey]||null;
   var prev2Key={67:null,68:null,69:'y2024'}[yrKey]||null;
@@ -1376,68 +1388,73 @@ function renderOKRCards(){
     xMet('เทียบ ก.ย. 68 สะสม', fmt(H.ac)+' คัน', (H.ac?(S.ac/H.ac*100).toFixed(1):'-')+'%', ''));
 
   /* 2. อีซูซุ — ยึดตารางแยกประเภทงานซ่อม (ชุดเดียวกับกราฟ) */
-  cards+=card(2,'รถอีซูซุ (สะสม)','ตารางแยกประเภทงานซ่อม ปี '+(yrSel?yrSel.value:'69')+' (เดียวกับกราฟ)','#f59e0b',
+  cards+=card(2,'รถอีซูซุ (สะสม)','สะสมถึง '+mm2+' ปี '+yrVal+' (ล่าง: รวมทั้งปี — ตามกราฟ)','#f59e0b',
     {cls:'good', txt:'สัดส่วน '+pY('อีซูซู')+'%'},
     deltaLine([['ปี '+(yrSel?yrSel.value:'69'),G69.isz,G68.isz],[(yrVal==='67'?'ไม่มีปีก่อน':(yrVal==='68'?'ปี 67 (รวมทั้งปี)':'ปี 68 (รวมทั้งปี)')),G68.isz,G67.isz]]),
-    fmt(G69.isz),'คัน',
+    fmt(msumM.isz),'คัน',
     [G67.isz,G68.isz,G69.isz], [],
     'สัดส่วนอีซูซุ ตามตารางแยกประเภท (ปี '+(yrSel?yrSel.value:'69')+')', pY('อีซูซู'), G69.isz, (G69.isz+G69.oth)||1,
     xMet('ต่างยี่ห้อ', fmt(G69.oth)+' คัน', 'สัดส่วน '+pY('ต่างยี่ห้อ')+'%', '')+
     xMet('ปี 68 (รวมทั้งปี)', fmt(G68.isz)+' คัน', (G68.isz?((G69.isz-G68.isz)/G68.isz*100).toFixed(1):'-')+'% จากปี 68', (G69.isz>=G68.isz)?'v':'x')+
     xMet('ปี 67 (รวมทั้งปี)', fmt(G67.isz)+' คัน', '', '')+
-    xMet('Monitor ปี 69 (รายเดือน)', fmt(S.isz)+' คัน', 'ถึง '+mm.m+' — ตามตาราง Monitor', '')+
-    xMet('เฉลี่ย/เดือน (Monitor)', fmt(Math.round(S.isz/(curIdx+1)))+' คัน', '', ''));
+    xMet('เดือน '+mm2+' (Monitor)', fmt(mrow.isz)+' คัน', 'เดือนเดียว — ปี '+yrVal, '')+
+    xMet('สะสมถึง '+mm2+' (Monitor)', fmt(S.isz)+' คัน', 'เทียบ ทั้งปี '+fmt(G69.isz)+' คัน (กราฟ)', '')+
+    xMet('เฉลี่ย/เดือน (Monitor)', fmt(Math.round(msumM.isz/(curIdx+1)))+' คัน', '', ''));
 
   /* 3. ต่างยี่ห้อ — ยึดตารางแยกประเภท (เดียวกับกราฟ) */
-  cards+=card(3,'รถต่างยี่ห้อ (สะสม)','ตารางแยกประเภทงานซ่อม ปี '+(yrSel?yrSel.value:'69')+' (เดียวกับกราฟ)','#8b5cf6',
+  cards+=card(3,'รถต่างยี่ห้อ (สะสม)','สะสมถึง '+mm2+' ปี '+yrVal+' (ล่าง: รวมทั้งปี — ตามกราฟ)','#8b5cf6',
     {cls:'good', txt:'สัดส่วน '+pY('ต่างยี่ห้อ')+'%'},
     deltaLine([['ปี '+(yrSel?yrSel.value:'69'),G69.oth,G68.oth],[(yrVal==='67'?'ไม่มีปีก่อน':(yrVal==='68'?'ปี 67 (รวมทั้งปี)':'ปี 68 (รวมทั้งปี)')),G68.oth,G67.oth]]),
-    fmt(G69.oth),'คัน',
+    fmt(msumM.oth),'คัน',
     [G67.oth,G68.oth,G69.oth], [],
     'สัดส่วนต่างยี่ห้อ ตามตารางแยกประเภท (ปี '+(yrSel?yrSel.value:'69')+')', pY('ต่างยี่ห้อ'), G69.oth, (G69.isz+G69.oth)||1,
     xMet('ปี 68 (รวมทั้งปี)', fmt(G68.oth)+' คัน', (G68.oth?((G69.oth-G68.oth)/G68.oth*100).toFixed(1):'-')+'% จากปี 68', '')+
     xMet('ปี 67 (รวมทั้งปี)', fmt(G67.oth)+' คัน', '', '')+
-    xMet('Monitor ปี 69 (รายเดือน)', fmt(Math.max(S.ac-S.isz,0))+' คัน', 'ถึง '+mm.m+' — ตามตาราง Monitor', '')+
+    xMet('เดือน '+mm2+' (Monitor)', fmt(mrow.oth)+' คัน', 'เดือนเดียว — ปี '+yrVal, '')+
+    xMet('สะสมถึง '+mm2+' (Monitor)', fmt(Math.max(S.ac-S.isz,0))+' คัน', 'เทียบ ทั้งปี '+fmt(G69.oth)+' คัน (กราฟ)', '')+
     xMet('ส่งซ่อม (sdn)', fmt(S.sdn)+' คัน', 'Monitor', '')+
     xMet('รถใหญ่', fmt(S.big)+' คัน', 'Monitor', ''));
 
   /* 4. เบี้ยห้าง — ยึดตารางแยกประเภท (เดียวกับกราฟ) */
-  cards+=card(4,'เบี้ยห้าง (สะสม)','ตารางแยกประเภทงานซ่อม ปี '+(yrSel?yrSel.value:'69')+' (เดียวกับกราฟ)','#10b981',
+  cards+=card(4,'เบี้ยห้าง (สะสม)','สะสมถึง '+mm2+' ปี '+yrVal+' (ล่าง: รวมทั้งปี — ตามกราฟ)','#10b981',
     {cls:'good', txt:'สัดส่วน '+pY('เบี้ยห้าง')+'%'},
     deltaLine([['ปี '+(yrSel?yrSel.value:'69'),G69.ins,G68.ins],[(yrVal==='67'?'ไม่มีปีก่อน':(yrVal==='68'?'ปี 67 (รวมทั้งปี)':'ปี 68 (รวมทั้งปี)')),G68.ins,G67.ins]]),
-    fmt(G69.ins),'คัน',
+    fmt(msumM.ins),'คัน',
     [G67.ins,G68.ins,G69.ins], [],
     'สัดส่วนเบี้ยห้าง ตามตารางแยกประเภท (ปี '+(yrSel?yrSel.value:'69')+')', pY('เบี้ยห้าง'), G69.ins, (G69.ins+G69.opk+G69.cash)||1,
     xMet('เบี้ยอู่', fmt(G69.opk)+' คัน', 'สัดส่วน '+pY('เบี้ยอู่')+'%', '')+
     xMet('เงินสด', fmt(G69.cash)+' คัน', 'สัดส่วน '+pY('เงินสด')+'%', '')+
     xMet('ปี 68 (รวมทั้งปี)', fmt(G68.ins)+' คัน', (G68.ins?((G69.ins-G68.ins)/G68.ins*100).toFixed(1):'-')+'% จากปี 68', '')+
     xMet('ปี 67 (รวมทั้งปี)', fmt(G67.ins)+' คัน', '', '')+
-    xMet('Monitor ปี 69 (รายเดือน)', fmt(S.ins)+' คัน', 'ถึง '+mm.m+' — ตามตาราง Monitor', ''));
+    xMet('เดือน '+mm2+' (Monitor)', fmt(mrow.ins)+' คัน', 'เดือนเดียว — ปี '+yrVal, '')+
+    xMet('สะสมถึง '+mm2+' (Monitor)', fmt(S.ins)+' คัน', 'เทียบ ทั้งปี '+fmt(G69.ins)+' คัน (กราฟ)', ''));
 
   /* 5. เบี้ยอู่ — ยึดตารางแยกประเภท (เดียวกับกราฟ) */
-  cards+=card(5,'เบี้ยอู่ (สะสม)','ตารางแยกประเภทงานซ่อม ปี '+(yrSel?yrSel.value:'69')+' (เดียวกับกราฟ)','#06b6d4',
+  cards+=card(5,'เบี้ยอู่ (สะสม)','สะสมถึง '+mm2+' ปี '+yrVal+' (ล่าง: รวมทั้งปี — ตามกราฟ)','#06b6d4',
     {cls:'good', txt:'สัดส่วน '+pY('เบี้ยอู่')+'%'},
     deltaLine([['ปี '+(yrSel?yrSel.value:'69'),G69.opk,G68.opk],[(yrVal==='67'?'ไม่มีปีก่อน':(yrVal==='68'?'ปี 67 (รวมทั้งปี)':'ปี 68 (รวมทั้งปี)')),G68.opk,G67.opk]]),
-    fmt(G69.opk),'คัน',
+    fmt(msumM.opk),'คัน',
     [G67.opk,G68.opk,G69.opk], [],
     'สัดส่วนเบี้ยอู่ ตามตารางแยกประเภท (ปี '+(yrSel?yrSel.value:'69')+')', pY('เบี้ยอู่'), G69.opk, (G69.ins+G69.opk+G69.cash)||1,
     xMet('ปี 68 (รวมทั้งปี)', fmt(G68.opk)+' คัน', (G68.opk?((G69.opk-G68.opk)/G68.opk*100).toFixed(1):'-')+'% จากปี 68', '')+
     xMet('ปี 67 (รวมทั้งปี)', fmt(G67.opk)+' คัน', '', '')+
     xMet('ส่งซ่อม (sdn)', fmt(S.sdn)+' คัน', 'Monitor', '')+
     xMet('รถใหญ่', fmt(S.big)+' คัน', 'Monitor', '')+
-    xMet('Monitor ปี 69 (รายเดือน)', fmt(S.opk)+' คัน', 'ถึง '+mm.m+' — ตามตาราง Monitor', ''));
+    xMet('เดือน '+mm2+' (Monitor)', fmt(mrow.opk)+' คัน', 'เดือนเดียว — ปี '+yrVal, '')+
+    xMet('สะสมถึง '+mm2+' (Monitor)', fmt(S.opk)+' คัน', 'เทียบ ทั้งปี '+fmt(G69.opk)+' คัน (กราฟ)', ''));
 
   /* 6. เงินสด — ยึดตารางแยกประเภท (เดียวกับกราฟ) */
-  cards+=card(6,'เงินสด (สะสม)','ตารางแยกประเภทงานซ่อม ปี '+(yrSel?yrSel.value:'69')+' (เดียวกับกราฟ)','#ec4899',
+  cards+=card(6,'เงินสด (สะสม)','สะสมถึง '+mm2+' ปี '+yrVal+' (ล่าง: รวมทั้งปี — ตามกราฟ)','#ec4899',
     {cls:'good', txt:'สัดส่วน '+pY('เงินสด')+'%'},
     deltaLine([['ปี '+(yrSel?yrSel.value:'69'),G69.cash,G68.cash],[(yrVal==='67'?'ไม่มีปีก่อน':(yrVal==='68'?'ปี 67 (รวมทั้งปี)':'ปี 68 (รวมทั้งปี)')),G68.cash,G67.cash]]),
-    fmt(G69.cash),'คัน',
-    [G67.cash,G68.cash,G69.cash], [],
+    fmt(msumM.cashA),'คัน',
+    [G67.cashA,G68.cashA,G69.cashA], [],
     'สัดส่วนเงินสด ตามตารางแยกประเภท (ปี '+(yrSel?yrSel.value:'69')+')', pY('เงินสด'), G69.cash, (G69.ins+G69.opk+G69.cash)||1,
     xMet('ปี 68 (รวมทั้งปี)', fmt(G68.cash)+' คัน', (G68.cash?((G69.cash-G68.cash)/G68.cash*100).toFixed(1):'-')+'% จากปี 68', '')+
     xMet('ปี 67 (รวมทั้งปี)', fmt(G67.cash)+' คัน', '', '')+
     xMet('Monitor (หน้าสัญญา)', fmt(S.cashA)+' คัน', 'เป้าปี '+fmt(S.cashT)+' คัน (รายเดือน)', '')+
-    xMet('Monitor ปี 69 (รายเดือน)', fmt(S.cashA)+' คัน', 'ถึง '+mm.m, '')+
+    xMet('เดือน '+mm2+' (Monitor)', fmt(mrow.cashA)+' คัน', 'เดือนเดียว — ปี '+yrVal, '')+
+    xMet('สะสมถึง '+mm2+' (Monitor)', fmt(S.cashA)+' คัน', 'เทียบ ทั้งปี '+fmt(G69.cash)+' คัน (กราฟ)', '')+
     xMet('รับซ่อมรวม', fmt(S.ac)+' คัน', 'Monitor', ''));
 
   /* 7. รายได้รวม */
