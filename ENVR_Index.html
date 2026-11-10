@@ -423,7 +423,8 @@ tr.grandtotal-row td{background:#1B5E20;color:#fff;font-weight:700;font-size:.85
       <table id="prodTable">
         <thead><tr>
           <th>วันที่ผลิต</th>
-          <th>รหัสเครื่อง</th>
+          <th>รหัสเครื่อง/ผู้บันทึก</th>
+          <th>แหล่งข้อมูล</th>
           <th class="num">ดีเซลที่ผลิตได้ (ลิตร)</th>
           <th class="num">ใช้น้ำมันเครื่องเก่า (ลิตร)</th>
           <th class="num">คงเหลือในเครื่อง (ลิตร)</th>
@@ -1486,7 +1487,7 @@ function renderSales() {
   // Detail table
   document.getElementById('salesFilteredInfo').textContent = 'แสดง ' + countSales + ' รายการ';
   if (!sales.length) {
-    document.getElementById('salesBody').innerHTML = '<tr><td colspan="10" class="empty-state"><div class="emoji">💰</div>ไม่มีข้อมูลขายในช่วงที่เลือก</td></tr>';
+    document.getElementById('salesBody').innerHTML = '<tr><td colspan="11" class="empty-state"><div class="emoji">💰</div>ไม่มีข้อมูลขายในช่วงที่เลือก</td></tr>';
     document.getElementById('salesFoot').innerHTML = '';
     return;
   }
@@ -1629,6 +1630,12 @@ function renderProduction() {
   kpiHtml += '<div class="kpi-card warning"><div class="kpi-label">🛢️ ใช้น้ำมันเครื่องเก่ารวม</div><div class="kpi-value">' + fmtNum(totalOldOil,0) + '</div><div class="kpi-sub">ลิตร</div></div>';
   kpiHtml += '<div class="kpi-card danger"><div class="kpi-label">🗑️ ของเสียรวม</div><div class="kpi-value">' + fmtNum(totalWaste,0) + '</div><div class="kpi-sub">ลิตร</div></div>';
   kpiHtml += '<div class="kpi-card"><div class="kpi-label">📋 จำนวนรอบผลิต</div><div class="kpi-value">' + countProd + '</div><div class="kpi-sub">รอบ</div></div>';
+  var years = prod.map(function(p) { return String(p.generate_col_1 || p.start_date || '').substring(0, 4); }).filter(function(y) { return y && y !== 'undefined' && !isNaN(Number(y)); }).sort();
+  if (years.length) {
+    var yFirst = years[0], yLast = years[years.length - 1];
+    var ySpan = 'ตั้งแต่ปี ' + yFirst + ' ถึง ' + yLast;
+    kpiHtml += '<div class="kpi-card"><div class="kpi-label">📅 ช่วงบันทึก</div><div class="kpi-value" style="font-size:1.6rem">' + yFirst + '–' + yLast + '</div><div class="kpi-sub">' + ySpan + '</div></div>';
+  }
   document.getElementById('prodKpi').innerHTML = kpiHtml;
 
   var tb = document.getElementById('prodBody');
@@ -1637,14 +1644,15 @@ function renderProduction() {
   prod.forEach(function(p) {
     html += '<tr>';
     html += '<td>' + fmtDate(p.generate_col_1 || p.start_date) + '</td>';
-    html += '<td>' + (p.environ_id_name || p.machine_name || '-') + '</td>';
-    html += '<td class="num" style="font-weight:700;color:var(--primary)">' + fmtNum(p.generate_col_5 || p.diesel_produced) + '</td>';
-    html += '<td class="num">' + fmtNum(p.generate_col_6 || p.old_oil_used) + '</td>';
-    html += '<td class="num">' + fmtNum(p.generate_col_11 || p.remaining) + '</td>';
-    html += '<td class="num" style="color:var(--danger)">' + fmtNum(p.generate_col_12 || p.waste) + '</td>';
+    html += '<td>' + (p.environ_id || p.environ_id_name || p.machine_name || '-') + (p.environ_id_name && p.environ_id ? ' · ' + p.environ_id_name : '') + '</td>';
+    html += '<td>' + (p.source === 'FR4' ? '<span style="display:inline-block;padding:1px 8px;border-radius:10px;background:#e8f0fe;color:#1a56a0;font-weight:700;font-size:.75rem">ฟอร์ม 2020-24</span>' : '<span style="display:inline-block;padding:1px 8px;border-radius:10px;background:#e6f4ea;color:#137333;font-weight:700;font-size:.75rem">ระบบใหม่</span>') + '</td>';
+    html += '<td class="num" style="font-weight:700;color:var(--primary)">' + fmtInt(Number(p.generate_col_5) || Number(p.diesel_produced) || 0) + '</td>';
+    html += '<td class="num">' + fmtInt(Number(p.generate_col_6) || Number(p.old_oil_used) || 0) + '</td>';
+    html += '<td class="num">' + fmtInt(Number(p.generate_col_11) || Number(p.remaining) || 0) + '</td>';
+    html += '<td class="num" style="color:var(--danger)">' + fmtInt(Number(p.generate_col_12) || Number(p.waste) || 0) + '</td>';
     html += '<td>' + fmtDate(p.generate_col_13 || p.end_date) + '</td>';
-    html += '<td class="num">' + fmtNum(p.generate_col_15 || p.electricity) + '</td>';
-    html += '<td class="num">' + fmtNum(p.generate_col_17 || p.cetane) + '</td>';
+    html += '<td class="num">' + fmtInt(Number(p.generate_col_15) || Number(p.electricity) || 0) + '</td>';
+    html += '<td class="num">' + fmtInt(Number(p.generate_col_17) || Number(p.cetane) || 0) + '</td>';
     html += '<td>' + (p.generate_col_18 || p.storage || '-') + '</td>';
     html += '</tr>';
   });

@@ -8663,11 +8663,59 @@ function envrFetchData_(ss) {
           generate_col_15: Number(row[21]) || 0, // V=ปริมาณใช้ไฟ
           generate_col_16: row[22],    // W=รายละเอียดอื่น
           generate_col_17: Number(row[23]) || 0,  // X=ค่าซีเทน
-          generate_col_18: row[24]     // Y=แหล่งจัดเก็บน้ำมันเอนกประสงค์1
+          generate_col_18: row[24],    // Y=แหล่งจัดเก็บน้ำมันเอนกประสงค์1
+          source: 'B2'
         });
       }
     }
   } catch(e) { Logger.log('ENVR production error: ' + e.message); }
+
+  // ── B(n)_Form responses 4 (ประวัติการผลิต 2020-2024 — ฟอร์มผลิตชุดแรก) ──
+  try {
+    var fr4Sheet = ss.getSheetByName('Form responses 4');
+    if (fr4Sheet) {
+      var fr4Rows = fr4Sheet.getDataRange().getValues();
+      // Header row 1, data from row 2
+      for (var i = 1; i < fr4Rows.length; i++) {
+        var fr = fr4Rows[i];
+        if (!fr[2] && !fr[6]) continue; // skip empty
+        var fr4Start = fr[2]; // C=วันที่เริ่มผลิต
+        if (fr4Start instanceof Date) { fr4Start = fr4Start.toISOString(); }
+        var fr4FlowD = fr[4]; // E=วันที่ดีเซลเริ่มไหล
+        if (fr4FlowD instanceof Date) { fr4FlowD = fr4FlowD.toISOString(); }
+        var fr4End = fr[14]; // O=วันที่หยุดผลิต
+        if (fr4End instanceof Date) { fr4End = fr4End.toISOString(); }
+        var fr4Store1 = String(fr[19] || ''); // T=แหล่งเก็บ1
+        var fr4Store2 = String(fr[21] || ''); // V=แหล่งเก็บ2
+        var fr4StoreTxt = (fr4Store1 ? fr4Store1 + ' ' + (Number(fr[20]) || 0) : '') + (fr4Store2 ? ' + ' + fr4Store2 + ' ' + (Number(fr[22]) || 0) : '');
+        result.production.push({
+          timestamp: fr[0] instanceof Date ? fr[0].toISOString() : fr[0],  // A
+          environ_id: '',                                     // (ฟอร์มชุดแรกไม่มีรหัสเครื่อง)
+          environ_id_name: fr[1] ? String(fr[1]).split('@')[0] : '',      // B=email ผู้บันทึก
+          environ_id_company_management: '',
+          generate_col_1: fr4Start,                           // C=วันที่เริ่มผลิต
+          generate_col_2: fr[3],                              // D=เวลาเริ่มผลิต
+          generate_col_3: fr4FlowD,                           // E=วันที่เริ่มไหล
+          generate_col_4: fr[5],                              // F=เวลาเริ่มไหล
+          generate_col_5: Number(String(fr[6]).replace('ุ','')) || 0,  // G=ดีเซลที่ผลิตได้
+          generate_col_6: Number(fr[7]) || 0,                 // H=ใช้น้ำมันเครื่องเก่า
+          generate_col_7: Number(fr[8]) || 0,                 // I=เบิกคลัง1
+          generate_col_8: fr[9],                              // J=แหล่งที่มา1
+          generate_col_9: Number(fr[10]) || 0,                // K=เบิกคลัง2
+          generate_col_10: fr[11],                            // L=แหล่งที่มา2
+          generate_col_11: Number(fr[12]) || 0,               // M=คงเหลือค้างในเครื่อง
+          generate_col_12: Number(fr[13]) || 0,               // N=ของเสีย
+          generate_col_13: fr4End,                            // O=วันที่หยุดผลิต
+          generate_col_14: fr[15],                            // P=เวลาหยุดผลิต
+          generate_col_15: Number(fr[16]) || 0,               // Q=ใช้ไฟ
+          generate_col_16: fr[17],                            // R=รายละเอียดอื่น
+          generate_col_17: Number(fr[18]) || 0,               // S=ค่าซีเทน
+          generate_col_18: fr4StoreTxt,                       // T/W=แหล่งจัดเก็บ (รวม)
+          source: 'FR4'                                       // ป้ายแหล่งข้อมูล
+        });
+      }
+    }
+  } catch(e) { Logger.log('ENVR FR4 production error: ' + e.message); }
   
   // ── รายงานขายน้ำมันENVR ──
   try {
