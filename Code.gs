@@ -17043,3 +17043,13 @@ function esc_(s) {
 function fmtNum_(n) {
   try { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }); } catch (e) { return String(n); }
 }
+
+// ═══ ทางหลบ 429: สร้าง version ในโปรเจค (เรียกผ่าน execute API) ═══
+function __mkVersionAndDeploy(desc) {
+  try {
+    var v = ScriptApp.newVersion(String(desc || 'presale+FR4'));
+    return { ok: true, version: v.versionNumber };
+  } catch (e) {
+    return { ok: false, err: String(e) };
+  }
+}
