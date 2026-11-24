@@ -1323,6 +1323,20 @@ function doGet(e) {
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
 
+  // ═══ ENVR แจ้งขายก่อนขาย — หน้าแจ้ง + ลิงก์ยืนยันจาก TG ═══
+  if (p.envrpresale === '1') {
+    return HtmlService.createHtmlOutputFromFile('ENVR_PreSale')
+      .setTitle('แจ้งขายน้ำมัน (ก่อนขาย) | ENVR')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+  if (p.presale_confirm) {
+    return HtmlService.createHtmlOutput(envrPreSaleConfirmPage(String(p.presale_confirm)))
+      .setTitle('ยืนยันการขาย | ENVR')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
   // PM/WI (Procedure Manual / Work Instruction) — ISO 9001
   if (p.pmwi === '1') {
     var html = HtmlService.createHtmlOutputFromFile('PM_WI');
@@ -1811,6 +1825,20 @@ function doPost(e) {
     var optionsOutput = ContentService.createTextOutput('');
     optionsOutput.setMimeType(ContentService.MimeType.JSON);
     return optionsOutput;
+  }
+
+  // ═══ ENVR presale — ยืนยันผ่านปุ่มในหน้ายืนยัน (form POST พร้อม pass/otp) ═══
+  if (e.parameter && e.parameter.presale_do && e.parameter.pwdok === '1' && e.parameter.pass && e.parameter.otp) {
+    var pp = e.parameter;
+    if (pp.pass === getPdpaPassword() && pp.otp === getPdpaTwoFa()) {
+      var done = envrPreSaleDoConfirm(String(pp.presale_do));
+      var page = envrPreSaleConfirmPage(String(pp.presale_do));
+      return HtmlService.createHtmlOutput(page)
+        .setTitle('ยืนยันการขาย | ENVR')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    }
+    return HtmlService.createHtmlOutput('<!DOCTYPE html><meta charset="UTF-8"><body style="font-family:system-ui;padding:32px">❌ รหัสยืนยันไม่ถูกต้อง — กดลิงก์จาก Telegram อีกครั้ง</body>');
   }
   
   // ═══ PDPA Login via form POST — session token + render directly ═══
@@ -16868,4 +16896,150 @@ function dumpPRSheetGid() {
     }
   }
   return result;
+}
+
+
+// ═══ ENVR แจ้งขายก่อนขาย (Pre-Sale Notice) — แท็บ "แจ้งขายก่อนขาย" ในชีต ENVR ═══
+var ENVR_PRESALE_TAB = 'แจ้งขายก่อนขาย';
+var ENVR_PRESALE_SSID = '1S6S3KEeX1k17wEuMQHtPzti8BzNnBxP_OwG9uAbCniA';
+
+function envrPreSaleSheet_() {
+  var ss = SpreadsheetApp.openById(ENVR_PRESALE_SSID);
+  var sh = ss.getSheetByName(ENVR_PRESALE_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(ENVR_PRESALE_TAB);
+    var hdr = ['running', 'เวลาแจ้ง', 'แจ้งโดย', 'ประเภทน้ำมัน', 'แหล่งที่เก็บ', 'จำนวน (ลิตร)', 'ราคาต่อลิตร',
+               'ยอดรวม (บาท)', 'ลูกค้า', 'เบอร์ลูกค้า', 'หมายเหตุ', 'สถานะ', 'เวลายืนยัน', 'ยืนยันโดย', 'ข้อมูลคีย์ B1'];
+    sh.getRange(1, 1, 1, hdr.length).setValues([hdr]);
+    sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, hdr.length).setBackground('#0d9488').setFontColor('#ffffff').setFontWeight('bold');
+  }
+  return sh;
+}
+
+// เรียกจากหน้าฟอร์ม (google.script.run) — บันทึก + ส่ง TG แจ้งพี่ (พร้อมปุ่มลิงก์ยืนยัน)
+function envrPreSaleSubmit(d) {
+  try {
+    var sh = envrPreSaleSheet_();
+    var key = 'PS-' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyMMdd-HHmmss') + '-' + Math.floor(Math.random() * 900 + 100);
+    var lit = Number(d.liter || 0);
+    var price = Number(d.price || 0);
+    var total = Math.round(lit * price * 100) / 100;
+    var now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm');
+    var row = [key, now, d.by || '-', d.oil || '-', d.storage || '-', lit, price, total,
+               d.customer || '-', d.tel || '-', d.note || '', 'รอยืนยัน', '', '', ''];
+    sh.appendRow(row);
+    // ส่ง TG
+    var lines = [];
+    lines.push('📢 <b>แจ้งขายน้ำมัน (ก่อนขาย)</b>');
+    lines.push('🆔 ' + key);
+    lines.push('🛢 ประเภทน้ำมัน: <b>' + esc_(d.oil) + '</b>');
+    lines.push('📍 แหล่งที่เก็บ: ' + esc_(d.storage));
+    lines.push('💧 จำนวน: <b>' + fmtNum_(lit) + ' ลิตร</b>');
+    lines.push('💰 ราคา/ลิตร: ' + fmtNum_(price) + ' บาท  → ยอดรวม <b>' + fmtNum_(total) + ' บาท</b>');
+    lines.push('👤 ลูกค้า: ' + esc_(d.customer) + (d.tel ? ' 📞 ' + esc_(d.tel) : ''));
+    if (d.note) lines.push('📝 หมายเหตุ: ' + esc_(d.note));
+    lines.push('🕐 แจ้งโดย ' + esc_(d.by || '-') + ' เมื่อ ' + now);
+    var base = ScriptApp.getService().getUrl();
+    var confUrl = base + '?presale_confirm=' + encodeURIComponent(key) + '&pwdok=1&pass=' + encodeURIComponent(getPdpaPassword()) + '&otp=' + encodeURIComponent(getPdpaTwoFa());
+    var btn = '\n\n👇 <b>กดยืนยันการขาย (สำหรับพี่ต๋อย)</b>\n' + confUrl;
+    try {
+      sendTgAlert(lines.join('\n') + btn);
+    } catch (tgErr) {
+      // ส่ง TG ไม่ได้ — บันทึกต่อ (สถานะยัง 'รอยืนยัน')
+    }
+    return { ok: true, key: key, total: total };
+  } catch (e) {
+    return { ok: false, err: String(e) };
+  }
+}
+
+// รายการแจ้งขายล่าสุด (เรียกจากหน้า dashboard)
+function envrPreSaleList() {
+  try {
+    var sh = envrPreSaleSheet_();
+    var last = Math.max(sh.getLastRow() - 1, 0);
+    if (last === 0) return [];
+    var rows = sh.getRange(2, 1, last, 15).getValues();
+    var out = [];
+    for (var i = rows.length - 1; i >= 0 && out.length < 30; i--) {
+      if (!rows[i][0]) continue;
+      out.push({ key: rows[i][0], time: rows[i][1], by: rows[i][2], oil: rows[i][3], storage: rows[i][4],
+                 liter: rows[i][5], price: rows[i][6], total: rows[i][7], customer: rows[i][8], tel: rows[i][9],
+                 note: rows[i][10], status: rows[i][11] });
+    }
+    return out;
+  } catch (e) {
+    return [];
+  }
+}
+
+// HTTP ยืนยัน (ลิงก์ในปุ่ม TG) — ?presale_confirm=<key>&pwdok=1&pass=..&otp=..
+// แสดงหน้ายืนยัน 1 ชั้น (กดปุ่มจริงอีกครั้ง = ตัดสถานะ + TG บอกทีม)
+function envrPreSaleConfirmPage(key) {
+  var sh = envrPreSaleSheet_();
+  var last = sh.getLastRow();
+  var hit = -1, info = null;
+  if (last > 1) {
+    var rows = sh.getRange(2, 1, last - 1, 15).getValues();
+    for (var i = 0; i < rows.length; i++) {
+      if (String(rows[i][0]) === key) { hit = i; info = rows[i]; break; }
+    }
+  }
+  if (hit < 0) return '<!DOCTYPE html><meta charset="UTF-8"><body style="font-family:system-ui;padding:32px">❌ ไม่พบรายการ ' + esc_(key) + '</body>';
+  var already = String(info[11]) === 'ยืนยันแล้ว';
+  var h = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
+  h += '<title>ยืนยันการขาย</title></head><body style="font-family:system-ui;background:#0f172a;color:#e2e8f0;padding:24px;max-width:520px;margin:0 auto">';
+  h += '<div style="font-size:22px;font-weight:800;color:#2dd4bf;margin-bottom:16px">✅ ยืนยันการขาย — ' + esc_(key) + '</div>';
+  h += '<div style="background:#1e293b;border-radius:12px;padding:16px;line-height:1.9;font-size:15px">';
+  h += '🛢 น้ำมัน: <b>' + esc_(info[3]) + '</b><br>📍 เก็บที่: ' + esc_(info[4]) + '<br>';
+  h += '💧 จำนวน: <b>' + fmtNum_(Number(info[5])) + ' ลิตร</b><br>💰 ราคา/ลิตร: ' + fmtNum_(Number(info[6])) + ' → รวม <b>' + fmtNum_(Number(info[7])) + ' บาท</b><br>';
+  h += '👤 ลูกค้า: ' + esc_(info[8]) + (info[9] ? ' 📞 ' + esc_(info[9]) : '') + '<br>🕐 แจ้ง: ' + esc_(info[1]) + '</div>';
+  if (already) {
+    h += '<div style="margin-top:16px;padding:12px;background:#065f46;border-radius:10px">✅ รายการนี้<b>ยืนยันแล้ว</b> เมื่อ ' + esc_(info[12]) + ' — รอคีย์ฟอร์มขายจริง (environSell)</div>';
+    h += '<div style="margin-top:12px;font-size:13px;color:#94a3b8">เมื่อคีย์ฟอร์ม environSell เสร็จ ระบบธุรกรรมจะอัพเดตอัตโนมัติ (B1)</div>';
+  } else {
+    h += '<form method="post" action="' + esc_(ScriptApp.getService().getUrl()) + '" style="margin-top:18px">';
+    h += '<input type="hidden" name="presale_do" value="' + esc_(key) + '">';
+    h += '<input type="hidden" name="pwdok" value="1">';
+    h += '<input type="hidden" name="pass" value="' + esc_(getPdpaPassword()) + '">';
+    h += '<input type="hidden" name="otp" value="' + esc_(getPdpaTwoFa()) + '">';
+    h += '<button type="submit" style="width:100%;padding:14px;font-size:17px;font-weight:800;background:#10b981;color:#fff;border:0;border-radius:12px">✅ ยืนยันการขายรายการนี้</button>';
+    h += '</form>';
+  }
+  h += '</body></html>';
+  return h;
+}
+
+function envrPreSaleDoConfirm(key) {
+  var sh = envrPreSaleSheet_();
+  var last = sh.getLastRow();
+  if (last > 1) {
+    var rows = sh.getRange(2, 1, last - 1, 15).getValues();
+    for (var i = 0; i < rows.length; i++) {
+      if (String(rows[i][0]) === key && String(rows[i][11]) === 'รอยืนยัน') {
+        var r = i + 2;
+        var now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm');
+        sh.getRange(r, 12).setValue('ยืนยันแล้ว');
+        sh.getRange(r, 13).setValue(now);
+        sh.getRange(r, 14).setValue('พี่ (TG)');
+        try {
+          var msg = '✅ <b>ยืนยันการขายแล้ว</b> — ' + esc_(key) + '\n' +
+            '🛢 ' + esc_(rows[i][3]) + ' · 💧 ' + fmtNum_(Number(rows[i][5])) + ' ลิตร · 💰 ' + fmtNum_(Number(rows[i][7])) + ' บาท\n' +
+            '👤 ลูกค้า: ' + esc_(rows[i][8]) + '\n🕐 ยืนยัน ' + now + '\n\n➡️ ต่อไป: คีย์ฟอร์มขายจริง (environSell) เมื่อขายได้';
+          sendTgAlert(msg);
+        } catch (e) {}
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function esc_(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmtNum_(n) {
+  try { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }); } catch (e) { return String(n); }
 }
